@@ -58,6 +58,49 @@ drifted onto the map.
 uv run vefr look --pack worlds/sample-world
 ```
 
+Four flags make it a photographer rather than one snapshot.
+
+`--sizes WxH[,WxH]` photographs the pack at each size it names, one
+file per size with the size in the name (`look-390x844.png`), and
+reports the containment of every HUD piece once per size. One size (or
+none) writes `--out` exactly as before, at 1280x800.
+
+```sh
+uv run vefr look --pack worlds/sample-world --sizes 390x844,1440x900
+```
+
+The containment report measures `window.VEFR_STAGE`, the rectangle the
+game itself paints on, and never the viewport. That is the difference
+between "the control is on screen" and "the control is inside the
+play panel": a piece that has fallen out of the frame is inside one and
+not the other, and a piece that sits inside the stage at 1280x800 can
+be outside it at 390x844. `--json` prints one report per size.
+
+`--at REGION X,Y` starts the run somewhere other than the world's start
+region. It needs `--pack`, because the region and the tile are checked
+against the pack before a browser opens - a region the pack does not
+have, or a tile the hero cannot stand on, is refused by name.
+
+```sh
+uv run vefr look --pack worlds/sample-world --at town 4,6
+```
+
+`--at` is a start position and nothing more: the typed half of a
+scenario. For a state worth checking in, write
+`scenarios/<name>.json` instead (below), and `vefr check` will keep it
+honest against the pack.
+
+`--seed SEED` asks the game for a run seed of its own. It rides the
+player's `?vefr-seed=` parameter - open a woven player with
+`?vefr-seed=hello` and the descent begins with the base seed `hello`,
+drawing the same floors a pack baked with `run_seed: "hello"` draws. A
+pack with no descent ignores it exactly as it ignores the parameter
+today.
+
+```sh
+uv run vefr look --pack path/to/your-pack --seed hello --steps ArrowDown,ArrowRight
+```
+
 `vefr probe` fires rule events at the woven player and reads the why-log
 and flags back. Each event is written `event:key=value`.
 
