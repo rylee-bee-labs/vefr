@@ -1242,3 +1242,63 @@ matter) + `src/vefr/maplab.py` (the unknown-value refusal) +
 - Punish: failure bends the story or waits; it never ends it.
 - Name private canon in engine code or fixtures (the neutrality guard
   reads engine surfaces on every CI run).
+
+## Player words (the pack's own wording, v0)
+
+The engine speaks a few action-critical lines — the ones a player has
+to read in order to act — and it writes each of them in ONE table, not
+at the call site. v0 of that table is the four where-next lines:
+
+| key | the engine's wording | what it tells the player |
+|---|---|---|
+| `where_next.goal` | `To reach {place}.` | which place the world is aiming at |
+| `where_next.reach` | `To reach {place}, go {direction}.` | which way to step to get there |
+| `where_next.here` | `The way to {place} is right here.` | it is already where the hero stands |
+| `where_next.no_way` | `No way to {place} is declared from here.` | the action is not available |
+
+Those defaults are the strings the player already read (vefr #259:
+"To reach floor-1, go north-west" — a region id and a compass where a
+place name and an action belong). This slice moves them into one home
+and gives the pack a say; it does not build a localization framework.
+
+A pack MAY name its own word for any of them, and MAY name none. The
+block is `world.json`'s `player_words`, one key per row, each the
+pack's own sentence:
+
+```json
+"player_words": {
+  "where_next.reach": "To get to {place}, head {direction}."
+}
+```
+
+Rules, all of them `vefr check`'s to enforce (and none of them said
+about a pack that names no word):
+
+- the block is optional and additive; a pack that declares none plays
+  the engine's own wording byte for byte, and nothing about it is ever
+  reported;
+- every value must be a string, must say something (not empty, not only
+  spaces), and must name its `{place}` slot — the engine hands it the
+  place being pointed at. `{direction}` is available too and stays as
+  written when there is no direction to fill it;
+- a key the table does not have is refused: a word nothing can ever
+  read is a word the author thought they had said;
+- each refusal is one plain sentence naming `world.json` and the key.
+  The engine never quietly falls back to its own default for a word a
+  pack meant to supply.
+
+The key set is typed once in Python (`shapes.PLAYER_WORDS` in
+`src/vefr/shapes.py`, which the refusals are spoken from) and once in
+the player (`VEFR_PLAYER_WORDS` in
+`web/player/parts/340-where-next-hints.js`, which holds the wording);
+`tests/test_player_words.py` fails if they drift. The pack's words ride
+the world object the weave already bakes, so there is no new
+placeholder and no new bake step.
+
+Code: `src/vefr/shapes.py` (`PLAYER_WORDS`, the `place-label` kind) +
+`src/vefr/maplab.py` (`player_words_errors`) + `web/player/parts/340-where-next-hints.js`
+(`VEFR_PLAYER_WORDS`, `playerWord`); tests: `tests/test_player_words.py`.
+
+Out of scope for v0: every other string in the player, region display
+names (vefr #363), POI labels in `point-to`, and any pluralization or
+translation framework.
