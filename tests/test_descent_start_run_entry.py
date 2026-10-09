@@ -31,8 +31,7 @@ pytestmark = pytest.mark.skipif(shutil.which("node") is None, reason="node not i
 RUNS = 6
 ENTRY = DESCENT["entry"]["at"]
 
-READS = ["VEFR_COMBAT.region", "VEFR_COMBAT.hero", "VEFR_DESCENT.doc",
-         "VEFR_DESCENT.floor", "VEFR_TRANSITIONS", "store"]
+READS = ["VEFR_COMBAT.region", "VEFR_COMBAT.hero", "VEFR_TRANSITIONS", "store"]
 
 
 def _play(tmp_path, steps):
