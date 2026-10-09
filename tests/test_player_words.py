@@ -74,7 +74,7 @@ def _js_table() -> dict:
     start = src.find(TABLE_START)
     end = src.find(TABLE_END)
     assert start != -1 and end != -1 and start < end, "player words markers"
-    return dict(re.findall(r"'([\w.]+)':\s*'([^']*)'", src[start:end]))
+    return dict(re.findall(r"'([^']+)':\s*'([^']*)'", src[start:end]))
 
 
 def test_the_two_tables_agree():
