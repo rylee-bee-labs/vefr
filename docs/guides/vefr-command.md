@@ -55,12 +55,12 @@ doors cannot drift apart. A pack that ships a `stamps/` directory gets
 it; a pack that ships none - every pack in the tree today - is skipped
 before it costs anything and prints nothing.
 
-A refusal reads the way `stamp check` writes it, naming the room and
-the value to fix:
+A refusal reads the way `stamp check` writes it, naming the room, how
+often it placed, and the value to fix. It is one line on the terminal,
+wrapped here to fit the page:
 
 ```
-stamp test-alcove: placed on 12 of 64 cellar floors (18%); it needs
-100%. It is 5 wide and cellar floors start at 64. /rows
+stamp test-alcove: placed on 12 of 64 cellar floors (18%); it needs 100%. It is 5 wide and cellar floors start at 64. /rows
 ```
 
 **The seam: a smaller sweep, no flag.** `vefr stamp check` sweeps 200
