@@ -606,11 +606,12 @@ def cmd_import(args) -> int:
 
 
 # The seed count the stamp sweep inside `vefr check` draws, and what it
-# calls them. It is deliberately NOT stamp_check's own default (200):
-# `vefr check` runs this sweep on every invocation, so it draws the same
-# `check-<n>` names `vefr stamp check` does but far fewer of them. See
-# `_stamp_findings` for why the seam sits here and what it costs.
-CHECK_STAMP_SEEDS = 8
+# calls them: the same `check-<n>` names, at the same 200 of them, that
+# `vefr stamp check` sweeps - the default `stamp_check.report` is given.
+# It used to be 8, on the reasoning that the sweep is the slow half. See
+# `_stamp_findings` for the arithmetic that retired that reasoning and
+# for what the raise costs.
+CHECK_STAMP_SEEDS = 200
 
 
 def _stamp_findings(pack_dir, seeds: int = CHECK_STAMP_SEEDS) -> list[str]:
@@ -624,18 +625,33 @@ def _stamp_findings(pack_dir, seeds: int = CHECK_STAMP_SEEDS) -> list[str]:
     the same `stamp_check.report` that command calls, so the two cannot
     drift: there is one copy of the rule, not two.
 
-    **Why the smaller seed count.** The sweep is the slow half, and
-    `vefr check` runs on every pack write. Measured end to end on a
-    one-Section pack that ships stamps: 0.82s before this change, 0.92s
-    after it - the sweep itself is ~0.10s at 8 seeds against ~2.9s at the
-    200 `stamp check` sweeps. Eight is enough for the reported bug
-    because a required room that never places places on zero of the eight
-    floors too; a rate that low cannot hide behind a small sample. The
-    trade is explicit and it is a trade: a room that places on, say, 99%
-    of floors can pass an 8-seed sweep and fail the 200-seed gate. That
-    is the narrow gap `vefr stamp check` is for, and the ROADMAP entry
-    says so in as many words. The rule stands either way: a pack is NEVER
-    green for free while carrying a room that never places.
+    **Why 200 seeds, and why that changed.** This seam shipped at 8 seeds
+    on the reasoning that the sweep is the slow half and `vefr check` runs
+    on every pack write. That reasoning priced the sweep and forgot what
+    the sweep is FOR. The bar a required room has to clear is 100% - one
+    floor in a hundred that loses its warden hall is a floor the hero
+    walks into an empty hall - so a room placing on 99 of 100 floors is
+    ALREADY a failure, and 8 seeds is a sample far too small to see it:
+    `0.99**8 = 0.9227`, so the check printed `ok:` on 92 packs in 100
+    carrying that room. A green light that is wrong 8 times in 100 is
+    worse than no light, because the creator stops looking. Taking a 99%
+    room 99% of the time takes `ceil(ln(0.01)/ln(0.99)) = 459` seeds - so
+    200 is the same order as the standalone gate, and the two are now at
+    one confidence instead of one of them being the weak one. 200 is also
+    what this command ALREADY pays for: `vefr check` sweeps every Section
+    at `locks.SECTION_SEEDS = 200` on the same pack and the same
+    `check-<n>` names, so raising this adds no new class of work.
+
+    **What the raise costs, measured.** Median of five runs each, same
+    machine, same pack, source edited between the two halves. On a
+    one-Section pack that ships three required stamps: **0.992s at 8
+    seeds, 3.906s at 200** - a delta of 2.91s. The stamp sweep alone is
+    0.12s at 8 and 3.03s at 200. On `worlds/sample-world`, which ships no
+    `stamps/` at all, it is 0.065s at 8 and 0.061s at 200: no change,
+    because the sweep is skipped before it costs anything. That is the
+    honest shape of the trade - every pack in the tree today is the second
+    case, and a pack that ships stamped rooms pays ~2.9s to stop being
+    green for free.
 
     **A pack with no stamps says nothing.** No `stamps/` directory means
     there is no stamp pack to check, which is every pack in the tree
@@ -714,8 +730,9 @@ def cmd_map(args) -> int:
         # ...and runs the stamp check over the same pack (vefr#346), so a
         # required room that never places cannot be green. The same
         # `stamp_check.report` `vefr stamp check` calls, over the same
-        # `check-<n>` seeds, at fewer of them - see `_stamp_findings`.
-        # A pack with no `stamps/` directory is silent and costs nothing.
+        # `check-<n>` seeds and the same 200 of them as the Section sweep
+        # above - see `_stamp_findings`. A pack with no `stamps/`
+        # directory is silent and costs nothing.
         findings += _stamp_findings(pack_dir)
         for finding in findings:
             print(finding)

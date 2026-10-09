@@ -60,29 +60,43 @@ often it placed, and the value to fix. It is one line on the terminal,
 wrapped here to fit the page:
 
 ```
-stamp test-alcove: placed on 12 of 64 cellar floors (18%); it needs 100%. It is 5 wide and cellar floors start at 64. /rows
+stamp test-alcove: placed on 248 of 1600 cellar floors (15%); it needs 100%. It is 5 wide and cellar floors start at 64. /rows
 ```
 
-**The seam: a smaller sweep, no flag.** `vefr stamp check` sweeps 200
-seeds; `vefr check` draws 8 (`cli.CHECK_STAMP_SEEDS`). That is a
-deliberate shape, not a hedge:
+**The same 200 seeds the standalone gate sweeps, and no flag.** Both
+doors draw `check-<n>` and both draw 200 of them (`cli.CHECK_STAMP_SEEDS`
+is the gate's own default), so a floor that fails one can be redrawn with
+the other and a pack cannot be green in one place and red in the other.
+That number was 8 until this change and the reason is worth keeping:
 
 - **No flag, no opt-in.** A pack must never be able to be green for
   free while carrying a room that never places, and a flag is exactly a
   way to be green for free. The check runs every time.
-- **Small rather than 200, because the sweep is the slow half** and
-  `vefr check` runs after every pack write. Measured: a pack with no
-  `stamps/` is 0.007s before this and 0.008s after (the sweep is
-  skipped); a pack that does ship stamps goes 0.82s to 0.92s.
-- **A room that never places is caught at any seed count.** It places
-  on none of eight floors exactly as it places on none of sixteen
-  hundred, which is what makes the small default safe for the case that
-  was reported.
-- **The gap is named, not hidden.** A room that places on 99% of floors
-  can pass an 8-seed sweep and still fail the 200-seed gate. That gap is
-  what `vefr stamp check --seeds <n>` is for; `vefr check` is the fast
-  gate that must not be able to be green for free, and the standalone
-  gate is the thorough one.
+- **Eight seeds could not see its own bar.** The bar is 100% - one floor
+  in a hundred that loses its warden hall is a floor the hero walks into
+  an empty hall - so a room on 99 of 100 floors is already a failure.
+  `0.99 ** 8 = 0.923`: an 8-seed sweep would have printed `ok:` on 92
+  packs in 100 like that. Taking a 99% room 99% of the time needs
+  `ceil(log(0.01) / log(0.99)) = 459` seeds, so 200 is the same order as
+  the gate and the two sit at one confidence instead of one of them
+  being the weak one.
+- **What the raise costs, measured** (median of five runs each, same
+  machine, same pack, source edited between the halves). A pack that
+  ships stamped rooms: **0.992s at 8 seeds, 3.906s at 200** - +2.91s.
+  `worlds/sample-world`, which ships no `stamps/` at all: **0.065s at 8,
+  0.061s at 200** - no change, because the sweep is skipped before it
+  costs anything. Every pack in the tree today is that second case.
+- **`vefr check` already paid for 200.** The Section gate above sweeps
+  every Section at 200 seeds (`locks.SECTION_SEEDS`) on the same pack and
+  the same `check-<n>` names, so this adds no new class of work to a
+  check that was already running it.
+
+The fixture that shows the gap is in
+[`tests/test_stamp_check_runs.py`](../../tests/test_stamp_check_runs.py):
+a required landmark weighed 99 against one rival weighed 1, so it lands on
+99 of every 100 floors. It misses on `check-58` and later, so the first
+eight seeds are clean - an 8-seed check says nothing at all, and a
+200-seed check refuses it.
 
 ## Developer verbs
 

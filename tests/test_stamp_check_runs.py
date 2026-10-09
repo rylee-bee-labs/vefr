@@ -114,6 +114,34 @@ RIVAL_LANDMARKS = tuple(
 )
 CROWDED_STAMPS = GOOD_STAMPS + RIVAL_LANDMARKS
 
+# The room that is on every floor but a few - the case a small sweep cannot
+# see, and the reason the sweep is 200 seeds rather than 8.
+#
+# Exactly the good pack, with the alcove weighed 99 and ONE rival landmark
+# weighed 1 against it. There is one landmark slot on a floor and the draw
+# is by weight, so the alcove takes it on 99 of every 100 floors and the
+# rival takes the rest. Nothing here is malformed: every room is a legal
+# room, the weights are whole numbers of 0 or more, and the Section is the
+# legal one from above. The pack simply has a required room that is not on
+# every floor it is required for - which is the failure, in the exact shape
+# the 100% bar exists to catch.
+#
+# The measured consequence, off this fixture and not asserted here: the
+# room misses on check-58 and after, so the first eight seeds are clean and
+# an 8-seed sweep says nothing at all. `0.99 ** 8 = 0.923`: a check that
+# drew eight seeds would print `ok:` on 92 packs in 100 like this one. The
+# seeds it takes to miss a 99% room 99% of the time is
+# `ceil(log(0.01) / log(0.99)) = 459`, so 200 is the same order as the
+# standalone gate and the two sweeps now sit at one confidence.
+NEAR_MISS_RIVAL = {
+    "stamp": 1, "id": "rival-00", "role": "landmark", "tags": ["cellar"],
+    "weight": 1, "poi": "rival 0",
+    "rows": ["#####", "#...#", "+....", "#...#", "#####"],
+}
+NEAR_MISS_STAMPS = (
+    dict(LANDMARK, weight=99), HALL, VAULT, NEAR_MISS_RIVAL,
+)
+
 def a_pack(tmp_path, stamps=GOOD_STAMPS, section=None):
     """A real pack carrying `stamps/` and `sections/`, built the shipped way.
 
@@ -419,12 +447,87 @@ def test_the_check_skips_the_sweep_entirely_for_a_pack_with_no_stamps(
     assert code == cli.EXIT_OK, out
 
 
-def test_the_seed_count_is_small_and_is_stated(tmp_path):
-    """The seam is a smaller sweep than the standalone gate's, and that is a
-    choice with a name and a number rather than a silent one. Pinned so a
-    later edit that raises it has to say so in the test as well.
+def test_the_check_sweeps_two_hundred_seeds_and_not_eight():
+    """The seed count is 200, and this is the test that says so out loud.
+
+    It used to be 8, on the reasoning that the sweep is the slow half of a
+    command that runs on every pack write. That reasoning is retired: the
+    bar a required room clears is 100%, so a room placing on 99 of 100
+    floors is ALREADY a failure, and `0.99 ** 8 = 0.923` means eight seeds
+    miss it on 8 packs in 10. `NEAR_MISS_STAMPS` above is that room, and
+    the two tests after it are what it does at each count.
+
+    Pinned as a floor (`>= 200`) and as an equality with the standalone
+    gate, so the constant cannot quietly drift back down to a sample that
+    cannot see its own bar - and so if the gate's own default ever moves,
+    the two are compared rather than diverged.
     """
-    assert cli.CHECK_STAMP_SEEDS < stamp_check_default_seeds()
+    assert cli.CHECK_STAMP_SEEDS >= 200, (
+        f'CHECK_STAMP_SEEDS is {cli.CHECK_STAMP_SEEDS}; a required room '
+        f'placing on 99% of floors passes 8 seeds 92% of the time')
+    assert cli.CHECK_STAMP_SEEDS == stamp_check_default_seeds(), (
+        'the check and the standalone gate must sweep at one confidence')
+
+
+def test_the_sweep_the_check_runs_is_two_hundred_seeds_wide(tmp_path):
+    """Not "the constant says 200" - the floors really were laid.
+
+    The refusal prints its own denominator: `placed on 248 of 1600 cellar
+    floors`. One seed lays this pack's floors-per-seed - two depths and
+    four floor kinds - so 1600 of them is 200 seeds and 64 of them is the
+    8 this used to draw. Asserting the number the author's terminal
+    actually shows is what makes this more than a restatement of the
+    constant above.
+    """
+    depths = GOOD_SECTION["floors"]
+    from vefr import delve_v3
+    floors_per_seed = depths * len(delve_v3.FLOOR_KINDS)
+    pack = a_pack(tmp_path, stamps=CROWDED_STAMPS)
+    _code, out = check(pack)
+    [placed, eligible] = re.findall(
+        r'stamp test-alcove: placed on (\d+) of (\d+)', out)[0]
+    assert int(eligible) == floors_per_seed * cli.CHECK_STAMP_SEEDS == 1600, (
+        placed, eligible, floors_per_seed)
+
+
+def test_a_room_on_99_of_100_floors_is_not_green(tmp_path):
+    """The case eight seeds cannot see, caught through the real command.
+
+    The good pack with the alcove weighed 99 against one rival weighed 1:
+    a required room that is on nearly every floor and on no floor the hero
+    may rely on. `vefr check` refuses it and names it.
+    """
+    pack = a_pack(tmp_path, stamps=NEAR_MISS_STAMPS)
+    code, out = check(pack)
+    assert code == cli.EXIT_ERROR, out
+    assert 'stamp test-alcove: placed on ' in out, out
+    [placed, eligible] = re.findall(
+        r'stamp test-alcove: placed on (\d+) of (\d+)', out)[0]
+    # Nearly every floor, and still a refusal - this is what 100% means.
+    assert 0.9 < int(placed) / int(eligible) < 1.0, (placed, eligible)
+
+
+def test_that_same_room_says_nothing_over_eight_seeds(tmp_path):
+    """Why the sweep is 200: the arithmetic, on a real pack.
+
+    Seeds are `check-0`, `check-1`, ... so an eight-seed sweep is a strict
+    PREFIX of the 200-seed one and can only see the first eight of them.
+    This room misses on check-58 and later, so the prefix is clean and the
+    eight-seed check prints nothing. That is the whole reason the constant
+    moved: a green light wrong 8 times in 100 is worse than no light.
+
+    Asserted on the behaviour at each count rather than left as prose, so
+    if an edit to the pack, the placer or the seeds ever moved the first
+    miss into the first eight, this test would say so instead of quietly
+    going stale.
+    """
+    pack = a_pack(tmp_path, stamps=NEAR_MISS_STAMPS)
+    assert not [f for f in cli._stamp_findings(pack, seeds=8)
+                if f.startswith('stamp test-alcove')], (
+        'the fixture no longer demonstrates the gap - move the weights')
+    assert [f for f in cli._stamp_findings(pack, seeds=cli.CHECK_STAMP_SEEDS)
+            if f.startswith('stamp test-alcove')], (
+        '200 seeds must catch what 8 misses')
 
 
 def stamp_check_default_seeds() -> int:
@@ -449,8 +552,9 @@ def test_a_required_room_that_never_places_is_caught_at_every_seed_count(
         tmp_path, seeds):
     """The guarantee does not depend on the sample size. A room crowded off
     its slot places on almost none of the floors at one seed just as it
-    does at eight - which is why the small default is safe for the
-    reported bug, and is the honest reason the seam sits where it does.
+    does at eight - which is why the reported bug was caught at any count.
+    It is NOT the same argument for a small default: a room on 99 of 100
+    floors is a different animal, and `NEAR_MISS_STAMPS` is it.
     """
     pack = a_pack(tmp_path, stamps=CROWDED_STAMPS)
     findings = cli._stamp_findings(pack, seeds=seeds)
