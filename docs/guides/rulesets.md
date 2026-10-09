@@ -414,6 +414,70 @@ expansion that emits the gate and the `enters town` rule);
 tests: `tests/test_wardens.py`, `tests/test_vault_door.py`,
 `tests/test_vault_contents.py`, `tests/test_town_states.py`,
 `tests/test_progress_walk.py`, `tests/test_descent_story_end.py`.
+### the Section contract: what a Section may hold
+
+The keys a Section pack (`sections/<id>.json`) may hold, in the order
+`src/vefr/shapes.py` reads them. Only `id` and `families` are required;
+everything else defaults, and a Section that names none of it is the
+floor it always was. `vefr check` refuses a key that is not on this list,
+and refuses every value below at the pointer that names it.
+
+| key | what it is | default |
+|---|---|---|
+| `section` | the Section's number in the descent order | unordered |
+| `id` | **required** - the floor key's middle | - |
+| `floors` | how many floors it has | 9 |
+| `size` | `{"w": [lo, hi], "h": [lo, hi]}` - every floor draws its own | w 64, h 48 |
+| `rooms` | the `[lo, hi]` room quota a floor draws | 12 |
+| `tiles` | the tile table: glyph to tileset | engine legend |
+| `fog` | `{"radius": N}` | radius 5 |
+| `families` | **required** - the families a floor draws from, with weights | - |
+| `pattern` | one slot per floor: `entry`, `n`, `special`, `landing`, `warden` | the nine-floor pattern |
+| `specials` | what a `special` slot may draw: `treasure`, `infested`, `hub` | all three |
+| `elites` | `{"per_floor": [lo, hi], "affixes": [ids]}` | none |
+| `groups` | `{"per_floor": [lo, hi], "minions": [lo, hi], "leader", "same_family", "wake", "leash"}` | none |
+| `mobs` | **how many monsters a floor carries** - see below | the area budget |
+| `curve` | `{"hp": [lo, hi], "atk": [lo, hi]}` - the depth multipliers | flat (1.0) |
+| `loot` | `{"tier": N}` - checked, not yet read (E10) | - |
+| `stamps` | the stamp ids this Section may use | none |
+| `pois` | the point-of-interest names its floors carry | none |
+| `warden` | a family id, or `{"family", "id", "carries"}` | no warden |
+| `vault` | the vault stamp's id | no vault |
+| `endless` | `{"omens": [{"id", "label", one of `fog_radius`/`groups_per_floor`/`warden_affixes`}], "picks": N}` - the omens an endless descent offers | no omens |
+
+**`mobs` - how many monsters a floor carries.** Without it the count is
+area policy: one monster per 30 walkable tiles, clamped into 4..36, which
+put 20-35 monsters on a first floor no pack could argue with. With it the
+pack decides, per depth:
+
+```json
+"mobs": {"1": 4, "from": 12}
+```
+
+A key is a floor of the Section (`"1"` is its first floor) or `"from"`,
+which is the count every floor the table does not name carries. So the
+example is four monsters on the floor a hero comes down to and twelve on
+every floor after it - gentle at the top, rising from there, without
+redrawing anything. `0` is a floor with nothing on it, which the area
+budget could never say. A count is 0 to 36 (ADR 0014's hard cap), and
+`vefr check` refuses anything else, naming the Section and the entry:
+
+```
+sections/cellar.json: /section/mobs/1 section.mobs['1'] must be between 0 and 36
+```
+
+It costs no draw, and it moves no tile: the `size`, `plan` and `layout`
+streams do not read it, so a pack that sets a count on a Section it has
+already placed things on by coordinate invalidates nothing it placed. Only
+the **pop** stream moves - which is the one place the count is used, and
+the reason a floor's monsters and chests are the only things about a floor
+that differ once the key is set. Both the v3 generator
+(`delve_v3.mob_budget`) and the play-time descent
+(`delve.floor_plan`, the `mobs` list the player walks) read it, and the
+JavaScript twins in `web/player/parts/396-` and `397-` read the same
+table through the same rule. Code: `src/vefr/sections.py`
+(`mob_count`), `src/vefr/delve_v3.py` (`mob_budget`); tests:
+`tests/test_section_monster_count.py`.
 
 ## regions + transitions (doors between maps)
 
