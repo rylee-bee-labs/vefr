@@ -401,6 +401,13 @@
   // after, so it carries the region they woke in. The killer is named
   // when there is one (an enemy called this) and left empty when there
   // is not, so the `defeats` mirror has nothing to pretend.
+  //
+  // A floor of the descent is the one place that wake point is not: the
+  // descent answers for its own floors (the up-stair of the floor the
+  // hero fell on, whole, with the run intact), and every other region -
+  // the town, a baked one - wakes exactly where the pack says it does.
+  // The descent therefore asks first, and `wakes` carries the region it
+  // answered with, so an event sees the wake and not the fall.
   function cozyDeath(killer) {
     combatSay(DEATH_LINE);
     fireRule('falls', { what: (killer && killer.id) || '',
@@ -410,7 +417,13 @@
     renderHp();
     var wake = (window.VEFR_HERO && window.VEFR_HERO.wake) || {};
     var woke = regionName;
-    if (wake.region && regions[wake.region]) {
+    var D = window.VEFR_DESCENT;
+    var back = (D && typeof D.deathResume === 'function')
+      ? D.deathResume(regionName) : null;
+    if (back) {
+      enterRegion(back.region, back.at);
+      woke = back.region;
+    } else if (wake.region && regions[wake.region]) {
       enterRegion(wake.region, wake.at);
       woke = wake.region;
     } else {

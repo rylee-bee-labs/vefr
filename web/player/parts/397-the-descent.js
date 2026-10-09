@@ -1047,11 +1047,20 @@ window.VEFR_DESCENT = (function () {
              drops: mob.drops.slice(), warden: mob.warden === true };
   }
 
+  // The same door twice is one door - and the second time it is wired it
+  // is the true one. The arrival tile is part of what a door says: a new
+  // run redraws floor one, so the stair into the deep now ends on the new
+  // floor's up-anchor, not on the tile the previous run drew. A dedupe
+  // that kept the first `to_at` left the hero walking in mid-floor, and
+  // on a run where that tile is a wall, inside one.
   function pushTransition(list, t) {
     for (var i = 0; i < list.length; i++) {
       var one = list[i];
       if (one && one.from === t.from && String(one.at) === String(t.at) &&
-          one.to === t.to) return;
+          one.to === t.to) {
+        if (Array.isArray(t.to_at)) one.to_at = t.to_at.slice();
+        return;
+      }
     }
     list.push(t);
   }
@@ -1380,6 +1389,37 @@ window.VEFR_DESCENT = (function () {
   function sectionIdOf(name) {
     var at = parseName(name);
     return at ? at.section.id : '';
+  }
+
+  // ---- where a death on a floor leaves the hero ------------------------
+  // A floor of the descent is not a place to wake up from. The hero
+  // falls, wakes whole on that same floor at its up-stair, and the run
+  // goes on - the shape the stair that carried them down already had. So
+  // this answers `{region, at}`, and null for anything that is not a
+  // floor of the descent: in town, or in a baked region, the pack's own
+  // wake point answers exactly as it always has.
+  //
+  // Nothing is lost on the way: waking is a step back onto the floor,
+  // not a redraw of it, so the kills, the drops and the walked ground
+  // are the ones the hero left. And the why-log names the floor, so what
+  // happened can be read back without watching the screen for it.
+  function deathResume(name) {
+    if (!on() || !isGenerated(name)) return null;
+    var depth = depthOfName(name);
+    var plan = depth ? floorPlan(depth) : null;
+    if (!plan) return null;
+    whySay('descent-death', 'You fell on ' + name + ' and woke at its up '
+      + 'stair; the descent is unbroken.');
+    return { region: name, at: plan.anchors.up.slice() };
+  }
+
+  // The player's why-log (`VEFR_WHY`, the Why panel), in the shape a
+  // fired rule writes. Guarded because that part may not be in a file,
+  // and a descent that cannot say what it did must still wake the hero
+  // where it said it would.
+  function whySay(id, text) {
+    if (typeof rulesWhyRecord !== 'function') return;
+    rulesWhyRecord([{ id: id, why: text }]);
   }
 
   // A monster fell on `name`. The warden's defeat is a permanent story
@@ -1801,7 +1841,7 @@ window.VEFR_DESCENT = (function () {
     floorSize: floorSize, floorKindOf: floorKindOf, mobsAt: mobsAt, mobDrops: mobDrops, placeBooks: placeBooks,
     xpFor: xpFor,
     ensureRegion: ensureRegion, onEnter: onEnter, entryHere: entryHere,
-    wireEntry: wireEntry, docKey: docKey,
+    wireEntry: wireEntry, docKey: docKey, deathResume: deathResume,
     loadDoc: loadDoc, saveDoc: saveDoc, trimDoc: trimDoc, fitDoc: fitDoc,
     saveRefusal: saveRefusal,
     docBytes: bytesOf, floorBytes: floorBytes,
