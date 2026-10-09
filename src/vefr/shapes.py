@@ -361,7 +361,7 @@ def _element_problem(block, key, value, index, path):
         return Problem(
             'not-in-choices', pointer,
             _say(block, key, 'not-in-choices').format(
-                name=block.name, key=key.name, path=here,
+                name=block.name, key=key.name, path=here, value=value,
                 choices=_render_choices(key.choices)))
     if key.kind == 'words':
         if isinstance(value, str) and WORD.fullmatch(value):
@@ -440,10 +440,15 @@ def _value_problem(block, key, value, path):
     pointer = f'/{block.name}/{key.name}'
     if key.kind == 'enum':
         if value not in key.choices:
+            # `value` is offered to the sentence as well as `choices`: a
+            # closed set a pack may name is worth naming the refused name
+            # in, the way `unknown-key` names the key it does not hold.
+            # A value that is not one of the choices is refused the same
+            # way whatever its type, so a non-string is named too.
             return Problem(
                 'not-in-choices', pointer,
                 _say(block, key, 'not-in-choices').format(
-                    name=block.name, key=key.name, path=path,
+                    name=block.name, key=key.name, path=path, value=value,
                     choices=_render_choices(key.choices)))
         return None
     if not _type_ok(key.kind, value):
@@ -739,6 +744,12 @@ FOG_RADIUS_MAX = SIZE_WIDTH_HI // 4
 # adds groups per floor stops at.
 GROUPS_PER_FLOOR_MAX = next(k.hi for k in GROUPS.keys if k.name == 'per_floor')
 
+# What to draw around the arrival tile: the disc a Section has always got,
+# or the square a floor of rooms is shaped like. `circle` is first because
+# it is the default and because a sentence reads its choices in this
+# order: "must be \"circle\" or \"square\"".
+FOG_SHAPES = ('circle', 'square')
+
 # How far a Section sees. The lit area on a generated floor is a filled
 # disc of `radius` tiles around the arrival tile, so the radius reads as
 # a fraction of the floor the same Section declares rather than as a
@@ -758,8 +769,20 @@ GROUPS_PER_FLOOR_MAX = next(k.hi for k in GROUPS.keys if k.name == 'per_floor')
 # ASK for and changes nothing a pack left out.
 FOG = Block(
     name='fog',
+    # The example stays the radius alone, which is still a whole valid
+    # block. `missing-key` quotes it, so a Section whose fog names no
+    # radius is refused with the words it was refused with before this
+    # key existed.
     example='{"radius": 4}',
-    keys=(Key('radius', 'int', lo=2, hi=FOG_RADIUS_MAX, required=True),),
+    keys=(
+        Key('radius', 'int', lo=2, hi=FOG_RADIUS_MAX, required=True),
+        # What the lit area is drawn as. Left out, it is a circle - the
+        # only thing that was ever drawn - so a Section written before
+        # this key validates and plays exactly as it did. The refused
+        # value is named in the sentence, the way an unknown key is.
+        Key('shape', 'enum', choices=FOG_SHAPES,
+            say={'not-in-choices': '{path} must be {choices}, not {value!r}'}),
+    ),
     say={'missing-key': '{name} must hold its {key}, such as {example}'},
 )
 

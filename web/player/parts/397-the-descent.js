@@ -646,6 +646,12 @@ window.VEFR_DESCENT = (function () {
     if (!up || !down) return null;
     var fog = (section && typeof section.fog === 'object') ? section.fog : null;
     var radius = (fog && isWhole(fog.radius)) ? fog.radius : DEFAULT_FOG_RADIUS;
+    // The twin of delve.py's `block_fog`: the shape rides along only when
+    // it is not the default, so a Section that names nothing and one that
+    // names "circle" produce the same floor record on both sides of the
+    // parity harness.
+    var blockFog = { radius: Math.max(1, radius) };
+    if (fog && fog.shape === 'square') blockFog.shape = 'square';
     return {
       name: floorName(at.section, at.cycle, at.k), key: key,
       identity: { gen: GEN_VERSION, hash: sectionHash(section), key: key },
@@ -659,7 +665,7 @@ window.VEFR_DESCENT = (function () {
       warden: wardenRecord(section, at.k, at.cycle, tileOrNull(floor.anchors.warden)),
       vault: vaultRecord(floor, section, at.k, at.cycle),
       legend: sectionLegend(section),
-      fog: { radius: Math.max(1, radius) }
+      fog: blockFog
     };
   }
 
