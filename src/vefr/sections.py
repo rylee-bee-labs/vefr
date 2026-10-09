@@ -63,7 +63,20 @@ TOUCH POINTS (written down before the first edit, as the slice asks)
 | the sweep over Sections | `locks.section_findings`, printed by `cmd_map` |
 | the bake | `cmd_delve --section`, which wires the doors and records the landings |
 | the golden | `tests/golden/validator/cases.json`, block `section` |
-| the tests | `tests/test_sections_e4.py`, two packs under `tests/fixtures/sections/` |
+| the tests | `tests/test_sections_e4.py`, the packs under `tests/fixtures/sections/` |
+
+THE MOB COUNT
+
+`mob_count` is the pack's own answer to how many monsters a floor carries,
+and it is read before the first draw of the pop stage rather than drawn:
+`{"1": 4, "from": 12}` is four on the first floor and twelve on every other
+floor of the Section, and a Section that writes no `mobs` key at all is the
+area budget it always was (`walkable // 30`, clamped to 4..36) - the same
+number in Python (`delve_v3.mob_budget`) and in the player's twin
+(`mobBudget` in part 396, which part 397 calls). It changes the POP stream
+and nothing else: the `size`, `plan` and `layout` streams do not read it, so
+a pack that sets a count on a Section it has already placed things on by
+coordinate invalidates nothing it placed.
 
 NOT IN THIS SLICE
 
@@ -433,6 +446,90 @@ def floor_kind(section: dict, k: int, run_seed: str, cycle: int = 0) -> str:
     kinds = specials(section)
     rng = prng(f'v3|{floor_key(run_seed, section, cycle, k)}|special')
     return kinds[int(rng() * len(kinds))]
+
+
+# ------------------------------------------------------------ the mob count
+
+# The key a Section writes its own monster count into, and the one entry of
+# that key which is not a floor. A count may be written against one floor of
+# the Section (`"1": 4` - four monsters on the floor a hero comes down to) or
+# against every floor the Section did not name (`"from": 12`), and the two
+# answers together are what a pack writes when the first floor is gentle and
+# the rest are not: `{"1": 4, "from": 12}`.
+MOBS_KEY = 'mobs'
+MOBS_EVERY = 'from'
+
+# The floors a count may name, which is the range `floors` itself is held to:
+# a Section has at most ninety-nine floors, so a count against a hundredth
+# is a count no floor can read, and `vefr check` refuses it rather than
+# letting a pack believe it is thinning a floor it does not have.
+MOB_FLOOR_MAX = 99
+
+
+def _floor_number(key) -> int | None:
+    """A `mobs` table's key as a floor number, or None when it names none.
+
+    The one rule, and it is the same rule in both languages: the key is a
+    floor only if it is the decimal spelling of that floor - `"3"` is three
+    and `"03"`, `"+3"`, `" 3"` and `"three"` are nothing at all, so a key a
+    floor would never look up is not quietly a floor either.
+
+    ASCII digits only: `str.isdigit` is true of `"٣"` and `"²"` as well, and
+    `int("²")` raises rather than answering.
+    """
+    if not isinstance(key, str) or not key.isascii() or not key.isdigit():
+        return None
+    number = int(key)
+    if number < 1 or number > MOB_FLOOR_MAX or str(number) != key:
+        return None
+    return number
+
+
+def mobs_of(section: dict) -> tuple[dict[int, int], int | None]:
+    """A Section's own `mobs` table: `(count by floor, every other floor)`.
+
+    `({"1": 4, "from": 12})` is `({1: 4}, 12)`; a Section that names no
+    count at all is `({}, None)`, which is every Section written before
+    this key existed and is not an error. An entry that is not a whole
+    number of monsters is left out rather than raised: `vefr check` is what
+    says a bad count out loud, and a sweep that stopped on one would check
+    none of the other floors - the same rule `load` and `size_range` follow.
+    """
+    raw = section.get(MOBS_KEY) if isinstance(section, dict) else None
+    by_floor: dict[int, int] = {}
+    every: int | None = None
+    if not isinstance(raw, dict):
+        return by_floor, every
+    for key, value in raw.items():
+        if not isinstance(value, int) or isinstance(value, bool):
+            continue
+        if key == MOBS_EVERY:
+            every = value
+            continue
+        number = _floor_number(key)
+        if number is not None:
+            by_floor[number] = value
+    return by_floor, every
+
+
+def mob_count(section: dict, k: int) -> int | None:
+    """The monsters floor `k` of a Section carries because the pack said so.
+
+    `None` is the whole of the answer for a Section that names nothing for
+    that floor, and the caller reads it as "use the area budget" - which is
+    what every floor of every Section written before this key did, and what
+    every floor a Section names only some of still does. A floor the pack
+    named wins over `from`, `from` wins over the area budget, and neither
+    is a draw: the count is read off the pack before the first draw of the
+    pop stream, so a Section that sets it draws exactly the monsters the
+    floor has room for on the same stream it always used.
+    """
+    by_floor, every = mobs_of(section)
+    if not by_floor and every is None:
+        return None
+    if isinstance(k, int) and not isinstance(k, bool) and k in by_floor:
+        return by_floor[k]
+    return every
 
 
 # ------------------------------------------------------------------ families

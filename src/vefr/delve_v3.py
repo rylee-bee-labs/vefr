@@ -73,7 +73,9 @@ STAIR_CLEAR = 7
 # One floor tile this many times is one monster slot, before the clamps.
 # `MOBS_MAX` is twice a number: the top of the budget clamp, and ADR
 # 0014's hard cap of 36 monsters a floor. They are the same ceiling, so
-# they are the same constant.
+# they are the same constant - and it is a third thing, the top of the
+# range `shapes.SECTION`'s `mobs` key is held to, so a count past it is
+# refused by `vefr check` rather than clamped in silence.
 TILES_PER_MOB = 30
 MOBS_MIN = 4
 MOBS_MAX = 36
@@ -330,6 +332,43 @@ def _draw_family(rng, families: list[dict]) -> str:
         if roll < walked:
             return family["family"]
     return families[-1]["family"]
+
+
+def mob_budget(section: dict, walkable: int, k: int) -> int:
+    """How many monsters this floor carries, and the one place that says so.
+
+    Two answers, in this order, and the first one the pack wrote wins:
+
+    - the count `section["mobs"]` names for floor `k` (vefr#357) - four on
+      a floor the pack named four, zero on a floor it named zero, and the
+      same number for `k` in every language because it is pack data;
+    - otherwise the area budget, one monster per `TILES_PER_MOB` walkable
+      tiles, clamped into `MOBS_MIN..MOBS_MAX`.
+
+    `walkable` is the caller's own count of the floor's walkable tiles and
+    is not re-measured here: the v3 pop stage counts the canvas and
+    `vefr.delve` counts the rows, and each counts what it always counted.
+
+    A named count is clamped to `0..MOBS_MAX` rather than to
+    `MOBS_MIN..MOBS_MAX`, because a pack that wrote zero meant zero and one
+    that wrote four meant four on a floor small enough to hold four. The
+    clamp is still here for a Section read off disk without its check, the
+    same reason `sections.size_range` clamps into `SIZE_BOUNDS`. It is not
+    a draw: `k` and the count are read before the pop stream's first draw,
+    so a Section that sets `mobs` opens the same three streams as one that
+    does not.
+
+    The JavaScript twin is `mobBudget` in part 396, published as
+    `VEFR_DELVE.v3MobBudget` and called from part 397's own `mobBudget` as
+    well as from the pop stage - one implementation on both sides of the
+    player, beside this one on this side.
+    """
+    from . import sections  # here, not at the top: sections imports this module
+
+    named = sections.mob_count(section, k)
+    if named is not None:
+        return min(MOBS_MAX, max(0, named))
+    return min(MOBS_MAX, max(MOBS_MIN, walkable // TILES_PER_MOB))
 
 
 def _read_size(size_range) -> tuple[int, int]:
@@ -1652,7 +1691,14 @@ def _at_of(placement: dict | None, name: str) -> tuple[int, int] | None:
 # small box of tiles a minion of that group may stand on.
 #
 # The budget is not a draw:
-#       budget = clamp(walkable // TILES_PER_MOB, MOBS_MIN, MOBS_MAX).
+#       budget = the count section["mobs"] names for this floor, else
+#                clamp(walkable // TILES_PER_MOB, MOBS_MIN, MOBS_MAX).
+# A Section that names a count names it for its own floors (`"1": 4`) and
+# for the rest (`"from": 12`); a Section that names none is the area
+# budget above, exactly as it was before the key existed. Either way it is
+# read before the first draw and moves no other stage. `mob_budget` is
+# where both answers live, with the JavaScript twin's beside them.
+#
 # The hard caps are applied where the stage says and not before: 36
 # monsters a floor, 2 lone elites, 3 groups, 4 members to a group, and
 # one elite-led group per 8 rooms (never below 1 while the pack's
@@ -1885,8 +1931,13 @@ def _corridor_regions(canvas: Canvas) -> dict[int, int]:
 
 def _pop_stage(rng, canvas: Canvas, graph: Graph, plan: dict, section: dict,
                up: tuple[int, int], down: tuple[int, int],
-               secrets: list[list[int]], floor_key: str):
-    """The pop stage: elites, groups, randoms and chests."""
+               secrets: list[list[int]], floor_key: str, k: int = 1):
+    """The pop stage: elites, groups, randoms and chests.
+
+    `k` is `depth`, the floor's 1-based position in its Section, and it is
+    what the Section's own `mobs` table is read against (`mob_budget`). It
+    is read, never drawn, and no other stage of the floor is given it.
+    """
     # The pool, in the order this floor's seed scatters it (see
     # `_spread`). One sort, before the first draw, and no draw spent on
     # it: the pool is the same set of tiles either way, only the order
@@ -2002,8 +2053,11 @@ def _pop_stage(rng, canvas: Canvas, graph: Graph, plan: dict, section: dict,
     # The budget. `MOBS_MAX` is this clamp's ceiling and is also ADR
     # 0014's cap of 36 monsters, so nothing below can pass it. The
     # elites and the group members below are reserved out of it FIRST;
-    # the randoms fill whatever is left over.
-    budget = min(MOBS_MAX, max(MOBS_MIN, len(canvas.walk) // TILES_PER_MOB))
+    # the randoms fill whatever is left over. A Section that names its
+    # own count for this floor (`mobs`) replaces the area budget whole -
+    # see `mob_budget`, which is also where `delve.mobs_at` and the
+    # player's twin get theirs.
+    budget = mob_budget(section, len(canvas.walk), k)
 
     # 1. Elites, in the ADR's order and before anything else.
     #
@@ -2351,7 +2405,7 @@ def _attempt(floor_key: str, width: int, height: int, section: dict,
     up = (anchors["up"][0], anchors["up"][1])
     down = (anchors["down"][0], anchors["down"][1])
     spawns, chests = _pop_stage(pop_rng, canvas, graph, plan, section, up, down,
-                                secrets, floor_key)
+                                secrets, floor_key, depth)
 
     floor = {
         "gen": 3,
@@ -2470,8 +2524,8 @@ def generate_floor_v3(seed: str, size_range, section: dict, floor_kind: str,
 
     `size_range` is the chosen `(w, h)` of the floor and nothing else.
     `section` is a Section pack; only `id`, `rooms`, `families`, `elites`,
-    `groups`, `pois`, `stamps` and `vault` are read, every other key is
-    defaulted, and a missing key never raises. `floor_kind` is one of
+    `groups`, `mobs`, `pois`, `stamps` and `vault` are read, every other key
+    is defaulted, and a missing key never raises. `floor_kind` is one of
     `normal`, `treasure`, `infested` or `hub`.
 
     `stamp_pack` is the pack's stamp set as `stamps.load` hands it over:

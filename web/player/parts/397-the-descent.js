@@ -346,22 +346,24 @@ window.VEFR_DESCENT = (function () {
     return hash12(canonical(stamps.length ? { section: section, stamps: stamps } : section));
   }
 
-  // How many randoms this floor's area asks for. The budget is not a
-  // draw: it is the same area budget the v3 pop stage clamps (PLAN.md
-  // section 2, step 4 - "randoms by area budget"), read off the floor's
-  // own walkable tiles. One tile TILES_PER_MOB times is one monster slot,
-  // clamped to the same two numbers, so a descent Section carries no
-  // `mobs` key at all - the count is generator policy, not pack data.
-  // The three numbers are `VEFR_DELVE.v3Constants`, part 396's own.
-  function mobBudget(rows) {
-    var C = (window.VEFR_DELVE && window.VEFR_DELVE.v3Constants) || {};
-    var per = C.TILES_PER_MOB, lo = C.MOBS_MIN, hi = C.MOBS_MAX;
+  // How many randoms this floor carries. Two answers, in this order: the
+  // count the Section's own `mobs` table names for this floor (vefr#357 -
+  // four on a floor the pack named four, zero on a floor it named zero, and
+  // `from` for every floor it did not name), or, for a Section that names
+  // none for it, the area budget (PLAN.md section 2, step 4 - "randoms by
+  // area budget") the v3 pop stage also clamps. The budget is not a draw
+  // either way.
+  // The rule itself is `VEFR_DELVE.v3MobBudget`, part 396's own - the twin of
+  // `vefr.delve_v3.mob_budget`, which `vefr.delve._mob_budget` calls the
+  // same way. What lives here is the one thing this part knows that 396 does
+  // not: how many walkable tiles this floor's rows carry.
+  function mobBudget(rows, section, k) {
     var walkable = 0;
     for (var y = 0; y < rows.length; y++) {
       var row = rows[y], at = row.indexOf('.');
       while (at !== -1) { walkable++; at = row.indexOf('.', at + 1); }
     }
-    return Math.min(hi, Math.max(lo, Math.floor(walkable / per)));
+    return window.VEFR_DELVE.v3MobBudget(section, walkable, k);
   }
 
   // A Section names a Blueprint family by id and carries no record of
@@ -409,9 +411,12 @@ window.VEFR_DESCENT = (function () {
     return range[0] <= k && k <= range[1];
   }
 
+  // `k` is the floor's 1-based position in its Section, which is what the
+  // Section's own `mobs` table is read against. The twin of
+  // `vefr.delve.mobs_at`.
   function mobsAt(key, section, rows, up, down, k) {
     var rng = window.VEFR_DELVE.prng(streamSeed(key, 'pop'));
-    var count = mobBudget(rows);
+    var count = mobBudget(rows, section, k);
     var families = familiesOf(section).filter(function (f) {
       return familyOnFloor(f, k);
     });

@@ -132,10 +132,17 @@
   var STAIR_CLEAR = 7;
 
   // One floor tile this many times is one monster slot, before the clamps.
-  // MOBS_MAX is both the top of the budget clamp and ADR 0014's hard cap.
+  // MOBS_MAX is both the top of the budget clamp and ADR 0014's hard cap,
+  // and it is a third thing: the top of the range `shapes.SECTION`'s `mobs`
+  // key is held to, so a count past it is refused by `vefr check` rather
+  // than clamped in silence.
   var TILES_PER_MOB = 30;
   var MOBS_MIN = 4;
   var MOBS_MAX = 36;
+
+  // The floors a `mobs` count may name, the range `floors` itself is held to.
+  // The twin of `vefr.sections.MOB_FLOOR_MAX`.
+  var MOB_FLOOR_MAX = 99;
 
   // ADR 0014's hard caps, applied AFTER the omens would be. A cap that is hit
   // stops further draws of that kind; it neither raises nor fails the floor.
@@ -362,6 +369,70 @@
       if (roll < walked) return families[j].family;
     }
     return families[families.length - 1].family;
+  }
+
+  // A `mobs` table's key as a floor number, or 0 when it names no floor. The
+  // twin of `vefr.sections._floor_number`: a key is a floor only if it is the
+  // decimal spelling of that floor, so "03", "+3" and "three" name nothing.
+  function floorOfKey(key) {
+    if (typeof key !== 'string' || !/^[0-9]+$/.test(key)) return 0;
+    var number = parseInt(key, 10);
+    if (number < 1 || number > MOB_FLOOR_MAX) return 0;
+    return String(number) === key ? number : 0;
+  }
+
+  // The Section's own monster count, as `floors` (a table of floor -> count)
+  // and `every` (the `from` entry). `{floors: {}, every: null}` is a Section
+  // that names no count at all, which is every Section written before
+  // vefr#357. An entry that is not a whole number is left out rather than
+  // raised: `vefr check` is what says a bad count out loud. The twin of
+  // `vefr.sections.mobs_of`.
+  function readMobs(section) {
+    var raw = section ? section.mobs : null;
+    var out = { floors: {}, every: null };
+    if (!isPlainObject(raw)) return out;
+    for (var key in raw) {
+      if (!Object.prototype.hasOwnProperty.call(raw, key)) continue;
+      var value = raw[key];
+      if (typeof value !== 'number' || !Number.isInteger(value)) continue;
+      if (key === 'from') { out.every = value; continue; }
+      var floor = floorOfKey(key);
+      if (floor) out.floors[floor] = value;
+    }
+    return out;
+  }
+
+  // The count floor `k` carries because the pack said so, or null when the
+  // Section names nothing for it and the area budget stands. A floor the pack
+  // named wins over `from`; `from` wins over the area budget; neither is a
+  // draw. The twin of `vefr.sections.mob_count`.
+  function mobCount(section, k) {
+    var table = readMobs(section);
+    var named = false;
+    for (var floor in table.floors) {
+      if (Object.prototype.hasOwnProperty.call(table.floors, floor)) {
+        named = true;
+        break;
+      }
+    }
+    if (!named && table.every === null) return null;
+    if (Number.isInteger(k) && Object.prototype.hasOwnProperty.call(
+        table.floors, k)) return table.floors[k];
+    return table.every;
+  }
+
+  // How many monsters this floor carries. The Section's own count for floor `k`
+  // when it names one - clamped to 0..MOBS_MAX, because a pack that wrote zero
+  // meant zero and one that wrote four meant four - and otherwise the area
+  // budget: one slot per TILES_PER_MOB walkable tiles, clamped into
+  // MOBS_MIN..MOBS_MAX. `walkable` is the caller's own count and is not
+  // re-measured. Read before the first draw, never drawn, and the `size`,
+  // `plan` and `layout` streams do not see it. The twin of
+  // `vefr.delve_v3.mob_budget`.
+  function mobBudget(section, walkable, k) {
+    var named = mobCount(section, k);
+    if (named !== null) return Math.min(MOBS_MAX, Math.max(0, named));
+    return Math.min(MOBS_MAX, Math.max(MOBS_MIN, Math.floor(walkable / TILES_PER_MOB)));
   }
 
   // The floor size, and only the `(w, h)` form of it: a pair of whole numbers
@@ -1783,7 +1854,13 @@
   // small box of tiles a minion of that group may stand on.
   //
   // The budget is not a draw:
-  //       budget = clamp(walkable // TILES_PER_MOB, MOBS_MIN, MOBS_MAX).
+  //       budget = the count section["mobs"] names for this floor, else
+  //                clamp(walkable // TILES_PER_MOB, MOBS_MIN, MOBS_MAX).
+  // A Section that names a count names it for its own floors ("1": 4) and for
+  // the rest ("from": 12); a Section that names none is the area budget above,
+  // exactly as it was before the key existed. Either way it is read before the
+  // first draw and moves no other stage. `mobBudget` is where both answers live.
+  //
   // The hard caps are applied where the stage says and not before: 36
   // monsters a floor, 2 lone elites, 3 groups, 4 members to a group, and one
   // elite-led group per 8 rooms (never below 1 while the pack's
@@ -2054,7 +2131,10 @@
   }
 
   // The pop stage: elites, groups, randoms and chests.
-  function popStage(rng, canvas, graph, plan, section, up, down, secrets, floorKey) {
+  // `k` is `depth`, the floor's 1-based position in its Section, and it is
+  // what the Section's own `mobs` table is read against (`mobBudget`). It is
+  // read, never drawn, and no other stage of the floor is given it.
+  function popStage(rng, canvas, graph, plan, section, up, down, secrets, floorKey, k) {
     // The pool, in the order this floor's seed scatters it. One sort, before
     // the first draw, and no draw spent on it: the pool is the same set of
     // tiles either way, only the order it is walked in changes.
@@ -2137,9 +2217,9 @@
     // The budget. MOBS_MAX is this clamp's ceiling and is also ADR 0014's cap
     // of 36 monsters, so nothing below can pass it. The elites and the group
     // members below are reserved out of it FIRST; the randoms fill whatever is
-    // left over.
-    var budget = Math.min(MOBS_MAX,
-      Math.max(MOBS_MIN, Math.floor(canvas.walk.size / TILES_PER_MOB)));
+    // left over. A Section that names its own count for this floor (`mobs`)
+    // replaces the area budget whole - see `mobBudget`.
+    var budget = mobBudget(section, canvas.walk.size, k);
 
     // 1. Elites, in the ADR's order and before anything else. The count draw
     // is a statement of its own, made BEFORE the loop: a pack with an elite
@@ -2476,7 +2556,7 @@
     var up = [anchors.up[0], anchors.up[1]];
     var down = [anchors.down[0], anchors.down[1]];
     var popped = popStage(popRng, canvas, graph, plan, section, up, down,
-                          graphed.secrets, floorKey);
+                          graphed.secrets, floorKey, depth);
 
     var floor = {
       gen: 3,
@@ -2664,6 +2744,7 @@
     TILES_PER_MOB: TILES_PER_MOB,
     MOBS_MIN: MOBS_MIN,
     MOBS_MAX: MOBS_MAX,
+    MOB_FLOOR_MAX: MOB_FLOOR_MAX,
     LONE_ELITES_MAX: LONE_ELITES_MAX,
     GROUPS_MAX: GROUPS_MAX,
     GROUP_MEMBERS_MAX: GROUP_MEMBERS_MAX,
@@ -2697,5 +2778,12 @@
 
   D.v3Attempt = v3Attempt;
   D.generateFloorV3 = generateFloorV3;
+  // The monster count of one floor, for part 397's play-time descent: the
+  // Section's own `mobs` for floor `k` where it names one, the area budget
+  // otherwise. One implementation for both call sites in the player, beside
+  // one in Python (`vefr.delve_v3.mob_budget`, which `vefr.delve._mob_budget`
+  // calls the same way). `walkable` is the caller's own count of the floor's
+  // walkable tiles and is never re-measured here.
+  D.v3MobBudget = mobBudget;
 })();
 // -- delve v3 end --
