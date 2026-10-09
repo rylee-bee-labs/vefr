@@ -93,7 +93,7 @@ def _walk(plan, start, goal, avoid=(), what=""):
     hero who stood still.
     """
     path = _path(plan, start, goal, avoid)
-    assert path, f"no walk {what or f'{start} -> {goal}'}"
+    assert path, f"no walk from {start} to {goal}" + (f" ({what})" if what else "")
     return path
 
 
@@ -148,7 +148,7 @@ def fall(tmp_path_factory):
     walk += [["dir", step] for step in to_vermin]
     # The last press of that walk is the bump that kills it; the two after
     # it are the step onto its tile, which is what takes the drop.
-    walk += [["dir", to_vermin[-1]]] * 2
+    walk += [["dir", to_vermin[-1]], ["dir", to_vermin[-1]]]
     walk += [["dir", step] for step in to_brute]
     case = {"floor": FLOOR, "wake": plan["anchors"]["up"], "walk": walk,
             "fight": {"dir": to_brute[-1], "presses": PRESSES}}

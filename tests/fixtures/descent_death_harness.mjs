@@ -49,6 +49,10 @@ const press = (name) => {
 };
 const same = (a, b) => Array.isArray(a) && Array.isArray(b)
   && a.length === b.length && a.every((v, i) => v === b[i]);
+// The dpad's own order, and the tile each way moves: a fight turns
+// through these when a press is refused.
+const DIRS = ['up', 'down', 'left', 'right'];
+const VEC = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 
 async function main() {
   for (let i = 0; i < 60 && !document.getElementById('ts-enter'); i++) await wait(50);
@@ -67,16 +71,29 @@ async function main() {
   // The fight: one way in, over and over, until the hero is found whole
   // again on the floor's own up stair. `hurt` keeps a hero who never
   // lost a hit point from being read as a wake.
+  //
+  // A press the engine refuses (a wall, the edge of the floor) is not
+  // even a turn, so a fight that began facing one would never have
+  // happened at all. When a press neither moves the hero nor bumps
+  // something, the next one turns instead.
   let died = false;
   let presses = 0;
   let hurt = false;
+  let stuck = false;
   const fight = plan.fight || {};
+  let dir = fight.dir || 'down';
   for (let i = 0; i < (fight.presses || 0); i++) {
-    press(fight.dir);
+    const before = (window.VEFR_COMBAT.hero || {}).at || [];
+    if (stuck) dir = DIRS[(DIRS.indexOf(dir) + 1) % DIRS.length];
+    const [dx, dy] = VEC[dir] || VEC.down;
+    const bumping = (window.VEFR_COMBAT.enemies || []).some((e) =>
+      e.alive && e.at[0] === before[0] + dx && e.at[1] === before[1] + dy);
+    press(dir);
     presses++;
     await wait(20);
-    const snap = window.VEFR_COMBAT || {};
-    const hero = snap.hero || {};
+    const hero = (window.VEFR_COMBAT || {}).hero || {};
+    const after = hero.at || [];
+    stuck = !bumping && after[0] === before[0] && after[1] === before[1];
     if (typeof hero.hp === 'number' && hero.hp < hero.max) hurt = true;
     if (hurt && same(hero.at, plan.wake) && hero.hp === hero.max) { died = true; break; }
   }
