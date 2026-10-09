@@ -208,6 +208,12 @@ def load_pack(pack_dir: Path) -> dict:
         # loads exactly as before, and the validator sees nothing new.
         if 'sound' in config:
             unified['sound'] = config['sound']
+        # The pack's own words for the action-critical lines the engine
+        # speaks (vefr #259), carried through ONLY when the pack declares
+        # them: a pack with none loads exactly as before, and the
+        # validator sees nothing new.
+        if 'player_words' in config:
+            unified['player_words'] = config['player_words']
         # Every act, in sorted order, each with its own world.json
         # fields plus `region_geo` (that act's own maps + contracts).
         # The validator checks act 2 and later against their own
@@ -1277,6 +1283,30 @@ def sound_errors(w: dict) -> list[str]:
     if 'sound' not in w:
         return []
     return [p.sentence for p in shapes.check(shapes.BLOCKS['sound'], w['sound'])]
+
+
+def player_words_errors(w: dict) -> list[str]:
+    """Every problem with a pack's optional `player_words` block.
+
+    The player's own words for the action-critical lines the engine
+    speaks (vefr #259: a hint that reads "To reach floor-1, go
+    north-west" names a region id where the pack's name for the place
+    belongs). A pack may name its own word for any of them and may
+    name none: a pack that declares no `player_words` gets nothing here
+    at all and plays the engine's own wording byte for byte, which is
+    why this says nothing whatever about silence.
+
+    What is refused is a word that is not one: a value that is not a
+    string, one that says nothing (empty or only spaces), one that names
+    no `{place}` slot for the engine to fill, and one naming a key the
+    message table does not have. Each is one plain sentence, with the
+    file and the key in front of it. See `docs/guides/rulesets.md`.
+    """
+    if 'player_words' not in w:
+        return []
+    return _shape_sentences(
+        'world.json', shapes.check(shapes.BLOCKS['player_words'],
+                                   w['player_words']))
 
 
 def descent_errors(w: dict, pack_dir=None) -> list[str]:
@@ -2797,6 +2827,11 @@ def validate(w: dict, pack_dir: Path | None = None) -> list[str]:
     # checked beside the other optional catalogs. A pack that declares
     # none gets nothing here.
     errors.extend(sound_errors(w))
+    # The pack's optional player words (vefr #259): the pack's own
+    # wording for the action-critical lines the engine speaks. A pack
+    # that declares none gets nothing here and says nothing else about
+    # it - the engine's own words are its own business.
+    errors.extend(player_words_errors(w))
     # The pack's optional descent block (slice E1): the run seed, the
     # tile the descent starts from and its Sections. A pack that declares
     # none gets nothing here.

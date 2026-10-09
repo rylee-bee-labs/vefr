@@ -3430,6 +3430,43 @@ function rulesStartsNow() {
   return !RULES_SAVE_LOADED;
 }
 
+// ---- the engine's message table ----
+// Every action-critical line a player reads in order to act lives
+// here, once, with the engine's known-good wording as each entry's
+// default. A pack may name its own word for a key (`player_words` in
+// world.json, carried on window.VEFR_WORLD), and that word wins; a
+// pack that names none plays exactly these bytes. vefr #259 is why
+// the table exists: engine wording derived from structure reads "To
+// reach floor-1, go north-west", a region id and a compass where the
+// pack's name for the place and the action belong.
+// The keys are typed once on the Python side (shapes.PLAYER_WORDS in
+// src/vefr/shapes.py, which vefr check speaks refusals from);
+// tests/test_player_words.py fails if the two drift.
+// -- player words start --
+var VEFR_PLAYER_WORDS = {
+  'where_next.goal': 'To reach {place}.',
+  'where_next.reach': 'To reach {place}, go {direction}.',
+  'where_next.here': 'The way to {place} is right here.',
+  'where_next.no_way': 'No way to {place} is declared from here.'
+};
+// The one reader: the pack's word when it supplies a usable one, the
+// engine's own otherwise, with the slots filled from what the engine
+// actually knows. A slot with nothing to fill it stays as written
+// rather than printing "undefined" at a player. A pack word that is
+// not usable - not a string, or only spaces - is not a word: `vefr
+// check` refuses it, and if one ever reached play anyway it must not
+// blank a line the player needs to act.
+function playerWord(key, slots) {
+  var pack = (window.VEFR_WORLD && window.VEFR_WORLD.player_words) || null;
+  var mine = (pack && typeof pack[key] === 'string') ? pack[key].trim() : '';
+  var text = mine || VEFR_PLAYER_WORDS[key] || key;
+  var s = slots || {};
+  return text.replace(/\{(\w+)\}/g, function (slot, name) {
+    return typeof s[name] === 'string' ? s[name] : slot;
+  });
+}
+// -- player words end --
+
 // ---- where next: the point-to hints, kept as player-facing
 // intentions ("Go toward Saltreach.") instead of thrown-away
 // narration. Authored by rules; nothing is inferred. Same wrapped
@@ -3452,7 +3489,10 @@ function rulesNextRecord(place, line) {
   rulesNextLoad();
   // one row per place: the newest word wins
   window.VEFR_NEXT = window.VEFR_NEXT.filter(function (e) { return e.place !== place; });
-  window.VEFR_NEXT.push({ place: place, line: line || ('To reach ' + place + '.') });
+  window.VEFR_NEXT.push({
+    place: place,
+    line: line || playerWord('where_next.goal', { place: place })
+  });
   store.setJSON(rulesNextKey(), window.VEFR_NEXT);
 }
 
@@ -11755,7 +11795,7 @@ function setupTown() {
     }
     var at = fromHere || entrance;
     if (!at) {
-      var lost = 'No way to ' + place + ' is declared from here.';
+      var lost = playerWord('where_next.no_way', { place: place });
       combatSay(lost);
       rulesNextRecord(place, lost);
       return;
@@ -11764,8 +11804,13 @@ function setupTown() {
     var vert = dy < 0 ? 'north' : (dy > 0 ? 'south' : '');
     var horiz = dx < 0 ? 'west' : (dx > 0 ? 'east' : '');
     var dir = vert && horiz ? vert + '-' + horiz : (vert || horiz);
-    var line = dir ? 'To reach ' + place + ', go ' + dir + '.'
-                   : 'The way to ' + place + ' is right here.';
+    // The line the player reads to know what to do, spoken from the
+    // message table rather than built here: a pack may name its own
+    // word for it (part 340), and a pack that names none gets these
+    // exact bytes.
+    var line = dir
+      ? playerWord('where_next.reach', { place: place, direction: dir })
+      : playerWord('where_next.here', { place: place });
     combatSay(line);
     // The hint is an intention, not a flash: it stays in the menu's
     // Where next? panel until the world points somewhere new.
