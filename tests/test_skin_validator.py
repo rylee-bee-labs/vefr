@@ -143,7 +143,9 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # that each changed the player. The value a stack computes on its own is
 # worth nothing here, and neither side's can be carried across a merge.
 # This union carries both moves at once, so the value below was re-measured
-# over the merged weave and is neither side's old value.
+# over the merged weave and is neither side's old value. The lit-area reader
+# also named its local `inLight` (vefr #364), a rename in the same part, so
+# the pin moved once more with the union's re-measure.
 #
 # What was checked before this value was written, and is the reason it is a
 # pack-neutrality proof rather than a golden: the pack's OWN baked content
@@ -151,7 +153,7 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # byte-identical before and after - only the player around them grew - and
 # `worlds/sample-world` declares no skin, so `window.VEFR_SKIN` lands the
 # literal null exactly as it did.
-NO_SKIN_WEAVE_SHA256 = "a3252cb84c9873925872e75074ee46751732af6efd1c15fc99eccd18bfcd5079"
+NO_SKIN_WEAVE_SHA256 = "991dfbe37a6e0a424c3de763f31c580741ff2dd6f78ba212bb8b70d81a7a9bf9"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

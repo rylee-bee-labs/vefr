@@ -10275,10 +10275,10 @@ function setupTown() {
         // line; a square counts the tiles within `fogRadius` steps on
         // each axis, so it holds every tile the circle holds and its
         // corners reach sqrt(2) further out.
-        var lit = square
+        var inLight = square
           ? Math.max(Math.abs(dx), Math.abs(dy)) <= fogRadius
           : dx * dx + dy * dy <= fogRadius * fogRadius;
-        if (lit) out[x + ',' + y] = 1;
+        if (inLight) out[x + ',' + y] = 1;
       }
     }
     return out;
