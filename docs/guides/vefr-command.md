@@ -21,7 +21,7 @@ order `vefr --help` prints them in, too.
 | `vefr chat` | interview a new world into existence | `norns chat` |
 | `vefr map` | rebuild the map from run-length rows | `norns build-map` |
 | `vefr delve` | generate dungeon floors from a seed, or a whole Section, and wire the stairs | `norns delve` |
-| `vefr check` | validate the pack geometry; `--release` lists every draft word (`--strict` to fail on one); `--live URL` validates a running deployment | `norns validate` / `norns verify` |
+| `vefr check` | validate the pack - geometry, item locks, Sections and stamped rooms (see below); `--release` lists every draft word (`--strict` to fail on one); `--live URL` validates a running deployment | `norns validate` / `norns verify` |
 | `vefr weave` | package a world into one self-contained HTML file | `ratatoskr weave` |
 | `vefr handbok` | write the mechanics manual from real play | `norns handbok` |
 | `vefr spark` | the resident small brain: `install`, `status`, `smoke`, `task` | `ratatoskr spark` |
@@ -35,6 +35,54 @@ order `vefr --help` prints them in, too.
 Two habits carry over unchanged: validate after every pack write
 (`uv run vefr check --pack worlds/<name>`), and read `--help` for the
 live list straight from the code.
+
+### What `vefr check` actually checks
+
+`vefr check` is not only the geometry. It runs four gates over the pack
+and each fails it on its own plain sentences:
+
+| Gate | What it refuses |
+|---|---|
+| geometry, reachability, voices | `maplab.validate` - a door that names no region, a hero who cannot reach the stair, a region with no walkable tile |
+| item locks | a key that cannot be obtained before its door |
+| Sections | a floor that does not hold over the sweep's seeds |
+| **stamped rooms** | **a required room that never places** |
+
+The stamp gate is `vefr stamp check`'s own work: `vefr check` calls the
+same `stamp_check.report` that command calls, over the same `check-<n>`
+seeds, so there is one copy of the rule rather than two and the two
+doors cannot drift apart. A pack that ships a `stamps/` directory gets
+it; a pack that ships none - every pack in the tree today - is skipped
+before it costs anything and prints nothing.
+
+A refusal reads the way `stamp check` writes it, naming the room and
+the value to fix:
+
+```
+stamp test-alcove: placed on 12 of 64 cellar floors (18%); it needs
+100%. It is 5 wide and cellar floors start at 64. /rows
+```
+
+**The seam: a smaller sweep, no flag.** `vefr stamp check` sweeps 200
+seeds; `vefr check` draws 8 (`cli.CHECK_STAMP_SEEDS`). That is a
+deliberate shape, not a hedge:
+
+- **No flag, no opt-in.** A pack must never be able to be green for
+  free while carrying a room that never places, and a flag is exactly a
+  way to be green for free. The check runs every time.
+- **Small rather than 200, because the sweep is the slow half** and
+  `vefr check` runs after every pack write. Measured: a pack with no
+  `stamps/` is 0.007s before this and 0.008s after (the sweep is
+  skipped); a pack that does ship stamps goes 0.82s to 0.92s.
+- **A room that never places is caught at any seed count.** It places
+  on none of eight floors exactly as it places on none of sixteen
+  hundred, which is what makes the small default safe for the case that
+  was reported.
+- **The gap is named, not hidden.** A room that places on 99% of floors
+  can pass an 8-seed sweep and still fail the 200-seed gate. That gap is
+  what `vefr stamp check --seeds <n>` is for; `vefr check` is the fast
+  gate that must not be able to be green for free, and the standalone
+  gate is the thorough one.
 
 ## Developer verbs
 
