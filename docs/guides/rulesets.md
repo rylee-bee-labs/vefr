@@ -564,6 +564,31 @@ region and behaves exactly as before. `maplab.validate` checks every
 door: `from`/`to` name declared regions, and `at`/`to_at` are inside
 their maps and walkable in their legends.
 
+### One tile, one way out: the descent's entry
+
+A pack's optional `descent` block names the tile the generated floors
+are entered from: `"entry": {"region": "town", "at": [7, 5]}`. That
+entry is a door like any other, so **it cannot stand on a tile an act
+transition already uses.** `vefr check` refuses the pack, in one
+sentence that names the tile and both ends of the door:
+
+```
+FAIL: world.json: descent.entry.at [7, 5] is the door from 'town' to
+'shed': the descent entry and an authored transition cannot share a
+tile, so move one of them
+```
+
+The check reads every act's doors, not just the first act's: an entry
+tile is a pack-level fact, so a door on it in any act is the same
+collision. Move the authored door or the entry - either is the fix.
+
+In play, the descent entry takes its tile: the entry is the pack's
+declared, checked way down, so it is the door that answers Interact
+there, and a pack that was woven anyway leads into the dungeon rather
+than past it (`claimTile` in the descent part). Every other door in the
+pack is untouched, and a pack with no collision plays exactly as it did
+before. Tests: `tests/test_descent_entry_collision.py`.
+
 ### Locked doors
 
 A door or stair may be locked behind a key. A transition may carry an

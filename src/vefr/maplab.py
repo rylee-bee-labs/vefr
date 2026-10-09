@@ -1464,8 +1464,10 @@ def descent_errors(w: dict, pack_dir=None) -> list[str]:
     Sections it walks. A Section may be written out in the block or named
     by id and kept in `sections/<id>.json`; the named ones are resolved
     here, so the check sees the same records the bake will. `shapes`
-    speaks for the block, its entry tile and each Section in it. A pack
-    that declares no descent gets no output at all, exactly as before.
+    speaks for the block, its entry tile and each Section in it, and the
+    entry tile is also compared against every act's doors (vefr#352). A
+    pack that declares no descent gets no output at all, exactly as
+    before.
     """
     if 'descent' not in w:
         return []
@@ -1478,9 +1480,73 @@ def descent_errors(w: dict, pack_dir=None) -> list[str]:
     try:
         resolved = delve_mod.descent_of(w, pack_dir)
     except ValueError as exc:
-        return _shape_sentences('world.json', problems) + [f'world.json: {exc}']
+        return (_shape_sentences('world.json', problems)
+                + _entry_collision_sentences(w, entry)
+                + [f'world.json: {exc}'])
     problems.extend(shapes.check_descent(resolved))
-    return _shape_sentences('world.json', problems)
+    return (_shape_sentences('world.json', problems)
+            + _entry_collision_sentences(w, entry))
+
+
+def _is_tile(value) -> bool:
+    """Whether a pack coordinate is a real [x, y] tile."""
+    return (isinstance(value, (list, tuple)) and len(value) == 2
+            and all(isinstance(v, (int, float)) for v in value))
+
+
+def _same_tile(one, two) -> bool:
+    """Whether two pack coordinates are the same [x, y].
+
+    Both must be two real numbers to compare at all: a door written
+    with a string or a missing half is `shapes`' and the door checks'
+    sentence, not this one's.
+    """
+    return _is_tile(one) and _is_tile(two) and [int(v) for v in one] == [int(v) for v in two]
+
+
+def _entry_collision_sentences(w: dict, entry) -> list[str]:
+    """Every authored door standing on the descent's own entry tile.
+
+    The entry is a door like any other, so a pack that puts an authored
+    transition on the same tile has two ways out of one tile and the
+    player gets whichever the woven list holds first - which used to be
+    the authored one, leaving the dungeon unreachable by walking while
+    both checks passed (vefr#352). So the tile is refused here, with one
+    sentence naming the tile and both regions, and the pack author moves
+    one of the two. At play the descent entry still wins the tile
+    (`claimTile` in the descent part), so a pack woven anyway leads into
+    the dungeon rather than past it.
+
+    Every act's doors are read, not just the first act's: an entry tile
+    is a pack-level fact, so a door on it in any act is the same
+    collision. An acts-shape pack lists act 1's doors twice (once as
+    `transitions`, once as `acts[0]['transitions']`), so a sentence is
+    only said once.
+    """
+    if not isinstance(entry, dict):
+        return []
+    region, at = entry.get('region'), entry.get('at')
+    if not isinstance(region, str) or not _is_tile(at):
+        return []     # `shapes` says what a malformed entry is, in its own words
+    listed = [w.get('transitions')]
+    for act in (w.get('acts') or []):
+        if isinstance(act, dict):
+            listed.append(act.get('transitions'))
+    out: list[str] = []
+    for transitions in listed:
+        for t in (transitions or []):
+            if not isinstance(t, dict) or t.get('from') != region:
+                continue
+            if not _same_tile(t.get('at'), at):
+                continue
+            sentence = (f"descent.entry.at [{at[0]}, {at[1]}] is the door "
+                        f"from '{region}' to '{t.get('to')}': the descent "
+                        f"entry and an authored transition cannot share a "
+                        f"tile, so move one of them")
+            line = f'world.json: {sentence}'
+            if line not in out:
+                out.append(line)
+    return out
 
 
 def town_states_errors(w: dict) -> list[str]:
