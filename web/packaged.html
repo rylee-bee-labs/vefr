@@ -192,6 +192,14 @@
     stroke-linecap: round; stroke-linejoin: round; }
   .gbtn--tool kbd { position: absolute; right: 3px; bottom: 1px; font-size: 0.55rem; line-height: 1; opacity: 0.85; border: 0; background: none; padding: 0; }
   .gbtn--tool[aria-pressed="true"] { border-color: #D8AA4E; box-shadow: inset 0 0 0 2px #D8AA4E; }
+  /* #interact is the one control that keeps its words on its face, so it is never
+     given a shape too small for them (issue #353: at the phone dock's 44 px square
+     the label was cut off - the one labelled button losing its label on the device
+     the owner plays on). The words may wrap onto a second line, but none is ever
+     clipped: `overflow-wrap: anywhere` breaks a word longer than the button, and
+     the pill rules below cap the width in viewport terms, never in the width of
+     the shrink-to-fit `.acts` that holds it. */
+  #interact { line-height: 1.15; text-align: center; white-space: normal; overflow-wrap: anywhere; }
   #menu .menu-sub { margin-top: 18px; }
   /* Display > Sound: the pack's cue switch, drawn only when the pack
      opted in. A real checkbox on a 44px row, in the menu's own ink and
@@ -250,7 +258,12 @@
   .trade-row .trade-name { flex: 1 1 auto; }
   .trade-row .trade-price { color: rgba(244, 238, 221, 0.75); font-size: 0.9rem; white-space: nowrap; }
   .trade-row button { min-height: 44px; }
-  /* choices */
+  /* choices. The row is a child of `.hud-frame`, so this absolute block is placed
+     against the painted play panel and not against the whole page: at 1280x720 the
+     row used to pin 16 px off the window's bottom-left corner, on the parchment
+     surround, and the fight controls read as having fallen out of the game
+     (issue #353). Every other piece of the in-world interface is placed the same
+     way. */
   .verb-row { position: absolute; left: calc(16px + var(--sai-left)); bottom: calc(16px + var(--sai-bottom)); z-index: 2; display: flex; flex-wrap: wrap; gap: 6px; max-width: calc(45% - var(--sai-left)); }
   .verb-row[hidden] { display: none; }
   .verb-row button { background: var(--glass); color: var(--glass-ink); border-color: rgba(242, 236, 221, 0.4); text-transform: none; letter-spacing: 0.02em; font: 700 0.9rem var(--read); }
@@ -289,7 +302,7 @@
     .dpad { left: calc(6px + var(--sai-left)); bottom: calc(6px + var(--sai-bottom)); grid-template-columns: repeat(3, 44px); gap: 2px; }
     .dpad button { width: 44px; height: 44px; }
     .acts { flex-direction: row; align-items: flex-end; right: calc(6px + var(--sai-right)); bottom: calc(6px + var(--sai-bottom)); gap: 2px; }
-    .acts .gbtn--main { width: 52px; height: 52px; border-radius: 50%; padding: 0; font-size: 0.6rem; }
+    .acts .gbtn--main { width: auto; min-width: 44px; max-width: calc(100vw - 176px); height: 52px; border-radius: 999px; padding: 0 10px; font-size: 0.6rem; }
     .acts .gbtn--tool { width: 44px; height: 44px; border-radius: 50%; }
     .acts kbd { display: none; }
   }
@@ -298,7 +311,7 @@
   @container (max-width: 380px) {
     .dpad { left: calc(4px + var(--sai-left)); gap: 0; bottom: calc(8px + var(--sai-bottom)); }
     .acts { right: calc(4px + var(--sai-right)); gap: 0; bottom: calc(8px + var(--sai-bottom)); }
-    .acts .gbtn--main { width: 44px; height: 44px; }
+    .acts .gbtn--main { width: auto; min-width: 44px; max-width: calc(100vw - 176px); height: 44px; border-radius: 999px; padding: 0 10px; font-size: 0.6rem; }
   }
   /* The phone dock (I2, docs/plans/interface/PLAN.md). On a narrow portrait
      window the stage grows to the whole window (publishStage sets
@@ -332,7 +345,9 @@
     grid-template-columns: repeat(3, 44px); gap: 2px;
   }
   #stage.stage--dock .dpad button { width: 44px; height: 44px; }
-  #stage.stage--dock .gbtn--main { width: 44px; height: 44px; border-radius: 50%; padding: 0; font-size: 0.6rem; }
+  /* The dock's Interact is a pill the label fits inside, not a 44 px circle that
+     cuts it off (issue #353). Same 44 px target, same height, same gold. */
+  #stage.stage--dock .gbtn--main { width: auto; min-width: 44px; max-width: calc(100vw - 176px); height: 44px; border-radius: 999px; padding: 0 10px; font-size: 0.6rem; }
   #stage.stage--dock .gbtn--tool { width: 44px; height: 44px; border-radius: 50%; }
   #stage.stage--dock .acts kbd { display: none; }
   /* pause menu */
@@ -445,6 +460,11 @@
           <button type="button" id="bagbtn" class="gbtn gbtn--tool" data-tip="Bag" title="Bag (B)"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 9V7a4 4 0 0 1 8 0v2"/><rect x="4" y="9" width="16" height="12" rx="2"/></svg><span class="sr-only">Bag</span><kbd>B</kbd></button>
           <button type="button" id="explore" class="gbtn gbtn--tool" aria-pressed="false" data-tip="Explore" title="Explore (O)"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg><span class="sr-only">Explore</span><kbd>O</kbd></button>
         </div>
+        <!-- The fight verbs sit inside the HUD frame, so they stand against the painted
+             play panel and not against the page around it (issue #353: at desktop
+             widths the row pinned 16 px off the whole window, on the parchment
+             surround, and read as having fallen out of the game). -->
+        <div class="verb-row" id="verb-row" role="group" aria-label="Combat actions"></div>
       </div>
       <div class="npc-box" id="npc-box" role="dialog" aria-labelledby="npc-name" hidden>
         <p class="speaker" id="npc-name"></p>
@@ -513,7 +533,6 @@
           </div>
         </div>
       </div>
-      <div class="verb-row" id="verb-row" role="group" aria-label="Combat actions"></div>
       <p class="glass" id="combat-log" aria-live="polite"></p>
     </div>
     <section id="kitchen" hidden>
@@ -7030,7 +7049,35 @@ window.VEFR_DESCENT = (function () {
     return (window.VEFR_WORLD && window.VEFR_WORLD.name) || 'world';
   }
 
+  // The URL parameter a caller uses to ask for a run seed of their own:
+  // `player.html?vefr-seed=hello`. Read at call time, so a page opened
+  // with it answers with it and a page opened without it changes not at
+  // all - `vefr look --seed`, a share link and a headless reviewer all
+  // name a seed without editing world.json. Length-capped because the
+  // seed is part of every floor key (and of the save), and a URL is
+  // untrusted input.
+  var SEED_PARAM = 'vefr-seed';
+  var SEED_MAX = 120;
+
+  function seedParam() {
+    try {
+      if (!window.location || !window.location.search) return '';
+      var asked = new URLSearchParams(window.location.search).get(SEED_PARAM);
+      return (typeof asked === 'string') ? asked.trim().slice(0, SEED_MAX) : '';
+    } catch (e) {
+      // A browser without URLSearchParams gets the pack's own seed, the
+      // same one it got before this parameter existed.
+      return '';
+    }
+  }
+
+  // The base seed every floor key is built on. The parameter wins over
+  // the pack's `run_seed` when it is there; the pack's seed is what
+  // every other caller already gets. A pack with no descent never asks
+  // (see `on`), so the parameter is ignored there exactly as it was.
   function baseSeed() {
+    var asked = seedParam();
+    if (asked) return asked;
     var d = def();
     return (d && d.run_seed) || '';
   }
@@ -8707,6 +8754,7 @@ window.VEFR_DESCENT = (function () {
     locate: locate, floorName: floorName, floorKey: floorKey,
     streamSeed: streamSeed, lootSeed: lootSeed, chestSeed: chestSeed,
     runSeed: runSeed, sectionHash: sectionHash, parseName: parseName,
+    baseSeed: baseSeed, seedParam: seedParam, seedFor: seedFor,
     isGenerated: isGenerated, depthOfName: depthOfName, floorPlan: floorPlan,
     floorSize: floorSize, floorKindOf: floorKindOf, mobsAt: mobsAt, mobDrops: mobDrops, placeBooks: placeBooks,
     ensureRegion: ensureRegion, onEnter: onEnter, entryHere: entryHere,

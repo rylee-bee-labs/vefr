@@ -72,6 +72,11 @@
           <button type="button" id="bagbtn" class="gbtn gbtn--tool" data-tip="Bag" title="Bag (B)"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 9V7a4 4 0 0 1 8 0v2"/><rect x="4" y="9" width="16" height="12" rx="2"/></svg><span class="sr-only">Bag</span><kbd>B</kbd></button>
           <button type="button" id="explore" class="gbtn gbtn--tool" aria-pressed="false" data-tip="Explore" title="Explore (O)"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg><span class="sr-only">Explore</span><kbd>O</kbd></button>
         </div>
+        <!-- The fight verbs sit inside the HUD frame, so they stand against the painted
+             play panel and not against the page around it (issue #353: at desktop
+             widths the row pinned 16 px off the whole window, on the parchment
+             surround, and read as having fallen out of the game). -->
+        <div class="verb-row" id="verb-row" role="group" aria-label="Combat actions"></div>
       </div>
       <div class="npc-box" id="npc-box" role="dialog" aria-labelledby="npc-name" hidden>
         <p class="speaker" id="npc-name"></p>
@@ -140,7 +145,6 @@
           </div>
         </div>
       </div>
-      <div class="verb-row" id="verb-row" role="group" aria-label="Combat actions"></div>
       <p class="glass" id="combat-log" aria-live="polite"></p>
     </div>
     <section id="kitchen" hidden>
