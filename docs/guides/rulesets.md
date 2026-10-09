@@ -581,8 +581,9 @@ point:
            "wake": {"region": "town", "at": [11, 11]}}
 ```
 
-`hp`/`atk` default to 6/2. `wake` is where Cozy death wakes the hero;
-it defaults to the act's first region at its `hero_start`. A `wake`
+`hp`/`atk` default to 6/2. `wake` is where Cozy death wakes the hero
+(a floor of the descent answers for itself instead - see "Cozy death"
+below); it defaults to the act's first region at its `hero_start`. A `wake`
 that names no real region is dropped, and one on a missing or solid
 tile falls back to that region's `hero_start` - the baked point is
 always real.
