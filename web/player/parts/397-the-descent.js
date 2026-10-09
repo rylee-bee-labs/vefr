@@ -1127,6 +1127,24 @@ window.VEFR_DESCENT = (function () {
     return townGate(sections()[at.sectionIndex - 1].id, at.cycle);
   }
 
+  // The descent's own way in takes its tile (vefr#352). A door is found
+  // by its region and its tile, first match wins, and the pack's doors
+  // are baked before this one - so an authored transition on the entry
+  // tile used to answer Interact and the dungeon was unreachable by
+  // walking. The entry is the pack's declared, checked way down, so it is
+  // the door that survives on that tile: every other tile, and every
+  // other door in the pack, is untouched. `vefr check` refuses a pack
+  // that writes both on one tile, so this is the fallback for a pack
+  // woven anyway, not a way to author a collision quietly.
+  function claimTile(list, t) {
+    for (var i = list.length - 1; i >= 0; i--) {
+      var one = list[i];
+      if (one && one.from === t.from && Array.isArray(one.at) &&
+          String(one.at) === String(t.at)) list.splice(i, 1);
+    }
+    list.push(t);
+  }
+
   // The stairs of a generated floor: down to the next depth, up to the
   // floor above - and the first floor's stair up is the way home.
   function wireFloor(name, plan) {
@@ -1202,7 +1220,7 @@ window.VEFR_DESCENT = (function () {
     // is what carries the gate on it.
     var gate = gateFor(1);
     if (gate) { stair.requires = { flag: gate }; stair.locked_text = GATE_LOCKED; }
-    pushTransition(list, stair);
+    claimTile(list, stair);
     window.VEFR_TRANSITIONS = list;
   }
 
