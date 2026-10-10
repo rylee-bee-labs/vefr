@@ -597,12 +597,22 @@ A chest book (`chest: yes` in its front matter) may also hold items:
 `drops: cloudy-potion, brass-ring` - a comma-separated list of catalog
 ids, read from `extra` like `chest` already is.
 
-`vefr check` reads a chest's `drops` against the catalog, because the bag
-refuses an id the catalog does not hold: a `drops` line that names no id,
-or ids no declared item answers for, is refused by name (an item declared
-with no `name` is no item - `weave` drops it from the catalog it bakes). A
-chest with no `drops` line at all holds its note and nothing else, and is
-left alone.
+**A `drops` line that pays nothing is refused.** `vefr check` reads a
+chest's `drops` - and an enemy's, and a Blueprint family's - against the
+catalog, because the bag refuses an id the catalog does not hold. An
+`items` entry with no `name` is no item: `weave` drops it from the catalog
+it bakes (`cli._player_items`), and a pack with no `items` at all declares
+none, so every drop check runs and every drop fails.
+
+One rule reads all of them, `library._drop_payout_errors`. A `drops` line
+that names no id at all is refused, and so is any id the catalog does not
+answer for, named one by one. A thing that writes **no `drops` line at
+all** is left alone: a chest holds its note and nothing else, a monster
+carrying nothing is a legitimate monster, and most Section families name
+no drops. Only a line that is written and pays nothing is refused.
+
+An enemy's `drops` is refused by `maplab._enemy_drop_errors`, beside it,
+and says the same thing in the same words.
 
 **The drop.** A killed enemy's drops are left on the tile it died on, as
 a small item marker (the item's sprite, or a dot). Fog rules apply: a
@@ -622,12 +632,15 @@ Baked as `VEFR_ITEMS` (the catalog), a `drops` list on each enemy and
 each book. Code: `src/vefr/cli.py` (`_player_items`, `_drop_ids`) +
 `web/packaged.html` (floor, take, bag panel, HUD strip); tests:
 `tests/test_builder_weave.py` + `tests/test_combat_loop.py` +
-`tests/fixtures/combat_harness.mjs` + `tests/fixtures/make_combat_pack.py`.
+`tests/fixtures/combat_harness.mjs` + `tests/fixtures/make_combat_pack.py`;
+the refused-drop check is `tests/test_empty_enemy_drops.py` +
+`tests/fixtures/make_empty_drops_pack.py`.
 
 Known gaps (this slice): no weight, no using, no dropping, no selling,
 and no identifying - a carried thing is only a name and a picture for
-now. `maplab.validate` does not yet pin the `items`/`drops` shape; the
-bake drops an unknown id instead. The bag has no size limit.
+now. `maplab.validate` does not yet pin the `items` shape; the bake drops
+an unknown id instead, and a `drops` line that resolves to nothing is
+refused rather than dropped quietly (above). The bag has no size limit.
 
 ## rolled loot (first slice: rarity at once, traits hidden)
 
