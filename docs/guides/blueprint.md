@@ -150,7 +150,7 @@ sentence and a JSON pointer.
 | `atk` | attack |
 | `xp` | experience |
 | `sight` | how far it notices the hero |
-| `drops` | a list of item ids the pack declares |
+| `drops` | a list of item ids the pack declares as items a player can be given (an `items` entry with no `name` never reaches the weave, so it is not one) |
 
 <!-- FIELD_KEYS: name, sprite, hp, atk, xp, sight, drops -->
 
@@ -172,7 +172,10 @@ sentence and a JSON pointer.
 
 Unknown keys, unknown families, unknown parents, cycles, duplicate
 ids, a missing `at`, an absent region, a region path outside the pack,
-and an unknown `drops` item all fail. Generated records are written in
+and an unknown `drops` item all fail. A `drops` item the pack declares
+but the weave cannot hand over - an `items` entry with no `name` - fails
+too, in its own words, rather than passing here and paying nothing in
+play. Generated records are written in
 this key order: `id, name, sprite, at, hp, atk, xp, sight, drops`. A family nothing uses is checked too: a broken parent or a cycle there is rejected, so a typo cannot hide until the family is first used. An error about a `drops` list points at the declaration that supplied it (the family's `defaults`, an ancestor's, or the instance's `properties`).
 
 ## Places (format 3)
