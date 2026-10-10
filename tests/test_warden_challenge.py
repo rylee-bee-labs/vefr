@@ -264,13 +264,21 @@ def test_the_walk_finds_the_missing_rule_where_the_author_looks(tmp_path):
 # ---- the drops a warden's own family hands over ---------------------------
 
 def _drop_pack(where, drops):
-    where.mkdir()
+    """A real pack directory: the catalog, the Blueprint and one Section
+    whose warden is that family. The checks are asked of the pack, not of
+    the helper, because a check nothing calls is not a check."""
+    (where / "sections").mkdir(parents=True)
     (where / "world.json").write_text(json.dumps(
         {"items": {"pebble": {"name": "a grey pebble"}}}))
     (where / "blueprint.json").write_text(json.dumps({
         "blueprint": 1,
-        "families": {"rat": {"defaults": {"hp": 1, "atk": 1, "drops": drops}}},
+        "families": {"rat": {"defaults": {"name": "a grey rat", "hp": 1,
+                                          "atk": 1, "sight": 5,
+                                          "drops": drops}}},
         "regions": {}}))
+    section = copy.deepcopy(make_town_pack.SECTIONS["cellar"])
+    section["warden"] = {"family": "rat"}
+    (where / "sections" / "cellar.json").write_text(json.dumps(section, indent=2))
     return where.resolve()
 
 
@@ -279,20 +287,12 @@ def test_a_warden_whose_family_drops_nothing_declared_is_refused(tmp_path):
     drops are its family's `drops` (delve draws them exactly as it draws
     every other monster's), and a drop the bag refuses is a drop that was
     never there."""
-    from vefr import blueprint as bp
-
-    def resolve(source):
-        return lambda fid: bp.resolve_family(source, fid)
-
-    section = {"id": "c", "warden": {"family": "rat"}}
     bad = _drop_pack(tmp_path / "bad", ["brass-key"])
-    assert maplab._warden_drop_errors(
-        bad, section, "sections/c.json", resolve(bp.read(bad / "blueprint.json"))) == [
-        "sections/c.json: /warden/family the warden drops 'brass-key', which "
-        "is not an item world.json declares - the bag will refuse it"]
+    assert maplab.section_errors(bad) == [
+        "sections/cellar.json: /warden/family the warden drops 'brass-key', "
+        "which is not an item world.json declares - the bag will refuse it"]
     good = _drop_pack(tmp_path / "good", ["pebble"])
-    assert maplab._warden_drop_errors(
-        good, section, "sections/c.json", resolve(bp.read(good / "blueprint.json"))) == []
+    assert maplab.section_errors(good) == []
 
 
 def test_a_pack_with_no_catalog_is_checked_and_not_refused(tmp_path):
@@ -313,22 +313,40 @@ def test_a_section_with_no_warden_family_is_not_asked_about_drops(tmp_path):
 def test_a_drop_the_pack_declares_with_no_name_is_still_no_item(tmp_path):
     """`weave` bakes only what has a name and `bagAdd` refuses the rest, so
     an id under a nameless entry is an id no drop can hand over."""
-    where = tmp_path / "nameless"
-    where.mkdir()
-    (where / "world.json").write_text(json.dumps(
-        {"items": {"brass-key": {"sprite": "key"}}}))
-    (where / "blueprint.json").write_text(json.dumps({
+    where = _drop_pack(tmp_path / "nameless", ["brass-key"])
+    world = json.loads((where / "world.json").read_text(encoding="utf-8"))
+    world["items"] = {"brass-key": {"sprite": "key"}}
+    (where / "world.json").write_text(json.dumps(world), encoding="utf-8")
+    said = maplab.section_errors(where)
+    assert len(said) == 1 and "brass-key" in said[0], said
+
+
+def test_vefr_check_names_the_wardens_own_drop_too(tmp_path):
+    """The same sentence at the door the author is standing at: `vefr check`
+    prints these and exits non-zero. The pack is the town fixture with a
+    Blueprint beside it, because that is the shape a descent pack has."""
+    import contextlib
+    import io
+    import types
+    from vefr import cli as cli_mod
+
+    pack = make_town_pack.build(tmp_path)
+    sections = copy.deepcopy(make_town_pack.SECTIONS)
+    sections["cellar"]["warden"] = {"family": "rat"}
+    (pack / "sections" / "cellar.json").write_text(json.dumps(sections["cellar"],
+                                                             indent=2))
+    (pack / "blueprint.json").write_text(json.dumps({
         "blueprint": 1,
-        "families": {"rat": {"defaults": {"hp": 1, "atk": 1,
+        "families": {"rat": {"defaults": {"name": "a grey rat", "hp": 1,
+                                          "atk": 1, "sight": 5,
                                           "drops": ["brass-key"]}}},
         "regions": {}}))
-    from vefr import blueprint as bp
-
-    resolve = lambda src: lambda fid: bp.resolve_family(src, fid)
-    said = maplab._warden_drop_errors(
-        where.resolve(), {"id": "c", "warden": {"family": "rat"}}, "s",
-        resolve(bp.read(where / "blueprint.json")))
-    assert len(said) == 1 and "brass-key" in said[0]
+    buf = io.StringIO()
+    args = types.SimpleNamespace(map_cmd="validate", pack=str(pack))
+    with contextlib.redirect_stdout(buf):
+        code = cli_mod.cmd_map(args)
+    assert code == cli_mod.EXIT_ERROR
+    assert "the warden drops 'brass-key'" in buf.getvalue()
 
 
 # ---- Amendment 1 §5, the two cases E8c had already landed -----------------
