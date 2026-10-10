@@ -619,6 +619,105 @@ def _names_sentence(names: list) -> str:
     return ', '.join(names[:-1]) + ' and ' + names[-1]
 
 
+# ---- the identify service (ADR 0017, T3 slice 2) --------------------------
+# A pack names the place a thing is read at the way it already names a
+# shop: a speaker carries `"identify": "true"` (also `yes`, `1`, or the
+# boolean true) and is the service of its region. Reading is not a draw
+# and not a model call - the rarity and the traits were drawn once, at
+# the drop, and this only reads them back - so the declaration can only
+# ever be that one word, and the three refusals below are what keeps it
+# so. Nothing here is baked: `VEFR_WORLD` already carries the speaker,
+# flag and all, so a pack that names no service weaves the bytes it did.
+IDENTIFY_TRUE = ('true', 'yes', '1')
+
+
+def identifies(spec) -> bool:
+    """True when this speaker's spec declares the region's identify service.
+
+    The one reader, mirrored by the player's twin in
+    `web/player/parts/195-the-identify-service.js`, so a pack that passes
+    here is a pack that offers the service in play. A blank string is
+    silence, exactly as a blank `shop` is.
+    """
+    if not isinstance(spec, dict):
+        return False
+    value = spec.get('identify')
+    if value is True:
+        return True
+    return isinstance(value, str) and value.strip().lower() in IDENTIFY_TRUE
+
+
+def _pack_region_names(w: dict) -> frozenset:
+    """Every region the pack declares, from the acts shape and the flat one
+    alike. Empty when the pack declares none - a legacy single-region world
+    with no `regions` of its own - so a caller can tell "nowhere" from
+    "this pack names no regions"."""
+    names: set = set()
+    geo = w.get('regions')
+    if isinstance(geo, dict):
+        names.update(name for name in geo if isinstance(name, str))
+    for act in (w.get('acts') or []):
+        if isinstance(act, dict) and isinstance(act.get('regions'), dict):
+            names.update(name for name in act['regions'] if isinstance(name, str))
+    return frozenset(names)
+
+
+def identify_errors(w: dict) -> list[str]:
+    """Every problem with a pack's optional identify service (empty = good).
+
+    ADR 0017, T3 slice 2. Three refusals, each one plain sentence naming
+    the speaker and the field, in the voice of `item_roll_errors`:
+
+    - an `identify` that is some other word - it names a service this
+      pack does not have;
+    - an `identify` that is not the word true at all (an object, a
+      number, a list): identifying reads what the drop drew, so anything
+      that could carry a chance, a roll or a model is refused rather than
+      quietly ignored;
+    - a speaker that offers identify in a region the pack does not have,
+      which is a service nobody can ever walk up to.
+
+    All three are additive: a pack that names no `identify` passes, and
+    so does every pack written before this slice.
+    """
+    speakers = w.get('speakers')
+    if not isinstance(speakers, dict) or not speakers:
+        return []
+    regions = _pack_region_names(w)
+    first = next(iter(sorted(regions)), None)
+    errors: list[str] = []
+    for key, spec in speakers.items():
+        if not isinstance(spec, dict) or 'identify' not in spec:
+            continue
+        name = spec.get('name') or key
+        where = (f"speaker '{name}'" if name == key
+                 else f"speaker '{name}' ({key})")
+        value = spec.get('identify')
+        if not identifies(spec):
+            if value is None or value is False or (
+                    isinstance(value, str) and not value.strip()):
+                # A flag that says no is silence, exactly as a blank
+                # `shop` is: there is no service, and nothing to say.
+                continue
+            if isinstance(value, str):
+                errors.append(f"{where} identify names '{value.strip()}', "
+                              "which is not a service this pack has: write "
+                              "true to make this speaker the one that reads "
+                              "things")
+            else:
+                errors.append(f"{where} identify must be the word true: a "
+                              "thing is read once, at the place the pack "
+                              "names, so identifying carries no chance, no "
+                              "roll and no model")
+            continue
+        if first is not None:
+            served = spec.get('region', first)
+            if isinstance(served, str) and served not in regions:
+                errors.append(f"{where} offers identify in region '{served}', "
+                              "which this pack does not have")
+    return errors
+
+
 def _door_key_items(w: dict) -> frozenset:
     """The item ids a locked door names as its key, from every act.
 
@@ -2656,6 +2755,12 @@ def validate(w: dict, pack_dir: Path | None = None) -> list[str]:
                 errors.extend(item_light_errors(iid, spec))
                 errors.extend(item_slot_errors(iid, spec, key_ids))
                 errors.extend(item_roll_errors(iid, spec))
+    # The pack's optional identify service (ADR 0017, T3 slice 2): the
+    # speaker that reads things, checked beside the other optional
+    # fields so a service that names no place to stand is an authoring
+    # error rather than a silence in play. A pack that declares none
+    # gets nothing here and plays exactly as it did.
+    errors.extend(identify_errors(w))
     # The pack's optional rules/flags/claims/people catalog: checked
     # beside the other optional catalogs so a broken rule is a
     # pack-authoring error, not a surprise in play. A pack that
