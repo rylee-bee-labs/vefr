@@ -173,15 +173,32 @@ def test_motion_off_is_the_same_page_as_motion_on(woven):
 
 
 def test_the_bag_names_the_traits_once_the_thing_has_been_read(woven):
-    """Both bag surfaces, in text - and the unread copy next to the read
-    one shows the difference is the flag, not a picture."""
-    steps = _to_the_reader(woven) + [{"do": "interact"}, {"do": "readOne"},
+    """Both bag surfaces, in text - and the unread copy beside the read
+    one shows the difference is the flag, not a picture.
+
+    The bag is seeded with two copies of one draw, one already read and
+    one not, so both states are on the page before anything is clicked:
+    the read copy names its traits, the unread one does not. Reading the
+    unread copy makes it say what its twin has been saying all along, and
+    nothing but the flag moved.
+    """
+    steps = _to_the_reader(woven) + [{"do": "snap", "tag": "unread"},
+                                     {"do": "interact"}, {"do": "readOne"},
                                      {"do": "closeIdentify"},
                                      {"do": "openBag"}]
-    final = run(woven, steps)["final"]
-    assert "a brass ring (rare) - traits: keen, cold" in final["bagNames"], \
-        final["bagNames"]
-    assert "a brass ring (rare)" in final["bagNames"], final["bagNames"]
+    out = run(woven, steps)
+    before = out["snaps"]["unread"]["bagNames"]
+    final = out["final"]["bagNames"]
+    named = "a brass ring (rare) - traits: keen, cold"
+    # Before the read, exactly one copy names its traits and the other
+    # says nothing beyond its name and rarity - the flag is the whole
+    # difference between the two rows.
+    assert before.count(named) == 1, before
+    assert before.count("a brass ring (rare)") == 1, before
+    # And after the read both copies name the traits the drop drew.
+    assert final.count(named) == 2, final
+    assert "a brass ring (rare)" not in final, final
+    # The Bag panel says the same words the rows do.
     assert "keen" in final["bagPanel"] and "cold" in final["bagPanel"]
     # A plain thing is still just its own words.
     assert "a grey pebble" in final["bagNames"]
@@ -209,27 +226,34 @@ def test_the_read_survives_a_reload(woven):
 def test_reading_two_copies_of_one_draw_gives_the_same_words(woven):
     """The evidence that reading is not drawing, in play.
 
-    The bag holds two copies that were drawn once. Reading the first
-    moves nothing; reading the second gives the same rarity and the same
-    traits, in the same order, because the only field a read writes is
-    the flag.
+    The bag holds two copies that were drawn once: one already read, one
+    not. Reading the unread one gives it exactly the words its twin has
+    been carrying all along - same rarity, same traits, same order - and
+    the only field that moved is the flag.
+
+    Reading is not re-reading either. With nothing unread left the panel
+    says so in words and offers no second Read, so the second copy's
+    words cannot be disturbed by a second visit at all.
     """
     steps = _to_the_reader(woven) + [
         {"do": "interact"}, {"do": "readOne"},
         {"do": "snap", "tag": "one"},
-        {"do": "closeIdentify"}, {"do": "interact"}, {"do": "readOne"},
+        {"do": "closeIdentify"}, {"do": "interact"},
         {"do": "snap", "tag": "two"},
         {"do": "closeIdentify"}, {"do": "openBag"},
     ]
     out = run(woven, steps)
     one = out["snaps"]["one"]["bag"]
     two = out["snaps"]["two"]["bag"]
-    read_words = ["a brass ring (rare) - traits: keen, cold"]
+    read_words = "a brass ring (rare) - traits: keen, cold"
     assert out["snaps"]["one"]["live"].count("keen, cold") == 1
-    assert out["snaps"]["two"]["live"].count("keen, cold") == 1
+    # The second visit offers nothing to read: both copies are read, so
+    # there is no Read button to press and no draw waiting behind one.
+    assert out["snaps"]["two"]["rows"] == [], out["snaps"]["two"]["rows"]
+    assert "waiting to be read" in out["snaps"]["two"]["panelText"]
     # Same rarity, same traits, same order - and the flags only went up.
     assert [r["rarity"] for r in one if isinstance(r, dict)] == ["rare", "rare"]
     assert [r["traits"] for r in two if isinstance(r, dict)] == \
         [["keen", "cold"], ["keen", "cold"]]
     assert [r["identified"] for r in two if isinstance(r, dict)] == [True, True]
-    assert out["final"]["bagNames"].count(read_words[0]) == 2
+    assert out["final"]["bagNames"].count(read_words) == 2
