@@ -40,12 +40,25 @@ PARTS = ROOT / "web" / "player" / "parts"
 
 # The packed sample world declares no `identify` on any speaker, so
 # everything woven out of it is what was woven before ADR 0017 slice 2.
-# Both digests below are the ones a pristine `main` prints for the same
-# two packs: the whole set of baked `window.VEFR_*` data lines (every
-# one of them, concatenated in file order) for the shipped sample world
-# and for the rolled-loot fixture.
+# Both digests below are over the whole set of baked `window.VEFR_*` data
+# lines (every one of them, in file order) for their pack.
+#
+# SAMPLE_DATA_SHA is the one a pristine `main` prints, and it still is: the
+# sample world declares no descent, so nothing ADR 0017 slice 2 or the
+# Section-tiles work baked into it, and it is the half of this test that
+# says a pack naming no reader is untouched by the slice.
+#
+# ROLLED_DATA_SHA is over the rolled-loot fixture pack - a pack this slice
+# ADDS, so no `main` ever wove it and "what pristine main prints" is not a
+# claim about it. It is a whole-weave digest and does not compose: measured
+# after every union, never derived. It was last moved on 2026-10-10 when
+# #385 (Section tiles reach play) added `section_tiles` to the descent
+# block at src/vefr/cli.py:2627 - a key that lands in `VEFR_DESCENT_DEF`
+# for every pack with a descent, which the sample world has none of. That
+# is merged engine behaviour, not this slice: it is the ONLY byte that
+# moved, and this slice adds no baked block of its own.
 SAMPLE_DATA_SHA = '62a08f1ac2b5739cef21abfefa672df09af94bd369cf1ed68c7cc81e58bd40da'
-ROLLED_DATA_SHA = 'cc128ba91da52985cfbe3bfc52f3a766c9f1eaf76b34f5a5ba750fa69fbdebb4'
+ROLLED_DATA_SHA = '82001ea6c10a94576969a7eb9cdaf795d976259eee5e1a6a55adf5eccbe4f8d9'
 
 
 def _data_blocks(html: str) -> str:
@@ -220,11 +233,13 @@ def test_a_pack_with_no_reader_bakes_the_same_bytes():
     """The backward-compatibility hash, for both packs.
 
     Nothing in the baked data changes: a pack that names no reader bakes
-    every `window.VEFR_*` line exactly as `main` baked it. The player
-    around those lines DOES change - this slice adds the service to the
-    bag strip, the bag panel and the Interact verb, which is what the
-    slice is - so the claim pinned here is the pack's own content, hash
-    for hash, and the digests are the ones a pristine `main` prints.
+    every `window.VEFR_*` line exactly as it did. The player around those
+    lines DOES change - this slice adds the service to the bag strip, the
+    bag panel and the Interact verb, which is what the slice is - so the
+    claim pinned here is the pack's own content, hash for hash. The sample
+    world's digest is the one a pristine `main` prints and still is; the
+    fixture pack's is measured, because it is a pack this slice adds and a
+    whole-weave digest does not compose across a union.
     """
     sample = cli.weave_html(ROOT / "worlds" / "sample-world")
     assert hashlib.sha256(_data_blocks(sample).encode()).hexdigest() == SAMPLE_DATA_SHA
