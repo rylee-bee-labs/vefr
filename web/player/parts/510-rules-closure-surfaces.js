@@ -105,9 +105,11 @@
     // monsters take their turn, exactly as after a bump. With no
     // target the press is only journalled, as it always was.
     if (VERB_TARGET) {
-      applyVerb(b.dataset.verb, b.textContent, VERB_TARGET);
-      lightTick();
-      enemyTurn();
+      var done = applyVerb(b.dataset.verb, b.textContent, VERB_TARGET);
+      if (done !== false) {
+        lightTick();
+        enemyTurn();
+      }
       closeEnemyVerbs();
       updateUse();
     }

@@ -3455,6 +3455,23 @@ function performRuleAction(a) {
     }
     return;
   }
+  if (key === 'set') {
+    // A flag is some other pack's business - except when it is a
+    // warden's, because ADR 0015 Amendment 1 §2 makes the moment a pack
+    // rule sets a `"challenge": "rule"` warden's flag the moment its
+    // challenge is complete: the key it carries goes straight into the
+    // bag, with a line, the same as on death. The descent owns that flag
+    // and this asks it; every other flag falls through to nothing, as
+    // `set` always did.
+    var D = window.VEFR_DESCENT;
+    if (D && typeof D.challengeSet === 'function') {
+      var wardenKey = D.challengeSet(v);
+      if (wardenKey && bagAdd(wardenKey)) {
+        combatSay('You take ' + itemName(wardenKey) + '; it is in your bag.');
+      }
+    }
+    return;
+  }
   if (key === 'give') { bagAdd(v); return; }
   if (key === 'takes') { bagRemoveOne(v); return; }
   if (key === 'weather') {
@@ -7549,8 +7566,13 @@ window.VEFR_DESCENT = (function () {
   // ---- the Section's warden (twin of delve.py, ADR 0015, E8a part 1) --
   // Monster `w` on the warden floor's v3 warden anchor, outside the area
   // budget; its defeat sets `warden:<id>:c<cycle>`, a permanent story flag,
-  // and a warden whose flag is set is not spawned again.
+  // and a warden whose flag is set is not spawned again. Amendment 1 §2
+  // (E8d) adds how it is passed (`challenge`), whether a beaten one stays
+  // (`yields`) and whether it can be struck at all (`fightable`).
   var WARDEN_MOB = 'w';
+  // The two challenges Amendment 1 §2 gives a warden, in the ADR's order.
+  // `defeat` is the default and is what every pack in the tree plays.
+  var WARDEN_CHALLENGES = ['defeat', 'rule'];
   function wardenOf(section) {
     var raw = section ? section.warden : null;
     if (typeof raw === 'string' && raw) return { id: raw, family: raw };
@@ -7559,11 +7581,22 @@ window.VEFR_DESCENT = (function () {
       var out = { id: (typeof raw.id === 'string' && raw.id) ? raw.id : raw.family,
                   family: raw.family };
       if (typeof raw.carries === 'string' && raw.carries) out.carries = raw.carries;
+      // Only what the pack wrote, exactly as `delve.warden_of`: a floor
+      // plan for a pack that names none of the three holds the same bytes.
+      if (WARDEN_CHALLENGES.indexOf(raw.challenge) >= 0) out.challenge = raw.challenge;
+      if (raw.yields === true) out.yields = true;
+      if (raw.fightable === false) out.fightable = false;
       return out;
     }
     return null;
   }
   function wardenFlag(id, cycle) { return 'warden:' + id + ':c' + cycle; }
+  // The flag's two halves, read back: `warden:<id>:c<n>`. A flag that is
+  // not one of this shape is some other pack's flag and not ours.
+  function wardenFlagParts(flag) {
+    var hit = /^warden:(.+):c(\d+)$/.exec(String(flag || ''));
+    return hit ? { id: hit[1], cycle: Number(hit[2]) } : null;
+  }
 
   // ---- the vault's story flag, the town gate and the story end (E8c) --
   // (twins of delve.py `vault_of`, `vault_flag`, `town_seen_flag`,
@@ -7604,6 +7637,9 @@ window.VEFR_DESCENT = (function () {
     if (!warden || !at || slot !== 'warden') return null;
     var record = { id: warden.id, flag: wardenFlag(warden.id, cycle) };
     if (warden.carries) record.carries = warden.carries;
+    if (warden.challenge) record.challenge = warden.challenge;
+    if (warden.yields) record.yields = true;
+    if (warden.fightable === false) record.fightable = false;
     return record;
   }
   // The warden floor's vault (ADR 0015; twin of delve.py `_vault_record`):
@@ -7634,7 +7670,8 @@ window.VEFR_DESCENT = (function () {
 
   function withWarden(mobs, key, section, k, at, depth) {
     if (!wardenRecord(section, k, 0, at)) return mobs;
-    var family = wardenOf(section).family;
+    var warden = wardenOf(section);
+    var family = warden.family;
     var base = familyBase(family) || {};
     var rng = window.VEFR_DELVE.prng(streamSeed(key, 'warden'));
     var hr = hpRange(base);
@@ -7642,13 +7679,18 @@ window.VEFR_DESCENT = (function () {
     var atk = isWhole(base.atk) ? base.atk : 1;
     var sight = isWhole(base.sight) ? base.sight : 6;
     var kept = mobs.filter(function (m) { return !(m.at[0] === at[0] && m.at[1] === at[1]); });
-    kept.push({
+    var mob = {
       id: WARDEN_MOB, family: family,
       name: (typeof base.name === 'string' && base.name) ? base.name : DEFAULT_FAMILY,
       at: [at[0], at[1]], hp: Math.max(1, hp), atk: Math.max(1, atk),
       sight: Math.max(1, sight), xp: xpFor(base, depth),
       drops: mobDrops(key, WARDEN_MOB, base.drops), warden: true
-    });
+    };
+    // The two presentation keys ride the monster as well as the record,
+    // because the player reads them off the monster.
+    if (warden.fightable === false) mob.fightable = false;
+    if (warden.yields === true) mob.yields = true;
+    kept.push(mob);
     return kept;
   }
 
@@ -8115,10 +8157,16 @@ window.VEFR_DESCENT = (function () {
   // through `growAward`: a generated monster that arrived here without
   // one is a kill worth nothing, and the floor it stood on is the only
   // place that number could have come from.
+  // The two presentation keys ride it because they are read off the enemy
+  // and not off the floor plan: `fightable` refuses a blow and `yields`
+  // leaves a beaten warden standing. Neither is written unless the pack asked.
   function enemyEntry(mob) {
-    return { id: mob.id, name: mob.name, sprite: '', at: mob.at.slice(),
-             hp: mob.hp, atk: mob.atk, sight: mob.sight, xp: mob.xp,
-             drops: mob.drops.slice(), warden: mob.warden === true };
+    var entry = { id: mob.id, name: mob.name, sprite: '', at: mob.at.slice(),
+                  hp: mob.hp, atk: mob.atk, sight: mob.sight, xp: mob.xp,
+                  drops: mob.drops.slice(), warden: mob.warden === true };
+    if (mob.fightable === false) entry.fightable = false;
+    if (mob.yields === true) entry.yields = true;
+    return entry;
   }
 
   // The same door twice is one door - and the second time it is wired it
@@ -8374,9 +8422,18 @@ window.VEFR_DESCENT = (function () {
     if (!enemies) enemies = window.VEFR_ENEMIES = {};
     // A warden whose story flag is set stays beaten: not even a town
     // return, which clears the floor's kills, brings it back (ADR 0015).
-    var beaten = plan.warden && flags()[plan.warden.flag] === true;
-    enemies[name] = plan.mobs.filter(function (m) { return !(m.warden && beaten); })
-                             .map(enemyEntry);
+    // A warden that `yields` is the one exception Amendment 1 §2 writes:
+    // it is still standing after the flag is set, so it is still here -
+    // and it comes back peaceful, which is what `yields` on the entry
+    // says. Everything else about it is the ordinary warden's.
+    var beaten = !!(plan.warden && flags()[plan.warden.flag] === true);
+    var yields = !!(beaten && plan.warden && plan.warden.yields === true);
+    enemies[name] = plan.mobs.filter(function (m) { return !(m.warden && beaten && !yields); })
+                             .map(function (m) {
+                               var e = enemyEntry(m);
+                               if (yields && e.warden) e.yields = true;
+                               return e;
+                             });
     currentName = name;
     // The record is made before the player arrives, so an identity
     // mismatch is settled by the floor the player is about to see.
@@ -8498,24 +8555,66 @@ window.VEFR_DESCENT = (function () {
 
   // A monster fell on `name`. The warden's defeat is a permanent story
   // flag, kept through town returns, identity mismatches and evictions;
-  // the record it returns names the key the warden carries, if any.
+  // the record it returns names the key the warden carries, if any, and
+  // whether a beaten warden stays on its anchor (Amendment 1 §2). A
+  // warden whose challenge is `rule` is not passed by dying - its flag is
+  // a pack rule's to set - so its death sets nothing, and the record is
+  // still returned so a `yields` one still stands.
   function defeated(name, enemy) {
     if (!on() || !enemy || enemy.warden !== true) return false;
     var depth = depthOfName(name);
     var plan = depth ? floorPlan(depth) : null;
     if (!plan || !plan.warden) return false;
-    setFlag(plan.warden.flag, true);
-    // Its vault door opens now, in place: the same array the player is
-    // walking, so no re-entry (which would respawn the floor's monsters).
-    var region = (window.VEFR_REGIONS || {})[name];
-    if (plan.vault && plan.vault.door && plan.vault.flag === plan.warden.flag && region &&
-        Array.isArray(region.map)) {
-      var door = plan.vault.door;
-      if ((region.map[door[1]] || '')[door[0]] === '+') {
-        region.map[door[1]] = withChar(region.map[door[1]], door[0], '.');
+    if (plan.warden.challenge !== 'rule') finishChallenge(plan.warden.flag, name);
+    return plan.warden;
+  }
+
+  // The one way a warden's flag is ever set, whichever challenge set it:
+  // `defeat` when the warden dies, `rule` when a pack rule sets the flag.
+  // So "the moment the flag is set, the key goes into the bag with a
+  // line, the same as on death" is one piece of work and not two. The
+  // vault door sees only the flag and does not change; it is opened in
+  // place when the player is standing on the warden's floor, and on the
+  // next wire of that floor otherwise, because `wireFloor` reads the
+  // same flag.
+  function finishChallenge(flag, here) {
+    var already = flags()[flag] === true;
+    setFlag(flag, true);
+    var depth = here ? depthOfName(here) : 0;
+    var plan = depth ? floorPlan(depth) : null;
+    if (plan && plan.warden && plan.warden.flag === flag) {
+      // The same array the player is walking, so no re-entry (which
+      // would respawn the floor's monsters).
+      var region = (window.VEFR_REGIONS || {})[here];
+      if (plan.vault && plan.vault.door && plan.vault.flag === flag && region &&
+          Array.isArray(region.map)) {
+        var door = plan.vault.door;
+        if ((region.map[door[1]] || '')[door[0]] === '+') {
+          region.map[door[1]] = withChar(region.map[door[1]], door[0], '.');
+        }
       }
     }
-    return plan.warden;
+    return !already;
+  }
+
+  // A pack rule set a flag (`performRuleAction`'s one seam for `set`).
+  // ADR 0015 Amendment 1 §2: for a `"challenge": "rule"` warden this is
+  // the moment its challenge is complete, so the key it carries goes into
+  // the bag with a line, exactly as on death. Every other flag is some
+  // other pack's business and is left alone, and a rule that fires twice
+  // delivers the key once: the flag being already set is what says so.
+  function challengeSet(flag) {
+    if (!on() || typeof flag !== 'string' || !flag) return '';
+    var at = wardenFlagParts(flag);
+    if (!at) return '';
+    var warden = null;
+    sections().forEach(function (s) {
+      var here = wardenOf(s);
+      if (here && here.id === at.id) warden = here;
+    });
+    if (!warden || warden.challenge !== 'rule') return '';
+    if (!finishChallenge(flag, currentName)) return '';
+    return warden.carries || '';
   }
 
   // What a bump into the shut vault door on `name` says, or '' for any
@@ -8906,6 +9005,7 @@ window.VEFR_DESCENT = (function () {
   var api = {
     on: on, GEN_VERSION: GEN_VERSION, FLOOR_CAP: FLOOR_CAP,
     defeated: defeated, wardenFlag: wardenFlag, shutDoorLine: shutDoorLine,
+    challengeSet: challengeSet,
     FLOOR_BYTES: FLOOR_BYTES, SAVE_BYTES: SAVE_BYTES,
     locate: locate, floorName: floorName, floorKey: floorKey,
     streamSeed: streamSeed, lootSeed: lootSeed, chestSeed: chestSeed,
@@ -9102,7 +9202,18 @@ function setupTown() {
         // A pack without it reads as zero: defeat still plays as before.
         xp: (typeof e.xp === 'number') ? e.xp : 0,
         drops: Array.isArray(e.drops) ? e.drops.slice() : [],
-        alive: dead.indexOf(slainKeyFor(e.id, sig, generated)) === -1
+        // ADR 0015 Amendment 1 §2, read here rather than at the fight:
+        // `fightable` is what refuses a blow and `yields` is what leaves
+        // a beaten warden standing, and both have to be on the record
+        // before the player can touch anything.
+        fightable: e.fightable !== false,
+        yields: e.yields === true,
+        // A yielding warden that is on the roster at all has already
+        // yielded: the descent puts one here only once its challenge
+        // flag is set, and it is not a living hazard from then on - it
+        // is a thing still standing where it stood.
+        alive: e.yields !== true
+               && dead.indexOf(slainKeyFor(e.id, sig, generated)) === -1
       };
     });
   }
@@ -9560,6 +9671,15 @@ function setupTown() {
 
   // A hero bump: strike the enemy on the tile you tried to walk into.
   function heroAttack(e) {
+    // ADR 0015 Amendment 1 §2: a warden with `"fightable": false` cannot
+    // be attacked. The blow never lands, makes no noise and spends no
+    // turn - there is no fight to have with it - and one plain line says
+    // so. Everything else about such a warden is unchanged: it still
+    // sleeps, wakes and hunts, so the hall stays dangerous.
+    if (!e || e.fightable === false) {
+      combatSay('You cannot strike ' + ((e && e.name) || 'it') + '.');
+      return false;
+    }
     var dmg = heroAtk();
     e.hp = Math.max(0, e.hp - dmg);
     // A blow is the loudest thing on the floor, and it is also the one
@@ -9576,9 +9696,23 @@ function setupTown() {
       saveSlain();
       var beaten = (window.VEFR_DESCENT && window.VEFR_DESCENT.defeated)
         ? window.VEFR_DESCENT.defeated(regionName, e) : false;
+      // A warden that `yields` (ADR 0015 Amendment 1 §2) stays on its
+      // anchor, no longer hostile, instead of vanishing: it is not alive
+      // any more - nothing attacks it and it attacks nothing - but it is
+      // still drawn, still where it stood, and it comes back the same way
+      // when the floor is rebuilt.
+      if (beaten && beaten.yields === true) {
+        e.yields = true;
+        if (Array.isArray(e.spawn)) e.at = e.spawn.slice();
+      }
       // A warden's key goes straight into the bag, so it cannot be lost
-      // on the floor (ADR 0015).
-      var keyLine = (beaten && beaten.carries && bagAdd(beaten.carries))
+      // on the floor (ADR 0015). The key follows the FLAG, not the death:
+      // a `"challenge": "rule"` warden (Amendment 1 §2) is not passed by
+      // dying, so nothing is handed over until its rule sets the flag.
+      var passed = !!(beaten && window.VEFR_DESCENT
+                      && window.VEFR_DESCENT.storyFlags
+                      && window.VEFR_DESCENT.storyFlags(beaten.flag));
+      var keyLine = (passed && beaten.carries && bagAdd(beaten.carries))
         ? ' You take ' + itemName(beaten.carries) + '; it is in your bag.' : '';
       soundCue('defeat');
       placeDrops(e.at, e.drops);
@@ -9594,6 +9728,7 @@ function setupTown() {
     }
     combatSay(said);
     combatSnapshot();
+    return true;
   }
   // One enemy's attack: the hero loses its `atk`, clamped at zero.
   function enemyAttack(e) {
@@ -11258,23 +11393,29 @@ function setupTown() {
 
     // The living hazards: their own sprite when the pack names one,
     // else the same body-and-head figure as a speaker, in a hostile
-    // colour. A slain enemy is never drawn; fog hides the unseen.
+    // colour. A slain enemy is never drawn - except a warden that
+    // `yields` (ADR 0015 Amendment 1 §2), which stays on its anchor and
+    // is drawn in a muted colour to say it is no longer hostile. Fog
+    // hides the unseen either way.
     enemies.forEach(function (e) {
-      if (!e || !e.alive || !Array.isArray(e.at)) return;
+      if (!e || !Array.isArray(e.at)) return;
+      if (!e.alive && !e.yields) return;
       // A monster is only drawn where the light reaches: you cannot
       // remember something that moves, and seeing through the dark
       // would give the floor away.
       if (fogOn && !(litSet && litSet[e.at[0] + ',' + e.at[1]])) return;
       if (e.sprite && spriteReady(e.sprite)) {
+        if (!e.alive) ctx.globalAlpha = 0.45;
         drawSprite(e.sprite, e.at[0], e.at[1]);
+        ctx.globalAlpha = 1;
         return;
       }
       var ex = e.at[0] * T, ey = e.at[1] * T;
-      ctx.fillStyle = '#8a3b34';
+      ctx.fillStyle = e.alive ? '#8a3b34' : '#4d4a48';
       ctx.beginPath();
       ctx.arc(ex + 16 * u, ey + 21 * u, 6 * u, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = '#d9c3bd';
+      ctx.fillStyle = e.alive ? '#d9c3bd' : '#8e8a84';
       ctx.beginPath();
       ctx.arc(ex + 16 * u, ey + 11 * u, 4 * u, 0, Math.PI * 2);
       ctx.fill();
@@ -11728,10 +11869,13 @@ function setupTown() {
   }
   // One verb, one enemy. `attack` is the existing heroAttack (so the
   // damage is exactly a bump's); any other verb the pack names is
-  // words only - deterministic, no model, no clock, no chance.
+  // words only - deterministic, no model, no clock, no chance. It
+  // answers whether the verb happened at all, because a blow at an
+  // unattackable warden (ADR 0015 Amendment 1 §2) does not, and a verb
+  // that did not happen spends no turn.
   function applyVerb(verb, label, enemy) {
-    if (!enemy) return;
-    if (verb === 'attack') { heroAttack(enemy); return; }
+    if (!enemy) return false;
+    if (verb === 'attack') return heroAttack(enemy);
     var said = 'You use ' + label + ' on ' + (enemy.name || 'it') + '.';
     // The other verbs are words only, but a practice spec can learn from
     // them. The default verbs are `console`/`hurl`; any other name
@@ -11740,6 +11884,7 @@ function setupTown() {
       : (verb === 'hurl') ? 'hurls' : null;
     if (kind) sayGrowth(practiceSuffix(growBump(kind)));
     combatSay(said);
+    return true;
   }
 
   // A locked door or stair (design/gates-and-guardians.md, step 1).
@@ -11839,11 +11984,14 @@ function setupTown() {
         if (!foe || !foe.alive) throw new Error('enemy gone');
         var verbs = surfaceVerbs();
         if (verbs.length === 1) {
-          // One verb: act at once, no menu - but the turn still runs.
+          // One verb: act at once, no menu - but the turn still runs,
+          // unless the verb was refused (a warden that cannot be
+          // struck), which changes nothing and therefore costs nothing.
           recordVerb(verbs[0][0]);
-          applyVerb(verbs[0][0], verbs[0][1], foe);
-          lightTick();
-          enemyTurn();
+          if (applyVerb(verbs[0][0], verbs[0][1], foe)) {
+            lightTick();
+            enemyTurn();
+          }
         } else {
           openEnemyVerbs(foe);
         }
@@ -11931,13 +12079,17 @@ function setupTown() {
       return;
     }
     // Bump to attack: a living enemy on the destination tile is struck
-    // instead of walked into. Either way the enemies take their turn.
+    // instead of walked into. Either way the enemies take their turn -
+    // except a blow at a warden that cannot be struck, which is no
+    // fight and so is no turn (ADR 0015 Amendment 1 §2).
     var target = enemyAt(nx, ny);
     if (target) {
-      heroAttack(target);
+      var struck = heroAttack(target);
       closeEnemyVerbs();   // a bump closes any open enemy menu
-      lightTick();
-      enemyTurn();
+      if (struck !== false) {
+        lightTick();
+        enemyTurn();
+      }
       heroSettleSoon();
       return;
     }
@@ -12334,9 +12486,11 @@ function setupTown() {
     // monsters take their turn, exactly as after a bump. With no
     // target the press is only journalled, as it always was.
     if (VERB_TARGET) {
-      applyVerb(b.dataset.verb, b.textContent, VERB_TARGET);
-      lightTick();
-      enemyTurn();
+      var done = applyVerb(b.dataset.verb, b.textContent, VERB_TARGET);
+      if (done !== false) {
+        lightTick();
+        enemyTurn();
+      }
       closeEnemyVerbs();
       updateUse();
     }

@@ -204,6 +204,9 @@ _DEFAULTS = {
     # it says. Spoken at the omen, because that is what has to be fixed.
     'no-omen-field': ('every omen changes exactly one field, and omen {i} '
                       'names {given}'),
+    'fightable-without-rule': ('a warden that cannot be struck is one no rule '
+                               'can complete, so "fightable": false belongs '
+                               'beside "challenge": "rule"'),
 }
 
 # The kinds whose wrong values need a sentence of their own. A key's `say`
@@ -1068,7 +1071,17 @@ ITEM_TAUGHT = ('spell',)
 # A Section's warden (ADR 0015): the Blueprint family it is, by id, or a
 # record naming that family and, optionally, the warden's own id (its flag is
 # `warden:<id>:c<cycle>`) and the key it `carries` into the bag when beaten.
-# `yields`, `challenge` and `fightable` (ADR 0015 Amendment 1) are E8d's.
+#
+# The three ADR 0015 Amendment 1 keys are E8d's, and all three are optional
+# with today's behaviour as their default: `challenge` is `defeat` (beat it
+# and the flag is set), `yields` is false (a beaten warden vanishes) and
+# `fightable` is true (it can be struck). A pack that names none of the three
+# weaves the bytes it always wove.
+#
+# `challenge` is `enum` rather than `word` so the two words are the table's
+# to name and the refusal quotes them; `yields` and `fightable` are plain
+# booleans, which is the only spelling a JSON author has for a yes.
+CHALLENGES = ('defeat', 'rule')
 WARDEN = Block(
     name='warden',
     example='{"family": "cellar-king", "carries": "cellar-key"}',
@@ -1079,6 +1092,9 @@ WARDEN = Block(
         Key('endless', 'obj', sub=WARDEN_ENDLESS,
             say={'wrong-type': '{path} must be an object, such as '
                                '{"affixes": 1}'}),
+        Key('challenge', 'enum', choices=CHALLENGES),
+        Key('yields', 'bool'),
+        Key('fightable', 'bool'),
     ),
     say={'missing-key': '{name} must hold its {key}, such as {example}'},
 )
@@ -1822,6 +1838,7 @@ def check_section(section: dict, affixes=None, resolve=None, drops=None) -> list
     problems.extend(_elite_leader_problems(section))
     problems.extend(_pattern_problems(section))
     problems.extend(_omen_problems(section))
+    problems.extend(_warden_challenge_problems(section))
     return problems
 
 
@@ -1857,6 +1874,27 @@ def _omen_problems(section: dict) -> list[Problem]:
             'no-omen-field', f'/endless/omens/{i}',
             _DEFAULTS['no-omen-field'].format(i=i, given=given)))
     return out
+
+
+def _warden_challenge_problems(section: dict) -> list[Problem]:
+    """Every way one warden's own keys contradict each other.
+
+    `fightable` cannot be read off any one key: ADR 0015 Amendment 1 says a
+    warden is unattackable only with `"challenge": "rule"`, because the flag
+    a rule challenge sets is the only way past such a warden, and a warden
+    nobody can fight and no rule can pass is a floor that cannot be finished.
+    The other two keys stand on their own and are left alone here.
+    """
+    warden = section.get('warden')
+    if not isinstance(warden, dict):
+        return []
+    if warden.get('fightable') is not False:
+        return []
+    if warden.get('challenge') == 'rule':
+        return []
+    return [Problem(
+        'fightable-without-rule', '/warden/fightable',
+        _DEFAULTS['fightable-without-rule'])]
 
 
 def _pattern_problems(section: dict) -> list[Problem]:

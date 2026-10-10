@@ -245,6 +245,17 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # `PYTHONPATH=src python3 -c ...`, no uv in the sandbox), readings equal:
 #   4927bff9b106baf362e253589a9e01f6a1e2e41c70e3af8ea2339fc4ca66cfc5
 #   4927bff9b106baf362e253589a9e01f6a1e2e41c70e3af8ea2339fc4ca66cfc5
+# Last moved 2026-10-10, on the E8d tree. E8d changed the player: it adds
+# ADR 0015 Amendment 1's warden's `challenge`, `yields` and `fightable`
+# (the key a rule challenge delivers, a beaten warden that stays, and a
+# warden a blow cannot land on). The player template is woven into every
+# pack, so the digest had to be recomputed rather than carried over.
+# Nothing about this pack's own bytes moved - `worlds/sample-world`
+# declares no skin and no descent, so `window.VEFR_TOWN_STATES` and
+# `window.VEFR_DESCENT_DEF` bake the literal null here exactly as
+# `window.VEFR_SKIN` does, and E8d did not touch the pack at all.
+# `tests/test_warden_challenge.py` holds the pin that says so for a pack
+# that DOES name a descent: the bytes the pack itself contributes.
 NO_SKIN_WEAVE_SHA256 = "4927bff9b106baf362e253589a9e01f6a1e2e41c70e3af8ea2339fc4ca66cfc5"
 
 

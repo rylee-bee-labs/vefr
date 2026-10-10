@@ -67,6 +67,23 @@ function performRuleAction(a) {
     }
     return;
   }
+  if (key === 'set') {
+    // A flag is some other pack's business - except when it is a
+    // warden's, because ADR 0015 Amendment 1 §2 makes the moment a pack
+    // rule sets a `"challenge": "rule"` warden's flag the moment its
+    // challenge is complete: the key it carries goes straight into the
+    // bag, with a line, the same as on death. The descent owns that flag
+    // and this asks it; every other flag falls through to nothing, as
+    // `set` always did.
+    var D = window.VEFR_DESCENT;
+    if (D && typeof D.challengeSet === 'function') {
+      var wardenKey = D.challengeSet(v);
+      if (wardenKey && bagAdd(wardenKey)) {
+        combatSay('You take ' + itemName(wardenKey) + '; it is in your bag.');
+      }
+    }
+    return;
+  }
   if (key === 'give') { bagAdd(v); return; }
   if (key === 'takes') { bagRemoveOne(v); return; }
   if (key === 'weather') {
