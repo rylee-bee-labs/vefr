@@ -15,6 +15,7 @@ there rather than baked.
 import copy
 import inspect
 import json
+import re
 
 import pytest
 
@@ -169,11 +170,14 @@ def test_the_pinned_conformance_fixtures_still_say_unknown_item():
     tests/fixtures/blueprint pin the sentence for an absent id. A fix that
     reworded them lands here."""
     root = mk.ROOT / "tests" / "fixtures" / "blueprint"
-    pinned = [path for path in sorted(root.rglob("invalid/*/expected-error.txt"))
-              if path.read_text(encoding="utf-8").splitlines()[0] == "unknown item"]
-    assert [p.parent.name for p in pinned] == [
-        "ancestor-drops-item", "inherited-drops-item",
-        "unknown-drops-item", "needs-unknown-item"]
+    names = {"ancestor-drops-item", "inherited-drops-item",
+             "unknown-drops-item", "needs-unknown-item"}
+    found = {p.parent.name: p.read_text(encoding="utf-8").splitlines()[0]
+             for p in sorted(root.rglob("invalid/*/expected-error.txt"))
+             if p.parent.name in names}
+    assert set(found) == names, "a pinned drop/needs fixture moved"
+    for name, first in found.items():
+        assert first == "unknown item", (name, first)
 
 
 # --------------------------------------------------------------------------
@@ -232,16 +236,39 @@ def test_weave_asks_blueprint_first_before_it_reads_the_world():
     assert text.index("blueprint.check_errors(pack)") < text.index("_player_items(world)")
 
 
-def test_a_drop_the_refusal_names_really_would_have_paid_nothing(tmp_path):
-    """The empirical half of the defect, kept as a test. With only `normalize
-    --out` in the way, the weave writes the record and then filters the
-    drop, so the enemy pays an empty list; give the entry a name and the
-    same record pays out."""
-    pack = build(tmp_path, one_drop(src(), NAMELESS), {NAMELESS: {"sprite": "pebble"}})
-    world = json.loads((pack / "world.json").read_text(encoding="utf-8"))
-    written = {"id": "b2", "name": "a beetle", "sprite": "beetle", "at": [6, 4],
-               "hp": 3, "atk": 1, "xp": 2, "drops": [NAMELESS]}
-    # What `weave_html` does with that record, verbatim.
-    assert cli._drop_ids(written["drops"], set(cli._player_items(world))) == []
+def test_the_weave_really_pays_nothing_for_a_nameless_drop(tmp_path):
+    """The other half of the defect, end to end. This pack carries no
+    Blueprint at all, so nothing refuses it: hand the weave the enemy record
+    the old check would have written and read what the player actually gets.
+    """
+    pack = mk.build(tmp_path, blueprint=None)
+    # `cave-2` has to be on the act's own region list or the weave never
+    # bakes it and the assertion below would pass for the wrong reason.
+    act = pack / "acts" / "act-1" / "world.json"
+    shape = json.loads(act.read_text(encoding="utf-8"))
+    shape["regions"].append("cave-2")
+    act.write_text(json.dumps(shape), encoding="utf-8")
+
+    world_json = pack / "world.json"
+    world = json.loads(world_json.read_text(encoding="utf-8"))
+    world["items"][NAMELESS] = {"sprite": "pebble"}
+    world_json.write_text(json.dumps(world), encoding="utf-8")
+    path = pack / "acts" / "act-1" / "cave-2" / "contract.json"
+    contract = json.loads(path.read_text(encoding="utf-8"))
+    contract["enemies"] = [{"id": "b2", "name": "a beetle", "sprite": "beetle",
+                            "at": [6, 4], "hp": 3, "atk": 1, "xp": 2,
+                            "drops": [NAMELESS]}]
+    path.write_text(json.dumps(contract), encoding="utf-8")
+
+    def spawned():
+        """The spawn record the woven file hands the player, drops and all."""
+        found = re.search(r"window\.VEFR_ENEMIES = (\{.*?\});",
+                          cli.weave_html(pack), re.S)
+        assert found, "the weave baked no enemy table"
+        return json.loads(found.group(1))["cave-2"]
+
+    assert spawned()[0]["drops"] == []
+    # The same record pays out the moment the entry is one the reader keeps.
     world["items"][NAMELESS]["name"] = "a pebble"
-    assert cli._drop_ids(written["drops"], set(cli._player_items(world))) == [NAMELESS]
+    world_json.write_text(json.dumps(world), encoding="utf-8")
+    assert spawned()[0]["drops"] == [NAMELESS]
