@@ -114,6 +114,9 @@ function growBump(kind) {
   (r.grown || []).forEach(function (g) { if (g && g.stat === 'hp') heal += g.gain; });
   healHeroBy(heal);
   renderGrowth();
+  // Practice keeps no level, so no spell is learned here; the call is
+  // cheap and it is the one place both modes pass through.
+  renderSpellList();
   return r.grown || [];
 }
 
@@ -129,6 +132,10 @@ function growAward(xp) {
   saveGrowth();
   if (r.grew) healHeroBy(r.grew.hp);
   renderGrowth();
+  // A level that has just been earned is the one moment a spell the hero
+  // knew the name of becomes a spell the hero can cast (ADR 0018), so the
+  // panel is redrawn here rather than only when the bag is opened.
+  renderSpellList();
   return r;
 }
 

@@ -592,8 +592,9 @@ def check(block, value, known=None, at='') -> list[Problem]:
 
 
 def check_item(value, at: str = '') -> list[Problem]:
-    """Every problem with an item's ADR 0017 fields: `rarity`, `traits`
-    and `roll`. An item with none of the three has no problems at all.
+    """Every problem with an item's added fields: ADR 0017's `rarity`,
+    `traits` and `roll`, and the spell slice's `spell`. An item with none
+    of them has no problems at all.
 
     Only the added keys are read, and the pack's own words for the rest are
     left exactly as they were: see `ITEM` for why the first nine keys are
@@ -602,7 +603,8 @@ def check_item(value, at: str = '') -> list[Problem]:
     """
     if not isinstance(value, dict):
         return []
-    added = {key: value[key] for key in ITEM_ADDED if key in value}
+    added = {key: value[key]
+             for key in ITEM_ADDED + ITEM_TAUGHT if key in value}
     return check(ITEM, added, at=at)
 
 
@@ -924,6 +926,13 @@ ITEM = Block(
             'wrong-element': 'traits must each be one plain word, such as "keen"'}),
         Key('roll', 'obj', sub=ROLL, say={
             'wrong-type': 'roll must be an object holding a rarity table'}),
+        # The key the spell slice added: a spellbook is an ordinary item
+        # that teaches one spell when it is used. The id it names is the
+        # one question `check_item` cannot answer for itself - does the
+        # pack declare that spell - and `maplab.item_spell_errors` asks it
+        # with the pack's own spell ids.
+        Key('spell', 'str', lo=1, hi=40, say={
+            'wrong-type': 'spell must be a spell id, such as "ember-bolt"'}),
     ),
 )
 
@@ -951,6 +960,13 @@ WARDEN_ENDLESS = Block(
 # caps a monster's affixes, so `vefr.sections.warden_affixes` stops here
 # when a Proud omen is stacked on a warden that already draws two.
 AFFIXES_MAX = next(k.hi for k in WARDEN_ENDLESS.keys if k.name == 'affixes')
+
+# The one key the spell slice added to an item, and it sits beside
+# `ITEM_ADDED` rather than inside it: `ITEM_ADDED` is the name ADR 0017
+# owns and `tests/test_rolled_loot.py` pins it by, so a later slice does
+# not write into another slice's record of what it added. `check_item`
+# reads both - the spell key is an item's, and a spellbook is an item.
+ITEM_TAUGHT = ('spell',)
 
 # A Section's warden (ADR 0015): the Blueprint family it is, by id, or a
 # record naming that family and, optionally, the warden's own id (its flag is
@@ -1293,6 +1309,52 @@ PLAYER_WORDS = Block(
     ),
 )
 
+# Spells (ADR 0018). One block of the pack's own `spells`: the schools it
+# teaches and the spells themselves, each of which belongs to one of those
+# schools and says the level at which the hero has learned it. A `spell`
+# is a record in a list, so its id is written in the record beside its
+# name rather than being a key it is filed under - the same choice
+# `families` makes in a Section, and the same reason: one pack may name
+# two schools with the same display name and still key them apart.
+#
+# `heal` is the whole of what casting does in this slice, and it is the
+# item `heal` verbatim: a cast heals the hero and never above the max,
+# which is the one effect the bag already knows how to do and this slice
+# does not need a second version of. A spell with no `heal` casts and says
+# so and changes nothing - which is the honest answer for a pack that has
+# not written the numbers yet, and not a refusal: what a spell does is the
+# pack's to grow into.
+SPELL = Block(
+    name='spell',
+    example='{"id": "ember-bolt", "name": "an ember bolt", '
+            '"school": "ember", "level": 1, "heal": 3}',
+    keys=(
+        Key('id', 'str', lo=1, hi=40, required=True),
+        Key('name', 'str', lo=1, hi=80, required=True),
+        Key('school', 'word', required=True, say={
+            'wrong-type': '{path} must be a string',
+            'wrong-element': '{path} must be one plain word, such as "ember"'}),
+        Key('level', 'int', lo=1, hi=99, say={
+            'wrong-type': '{path} must be a whole number',
+            'out-of-range': '{path} must be a whole number of at least 1'}),
+        Key('heal', 'int', lo=1, hi=999, say={
+            'wrong-type': '{path} must be a whole number',
+            'out-of-range': '{path} must be a whole number of at least 1'}),
+    ),
+)
+
+SPELLS = Block(
+    name='spells',
+    example='{"schools": ["ember", "tide"], "spells": '
+            '[{"id": "ember-bolt", "name": "an ember bolt", '
+            '"school": "ember", "level": 1}]}',
+    keys=(
+        Key('schools', 'words', required=True),
+        Key('spells', 'list', sub=SPELL, required=True),
+    ),
+)
+
+
 BLOCKS = {
     'saves': SAVES,
     'sound': SOUND,
@@ -1308,6 +1370,8 @@ BLOCKS = {
     'scenario start': SCENARIO_START,
     'item': ITEM,
     'player_words': PLAYER_WORDS,
+    'spells': SPELLS,
+    'spell': SPELL,
 }
 
 

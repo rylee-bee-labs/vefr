@@ -60,7 +60,8 @@ def load_pack(pack_dir: Path) -> dict:
     is carried the same way: only when the pack declares it, so a pack
     without one loads exactly as before. The optional `saves` block
     (docs/adr/0009-rule-saves.md) and the optional `descent` block
-    (slice E1) ride through the same way.
+    (slice E1) ride through the same way, as does the optional `spells`
+    block (ADR 0018).
     """
     pack = Path(pack_dir)
     config = json.loads((pack / 'world.json').read_text(encoding='utf-8'))
@@ -173,6 +174,10 @@ def load_pack(pack_dir: Path) -> dict:
         # pack declares it (design/growth.md).
         if 'growth' in config:
             unified['growth'] = config['growth']
+        # The optional spells block (ADR 0018), carried through the same
+        # way: the schools the pack teaches and the spells in them.
+        if 'spells' in config:
+            unified['spells'] = config['spells']
         # The optional descent block (slice E1), carried through ONLY when
         # the pack declares it: a pack with none loads exactly as before.
         if 'descent' in config:
@@ -1254,6 +1259,149 @@ def growth_errors(w: dict) -> list[str]:
     else:
         errors.extend(_practice_growth_errors(block))
     return errors
+
+
+def spells_of(w: dict) -> list:
+    """The pack's own spell records, in the order it wrote them.
+
+    Only the records that can be read at all - an object with an `id` -
+    are returned, so every caller downstream (the bake, the check, the
+    fixture tests) sees the same list and a pack that wrote one broken
+    record is still swept rather than skipped.
+    """
+    block = w.get('spells') if isinstance(w, dict) else None
+    if not isinstance(block, dict):
+        return []
+    listed = block.get('spells')
+    if not isinstance(listed, list):
+        return []
+    return [r for r in listed
+            if isinstance(r, dict) and isinstance(r.get('id'), str) and r['id']]
+
+
+def spell_ids_of(w: dict) -> set:
+    """Every spell id the pack declares, for the checks that ask whether a
+    name is one of them. An item naming a spell reads this."""
+    return {r['id'] for r in spells_of(w)}
+
+
+def spell_schools_of(w: dict) -> list:
+    """The pack's own school names, in pack order, once each: the plain
+    words `spells.schools` declared, and nothing else. A school the pack
+    did not name is not a school, which is what `spells_errors` says."""
+    block = w.get('spells') if isinstance(w, dict) else None
+    named = block.get('schools') if isinstance(block, dict) else None
+    if not isinstance(named, list):
+        return []
+    out: list[str] = []
+    for word in named:
+        if isinstance(word, str) and shapes.WORD.fullmatch(word) and word not in out:
+            out.append(word)
+    return out
+
+
+def growth_level_cap(w: dict) -> int:
+    """The highest level the pack's own growth table can reach, or 0.
+
+    The `xp` table is a list of steps and the growth engine's level is the
+    count of the steps the hero's experience has passed, clamped to the
+    table's own length - so the length is the cap. This is the number the
+    endless-mode rule holds still and this slice does not move: a spell
+    can be written above it, and then nothing teaches it by level.
+    """
+    growth = w.get('growth') if isinstance(w, dict) else None
+    if not isinstance(growth, dict) or growth.get('mode') != 'levels':
+        return 0
+    levels = growth.get('levels')
+    table = levels.get('xp') if isinstance(levels, dict) else None
+    return len(table) if isinstance(table, list) else 0
+
+
+def spells_learnable_at(w: dict, level) -> list:
+    """The spells the hero has learned by the time it is level `level`.
+
+    The pack-side reading of the rule `web/player/parts/225-spells.js`
+    runs in play, over the same two things it reads there - a spell's own
+    `level` and the level the growth block's table allows - so the two
+    cannot disagree about the cap. In play the number comes from
+    `growthStats().level`, which the growth engine has already clamped;
+    here it is clamped the same way first, which is what makes this the
+    statement that learning by level never reaches past the cap.
+
+    An empty list for a pack that declares no growth table, no levels
+    mode, or no spells: there is no level to learn at, so nothing is
+    learned by level and every spell waits for a book.
+    """
+    cap = growth_level_cap(w)
+    if cap < 1 or not isinstance(level, int) or isinstance(level, bool):
+        return []
+    here = min(level, cap)
+    return [r for r in spells_of(w)
+            if isinstance(r.get('level'), int) and not isinstance(r.get('level'), bool)
+            and 1 <= r['level'] <= here]
+
+
+def spells_errors(w: dict) -> list[str]:
+    """Every problem with a pack's optional `spells` block (empty = good).
+
+    Spells are optional and additive: a pack that declares none gets no
+    output at all, exactly as before. `shapes` speaks for the block, its
+    schools and every spell record in it - a spell with no school at all,
+    a `level` under 1, a `heal` that is not a whole number.
+
+    The one question a record cannot answer for itself is the school it
+    belongs to: a school is a name the pack chose, and there is no
+    closed vocabulary for this table to hold a spell to, so a school the
+    block did not declare is named here instead. The other cross-record
+    question - an item that grants a spell the pack does not have - is
+    `item_spell_errors`, because it is the item's own key that is wrong.
+    """
+    if 'spells' not in w:
+        return []
+    errors = [p.sentence
+              for p in shapes.check(shapes.BLOCKS['spells'], w['spells'],
+                                    at='spells')]
+    schools = spell_schools_of(w)
+    for record in spells_of(w):
+        school = record.get('school')
+        # A record the shape table has already refused - no school, or a
+        # school that is not one plain word - is left to it, so one
+        # broken record says one thing.
+        if not isinstance(school, str) or not shapes.WORD.fullmatch(school):
+            continue
+        if school in schools:
+            continue
+        errors.append(
+            f"spell '{record['id']}' must name a school the pack declares, "
+            f"and {school!r} is not one"
+            + (f"; the pack declares {_names_sentence(schools)}"
+               if schools else "; the pack declares no schools at all"))
+    return errors
+
+
+def item_spell_errors(item_id, spec, spell_ids) -> list[str]:
+    """Every problem with an item's optional `spell` key (empty = good).
+
+    ADR 0018. One refusal, one plain sentence naming the item and the
+    field: an item that teaches a spell the pack does not declare. A
+    spellbook found as loot is an ordinary item, so this is checked
+    beside `item_roll_errors` and speaks in the same voice; `spell_ids`
+    is the pack's own `spells` block read through `spell_ids_of`, which
+    is the only way this function can answer whether the id exists.
+
+    An item with no `spell` passes, and so does every item written before
+    this slice.
+    """
+    taught = spec.get('spell') if isinstance(spec, dict) else None
+    if not isinstance(taught, str) or not taught:
+        return []          # the shape table already spoke about the type
+    if taught in (spell_ids or ()):
+        return []
+    label = str(spec.get('name') or item_id)
+    where = (f"item '{label}'" if label == item_id
+             else f"item '{label}' ({item_id})")
+    return [f"{where} must teach a spell the pack declares, and {taught!r} "
+            f"is not one of its spells"]
 
 
 def saves_errors(w: dict) -> list[str]:
@@ -2860,11 +3008,13 @@ def validate(w: dict, pack_dir: Path | None = None) -> list[str]:
     items = w.get('items')
     if isinstance(items, dict):
         key_ids = _door_key_items(w)
+        spell_ids = spell_ids_of(w)
         for iid, spec in items.items():
             if isinstance(spec, dict):
                 errors.extend(item_light_errors(iid, spec))
                 errors.extend(item_slot_errors(iid, spec, key_ids))
                 errors.extend(item_roll_errors(iid, spec))
+                errors.extend(item_spell_errors(iid, spec, spell_ids))
     # The pack's optional identify service (ADR 0017, T3 slice 2): the
     # speaker that reads things, checked beside the other optional
     # fields so a service that names no place to stand is an authoring
@@ -2907,6 +3057,11 @@ def validate(w: dict, pack_dir: Path | None = None) -> list[str]:
     # beside the other optional catalogs. A pack that declares none
     # gets nothing here.
     errors.extend(growth_errors(w))
+    # The pack's optional spells block (ADR 0018): the schools it teaches,
+    # the spells in them, and the level each is learned at. Checked beside
+    # the other optional blocks. A pack that declares none gets nothing
+    # here and plays exactly as it always did.
+    errors.extend(spells_errors(w))
     # The pack's optional saves block (docs/adr/0009-rule-saves.md),
     # checked beside the other optional catalogs. A pack that declares
     # none gets nothing here.
