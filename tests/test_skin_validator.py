@@ -172,7 +172,35 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # every pack, skinned or not - changed. The stack left the constant at its own
 # base's value, so it is the merged tree's digest and nothing else. Recomputed
 # with the documented command above; the pack's own bytes did not move.
-NO_SKIN_WEAVE_SHA256 = "f9b71abce79111ff774ceea7c6f847759fadf417062dc8a23aebd2816407d46a"
+# Last moved 2026-10-10, on the spells tree (ADR 0018). Spells changed the
+# player: a new `225-spells.js` part teaches the Bag panel the spells a
+# level has earned and the ones a book has taught, and `180-gold.js` reads a
+# spellbook's `spell` through the `use` verb it already had. The player
+# template is woven into every pack, so the digest had to be recomputed
+# rather than carried over. Nothing about this pack's own bytes moved -
+# `worlds/sample-world` declares no skin and no spells, so the new
+# `window.VEFR_SPELLS` bakes the literal null here exactly as
+# `window.VEFR_SKIN` does, and spells did not touch the pack at all. The
+# proof that only the shared template moved: woven with `main`'s
+# `web/packaged.html` in place of this one, this branch's `cli.py` produces
+# `7ef6d4411e8a6f2661346fe6701d4a741173f33aaa94ec4085925c2649258dfe` for
+# this pack - byte for byte what `main` produced.
+# Re-cut 2026-10-11, the union of the spells stack with `main`'s identify
+# service: both sides changed the player template, so the pinned value is
+# this merged tree's weave and neither side's could be carried across.
+# Measured twice with the documented command above (as
+# `PYTHONPATH=src python3 -c ...`, no uv in the sandbox):
+#   d4e5136dde68963081cf1a6ebb78bcffdd47e8edf575c07256e3b4eb825a6eaf
+# Re-cut again 2026-10-11, onto `main` one landing further on: the spells
+# stack now meets vefr #395 (FOGSHAPE), whose lit-area reader grew a branch
+# and whose floor-fog writer grew a line. That is a third move in the same
+# player template as the identify service and the spells, so the union of
+# all three is measured here and is again no side's value. The sample world
+# names no shape and no skin, so its own baked bytes still do not move.
+# Measured twice with the documented command above (as
+# `PYTHONPATH=src python3 -c ...`, no uv in the sandbox):
+#   7b672cc24f806fdf7f0bfd2d05b0f6318ad8d9626e6cd1e00838df6ab5d118c7
+NO_SKIN_WEAVE_SHA256 = "23d9493c661fc68a7cf1b746083650ec0515406bbb2abf260a470032bf92e807"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

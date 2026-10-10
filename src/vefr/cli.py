@@ -1858,8 +1858,52 @@ def _player_items(world: dict) -> dict[str, dict]:
                 'traits': list(roll['traits']),
                 'chance': roll['chance'], 'max': roll['max'],
             }
+        # `spell` (ADR 0018): the spell this item teaches when it is used.
+        # A spellbook is an ordinary item, so it rides along beside the
+        # rest of the record and only when the pack named one - an item
+        # written before this slice bakes byte for byte what it always
+        # baked. The id itself is checked against the pack's own `spells`
+        # by `maplab.item_spell_errors`; the bake carries the pack's word
+        # either way, because a silent drop is worse than a sentence.
+        taught = spec.get('spell')
+        if isinstance(taught, str) and taught.strip():
+            entry['spell'] = taught.strip()
         out[key] = entry
     return out
+
+
+def _player_spells(world: dict):
+    """The pack's `spells` block as the woven player reads it, or None.
+
+    ADR 0018. `{'schools': [...], 'spells': [{...}, ...]}` - the pack's
+    own words in the pack's own order, resolved through the same readers
+    `maplab.spells_errors` validated them with, so what the player is
+    handed is what the check looked at.
+
+    None when the pack declares no block at all, and that literal `null`
+    is what the woven file holds: a pack with no spells bakes exactly the
+    player it baked before this slice, and `window.VEFR_SPELLS` reads as
+    no spells rather than as an empty object that looks like a pack that
+    declared none of anything.
+    """
+    block = world.get('spells') if isinstance(world, dict) else None
+    if not isinstance(block, dict):
+        return None
+    from .maplab import spells_of, spell_schools_of
+    out: list[dict] = []
+    for record in spells_of(world):
+        entry: dict = {'id': str(record.get('id')).strip(),
+                       'name': str(record.get('name') or '').strip(),
+                       'school': str(record.get('school') or '').strip()}
+        if not entry['id'] or not entry['name']:
+            continue
+        level, heal = record.get('level'), record.get('heal')
+        if isinstance(level, int) and not isinstance(level, bool) and level >= 1:
+            entry['level'] = level
+        if isinstance(heal, int) and not isinstance(heal, bool) and heal >= 1:
+            entry['heal'] = heal
+        out.append(entry)
+    return {'schools': spell_schools_of(world), 'spells': out}
 
 
 def _drop_ids(value, items: set) -> list[str]:
@@ -2655,6 +2699,12 @@ def weave_html(pack: Path, *, pool: dict | None = None) -> str:
     # pack that declares none bakes the literal `null`.
     out_html = out_html.replace('{{growth_json}}',
                                 _json.dumps(world.get('growth'), ensure_ascii=False))
+    # The pack's optional spells block (ADR 0018): the schools it teaches
+    # and the spells in them, each with the level it is learned at. The
+    # literal `null` for a pack that declares none, which is every pack
+    # but a spellbook's.
+    out_html = out_html.replace('{{spells_json}}',
+                                _json.dumps(_player_spells(world), ensure_ascii=False))
     out_html = out_html.replace('{{start_json}}', _json.dumps(start, ensure_ascii=False))
     # The woven pool: real generations baked into the file, so a
     # player with no LLM endpoint still hears the world. Empty unless
