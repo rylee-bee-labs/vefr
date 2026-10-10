@@ -602,6 +602,37 @@ gameplay features over new core machinery.
       Guide: `docs/guides/rulesets.md` → rolled loot. Tests:
       `tests/test_rolled_loot.py`, `tests/test_rolled_loot_play.py`,
       `tests/test_descent_parity.py`, `tests/fixtures/make_rolled_pack.py`.
+- [x] **Identify, second slice — a town place that reads a thing**
+      (2026-10-10): slice 1 hid the traits behind an `identified` flag
+      nothing could turn. A speaker may now carry `"identify": "true"`
+      (also `yes`/`1`/`true`) and is its region's reader, named exactly
+      the way a pack already names a shopkeeper; standing beside that
+      speaker and pressing Interact opens an Identify panel listing the
+      carried things that have not been read, and reading one sets
+      `identified: true` on THAT instance in the saved bag and nothing
+      else. The rarity and the traits are the ones the drop drew - reading
+      never re-rolls - and the flag survives a reload. Once read, the
+      traits are named in the bag row and in the HUD strip's
+      `aria-label`, in text, in the same call as the click, with no timer
+      and no animation anywhere in the path: with motion off the words are
+      on the first frame, which `tests/test_identify_play.py` reads out of
+      the DOM in the same tick as the press and compares against the same
+      run with motion on. Before a read the traits are still in no part of
+      the page, so nothing is hidden from the eye that is not also hidden
+      from a screen reader. No model call, no second draw, no clock. The
+      flag rides the speaker the weave already inlines, so this slice adds
+      no baked block: a pack that names no reader bakes every `VEFR_*`
+      data line byte for byte (hashed both ways in
+      `tests/test_identify.py`). `vefr check` refuses three, one sentence
+      each: an `identify` naming some other service, an `identify` that is
+      not the word true (an object could carry a chance, a roll or a
+      model), and a speaker that offers identify in a region the pack does
+      not have. Gaps, deliberately: no bag capacity, no bag upgrades, no
+      cost for a read, and still no answer to what a trait *does*. ADR:
+      `docs/adr/0017-rolled-loot-with-rarity-and-hidden-traits.md`. Tests:
+      `tests/test_identify.py`, `tests/test_identify_play.py`,
+      `tests/test_interact.py`, `tests/fixtures/make_identify_pack.py`,
+      `tests/fixtures/identify_harness.mjs`.
 - [x] **Combat, first slice — bump to fight, and monsters that come for you**
       (2026-09-30): the dungeon had floors, fog, doors, stairs, books and a
       chest - and nothing to fight. A region's `contract.json` may now carry
