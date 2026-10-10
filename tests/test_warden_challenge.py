@@ -445,6 +445,31 @@ def _down_to(depth, descent):
     return steps
 
 
+def _fight_to_the_warden(tmp_path, descent, warden, patch):
+    """The whole walk to the warden floor and the bump that reaches it,
+    with the harness's window onto the fight read back.
+
+    `play_kit.play` rather than the shared `_play`, because this asks for
+    its own reads: the fight is read off `VEFR_COMBAT`, which is where
+    `alive`, `yields` and the mind state are published.
+    """
+    import play_kit
+
+    plan = delve.floor_plan(descent, 3)
+    steps = _down_to(3, descent) + [_go_fight(plan, warden)] + ["wait:100"] * 6
+    html = play_kit.weave(play_kit.pack(tmp_path, "descent", patch=patch),
+                          tmp_path)
+    played = play_kit.play(html, {
+        "steps": steps,
+        "read": ["VEFR_COMBAT.region", "VEFR_COMBAT.enemies",
+                 "VEFR_COMBAT.minds", "VEFR_DESCENT.doc", "store"]})
+    assert played["errors"] == [], played["errors"]
+    assert played["reads"]["VEFR_COMBAT.region"] == plan["name"]
+    live = played["reads"]["VEFR_COMBAT.enemies"]
+    (there,) = [e for e in live if e["id"] == "w"]
+    return played, there
+
+
 @play_only
 def test_a_yields_warden_stays_on_its_anchor_after_defeat(tmp_path):
     """Amendment 1 §5, second bullet, in the player that draws it."""
@@ -455,14 +480,25 @@ def test_a_yields_warden_stays_on_its_anchor_after_defeat(tmp_path):
                                                      "keep": True}}}}
     plan = delve.floor_plan(descent, 3)
     (warden,) = _wardens(plan)
-    fought = _play(tmp_path, _down_to(3, descent) + [_go_fight(plan, warden)]
-                   + ["wait:100"] * 6, patch=patch)
-    assert fought["errors"] == [], fought["errors"]
-    live = fought["reads"]["VEFR_ENEMIES"][plan["name"]]
-    (there,) = [e for e in live if e["id"] == "w"]
-    assert there["alive"] is False and there["yields"] is True, there
-    # Still on its anchor, and still drawn: the roster keeps it.
-    assert there["at"] == plan["anchors"]["warden"]
+    fought, there = _fight_to_the_warden(tmp_path, descent, warden, patch)
+    # It fell, it is no longer a living hazard, and it is still there.
+    assert there["alive"] is False, there
+    assert there["yields"] is True, there
+    assert there["at"] == plan["anchors"]["warden"], there
+    assert _doc(fought)["flags"].get(plan["warden"]["flag"]) is True
+
+
+@play_only
+def test_a_warden_that_does_not_yield_is_gone_after_defeat(tmp_path):
+    """The other half of the same sentence: without `yields` a beaten
+    warden still vanishes, and this is the control that says the test
+    above is about the key."""
+    descent = _descent({"family": FAMILY}, families=[])
+    patch = {"world.json": {"descent": descent}}
+    plan = delve.floor_plan(descent, 3)
+    (warden,) = _wardens(plan)
+    fought, there = _fight_to_the_warden(tmp_path, descent, warden, patch)
+    assert there["alive"] is False and there["yields"] is False, there
     assert _doc(fought)["flags"].get(plan["warden"]["flag"]) is True
 
 
@@ -474,11 +510,7 @@ def test_a_fightable_false_warden_cannot_be_attacked(tmp_path):
     patch = {"world.json": {"descent": descent}}
     plan = delve.floor_plan(descent, 3)
     (warden,) = _wardens(plan)
-    fought = _play(tmp_path, _down_to(3, descent) + [_go_fight(plan, warden)]
-                   + ["wait:100"] * 6, patch=patch)
-    assert fought["errors"] == [], fought["errors"]
-    live = fought["reads"]["VEFR_ENEMIES"][plan["name"]]
-    (there,) = [e for e in live if e["id"] == "w"]
+    fought, there = _fight_to_the_warden(tmp_path, descent, warden, patch)
     assert there["hp"] == warden["hp"], there      # no damage landed
     assert _doc(fought)["flags"].get(plan["warden"]["flag"]) is None
 
@@ -492,15 +524,15 @@ def test_a_warden_that_cannot_be_struck_still_hunts(tmp_path):
     patch = {"world.json": {"descent": descent}}
     plan = delve.floor_plan(descent, 3)
     (warden,) = _wardens(plan)
-    fought = _play(tmp_path, _down_to(3, descent) + [_go_fight(plan, warden)]
-                   + ["wait:100"] * 6, patch=patch)
-    assert fought["errors"] == [], fought["errors"]
-    live = fought["reads"]["VEFR_ENEMIES"][plan["name"]]
-    (there,) = [e for e in live if e["id"] == "w"]
+    fought, there = _fight_to_the_warden(tmp_path, descent, warden, patch)
     assert there["alive"] is True, there
-    assert there["awake"] is True, there            # the warden is never asleep
     assert there["atk"] >= 1, there
-    # And it closed the distance: it moved off the anchor towards the hero.
+    # It woke and it came: the warden is never asleep (ADR 0015), and it
+    # closed the distance towards the hero rather than standing on its
+    # anchor while the player walked up to it.
+    minds = fought["reads"]["VEFR_COMBAT.minds"]
+    (mind,) = [m for m in minds if m["id"] == "w"]
+    assert mind["awake"] is True, mind
     assert there["at"] != plan["anchors"]["warden"], there
 
 
