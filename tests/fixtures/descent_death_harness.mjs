@@ -97,10 +97,15 @@ async function main() {
   // even a turn, so a fight that began facing one would never have
   // happened at all. When a press neither moves the hero nor bumps
   // something, the next one turns instead.
+  //
+  // `!died` is a boolean, and `<` binds tighter than `&&`: written
+  // `i < !died && presses`, the test is `i < !died`, which is `i < 1`
+  // while the hero is standing, and the fight is over after one press.
+  // The count is the loop's bound and the wake is what stops it.
   let stuck = false;
   const fight = plan.fight || {};
   let dir = fight.dir || 'down';
-  for (let i = 0; i < !died && (fight.presses || 0); i++) {
+  for (let i = 0; i < (fight.presses || 0) && !died; i++) {
     const before = (window.VEFR_COMBAT.hero || {}).at || [];
     if (stuck) dir = DIRS[(DIRS.indexOf(dir) + 1) % DIRS.length];
     const [dx, dy] = VEC[dir] || VEC.down;
