@@ -1496,6 +1496,13 @@ def check_section(section: dict, affixes=None, resolve=None, drops=None) -> list
                 return problems + [Problem('unknown-drop',
                                            f'/families/{i}/family', sentence)]
 
+    # `/warden/family` is deliberately NOT read by the drop check above. The
+    # warden's own family record is a fifth surface (`delve.mobs_at` reads
+    # the `drops` off it too) and it is left alone here on purpose: it is a
+    # separate surface with its own question - what a boss is allowed to
+    # carry - and folding it in would change a pack that validates today
+    # without the pack having done anything wrong.
+    #
     # A record names its family outright, so that family must resolve. A bare
     # string is checked by nothing here: packs write it both as a family id
     # (Cottage's "cellar-king") and as ADR 0015's warden id ("ashwing"), and
