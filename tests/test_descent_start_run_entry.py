@@ -34,6 +34,19 @@ ENTRY = DESCENT["entry"]["at"]
 READS = ["VEFR_COMBAT.region", "VEFR_COMBAT.hero", "VEFR_TRANSITIONS", "store"]
 
 
+def _combat(play):
+    """The fight snapshot the way this file asks for it.
+
+    `play.mjs` keys every read by the exact string it was asked for
+    (`tests/fixtures/play.mjs:193`), so a run that read
+    `VEFR_COMBAT.region` and `VEFR_COMBAT.hero` has no
+    `reads["VEFR_COMBAT"]` to index - only those two. These are those
+    two, put back together under the name the assertions read.
+    """
+    return {"region": play["reads"]["VEFR_COMBAT.region"],
+            "hero": play["reads"]["VEFR_COMBAT.hero"]}
+
+
 def _play(tmp_path, steps):
     html = play_kit.weave(play_kit.pack(tmp_path, "descent"), tmp_path)
     return play_kit.play(html, {"steps": steps, "read": list(READS)})
@@ -70,7 +83,7 @@ def test_entering_the_descent_lands_on_this_runs_up_stair(tmp_path, run):
     play = _play(tmp_path, _enter(run))
     assert play["errors"] == [], play["errors"]
     plan = _first_floor(run)
-    combat = play["reads"]["VEFR_COMBAT"]
+    combat = _combat(play)
     got = combat["hero"]["at"]
     assert combat["region"] == plan["name"], \
         f"run {run} should open on {plan['name']}, not {combat['region']}"
