@@ -49,11 +49,6 @@ def _with(**patch):
     return {**GOOD, **patch}
 
 
-def _spell(**patch):
-    """Every record of `GOOD` patched at once."""
-    return [{**r, **patch} for r in GOOD["spells"]]
-
-
 def _code(part: Path) -> str:
     """A player part with its `//` comments stripped, so a claim about what
     the code *does* is not satisfied by a sentence about it."""
@@ -159,9 +154,14 @@ def test_a_spell_learned_below_level_one_is_named():
         spells=_one(id="gutter-light"))}) == []
 
 
-def test_a_spellbook_granting_a_spell_that_does_not_exist_is_named():
+def test_a_spellbook_granting_a_spell_that_does_not_exist_is_named(tmp_path):
     """Refusal three: a book that teaches a spell the pack never wrote
-    would teach nothing at all, so the item's own key is named."""
+    would teach nothing at all, so the item's own key is named.
+
+    Asserted through `maplab.validate` on a real pack, not only against
+    the helper: the refusal is worth nothing unless the sweep that runs
+    in `vefr check` actually reaches the item catalog.
+    """
     assert maplab.item_spell_errors(
         "tide-tome", {"name": "a tide-bound tome", "spell": "ash-call"},
         {"tide-mend"}) == [
@@ -173,6 +173,23 @@ def test_a_spellbook_granting_a_spell_that_does_not_exist_is_named():
         set()) == [
             "item 'a tide-bound tome' (tide-tome) must teach a spell the "
             "pack declares, and 'tide-mend' is not one of its spells"]
+
+    pack = mk.build(tmp_path, spells=mk.SPELLS, growth=mk.LEVELS, xp=3,
+                    tome=False)
+    world_json = pack / "world.json"
+    world = json.loads(world_json.read_text(encoding='utf-8'))
+    world["items"]["tide-tome"] = dict(mk.TOME, spell="ash-call")
+    world_json.write_text(json.dumps(world), encoding="utf-8")
+    loaded = {**json.loads(world_json.read_text(encoding='utf-8')),
+              **maplab.load_pack(pack)}
+    assert maplab.validate(loaded, pack) == [
+        "item 'a tide-bound tome' (tide-tome) must teach a spell the pack "
+        "declares, and 'ash-call' is not one of its spells"]
+    # And the pack with the good book beside it is silent.
+    good = mk.build(tmp_path, spells=mk.SPELLS, growth=mk.LEVELS, xp=3)
+    assert maplab.validate(
+        {**json.loads((good / 'world.json').read_text(encoding='utf-8')),
+         **maplab.load_pack(good)}, good) == []
 
 
 def test_a_spell_with_no_school_at_all_is_named():
