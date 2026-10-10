@@ -119,6 +119,15 @@
 
   // A hero bump: strike the enemy on the tile you tried to walk into.
   function heroAttack(e) {
+    // ADR 0015 Amendment 1 §2: a warden with `"fightable": false` cannot
+    // be attacked. The blow never lands, makes no noise and spends no
+    // turn - there is no fight to have with it - and one plain line says
+    // so. Everything else about such a warden is unchanged: it still
+    // sleeps, wakes and hunts, so the hall stays dangerous.
+    if (!e || e.fightable === false) {
+      combatSay('You cannot strike ' + ((e && e.name) || 'it') + '.');
+      return false;
+    }
     var dmg = heroAtk();
     e.hp = Math.max(0, e.hp - dmg);
     // A blow is the loudest thing on the floor, and it is also the one
@@ -135,9 +144,23 @@
       saveSlain();
       var beaten = (window.VEFR_DESCENT && window.VEFR_DESCENT.defeated)
         ? window.VEFR_DESCENT.defeated(regionName, e) : false;
+      // A warden that `yields` (ADR 0015 Amendment 1 §2) stays on its
+      // anchor, no longer hostile, instead of vanishing: it is not alive
+      // any more - nothing attacks it and it attacks nothing - but it is
+      // still drawn, still where it stood, and it comes back the same way
+      // when the floor is rebuilt.
+      if (beaten && beaten.yields === true) {
+        e.yields = true;
+        if (Array.isArray(e.spawn)) e.at = e.spawn.slice();
+      }
       // A warden's key goes straight into the bag, so it cannot be lost
-      // on the floor (ADR 0015).
-      var keyLine = (beaten && beaten.carries && bagAdd(beaten.carries))
+      // on the floor (ADR 0015). The key follows the FLAG, not the death:
+      // a `"challenge": "rule"` warden (Amendment 1 §2) is not passed by
+      // dying, so nothing is handed over until its rule sets the flag.
+      var passed = !!(beaten && window.VEFR_DESCENT
+                      && window.VEFR_DESCENT.storyFlags
+                      && window.VEFR_DESCENT.storyFlags(beaten.flag));
+      var keyLine = (passed && beaten.carries && bagAdd(beaten.carries))
         ? ' You take ' + itemName(beaten.carries) + '; it is in your bag.' : '';
       soundCue('defeat');
       placeDrops(e.at, e.drops);
@@ -153,6 +176,7 @@
     }
     combatSay(said);
     combatSnapshot();
+    return true;
   }
   // One enemy's attack: the hero loses its `atk`, clamped at zero.
   function enemyAttack(e) {

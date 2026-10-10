@@ -543,12 +543,27 @@ def progress_findings(pack_dir, cycle: int = 0) -> list[str]:
         if not isinstance(section, dict):
             continue
         name = sections.section_id(section) or '?'
-        # 1. Complete the warden's challenge. The only challenge that
-        #    exists is `defeat` (`challenge` is ADR 0015 Amendment 1's and
-        #    E8d's), and beating it sets its flag.
+        # 1. Complete the warden's challenge (ADR 0015 Amendment 1 §4: the
+        #    walk's first step is the challenge, not the killing). A
+        #    `defeat` warden is beaten, so its flag is set. A `rule`
+        #    warden is completed by the pack rule that sets its flag, so
+        #    the walk asks for that setter the same way it asks for a
+        #    note's - one sentence when there is none.
         warden = delve.warden_of(section)
         if warden:
-            flags[delve.warden_flag(warden['id'], cycle)] = True
+            flag = delve.warden_flag(warden['id'], cycle)
+            if delve.warden_challenge(warden) == 'rule':
+                if flag in setters:
+                    flags[flag] = True
+                else:
+                    findings.append(
+                        f"section {name}: the warden {warden['id']!r} takes "
+                        f"challenge 'rule' and no rule sets the flag "
+                        f"{flag!r} that completes it, so nothing can ever "
+                        f"pass it")
+                    spoken.add(flag)
+            else:
+                flags[flag] = True
         # 2. Read the note: the flag the vault's `sets` names, which a
         #    pack rule records when the note is opened.
         vault = delve.vault_of(section)

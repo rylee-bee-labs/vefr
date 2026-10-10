@@ -85,7 +85,18 @@
         // A pack without it reads as zero: defeat still plays as before.
         xp: (typeof e.xp === 'number') ? e.xp : 0,
         drops: Array.isArray(e.drops) ? e.drops.slice() : [],
-        alive: dead.indexOf(slainKeyFor(e.id, sig, generated)) === -1
+        // ADR 0015 Amendment 1 §2, read here rather than at the fight:
+        // `fightable` is what refuses a blow and `yields` is what leaves
+        // a beaten warden standing, and both have to be on the record
+        // before the player can touch anything.
+        fightable: e.fightable !== false,
+        yields: e.yields === true,
+        // A yielding warden that is on the roster at all has already
+        // yielded: the descent puts one here only once its challenge
+        // flag is set, and it is not a living hazard from then on - it
+        // is a thing still standing where it stood.
+        alive: e.yields !== true
+               && dead.indexOf(slainKeyFor(e.id, sig, generated)) === -1
       };
     });
   }

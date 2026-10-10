@@ -102,6 +102,13 @@ ROLLED_DESCENT = copy.deepcopy(BLUEPRINT_DESCENT)
 ROLLED_DESCENT["blueprint"]["families"]["rat"]["defaults"]["drops"] = ["pebble"]
 ROLLED_DESCENT["blueprint"]["families"]["moth"]["defaults"]["drops"] = [
     "brass-ring", "cloudy-potion"]
+# E8d: this descent's warden carries Amendment 1's three keys, so the
+# whole-plan comparison below holds the plan record AND the mob they ride
+# equal in both languages - `challenge`, `yields` and `fightable` are
+# exactly the keys a JS twin that forgot them would drop.
+ROLLED_DESCENT["sections"][0]["warden"] = {
+    "family": "gutter-rat", "id": "rat-king", "carries": "rat-key",
+    "challenge": "rule", "yields": True, "fightable": False}
 ROLLED_DEPTHS = [1, 2, 3]
 
 

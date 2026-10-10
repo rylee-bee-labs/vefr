@@ -1727,6 +1727,7 @@ def section_errors(pack_dir) -> list[str]:
                                            drops))
         errors.extend(_warden_key_errors(root, section, rel))
         errors.extend(_section_tile_errors(root, section, rel))
+        errors.extend(_warden_drop_errors(root, section, rel, resolve))
     return errors
 
 
@@ -1865,6 +1866,41 @@ def _warden_key_errors(root: Path, section: dict, rel: str) -> list[str]:
             out.append(f'{where} {item!r} is dropped by family {fid!r}; '
                        'the warden must be the only way to get it')
     return out
+
+
+def _warden_drop_errors(root: Path, section: dict, rel: str, resolve=None) -> list[str]:
+    """Every sentence for a drop the warden's own family hands over.
+
+    The last of the four drop surfaces the catalog reads. A chest book, a
+    baked region's enemy and a rule's `give` are all checked against the
+    items `weave` bakes; the warden's drops are drawn from its family's own
+    `drops` (`delve._with_warden`, the draw every monster on the floor
+    makes) and were the one that was not - so a pack could name a drop the
+    bag will refuse, validate green, and lose it on the floor.
+
+    Read the same way the chest drops are read: an id with no `name` under
+    it is not an item the bag can hold (`library._declared_items`), a pack
+    whose `world.json` cannot be read has no catalog to read against and is
+    checked rather than refused, and a family the Blueprint does not have is
+    the family's own sentence, not one of these.
+    """
+    from . import library
+
+    warden = section.get('warden')
+    family = warden.get('family') if isinstance(warden, dict) else warden
+    if not (isinstance(family, str) and family):
+        return []
+    declared = library._declared_items(_pack_catalog(root))
+    if declared is None:
+        return []
+    base = resolve(family) if resolve is not None else None
+    drops = base.get('drops') if isinstance(base, dict) else None
+    if not isinstance(drops, list):
+        return []
+    return [f'{rel}: /warden/family the warden drops {drop!r}, which is not '
+            f'an item world.json declares - the bag will refuse it'
+            for drop in drops
+            if isinstance(drop, str) and drop and drop not in declared]
 
 
 # The parts a skin may name (design/ui-skin.md). Anything else is a

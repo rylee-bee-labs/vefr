@@ -475,8 +475,13 @@ window.VEFR_DESCENT = (function () {
   // ---- the Section's warden (twin of delve.py, ADR 0015, E8a part 1) --
   // Monster `w` on the warden floor's v3 warden anchor, outside the area
   // budget; its defeat sets `warden:<id>:c<cycle>`, a permanent story flag,
-  // and a warden whose flag is set is not spawned again.
+  // and a warden whose flag is set is not spawned again. Amendment 1 §2
+  // (E8d) adds how it is passed (`challenge`), whether a beaten one stays
+  // (`yields`) and whether it can be struck at all (`fightable`).
   var WARDEN_MOB = 'w';
+  // The two challenges Amendment 1 §2 gives a warden, in the ADR's order.
+  // `defeat` is the default and is what every pack in the tree plays.
+  var WARDEN_CHALLENGES = ['defeat', 'rule'];
   function wardenOf(section) {
     var raw = section ? section.warden : null;
     if (typeof raw === 'string' && raw) return { id: raw, family: raw };
@@ -485,11 +490,22 @@ window.VEFR_DESCENT = (function () {
       var out = { id: (typeof raw.id === 'string' && raw.id) ? raw.id : raw.family,
                   family: raw.family };
       if (typeof raw.carries === 'string' && raw.carries) out.carries = raw.carries;
+      // Only what the pack wrote, exactly as `delve.warden_of`: a floor
+      // plan for a pack that names none of the three holds the same bytes.
+      if (WARDEN_CHALLENGES.indexOf(raw.challenge) >= 0) out.challenge = raw.challenge;
+      if (raw.yields === true) out.yields = true;
+      if (raw.fightable === false) out.fightable = false;
       return out;
     }
     return null;
   }
   function wardenFlag(id, cycle) { return 'warden:' + id + ':c' + cycle; }
+  // The flag's two halves, read back: `warden:<id>:c<n>`. A flag that is
+  // not one of this shape is some other pack's flag and not ours.
+  function wardenFlagParts(flag) {
+    var hit = /^warden:(.+):c(\d+)$/.exec(String(flag || ''));
+    return hit ? { id: hit[1], cycle: Number(hit[2]) } : null;
+  }
 
   // ---- the vault's story flag, the town gate and the story end (E8c) --
   // (twins of delve.py `vault_of`, `vault_flag`, `town_seen_flag`,
@@ -530,6 +546,9 @@ window.VEFR_DESCENT = (function () {
     if (!warden || !at || slot !== 'warden') return null;
     var record = { id: warden.id, flag: wardenFlag(warden.id, cycle) };
     if (warden.carries) record.carries = warden.carries;
+    if (warden.challenge) record.challenge = warden.challenge;
+    if (warden.yields) record.yields = true;
+    if (warden.fightable === false) record.fightable = false;
     return record;
   }
   // The warden floor's vault (ADR 0015; twin of delve.py `_vault_record`):
@@ -560,7 +579,8 @@ window.VEFR_DESCENT = (function () {
 
   function withWarden(mobs, key, section, k, at, depth) {
     if (!wardenRecord(section, k, 0, at)) return mobs;
-    var family = wardenOf(section).family;
+    var warden = wardenOf(section);
+    var family = warden.family;
     var base = familyBase(family) || {};
     var rng = window.VEFR_DELVE.prng(streamSeed(key, 'warden'));
     var hr = hpRange(base);
@@ -568,13 +588,18 @@ window.VEFR_DESCENT = (function () {
     var atk = isWhole(base.atk) ? base.atk : 1;
     var sight = isWhole(base.sight) ? base.sight : 6;
     var kept = mobs.filter(function (m) { return !(m.at[0] === at[0] && m.at[1] === at[1]); });
-    kept.push({
+    var mob = {
       id: WARDEN_MOB, family: family,
       name: (typeof base.name === 'string' && base.name) ? base.name : DEFAULT_FAMILY,
       at: [at[0], at[1]], hp: Math.max(1, hp), atk: Math.max(1, atk),
       sight: Math.max(1, sight), xp: xpFor(base, depth),
       drops: mobDrops(key, WARDEN_MOB, base.drops), warden: true
-    });
+    };
+    // The two presentation keys ride the monster as well as the record,
+    // because the player reads them off the monster.
+    if (warden.fightable === false) mob.fightable = false;
+    if (warden.yields === true) mob.yields = true;
+    kept.push(mob);
     return kept;
   }
 
@@ -1041,10 +1066,16 @@ window.VEFR_DESCENT = (function () {
   // through `growAward`: a generated monster that arrived here without
   // one is a kill worth nothing, and the floor it stood on is the only
   // place that number could have come from.
+  // The two presentation keys ride it because they are read off the enemy
+  // and not off the floor plan: `fightable` refuses a blow and `yields`
+  // leaves a beaten warden standing. Neither is written unless the pack asked.
   function enemyEntry(mob) {
-    return { id: mob.id, name: mob.name, sprite: '', at: mob.at.slice(),
-             hp: mob.hp, atk: mob.atk, sight: mob.sight, xp: mob.xp,
-             drops: mob.drops.slice(), warden: mob.warden === true };
+    var entry = { id: mob.id, name: mob.name, sprite: '', at: mob.at.slice(),
+                  hp: mob.hp, atk: mob.atk, sight: mob.sight, xp: mob.xp,
+                  drops: mob.drops.slice(), warden: mob.warden === true };
+    if (mob.fightable === false) entry.fightable = false;
+    if (mob.yields === true) entry.yields = true;
+    return entry;
   }
 
   function pushTransition(list, t) {
@@ -1291,9 +1322,18 @@ window.VEFR_DESCENT = (function () {
     if (!enemies) enemies = window.VEFR_ENEMIES = {};
     // A warden whose story flag is set stays beaten: not even a town
     // return, which clears the floor's kills, brings it back (ADR 0015).
-    var beaten = plan.warden && flags()[plan.warden.flag] === true;
-    enemies[name] = plan.mobs.filter(function (m) { return !(m.warden && beaten); })
-                             .map(enemyEntry);
+    // A warden that `yields` is the one exception Amendment 1 §2 writes:
+    // it is still standing after the flag is set, so it is still here -
+    // and it comes back peaceful, which is what `yields` on the entry
+    // says. Everything else about it is the ordinary warden's.
+    var beaten = !!(plan.warden && flags()[plan.warden.flag] === true);
+    var yields = !!(beaten && plan.warden && plan.warden.yields === true);
+    enemies[name] = plan.mobs.filter(function (m) { return !(m.warden && beaten && !yields); })
+                             .map(function (m) {
+                               var e = enemyEntry(m);
+                               if (yields && e.warden) e.yields = true;
+                               return e;
+                             });
     currentName = name;
     // The record is made before the player arrives, so an identity
     // mismatch is settled by the floor the player is about to see.
@@ -1384,24 +1424,66 @@ window.VEFR_DESCENT = (function () {
 
   // A monster fell on `name`. The warden's defeat is a permanent story
   // flag, kept through town returns, identity mismatches and evictions;
-  // the record it returns names the key the warden carries, if any.
+  // the record it returns names the key the warden carries, if any, and
+  // whether a beaten warden stays on its anchor (Amendment 1 §2). A
+  // warden whose challenge is `rule` is not passed by dying - its flag is
+  // a pack rule's to set - so its death sets nothing, and the record is
+  // still returned so a `yields` one still stands.
   function defeated(name, enemy) {
     if (!on() || !enemy || enemy.warden !== true) return false;
     var depth = depthOfName(name);
     var plan = depth ? floorPlan(depth) : null;
     if (!plan || !plan.warden) return false;
-    setFlag(plan.warden.flag, true);
-    // Its vault door opens now, in place: the same array the player is
-    // walking, so no re-entry (which would respawn the floor's monsters).
-    var region = (window.VEFR_REGIONS || {})[name];
-    if (plan.vault && plan.vault.door && plan.vault.flag === plan.warden.flag && region &&
-        Array.isArray(region.map)) {
-      var door = plan.vault.door;
-      if ((region.map[door[1]] || '')[door[0]] === '+') {
-        region.map[door[1]] = withChar(region.map[door[1]], door[0], '.');
+    if (plan.warden.challenge !== 'rule') finishChallenge(plan.warden.flag, name);
+    return plan.warden;
+  }
+
+  // The one way a warden's flag is ever set, whichever challenge set it:
+  // `defeat` when the warden dies, `rule` when a pack rule sets the flag.
+  // So "the moment the flag is set, the key goes into the bag with a
+  // line, the same as on death" is one piece of work and not two. The
+  // vault door sees only the flag and does not change; it is opened in
+  // place when the player is standing on the warden's floor, and on the
+  // next wire of that floor otherwise, because `wireFloor` reads the
+  // same flag.
+  function finishChallenge(flag, here) {
+    var already = flags()[flag] === true;
+    setFlag(flag, true);
+    var depth = here ? depthOfName(here) : 0;
+    var plan = depth ? floorPlan(depth) : null;
+    if (plan && plan.warden && plan.warden.flag === flag) {
+      // The same array the player is walking, so no re-entry (which
+      // would respawn the floor's monsters).
+      var region = (window.VEFR_REGIONS || {})[here];
+      if (plan.vault && plan.vault.door && plan.vault.flag === flag && region &&
+          Array.isArray(region.map)) {
+        var door = plan.vault.door;
+        if ((region.map[door[1]] || '')[door[0]] === '+') {
+          region.map[door[1]] = withChar(region.map[door[1]], door[0], '.');
+        }
       }
     }
-    return plan.warden;
+    return !already;
+  }
+
+  // A pack rule set a flag (`performRuleAction`'s one seam for `set`).
+  // ADR 0015 Amendment 1 §2: for a `"challenge": "rule"` warden this is
+  // the moment its challenge is complete, so the key it carries goes into
+  // the bag with a line, exactly as on death. Every other flag is some
+  // other pack's business and is left alone, and a rule that fires twice
+  // delivers the key once: the flag being already set is what says so.
+  function challengeSet(flag) {
+    if (!on() || typeof flag !== 'string' || !flag) return '';
+    var at = wardenFlagParts(flag);
+    if (!at) return '';
+    var warden = null;
+    sections().forEach(function (s) {
+      var here = wardenOf(s);
+      if (here && here.id === at.id) warden = here;
+    });
+    if (!warden || warden.challenge !== 'rule') return '';
+    if (!finishChallenge(flag, currentName)) return '';
+    return warden.carries || '';
   }
 
   // What a bump into the shut vault door on `name` says, or '' for any
@@ -1792,6 +1874,7 @@ window.VEFR_DESCENT = (function () {
   var api = {
     on: on, GEN_VERSION: GEN_VERSION, FLOOR_CAP: FLOOR_CAP,
     defeated: defeated, wardenFlag: wardenFlag, shutDoorLine: shutDoorLine,
+    challengeSet: challengeSet,
     FLOOR_BYTES: FLOOR_BYTES, SAVE_BYTES: SAVE_BYTES,
     locate: locate, floorName: floorName, floorKey: floorKey,
     streamSeed: streamSeed, lootSeed: lootSeed, chestSeed: chestSeed,

@@ -299,23 +299,29 @@
 
     // The living hazards: their own sprite when the pack names one,
     // else the same body-and-head figure as a speaker, in a hostile
-    // colour. A slain enemy is never drawn; fog hides the unseen.
+    // colour. A slain enemy is never drawn - except a warden that
+    // `yields` (ADR 0015 Amendment 1 §2), which stays on its anchor and
+    // is drawn in a muted colour to say it is no longer hostile. Fog
+    // hides the unseen either way.
     enemies.forEach(function (e) {
-      if (!e || !e.alive || !Array.isArray(e.at)) return;
+      if (!e || !Array.isArray(e.at)) return;
+      if (!e.alive && !e.yields) return;
       // A monster is only drawn where the light reaches: you cannot
       // remember something that moves, and seeing through the dark
       // would give the floor away.
       if (fogOn && !(litSet && litSet[e.at[0] + ',' + e.at[1]])) return;
       if (e.sprite && spriteReady(e.sprite)) {
+        if (!e.alive) ctx.globalAlpha = 0.45;
         drawSprite(e.sprite, e.at[0], e.at[1]);
+        ctx.globalAlpha = 1;
         return;
       }
       var ex = e.at[0] * T, ey = e.at[1] * T;
-      ctx.fillStyle = '#8a3b34';
+      ctx.fillStyle = e.alive ? '#8a3b34' : '#4d4a48';
       ctx.beginPath();
       ctx.arc(ex + 16 * u, ey + 21 * u, 6 * u, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = '#d9c3bd';
+      ctx.fillStyle = e.alive ? '#d9c3bd' : '#8e8a84';
       ctx.beginPath();
       ctx.arc(ex + 16 * u, ey + 11 * u, 4 * u, 0, Math.PI * 2);
       ctx.fill();
@@ -769,10 +775,13 @@
   }
   // One verb, one enemy. `attack` is the existing heroAttack (so the
   // damage is exactly a bump's); any other verb the pack names is
-  // words only - deterministic, no model, no clock, no chance.
+  // words only - deterministic, no model, no clock, no chance. It
+  // answers whether the verb happened at all, because a blow at an
+  // unattackable warden (ADR 0015 Amendment 1 §2) does not, and a verb
+  // that did not happen spends no turn.
   function applyVerb(verb, label, enemy) {
-    if (!enemy) return;
-    if (verb === 'attack') { heroAttack(enemy); return; }
+    if (!enemy) return false;
+    if (verb === 'attack') return heroAttack(enemy);
     var said = 'You use ' + label + ' on ' + (enemy.name || 'it') + '.';
     // The other verbs are words only, but a practice spec can learn from
     // them. The default verbs are `console`/`hurl`; any other name
@@ -781,6 +790,7 @@
       : (verb === 'hurl') ? 'hurls' : null;
     if (kind) sayGrowth(practiceSuffix(growBump(kind)));
     combatSay(said);
+    return true;
   }
 
   // A locked door or stair (design/gates-and-guardians.md, step 1).
@@ -880,11 +890,14 @@
         if (!foe || !foe.alive) throw new Error('enemy gone');
         var verbs = surfaceVerbs();
         if (verbs.length === 1) {
-          // One verb: act at once, no menu - but the turn still runs.
+          // One verb: act at once, no menu - but the turn still runs,
+          // unless the verb was refused (a warden that cannot be
+          // struck), which changes nothing and therefore costs nothing.
           recordVerb(verbs[0][0]);
-          applyVerb(verbs[0][0], verbs[0][1], foe);
-          lightTick();
-          enemyTurn();
+          if (applyVerb(verbs[0][0], verbs[0][1], foe)) {
+            lightTick();
+            enemyTurn();
+          }
         } else {
           openEnemyVerbs(foe);
         }
@@ -972,13 +985,17 @@
       return;
     }
     // Bump to attack: a living enemy on the destination tile is struck
-    // instead of walked into. Either way the enemies take their turn.
+    // instead of walked into. Either way the enemies take their turn -
+    // except a blow at a warden that cannot be struck, which is no
+    // fight and so is no turn (ADR 0015 Amendment 1 §2).
     var target = enemyAt(nx, ny);
     if (target) {
-      heroAttack(target);
+      var struck = heroAttack(target);
       closeEnemyVerbs();   // a bump closes any open enemy menu
-      lightTick();
-      enemyTurn();
+      if (struck !== false) {
+        lightTick();
+        enemyTurn();
+      }
       heroSettleSoon();
       return;
     }

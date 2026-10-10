@@ -1170,15 +1170,26 @@ def place_books(plan: dict, books: list) -> dict:
 # as monster `w`, outside the area budget. Defeating it sets the permanent story
 # flag `warden:<id>:c<cycle>`; a warden whose flag is set is not spawned again,
 # so a town return cannot revive it. A record-form warden (ADR 0015) may name the
-# key it `carries` into the bag when beaten; `yields` is E8d's.
+# key it `carries` into the bag when beaten, and Amendment 1 section 2 adds how it
+# is passed (`challenge`), whether a beaten one stays (`yields`) and whether it
+# can be struck at all (`fightable`).
 WARDEN_MOB = 'w'
+
+# The two challenges ADR 0015 Amendment 1 section 2 gives a warden, in the order
+# it writes them. `defeat` is first because it is the default and the one every
+# pack in the tree is playing.
+WARDEN_CHALLENGES = ('defeat', 'rule')
 
 
 def warden_of(section: dict) -> dict | None:
-    """The Section's warden as `{id, family}` (plus `carries`), or None when it names none.
+    """The Section's warden as `{id, family}` (plus what it was given), or None when it names none.
 
     A Section writes its warden as the family id (`"cellar-king"`), or as a record (ADR 0015) naming the
-    family, optionally its own `id` (the flag's middle, defaulting to the family) and the key it `carries`."""
+    family, optionally its own `id` (the flag's middle, defaulting to the family), the key it `carries`,
+    and ADR 0015 Amendment 1's `challenge`, `yields` and `fightable`. Only what the pack wrote is
+    carried: the three defaults (`defeat`, no, yes) are `warden_challenge`,
+    `warden_yields` and `warden_fightable`'s to answer, so a floor plan for a pack that names none of
+    them holds the same bytes it held before Amendment 1."""
     raw = section.get('warden') if isinstance(section, dict) else None
     if isinstance(raw, str) and raw:
         return {'id': raw, 'family': raw}
@@ -1187,8 +1198,39 @@ def warden_of(section: dict) -> dict | None:
         out = {'id': rid if isinstance(rid, str) and rid else raw['family'], 'family': raw['family']}
         if isinstance(raw.get('carries'), str) and raw['carries']:
             out['carries'] = raw['carries']
+        if raw.get('challenge') in WARDEN_CHALLENGES:
+            out['challenge'] = raw['challenge']
+        if raw.get('yields') is True:
+            out['yields'] = True
+        if raw.get('fightable') is False:
+            out['fightable'] = False
         return out
     return None
+
+
+def warden_challenge(warden: dict | None) -> str:
+    """How this warden is passed: `'defeat'` (the default) or `'rule'` (ADR 0015 Amendment 1).
+
+    `defeat` is today's behaviour exactly - the warden's death sets its flag - and is what a warden
+    written as a bare family id gets, so a pack that names no `challenge` plays as it always did."""
+    value = warden.get('challenge') if isinstance(warden, dict) else None
+    return value if value in WARDEN_CHALLENGES else 'defeat'
+
+
+def warden_yields(warden: dict | None) -> bool:
+    """Whether a beaten warden stays on its anchor, no longer hostile, instead of vanishing.
+
+    Amendment 1 section 2's `yields`. False is today's behaviour: a beaten warden vanishes."""
+    return isinstance(warden, dict) and warden.get('yields') is True
+
+
+def warden_fightable(warden: dict | None) -> bool:
+    """Whether this warden can be struck at all.
+
+    Amendment 1 section 2's `fightable`, which is `false` only beside `"challenge": "rule"`. True is
+    today's behaviour: a warden is a monster and a monster can be hit. A false one still sleeps,
+    wakes and hunts by ADR 0014, so the hall stays dangerous."""
+    return not (isinstance(warden, dict) and warden.get('fightable') is False)
 
 
 def warden_flag(warden_id: str, cycle: int) -> str:
@@ -1300,6 +1342,11 @@ def _warden_record(section: dict, k: int, cycle: int, at) -> dict | None:
     record = {'id': warden['id'], 'flag': warden_flag(warden['id'], cycle)}
     if 'carries' in warden:
         record['carries'] = warden['carries']
+    # Only what the pack wrote, so a plan for a pack that names none of
+    # Amendment 1's three keys is the record it was before them.
+    for key in ('challenge', 'yields', 'fightable'):
+        if key in warden:
+            record[key] = warden[key]
     return record
 
 
@@ -1316,7 +1363,8 @@ def _with_warden(mobs: list, key: str, section: dict, k: int, at, source,
 
     if _warden_record(section, k, 0, at) is None:
         return mobs
-    family = warden_of(section)['family']
+    warden = warden_of(section)
+    family = warden['family']
     base = family_base(source, family) if source else None
     base = base if isinstance(base, dict) else {}
     rng = prng(stream_seed(key, 'warden'))
@@ -1328,14 +1376,23 @@ def _with_warden(mobs: list, key: str, section: dict, k: int, at, source,
     sight = sight if isinstance(sight, int) and not isinstance(sight, bool) else 6
     tile = [int(at[0]), int(at[1])]
     kept = [m for m in mobs if m['at'] != tile]
-    return kept + [{
+    mob = {
         'id': WARDEN_MOB, 'family': family,
         'name': base.get('name') or DEFAULT_FAMILY,
         'at': tile, 'hp': max(1, hp), 'atk': max(1, atk), 'sight': max(1, sight),
         'xp': sections.xp_for(base, depth),
         'drops': mob_drops(key, WARDEN_MOB, base.get('drops'), catalog),
         'warden': True,
-    }]
+    }
+    # The two presentation keys ride the monster as well as the record,
+    # because the player reads them off the monster: `fightable` is what
+    # refuses a blow, `yields` is what leaves a beaten warden standing.
+    # Neither is written unless the pack asked for it.
+    if not warden_fightable(warden):
+        mob['fightable'] = False
+    if warden_yields(warden):
+        mob['yields'] = True
+    return kept + [mob]
 
 
 def _vault_record(floor: dict, section: dict, k: int, cycle: int) -> dict | None:
