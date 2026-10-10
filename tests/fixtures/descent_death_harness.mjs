@@ -61,28 +61,46 @@ async function main() {
   if (!window.VEFR_COMBAT) throw new Error('VEFR_COMBAT never appeared');
   await wait(400);
 
+  // A wake is the hero's health going UP: nothing in this pack heals
+  // them, so a rise is the one thing `cozyDeath` does that no other
+  // press can. Standing on the wake tile with full health is not a
+  // wake - a hero that woke two tiles away can stroll onto it without
+  // being hit - so the old "hurt at some point, and whole, and on the
+  // tile" test read a stroll as a fall and every later reading was of
+  // the wrong floor. A wake it is.
+  let died = false;
+  let presses = 0;
+  let hp = (window.VEFR_COMBAT.hero || {}).hp;
+  const woke = () => {
+    const hero = (window.VEFR_COMBAT || {}).hero || {};
+    const rose = typeof hero.hp === 'number' && typeof hp === 'number' && hero.hp > hp;
+    hp = hero.hp;
+    return rose && same(hero.at, plan.wake) && hero.hp === hero.max;
+  };
+
+  // The staging walk stops on the wake too, for the reason the fight
+  // does: a hero that fell halfway down and then kept walking has not
+  // staged anything, and every press after the fall is a press on a
+  // floor the test never meant to measure.
   for (const [verb, arg] of plan.walk || []) {
     if (verb === 'wait') { await wait(Number(arg) || 0); continue; }
     if (verb === 'dir') press(arg);
     else if (verb === 'click') document.querySelector(arg).click();
     await wait(verb === 'click' ? 150 : 20);
+    if (woke()) { died = true; break; }
   }
 
   // The fight: one way in, over and over, until the hero is found whole
-  // again on the floor's own up stair. `hurt` keeps a hero who never
-  // lost a hit point from being read as a wake.
+  // again on the floor's own up stair.
   //
   // A press the engine refuses (a wall, the edge of the floor) is not
   // even a turn, so a fight that began facing one would never have
   // happened at all. When a press neither moves the hero nor bumps
   // something, the next one turns instead.
-  let died = false;
-  let presses = 0;
-  let hurt = false;
   let stuck = false;
   const fight = plan.fight || {};
   let dir = fight.dir || 'down';
-  for (let i = 0; i < (fight.presses || 0); i++) {
+  for (let i = 0; i < !died && (fight.presses || 0); i++) {
     const before = (window.VEFR_COMBAT.hero || {}).at || [];
     if (stuck) dir = DIRS[(DIRS.indexOf(dir) + 1) % DIRS.length];
     const [dx, dy] = VEC[dir] || VEC.down;
@@ -94,8 +112,7 @@ async function main() {
     const hero = (window.VEFR_COMBAT || {}).hero || {};
     const after = hero.at || [];
     stuck = !bumping && after[0] === before[0] && after[1] === before[1];
-    if (typeof hero.hp === 'number' && hero.hp < hero.max) hurt = true;
-    if (hurt && same(hero.at, plan.wake) && hero.hp === hero.max) { died = true; break; }
+    if (woke()) { died = true; break; }
   }
 
   const store = {};

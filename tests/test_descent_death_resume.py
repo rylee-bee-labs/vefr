@@ -13,6 +13,14 @@ walks to a monster it can reach and falls on it on purpose. The harness
 stops pressing the moment the hero wakes, because a hero that wakes and
 then keeps walking says nothing about where they woke.
 
+Where the fight is staged is not a detail, and it is spelled out below:
+a Section carries ONE family table for all of its floors, so a brute
+planted on the cellar is a brute the hero must cross as well as fight,
+and crossing is not a fight the hero can win. The brutes go on the
+hollow - the last Section of the descent, four floors down - so the walk
+down is a walk past the fixture's own harmless families and the only
+brute in the run is the one the hero walks into on purpose.
+
 The last test is the other half of that promise - a pack with no descent
 at all wakes its hero exactly where it did before, because the fix has
 nothing to say about a region it does not own.
@@ -29,7 +37,7 @@ import pytest
 import play_kit
 from vefr import delve
 
-from test_descent_deltas import TOWN, TOWN_HERO, _path
+from test_descent_deltas import DIRS, TOWN, TOWN_HERO, _path
 from test_descent_floors import DESCENT
 
 pytestmark = pytest.mark.skipif(shutil.which("node") is None, reason="node not installed")
@@ -37,34 +45,60 @@ pytestmark = pytest.mark.skipif(shutil.which("node") is None, reason="node not i
 ROOT = Path(__file__).resolve().parents[1]
 HARNESS = ROOT / "tests" / "fixtures" / "descent_death_harness.mjs"
 
-# The floor of the acceptance criterion: `cellar-0-3`, the third floor of
-# the fixture descent's first Section.
-DEPTH = 3
-FLOOR = "cellar-0-3"
-BELOW = "hollow-0-1"
+# The floor of the acceptance criterion: `hollow-0-2`, the second floor
+# of the fixture descent's second Section and the deepest floor these
+# tests reach. Four floors down from the town, which is the case the bug
+# report is about: a fall far into a descent.
+DEPTH = 5
+FLOOR = "hollow-0-2"
+BELOW = "cellar-1-1"
 
 # The hero is given three hundred hit points and the monster it falls to
 # has ten, so the fall takes thirty of its blows. The descent is walked
-# before anything is staged, and every monster on the way walks toward
-# the hero, so the numbers are chosen to survive that walk: a hero two
-# meetings on the way down could finish would die on the wrong floor, and
-# the test would be measuring the walk instead of the waking.
+# before anything is staged, so the same numbers have to survive the walk
+# too - see the Section note below for why the walk is a walk past
+# monsters worth one hit point, and the fight is the only fight in it.
 HERO_HP = 300
 PRESSES = 60
 
-# Two families, both on every floor of the Section. The brute is what
-# kills the hero, and it outlives the fight: the hero's four points a
-# bump take thirty of its hundred and fifty to finish, and the fall needs
-# no more than the thirty blows it takes to drop the hero. The vermin
-# falls in one and carries a pebble, so there is something in the bag and
-# something in the floor's own memory before the hero ever falls.
+# Two families, and both go on the SECOND Section. A Section carries one
+# family table for every floor it has (`vefr.sections.families` merges
+# that table; nothing in the generator reads a per-floor one), so a brute
+# planted on the cellar is a brute the hero must CROSS as well as fight -
+# and the crossing cannot be budgeted at all:
+#
+#   - the hero's four points a bump take against a hundred and fifty, so
+#     clearing one brute is thirty-eight turns, and the brute hits back
+#     on every one of them: three hundred and eighty of the hero's three
+#     hundred. A single block on the way down kills the hero outright,
+#     and `cellar-0-2` draws one a tile off the walked path.
+#   - so the hero has to be given more health than that, and then the
+#     fight stops working: the brute falls at the thirty-eighth bump, and
+#     a hero carrying more than three hundred hit points is still standing
+#     when it does. Raise the brute's health so it outlives the fight and
+#     the price of blocking one on the way down rises with it. No pair of
+#     numbers both clears a brute on the way and dies to one at the end:
+#     the two bounds are the same number, `hp / atk * atk`.
+#
+# The hollow is the last Section of the descent, so the hero walks down
+# through the cellar and hollow-0-1 first, and every monster on those
+# floors is the fixture's own - one hit point, one point of attack - so a
+# block on the way down there costs one turn and one hit point. The brute
+# is on the floor the hero is meant to fall on, and nowhere else.
+#
+# The brute is what kills the hero, and it outlives the fight: the hero's
+# four points a bump take thirty of its hundred and fifty to finish, and
+# the fall needs no more than the thirty blows it takes to drop the
+# hero. The vermin falls in one and carries a pebble, so there is
+# something in the bag and something in the floor's own memory before
+# the hero ever falls.
 BRUTE = {"family": "brute", "weight": 3, "hp": 150, "atk": 10,
          "name": "a heavy brute"}
 VERMIN = {"family": "vermin", "weight": 3, "drops": ["pebble"],
           "name": "a vermin"}
 
 FIGHT = copy.deepcopy(DESCENT)
-FIGHT["sections"][0]["families"] = [BRUTE, VERMIN]
+FIGHT["sections"][1]["families"] = [BRUTE, VERMIN]
 
 PATCH = {"world.json": {"player": {"hp": HERO_HP}, "descent": FIGHT}}
 
@@ -114,36 +148,70 @@ def _descent_to(depth):
     return actions
 
 
-def _reachable(plan, family, start):
-    """The first monster of `family` the hero can walk to from `start`, and the way.
+def _tiles(start, path):
+    """Every tile `path` walks over, `start` included."""
+    out = [list(start)]
+    here = list(start)
+    for step in path:
+        dx, dy = DIRS[step]
+        here = [here[0] + dx, here[1] + dy]
+        out.append(here)
+    return out
 
-    A v3 floor joins its rooms with corridors and its monsters wander
-    while the walk is being planned, so this is the first one with a
-    path that does not cross another monster's tile - the rule the
-    deltas tests walk by.
+
+def _staged(plan):
+    """The vermin the hero stages on, the walk to it, and the brute after it.
+
+    The pair whose staging walk keeps the brute furthest off that walk.
+    The hero must reach the vermin and take its pebble BEFORE the brute
+    ever gets a turn on it, and a brute is awake from ten tiles and
+    closes from six, so a vermin with the brute three tiles off the walk
+    to it is a hero that dies with an empty bag. The furthest one is
+    past all of that: the walk is a walk past vermin worth one hit
+    point, and the brute is only met on the way to it.
     """
+    up = plan["anchors"]["up"]
+    best = None
     for mob in plan["mobs"]:
-        if mob["family"] != family:
+        if mob["family"] != VERMIN["family"]:
             continue
         others = [m["at"] for m in plan["mobs"] if m["at"] != mob["at"]]
-        path = _path(plan, start, mob["at"], others)
-        if path:
-            return mob, path
-    raise AssertionError(f"no {family} on {plan['name']} the hero can reach")
+        walk = _path(plan, up, mob["at"], others)
+        if not walk:
+            continue
+        # The two presses past the vermin are its death and the step
+        # onto its tile, so the tiles they cover are part of the walk.
+        walked = _tiles(up, walk + [walk[-1], walk[-1]])
+        for brute in plan["mobs"]:
+            if brute["family"] != BRUTE["family"]:
+                continue
+            spare = [m["at"] for m in plan["mobs"] if m["at"] != brute["at"]]
+            fight = _path(plan, mob["at"], brute["at"], spare)
+            if not fight:
+                continue
+            off = min(abs(brute["at"][0] - at[0]) + abs(brute["at"][1] - at[1])
+                      for at in walked)
+            if best is None or off > best[0]:
+                best = (off, mob, walk, brute, fight)
+    if best is None:
+        raise AssertionError(
+            f"no vermin and brute on {plan['name']} the hero can walk to")
+    _off, mob, walk, brute, fight = best
+    return mob, walk, brute, fight
 
 
 @pytest.fixture(scope="module")
 def fall(tmp_path_factory):
-    """One death on the third floor, played once and read by the tests below.
+    """One death on the fifth floor, played once and read by the tests below.
 
-    A real descent and a real fight: kill the vermin, take its pebble,
-    then walk into the brute and keep bumping it until it finishes the
-    job.
+    A real descent and a real fight: walk four floors down past the
+    fixture's own monsters, kill the vermin on the fifth, take its
+    pebble, then walk into the brute and keep bumping it until it
+    finishes the job.
     """
     tmp_path = tmp_path_factory.mktemp("descent-death")
     plan = _plan(DEPTH)
-    vermin, to_vermin = _reachable(plan, VERMIN["family"], plan["anchors"]["up"])
-    brute, to_brute = _reachable(plan, BRUTE["family"], vermin["at"])
+    vermin, to_vermin, brute, to_brute = _staged(plan)
     walk = _descent_to(DEPTH)
     walk += [["dir", step] for step in to_vermin]
     # The last press of that walk is the bump that kills it; the two after
