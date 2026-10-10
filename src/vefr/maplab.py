@@ -1334,7 +1334,8 @@ def _no_affix_list_sentences(rel: str, section: dict, affixes) -> list[str]:
 
 
 def section_block_errors(section: dict, affixes=None, resolve=None,
-                         rel: str = f'{SECTIONS_DIR}/<id>.json') -> list[str]:
+                         rel: str = f'{SECTIONS_DIR}/<id>.json',
+                         drops=None) -> list[str]:
     """Every sentence `vefr check` prints for one Section pack.
 
     The Section block of `shapes.py` is the engine's own read of a Section
@@ -1343,9 +1344,13 @@ def section_block_errors(section: dict, affixes=None, resolve=None,
     them. `section_errors` below is the only caller in the engine, and
     `tests/golden/validator/cases.json` pins the sentences through here,
     so a change to any of them is a deliberate act.
+
+    `drops` is the callable that says whether a family's `drops` can pay
+    the player, handed on to `shapes.check_section` (which may not import
+    `vefr`); see `section_errors` for what it is.
     """
     sentences = _shape_sentences(rel, shapes.check_section(section, affixes,
-                                                           resolve))
+                                                           resolve, drops))
     sentences.extend(_no_affix_list_sentences(rel, section, affixes))
     return sentences
 
@@ -1374,6 +1379,18 @@ def section_errors(pack_dir) -> list[str]:
     affix checks when there is no list to read them against, which is
     right for a pack that asks for no elite and wrong for one that asks
     for one, and the difference is the file this module knows the name of.
+
+    A Section family's `drops` are read against the same catalog every
+    other `drops` in the engine is: `_pack_declared(root)`, this pack's
+    own `world.json` through `library._declared_items`. A monster on a
+    generated floor carries exactly what its Blueprint family names, so a
+    family naming an id the pack cannot deliver is a pack that promises an
+    item it will never hand over. A pack whose `world.json` cannot be read
+    gets that one check skipped rather than wrong.
+
+    `shapes` may not import `vefr`, so the reading is passed to it as the
+    `drops` callable it already takes its `resolve` through - the same
+    door, for the same reason.
     """
     pack = Path(pack_dir)
     root = pack.resolve()
@@ -1410,6 +1427,16 @@ def section_errors(pack_dir) -> list[str]:
     if not paths:
         return errors
     resolve = _family_resolver(pack)
+    declared = _pack_declared(root)
+
+    def drops(section_id, family, record):
+        """One sentence if this family's `drops` pay nothing, else None."""
+        said = library._drop_payout_errors(
+            f'section {section_id!r} family {family!r}', 'the family',
+            record.get('drops', library.NO_DROPS)
+            if isinstance(record, dict) else library.NO_DROPS,
+            declared)
+        return said[0] if said else None
     for path in paths:
         rel = path.relative_to(root).as_posix()
         section, problem = _pack_json(root, rel)
@@ -1419,7 +1446,8 @@ def section_errors(pack_dir) -> list[str]:
         if not isinstance(section, dict):
             errors.append(f'{rel}: a Section pack must be a JSON object')
             continue
-        errors.extend(section_block_errors(section, affixes, resolve, rel))
+        errors.extend(section_block_errors(section, affixes, resolve, rel,
+                                           drops))
         errors.extend(_warden_key_errors(root, section, rel))
         errors.extend(_section_tile_errors(root, section, rel))
     return errors
@@ -1445,6 +1473,12 @@ def _pack_catalog(root: Path) -> dict | None:
     A file that reads and carries no `items` is `{}`: the pack declares no
     catalog, so it declares nothing, and a chest that drops from it opens
     on nothing.
+
+    Every `drops` in the engine is read against this file and then
+    through `library._declared_items`, which is the reader that keeps
+    only the entries the item reader would really bake. One file, one
+    read, one rule: the chest book, the region enemy, the Blueprint
+    family and the Section family below all ask here.
     """
     config, problem = _pack_json(Path(root), 'world.json')
     if problem is not None:
@@ -1495,6 +1529,19 @@ def _section_tile_errors(root: Path, section: dict, rel: str) -> list[str]:
             f'pack\'s tiles/ or the engine\'s; the floor would fall back to '
             f'the glyph\'s own colour')
     return problems
+
+
+def _pack_declared(root: Path) -> set[str] | None:
+    """The ids this pack really hands over, from its own `world.json`.
+
+    `_pack_catalog` reads the file and `library._declared_items` says what
+    the weave keeps of it, which is the pair every drop check in this
+    module reads through. None (an unreadable `world.json`) is kept
+    distinct from `{}` (a pack that declares no catalog, and so declares
+    nothing) because they mean opposite things - see `_pack_catalog`.
+    """
+    catalog = _pack_catalog(root)
+    return None if catalog is None else library._declared_items(catalog)
 
 
 def _warden_key_errors(root: Path, section: dict, rel: str) -> list[str]:
@@ -2696,8 +2743,7 @@ def validate(w: dict, pack_dir: Path | None = None) -> list[str]:
     # with no `name` is not an id a drop can hand over. A pack directory
     # that cannot be read is None, and every drop check below is then
     # skipped rather than wrong.
-    declared_items = (library._declared_items(_pack_catalog(pack_dir))
-                      if pack_dir is not None else None)
+    declared_items = _pack_declared(pack_dir) if pack_dir is not None else None
     # The pack's optional rules/flags/claims/people catalog: checked
     # beside the other optional catalogs so a broken rule is a
     # pack-authoring error, not a surprise in play. A pack that

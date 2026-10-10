@@ -66,10 +66,13 @@ not name. They are `check_affixes` and `check_section`, and they return
 the same `list[Problem]` and speak the same plain sentences.
 
 The module is standard-library only: `shapes.py` must never import from
-`vefr`, or `maplab` would import itself into a cycle. So the one
-question `shapes` cannot answer for itself - does this family exist in
-the Blueprint, and what does it resolve to - is asked through a
-`resolve` callable the caller passes in.
+`vefr`, or `maplab` would import itself into a cycle. So the questions
+`shapes` cannot answer for itself are asked through callables the caller
+passes in - `resolve` for whether a family exists in the Blueprint and
+what it resolves to, `drops` for whether the drops it names can actually
+pay the player. `check_section`'s two callables are the whole of that:
+the rule behind the second one lives in `library._drop_payout_errors`,
+the same rule the chest book and the region enemy are read by.
 """
 
 from collections import namedtuple
@@ -1429,7 +1432,7 @@ def check_affixes(section: dict, affixes) -> list[Problem]:
     return []
 
 
-def check_section(section: dict, affixes=None, resolve=None) -> list[Problem]:
+def check_section(section: dict, affixes=None, resolve=None, drops=None) -> list[Problem]:
     """Every problem with one Section pack, in stable order.
 
     `section` is a Section pack, `affixes` its pack's affix list, and
@@ -1438,6 +1441,16 @@ def check_section(section: dict, affixes=None, resolve=None) -> list[Problem]:
     have (`vefr.blueprint.resolve_family` behind that one wrapper -
     `shapes` may not import it). A caller with no `resolve` gets the
     family checks skipped rather than wrong.
+
+    `drops` is a callable taking `(section id, family, record)` and
+    returning the one sentence saying that family's `drops` cannot pay the
+    player, or None when they can - which is what
+    `library._drop_payout_errors` says for a chest book and a region
+    enemy too, so all four surfaces are read by one rule. A caller with
+    no `drops` (a Section checked on its own, with no pack catalog behind
+    it) gets the drop check skipped rather than wrong, and a Section
+    whose families name no drops is a floor of monsters that carry
+    nothing, which is a legitimate pack.
 
     The order is the one ADR 0014's tests pinned, and the Section table
     comes first without disturbing it: the whole Section, then the two
@@ -1477,6 +1490,11 @@ def check_section(section: dict, affixes=None, resolve=None) -> list[Problem]:
                 return problems + [Problem(
                     'no-stat', f'/families/{i}/family',
                     _DEFAULTS['no-stat'].format(stat=missing[0], id=family))]
+            sentence = (drops(section.get('id', ''), family, record)
+                        if drops is not None else None)
+            if sentence:
+                return problems + [Problem('unknown-drop',
+                                           f'/families/{i}/family', sentence)]
 
     # A record names its family outright, so that family must resolve. A bare
     # string is checked by nothing here: packs write it both as a family id

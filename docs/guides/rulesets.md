@@ -236,6 +236,16 @@ chest reachable from the up-stair. Code: `src/vefr/sections.py`,
 `src/vefr/locks.py` (`section_findings`), `src/vefr/cli.py`
 (`_bake_section`); tests: `tests/test_sections_e4.py`.
 
+A Section names its families by id and carries no record of one of its
+own, so what a monster on a generated floor carries is exactly what
+`drops` in its Blueprint family names (`delve.mobs_at`, one id off that
+monster's own loot stream). `vefr check` reads those ids by the same
+rule every other `drops` is read by (above): a family naming an id the
+pack's `world.json` cannot describe with a `name` is one sentence at
+`/families/<n>/family` naming the Section, the family and the empty kill,
+because that monster would be killed for nothing on any floor. A family
+that names no drops at all is fine - most of them do.
+
 A Section's `fog` is how far it sees: `{"radius": N}`, a whole number
 from 2 to 32, and the lit area around the arrival tile is a disc `N`
 tiles in radius. The ceiling is a quarter of the widest floor `size`
