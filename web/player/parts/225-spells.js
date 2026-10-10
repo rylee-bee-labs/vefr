@@ -21,14 +21,6 @@ function spellRecords() {
     return r && typeof r === 'object' && typeof r.id === 'string' && r.id;
   });
 }
-// The pack's own school names, in pack order. A spell naming a school
-// outside this list is a pack `vefr check` refused, so the player never
-// has to decide what to do about one.
-function spellSchools() {
-  var block = window.VEFR_SPELLS;
-  if (!block || typeof block !== 'object' || !Array.isArray(block.schools)) return [];
-  return block.schools.filter(function (s) { return typeof s === 'string' && s; });
-}
 function spellById(id) {
   var found = null;
   spellRecords().forEach(function (r) { if (r.id === id) found = r; });
@@ -130,9 +122,14 @@ function castSpell(id) {
 // The Bag panel's "Spells" section. Nothing at all for a pack that
 // declares no spells: the heading is hidden and the list is empty, so a
 // pack with no `spells` block draws the panel it always drew. Each row
-// names the spell and its school in one line of text, and the button says
-// which verb casts it, so the eye and a screen reader are told the same
-// thing in the same sentence.
+// names the spell and its school in one line of text and the button names
+// the same two words in its own label, so the eye and a screen reader are
+// told the same thing in the same sentence.
+//
+// The schools list is not read here on purpose. A school is a name the
+// pack chose, a spell outside the list is a pack `vefr check` refuses,
+// and nothing in this slice decides what a school is FOR - so the player
+// prints the name the pack wrote and asks nothing of it.
 function renderSpellList() {
   var list = document.getElementById('spell-list');
   var head = document.getElementById('spells-heading');

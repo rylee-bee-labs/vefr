@@ -158,8 +158,9 @@ function bagRemoveOne(id) {
 
 // Use a carried thing. A thing the pack gave a `light` lights the dark
 // (see setupTown); a thing with a `heal` raises health by `heal` (never
-// above the max). Either way it takes one copy out of the bag and says
-// so in the panel's live line. With neither, nothing happens.
+// above the max); a thing with a `spell` teaches it (ADR 0018). Either
+// way it takes one copy out of the bag and says so in the panel's live
+// line. With none of them, nothing happens.
 function useItem(id) {
   var def = itemCatalog()[id];
   if (!def) return false;
@@ -189,9 +190,10 @@ function useItem(id) {
   // bag is used and stays.
   if (typeof def.spell === 'string' && def.spell) {
     if (!spellById(def.spell)) {
-      // Only a pack `vefr check` refused gets here. Say so in words
-      // rather than taking a book away for a spell nobody can learn.
-      bagSay('The words in ' + itemName(id) + ' are in no school you know.');
+      // Only a pack `vefr check` refused gets here: the book names a
+      // spell the pack never wrote. Say so in words rather than taking a
+      // book away for a spell nobody can learn.
+      bagSay('Nothing in ' + itemName(id) + ' is a spell this world teaches.');
       return false;
     }
     if (!keep && !bagRemoveOne(id)) return false;

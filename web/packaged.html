@@ -1752,8 +1752,9 @@ function bagRemoveOne(id) {
 
 // Use a carried thing. A thing the pack gave a `light` lights the dark
 // (see setupTown); a thing with a `heal` raises health by `heal` (never
-// above the max). Either way it takes one copy out of the bag and says
-// so in the panel's live line. With neither, nothing happens.
+// above the max); a thing with a `spell` teaches it (ADR 0018). Either
+// way it takes one copy out of the bag and says so in the panel's live
+// line. With none of them, nothing happens.
 function useItem(id) {
   var def = itemCatalog()[id];
   if (!def) return false;
@@ -1783,9 +1784,10 @@ function useItem(id) {
   // bag is used and stays.
   if (typeof def.spell === 'string' && def.spell) {
     if (!spellById(def.spell)) {
-      // Only a pack `vefr check` refused gets here. Say so in words
-      // rather than taking a book away for a spell nobody can learn.
-      bagSay('The words in ' + itemName(id) + ' are in no school you know.');
+      // Only a pack `vefr check` refused gets here: the book names a
+      // spell the pack never wrote. Say so in words rather than taking a
+      // book away for a spell nobody can learn.
+      bagSay('Nothing in ' + itemName(id) + ' is a spell this world teaches.');
       return false;
     }
     if (!keep && !bagRemoveOne(id)) return false;
@@ -2790,14 +2792,6 @@ function spellRecords() {
     return r && typeof r === 'object' && typeof r.id === 'string' && r.id;
   });
 }
-// The pack's own school names, in pack order. A spell naming a school
-// outside this list is a pack `vefr check` refused, so the player never
-// has to decide what to do about one.
-function spellSchools() {
-  var block = window.VEFR_SPELLS;
-  if (!block || typeof block !== 'object' || !Array.isArray(block.schools)) return [];
-  return block.schools.filter(function (s) { return typeof s === 'string' && s; });
-}
 function spellById(id) {
   var found = null;
   spellRecords().forEach(function (r) { if (r.id === id) found = r; });
@@ -2899,9 +2893,14 @@ function castSpell(id) {
 // The Bag panel's "Spells" section. Nothing at all for a pack that
 // declares no spells: the heading is hidden and the list is empty, so a
 // pack with no `spells` block draws the panel it always drew. Each row
-// names the spell and its school in one line of text, and the button says
-// which verb casts it, so the eye and a screen reader are told the same
-// thing in the same sentence.
+// names the spell and its school in one line of text and the button names
+// the same two words in its own label, so the eye and a screen reader are
+// told the same thing in the same sentence.
+//
+// The schools list is not read here on purpose. A school is a name the
+// pack chose, a spell outside the list is a pack `vefr check` refuses,
+// and nothing in this slice decides what a school is FOR - so the player
+// prints the name the pack wrote and asks nothing of it.
 function renderSpellList() {
   var list = document.getElementById('spell-list');
   var head = document.getElementById('spells-heading');
