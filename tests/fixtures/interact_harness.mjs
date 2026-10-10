@@ -142,6 +142,7 @@ const DOOR = { kind: 'door', id: 't-cellar', name: 'the cellar door' };
 const STAIRS = { kind: 'stairs', id: 't-down', name: 'the way down' };
 const CHEST = { kind: 'chest', id: 'bk-oak', name: 'the oak chest' };
 const TRADER = { kind: 'trader', id: 'tr-bram', name: 'Bram' };
+const IDENTIFIER = { kind: 'identifier', id: 'id-wren', name: 'Wren' };
 const RESIDENT = { kind: 'resident', id: 'sp-ada', name: 'Ada' };
 const PLACE = { kind: 'place', id: 'poi-well', name: 'the old well' };
 const ENEMY = { kind: 'enemy', id: 'e-rat', name: 'the cellar rat' };
@@ -173,6 +174,18 @@ pin('tieTraderThenResident', tieAdj(TRADER, RESIDENT).pick,
   win4(TRADER, 'Trade with Bram'));
 pin('tieResidentThenTrader', tieAdj(RESIDENT, TRADER).pick,
   win6(TRADER, 'Trade with Bram'));
+/* trader vs identifier: the two town services rank as one pair, the
+   shopkeeper first because he was first. */
+pin('tieTraderThenIdentifier', tieAdj(TRADER, IDENTIFIER).pick,
+  win4(TRADER, 'Trade with Bram'));
+pin('tieIdentifierThenTrader', tieAdj(IDENTIFIER, TRADER).pick,
+  win6(TRADER, 'Trade with Bram'));
+/* identifier vs resident: a reader opens their panel, not their talk,
+   exactly as a shopkeeper does. */
+pin('tieIdentifierThenResident', tieAdj(IDENTIFIER, RESIDENT).pick,
+  win4(IDENTIFIER, 'Ask Wren to read things'));
+pin('tieResidentThenIdentifier', tieAdj(RESIDENT, IDENTIFIER).pick,
+  win6(IDENTIFIER, 'Ask Wren to read things'));
 /* resident vs place */
 pin('tieResidentThenPlace', tieAdj(RESIDENT, PLACE).pick,
   win4(RESIDENT, 'Talk to Ada'));
@@ -204,16 +217,32 @@ const reachRes3 = run(st([5, 5], 'up', [c('resident', 'sp-three', 'Ulf', 8, 5)])
 pin('reachResident3Targets', reachRes3.targets, []);
 pin('reachResident3Pick', reachRes3.pick, null);
 
+/* A reader is a person: the same reach a shopkeeper and a resident
+   have, two tiles. */
+const reachId2 = run(st([5, 5], 'up', [c('identifier', 'id-two', 'Wren', 7, 5)]));
+pin('reachIdentifier2Targets', reachId2.targets, [
+  { kind: 'identifier', id: 'id-two', name: 'Wren', at: [7, 5], dist: 2,
+    label: 'Ask Wren to read things' },
+]);
+pin('reachIdentifier2Pick', reachId2.pick,
+  { kind: 'identifier', id: 'id-two', name: 'Wren', at: [7, 5], dist: 2,
+    label: 'Ask Wren to read things' });
+
+const reachId3 = run(st([5, 5], 'up', [c('identifier', 'id-three', 'Wren', 8, 5)]));
+pin('reachIdentifier3Targets', reachId3.targets, []);
+pin('reachIdentifier3Pick', reachId3.pick, null);
+
 /* ---- 6. nothing in reach ---- */
 const nothing = run(st([5, 5], 'up', []));
 pin('nothingTargets', nothing.targets, []);
 pin('nothingPick', nothing.pick, null);
 pin('nothingLabel', labelFor(nothing.pick), null);
 
-/* ---- 7. all seven labels, plus null and absent ---- */
+/* ---- 7. all eight labels, plus null and absent ---- */
 pin('labelChest', labelFor({ kind: 'chest', name: 'x' }), 'Open the chest');
 pin('labelResident', labelFor({ kind: 'resident', name: 'Ada' }), 'Talk to Ada');
 pin('labelTrader', labelFor({ kind: 'trader', name: 'Bram' }), 'Trade with Bram');
+pin('labelIdentifier', labelFor({ kind: 'identifier', name: 'Wren' }), 'Ask Wren to read things');
 pin('labelDoor', labelFor({ kind: 'door', name: 'x' }), 'Go through the door');
 pin('labelStairs', labelFor({ kind: 'stairs', name: 'x' }), 'Go down the stairs');
 pin('labelStairsUp', labelFor({ kind: 'stairs', name: 'the stair up' }), 'Go up the stairs');
