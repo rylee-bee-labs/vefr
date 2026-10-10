@@ -175,6 +175,59 @@ def _declared_items(items) -> set[str] | None:
             and isinstance(spec, dict) and str(spec.get("name", "")).strip()}
 
 
+# The value a caller hands `_drop_payout_errors` when the pack wrote no
+# `drops` key at all, which is NOT the same thing as a `drops` line that
+# names nothing. Carrying nothing is legal; promising something and being
+# unable to pay it is the bug.
+NO_DROPS = object()
+
+
+def _drop_payout_errors(where: str, what: str, value,
+                        declared: set[str] | None) -> list[str]:
+    """Why a `drops` line hands the player nothing (empty = fine).
+
+    THE rule for every `drops` in the engine, and there is one on purpose.
+    Four keys reached a 2026-10-08 game as chests whose `drops` the
+    catalog could not answer, each validated green, each one a run that
+    could not be finished (`giveChestDrops`, `placeDrops` and `bagAdd` all
+    drop or refuse an id the baked catalog does not hold). The same shape
+    then turned up on a region enemy's `drops`, on a Blueprint family's
+    and on a Section family's, and three of those four each carried their
+    own idea of what a real item is. This is the one idea: read against
+    `_declared_items` - the catalog the weave really bakes - through the
+    ids `cli._drop_ids` really keeps, so the check and the bake agree by
+    construction rather than by four copies of a rule.
+
+    Three shapes are said out loud, all of them from the line the author
+    wrote:
+
+    * `NO_DROPS` - the key is not there at all - is NOT one of them. A
+      chest holds its note and nothing else, a monster that carries
+      nothing is a legitimate monster, and most Section families name no
+      drops. Left alone on purpose.
+    * a line that names no id is a refusal, because it promises a
+      payout and names nothing to pay it with.
+    * an id no declared item answers for is a refusal, named one by one.
+      A list where every id is dead gets the "holds nothing" sentence
+      instead, because that is the whole truth about it.
+
+    `declared` is None when the caller had no catalog to read against at
+    all (no pack directory, an unreadable `world.json`), and then every
+    drop check is skipped rather than wrong.
+    """
+    if declared is None or value is NO_DROPS:
+        return []
+    named = _drop_ids(value)
+    if not named:
+        return [f"{where}: {what} holds nothing - its 'drops' line names no item"]
+    dead = [pid for pid in named if pid not in declared]
+    if len(dead) == len(named):
+        return [f"{where}: {what} holds nothing - its drops name no item "
+                "world.json declares"]
+    return [f"{where}: drop {pid!r} is not an item world.json declares"
+            for pid in dead]
+
+
 def _chest_drop_errors(where: str, book: dict, declared: set[str] | None) -> list[str]:
     """Why a chest book holds nothing the player can take (empty = fine).
 
@@ -189,24 +242,18 @@ def _chest_drop_errors(where: str, book: dict, declared: set[str] | None) -> lis
     wrote: a line that names no id at all, and ids that resolve to no
     item. A book with no `drops` line is NOT one of them - it holds its
     note and nothing else, which is a thing a pack may mean - so it is
-    left alone here.
+    left alone here. Both shapes, and the carve-out, are
+    `_drop_payout_errors`'s: this function decides only whether the book
+    IS a chest, and then hands the line to the one rule every other
+    `drops` in the engine is read by.
     """
     if declared is None:
         return []
     extra = book.get("extra") if isinstance(book.get("extra"), dict) else {}
     if str(extra.get("chest", "")).strip().lower() not in CHEST_TRUE:
         return []
-    named = _drop_ids(extra.get("drops"))
-    if not named:
-        if "drops" in extra:
-            return [f"{where}: the chest holds nothing - its 'drops' line "
-                    "names no item"]
-        return []
-    if not any(pid in declared for pid in named):
-        return [f"{where}: the chest holds nothing - its drops name no item "
-                "world.json declares"]
-    return [f"{where}: drop {pid!r} is not an item world.json declares"
-            for pid in named if pid not in declared]
+    return _drop_payout_errors(where, "the chest",
+                               extra.get("drops", NO_DROPS), declared)
 
 
 def _walkable(town: dict, x: int, y: int) -> bool:

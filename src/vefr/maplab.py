@@ -25,7 +25,7 @@ import sys
 import urllib.request
 from pathlib import Path
 
-from . import shapes
+from . import library, shapes
 from .paths import world_name as _default_world_name
 from .world import VALID_FLOORS, VALID_TONES
 from .world import creed_from as _creed_from
@@ -2632,8 +2632,31 @@ def _door_tile_problem(field: str, rname: str, at,
     return None
 
 
+def _enemy_drop_errors(where: str, drops, declared) -> list[str]:
+    """Why a killed enemy hands the player none of what it wrote (empty = fine).
+
+    The enemy face of the one rule: a `drops` line the bake cannot pay is
+    a fight the player wins and walks away from with nothing, because the
+    weave drops every id that is not a catalog item and the bag refuses
+    one twice over (`placeDrops` and `bagAdd`), so the floor never even
+    shows the marker.
+
+    What a real item is, what a legal pack looks like and the exact words
+    of the refusal are all `library._drop_payout_errors`'s, shared with
+    the chest (`library._chest_drop_errors`) and the Blueprint and Section
+    families, so the three surfaces cannot drift into three opinions. This
+    function is only the door for the enemy: `declared` is the catalog the
+    player will really get, read by the caller off the pack's own
+    `world.json` through the same `library._declared_items` the chest
+    check uses, and an enemy that writes no `drops` at all carries nothing,
+    which is a legitimate monster.
+    """
+    return library._drop_payout_errors(where, "the kill", drops, declared)
+
+
 def _region_enemy_errors(rname: str, geo: dict, levels_mode: bool,
-                         act_id: str | None = None) -> list[str]:
+                         act_id: str | None = None,
+                         declared: set[str] | None = None) -> list[str]:
     """Every problem with one region's `enemies` (empty = good).
 
     Shared by the first act's region check and the per-act checks. With
@@ -2641,7 +2664,11 @@ def _region_enemy_errors(rname: str, geo: dict, levels_mode: bool,
     the enemy's display name); with an act id every sentence carries
     `act '<id>'` and names the enemy by its id, so a hazard in act 2 is
     findable. The checks are the same either way: a walkable tile, real
-    numbers, ids unique within the region, and `xp` only in levels mode.
+    numbers, ids unique within the region, `xp` only in levels mode, and a
+    `drops` line that hands the player something (`declared` is the
+    catalog it is read against, and None means there was none to read
+    against, so the check is skipped rather than wrong - see
+    `_enemy_drop_errors`).
     """
     errors: list[str] = []
     rows = geo.get('map') or []
@@ -2707,6 +2734,12 @@ def _region_enemy_errors(rname: str, geo: dict, levels_mode: bool,
                 errors.append(
                     f"{prefix}enemy '{eid}' in region '{rname}' needs a whole "
                     "'xp' of 0 or more")
+        # A `drops` line the kill cannot pay out is named by the enemy's
+        # display name, like every other sentence here: an author reads
+        # "a cellar rat", not an id, when they go looking for it.
+        errors.extend(_enemy_drop_errors(
+            f"{prefix}enemy '{who}' in region '{rname}'",
+            e.get('drops', library.NO_DROPS), declared))
     return errors
 
 
@@ -2761,6 +2794,15 @@ def validate(w: dict, pack_dir: Path | None = None) -> list[str]:
     # error rather than a silence in play. A pack that declares none
     # gets nothing here and plays exactly as it did.
     errors.extend(identify_errors(w))
+    # The catalog every `drops` is paid from: what the player will really
+    # get, read off the pack's own `world.json` and through
+    # `library._declared_items` - the same file, the same read and the
+    # same shape the chest check above already uses, so an `items` entry
+    # with no `name` is not an id a drop can hand over. A pack directory
+    # that cannot be read is None, and every drop check below is then
+    # skipped rather than wrong.
+    declared_items = (library._declared_items(_pack_catalog(pack_dir))
+                      if pack_dir is not None else None)
     # The pack's optional rules/flags/claims/people catalog: checked
     # beside the other optional catalogs so a broken rule is a
     # pack-authoring error, not a surprise in play. A pack that
@@ -3074,7 +3116,8 @@ def validate(w: dict, pack_dir: Path | None = None) -> list[str]:
     levels_mode = isinstance(_growth, dict) and _growth.get('mode') == 'levels'
     for rname, geo in region_geo.items():
         if isinstance(geo, dict):
-            errors.extend(_region_enemy_errors(rname, geo, levels_mode))
+            errors.extend(_region_enemy_errors(rname, geo, levels_mode,
+                                               declared=declared_items))
 
     # Every act after the first is checked against its OWN regions: its
     # doors must stay inside the act, land on walkable tiles, name
@@ -3135,7 +3178,8 @@ def validate(w: dict, pack_dir: Path | None = None) -> list[str]:
                 if isinstance(rdata, dict):
                     errors.extend(
                         _region_enemy_errors(rname, rdata, levels_mode,
-                                             act_id=aid))
+                                             act_id=aid,
+                                             declared=declared_items))
 
     # The Library: authored books this pack keeps (library/*.md). Needs the
     # pack on disk; in-memory validation (chat drafts) has no books yet.
