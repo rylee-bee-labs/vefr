@@ -258,5 +258,6 @@ function bindLibrary() {
   document.getElementById('reader-back').addEventListener('click', function () { readerTurn(-1); });
   document.getElementById('reader-next').addEventListener('click', function () { readerTurn(1); });
   document.getElementById('trade-close').addEventListener('click', closeTrade);
+  document.getElementById('identify-close').addEventListener('click', closeIdentify);
 }
 

@@ -601,9 +601,10 @@ window.VEFR_DESCENT = (function () {
     return out;
   }
   // The drop one drawn item is: the bare id it has always been, or the
-  // instance record the bag keeps as it is. `identified` is false because
-  // the reveal is the next slice - nothing here decides a thing has been
-  // read, it only refuses to pretend one has.
+  // instance record the bag keeps as it is. `identified` is false here
+  // because nothing here decides a thing has been read, it only refuses
+  // to pretend one has - reading is the town's identify service
+  // (`195-the-identify-service.js`), and this draw is never redone.
   function itemDraw(key, mobId, itemId, def) {
     var entry = (def && typeof def === 'object') ? def : {};
     var roll = itemRollOf(entry);

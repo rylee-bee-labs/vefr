@@ -8,6 +8,8 @@
 // buying happen at a shopkeeper's Trade panel (see below). Since ADR
 // 0017 an entry may instead be the instance a rolled drop left behind
 // (rarity and hidden traits); the bag logic and the strip live in the
-// gold part below. No weight, no dropping, no identifying yet.
+// gold part below. No weight, no dropping, no bag size: the town reads
+// what it reads (see `195-the-identify-service.js`), and slice 3 gives
+// the bag its capacity and its upgrades.
 var BAG_KEY = 'vefr-bag-' + ((window.VEFR_WORLD && window.VEFR_WORLD.name) || 'world');
 

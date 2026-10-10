@@ -223,21 +223,22 @@
   /* the reader: the author's words, one page at a time, over the game.
      Matches the speech box (dark in both colour schemes), because it
      sits inside the always-dark stage. */
-  #reader, #trade { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center;
+  #reader, #trade, #identify { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center;
             justify-content: center; padding: 20px; background: rgba(6, 7, 9, 0.8); }
   .reader-card { width: 100%; max-width: 560px; max-height: 82vh; overflow-y: auto;
                  background: rgba(21, 24, 29, 0.97); border: 2px solid #D8AA4E;
                  border-radius: 6px; padding: 24px 22px 16px; color: var(--glass-ink); }
-  #reader .speaker, #trade .speaker { margin: 0 0 10px; font: 700 1rem var(--display);
+  #reader .speaker, #trade .speaker, #identify .speaker { margin: 0 0 10px; font: 700 1rem var(--display);
                      letter-spacing: 0.04em; color: #E2BC6E; }
   .reader-page { margin: 0 0 10px; font-size: 1.05rem; line-height: 1.55;
                  white-space: pre-wrap; color: var(--glass-ink); }
-  #reader .status, #trade .status { color: rgba(244, 238, 221, 0.75); }
+  #reader .status, #trade .status, #identify .status { color: rgba(244, 238, 221, 0.75); }
   .reader-controls { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
   .reader-controls .cta { color: var(--glass-ink); border-color: rgba(242, 236, 221, 0.5); }
-  #reader #reader-close, #trade #trade-close { background: transparent; color: #E2BC6E; border-color: rgba(216, 170, 78, 0.5); }
+  #reader #reader-close, #trade #trade-close, #identify #identify-close { background: transparent; color: #E2BC6E; border-color: rgba(216, 170, 78, 0.5); }
   /* the shop's Trade panel: sell what you carry, buy what the shop keeps */
   #trade h2 { margin: 14px 0 6px; font: 700 0.95rem var(--display); letter-spacing: 0.06em; color: #E2BC6E; }
+  /* the identify panel shares the trade panel's rows: art, name, verb. */
   .trade-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
   .trade-row .trade-name { flex: 1 1 auto; }
   .trade-row .trade-price { color: rgba(244, 238, 221, 0.75); font-size: 0.9rem; white-space: nowrap; }

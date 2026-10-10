@@ -564,11 +564,11 @@
   //     candidates: [ { kind, id, name, at: [x, y] } ]
   //   }
   //
-  // `kind` is one of exactly: resident, trader, chest, door, stairs,
-  // place, enemy. `id` is the caller's key (speaker key, book id,
-  // transition id, enemy id, poi key); `name` is the display name. A
-  // malformed candidate - missing or unknown kind, missing, short or
-  // non-numeric `at` - is skipped, never an error.
+  // `kind` is one of exactly: resident, trader, identifier, chest,
+  // door, stairs, place, enemy. `id` is the caller's key (speaker key,
+  // book id, transition id, enemy id, poi key); `name` is the display
+  // name. A malformed candidate - missing or unknown kind, missing,
+  // short or non-numeric `at` - is skipped, never an error.
   //
   // Reach is Manhattan from `state.hero`: one tile for the things you
   // touch (chest, door, stairs, place, enemy), two for people (the
@@ -579,8 +579,10 @@
   // else one on the hero's own tile, else the nearest in reach.
   // Ties break by kind - door and stairs share the top rank and
   // candidate order decides between them, then chest, trader,
-  // resident, place, enemy - and finally by candidate order. Nothing
-  // is mutated: every call returns fresh objects. No DOM, no
+  // identifier, resident, place, enemy - and finally by candidate
+  // order. The two service kinds sit where the trade panel's did, so a
+  // shopkeeper or a reader opens their panel rather than their talk.
+  // Nothing is mutated: every call returns fresh objects. No DOM, no
   // storage, no clock, no chance.
   globalThis.labelFor = function (target) {
     if (!target) return null;
@@ -588,6 +590,7 @@
     if (target.kind === 'chest') return 'Open the chest';
     if (target.kind === 'resident') return 'Talk to ' + name;
     if (target.kind === 'trader') return 'Trade with ' + name;
+    if (target.kind === 'identifier') return 'Ask ' + name + ' to read things';
     if (target.kind === 'door') return 'Go through the door';
     // A stair the pack names as going up ("the stair up") climbs; any other
     // stair keeps the original words.
@@ -606,8 +609,8 @@
     if (!Array.isArray(hero) || hero.length < 2) return out;
     if (typeof hero[0] !== 'number' || !isFinite(hero[0])) return out;
     if (typeof hero[1] !== 'number' || !isFinite(hero[1])) return out;
-    var reach = { resident: 2, trader: 2, chest: 1, door: 1,
-                  stairs: 1, place: 1, enemy: 1 };
+    var reach = { resident: 2, trader: 2, identifier: 2, chest: 1,
+                  door: 1, stairs: 1, place: 1, enemy: 1 };
     var list = Array.isArray(state.candidates) ? state.candidates : [];
     for (var i = 0; i < list.length; i++) {
       var c = list[i];
@@ -637,7 +640,7 @@
     var fx = null, fy = null;
     if (face) { fx = hero[0] + face[0]; fy = hero[1] + face[1]; }
     var rank = { door: 0, stairs: 0, chest: 1, trader: 2,
-                 resident: 3, place: 4, enemy: 5 };
+                 identifier: 3, resident: 4, place: 5, enemy: 6 };
     var best = null, bestTier = -1, bestDist = -1, bestRank = -1;
     for (var i = 0; i < all.length; i++) {
       var t = all[i];
@@ -667,6 +670,10 @@
   //              shopkeeperNear finds it (shopKeyHere) but with NO
   //              distance cut, so the pure block's own reach rules
   //              decide; the reach cut lives only in shopkeeperNear;
+  //   identifier - the region's reader (ADR 0017, T3 slice 2), the
+  //                speaker that carries `"identify": "true"`, found
+  //                the same way: identifyKeyHere names it and the
+  //                pure block's own reach rules decide.
   //   chest    - every unfound chest book in this region: a chest
   //              book (`chest: yes`, `found: map`) whose region is
   //              this one and which is not already found;
@@ -697,6 +704,16 @@
     if (shop && Array.isArray(shop.at)) {
       candidates.push({ kind: 'trader', id: shopKey, name: shop.name,
                         at: [shop.at[0], shop.at[1]] });
+    }
+    // The region's reader, the same two lines as the shopkeeper above: a
+    // pack that names no identify service adds no candidate at all, and
+    // the region plays exactly as it did.
+    var readerKey = identifyKeyHere(regionName);
+    var reader = readerKey ? speakers[readerKey] : null;
+    if (reader && Array.isArray(reader.at)) {
+      candidates.push({ kind: 'identifier', id: readerKey,
+                        name: reader.name,
+                        at: [reader.at[0], reader.at[1]] });
     }
     libraryBooks().forEach(function (b) {
       if (!b || !b.chest || b.found !== 'map' || !Array.isArray(b.at)) return;
@@ -847,6 +864,8 @@
         combatSnapshot();
       } else if (t.kind === 'trader') {
         openTrade(t.id, t.name, document.getElementById('interact'));
+      } else if (t.kind === 'identifier') {
+        openIdentify(t.id, t.name, document.getElementById('interact'));
       } else if (t.kind === 'resident') {
         if (!speakers[t.id]) throw new Error('speaker gone');
         talkToSpeaker({ key: t.id, spec: speakers[t.id], dist: t.dist });
