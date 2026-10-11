@@ -961,6 +961,73 @@ Code: `src/vefr/maplab.py` (validation) + `src/vefr/cli.py` (bake) +
 `tests/test_growth_validator.py` + `tests/test_growth_engine.py` +
 `tests/test_growth_play.py` + `tests/fixtures/make_growth_pack.py`.
 
+## spells (schools, levels, and the books found on the floor)
+
+Spells are optional and additive: **a pack with no `spells` key plays
+exactly as it did**, and one that declares none bakes no
+`window.VEFR_SPELLS` line at all, so its woven bytes are the ones it wove
+before this feature. A pack may declare the schools it teaches and
+the spells in them:
+
+```json
+"spells": {
+  "schools": ["ember", "tide"],
+  "spells": [
+    {"id": "ember-bolt", "name": "an ember bolt", "school": "ember",
+     "level": 1, "heal": 3},
+    {"id": "tide-mend", "name": "a mending tide", "school": "tide",
+     "level": 2, "heal": 5},
+    {"id": "gutter-light", "name": "a gutter light", "school": "ember"}
+  ]
+}
+```
+
+`id`, `name` and `school` are required; `level` and `heal` are not. The
+school names are the pack's own plain words, and there is no closed list
+and no order the engine imposes.
+
+**Learning by level.** A spell with a `level` is learned the moment the
+hero's level reaches it. That level is the one the `growth` block above
+already derives and already caps at the length of `levels.xp` - spells
+add no counter of their own and **the cap does not move**, so a spell
+written above the table's last entry is never learned by level. A pack
+with no `growth` block, and a `practice` pack (which keeps no level),
+learn nothing by level at all.
+
+**Learning from a book.** A spellbook is an ordinary item with one extra
+optional key, `spell`:
+
+```json
+"items": {
+  "tide-tome": {"name": "a tide-bound tome", "use": "read",
+                "spell": "tide-mend"}
+}
+```
+
+It is a drop like any other drop, so which spell a book teaches follows
+from which book the draw already chose - there is no second draw and no
+second stream. Reading it is the `use` verb a potion is already drunk
+with: the book is spent (unless it carries `keep`), the spell is learned,
+and the panel's live line says which. A spell with no `level` is only
+ever taught this way.
+
+**Casting.** A known spell appears in the Bag panel, under the bag, with
+a `Cast` button. Casting recovers its `heal` and never above the hero's
+max, and keeps the potion's rule: already whole means nothing is gained
+and nothing is spent, and the line says so. A spell with no `heal` casts,
+says so and changes no number.
+
+`vefr check` refuses four things, one plain sentence each: a spell
+naming a school the block does not declare, a `level` under 1, a book
+teaching a spell the pack does not declare, and a spell with no school
+at all. What a school does in play, and what a spell does beyond
+healing, are open questions this slice does not answer - see ADR 0018.
+
+Code: `src/vefr/shapes.py` (the two blocks) + `src/vefr/maplab.py` (the
+sweep) + `src/vefr/cli.py` (the bake) + `web/player/parts/225-spells.js`
+(the player); tests: `tests/test_spells.py` +
+`tests/test_spells_play.py` + `tests/fixtures/make_spell_pack.py`.
+
 ## equipment (the pack fields and the engine; the wearing is a later slice)
 
 Equipment is optional and additive: a pack whose items carry no `slot`

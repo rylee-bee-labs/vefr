@@ -172,7 +172,54 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # every pack, skinned or not - changed. The stack left the constant at its own
 # base's value, so it is the merged tree's digest and nothing else. Recomputed
 # with the documented command above; the pack's own bytes did not move.
-NO_SKIN_WEAVE_SHA256 = "f9b71abce79111ff774ceea7c6f847759fadf417062dc8a23aebd2816407d46a"
+# Last moved 2026-10-10, on the spells tree (ADR 0018). Spells changed the
+# player: a new `225-spells.js` part teaches the Bag panel the spells a
+# level has earned and the ones a book has taught, and `180-gold.js` reads a
+# spellbook's `spell` through the `use` verb it already had. The player
+# template is woven into every pack, so the digest had to be recomputed
+# rather than carried over. Nothing about this pack's own bytes moved -
+# `worlds/sample-world` declares no skin and no spells, so the bake adds
+# no spells data for it (the line meant to bake the literal null was later
+# dropped entirely; see the last note below), and spells did not touch the
+# pack at all. The
+# proof that only the shared template moved: woven with `main`'s
+# `web/packaged.html` in place of this one, this branch's `cli.py` produces
+# `7ef6d4411e8a6f2661346fe6701d4a741173f33aaa94ec4085925c2649258dfe` for
+# this pack - byte for byte what `main` produced.
+# Re-cut 2026-10-11, the union of the spells stack with `main`'s identify
+# service: both sides changed the player template, so the pinned value is
+# this merged tree's weave and neither side's could be carried across.
+# The spells refactor (one gate for what the hero knows) moved the player
+# once more, and measured `d993042f...` for the source stack on its own.
+# The source stack's own union repair moved the player again: `spellsKnown`
+# in `225-spells.js` published the book-learned spells ahead of the ones a
+# level had earned; it now walks the pack's own order and publishes each
+# known spell in the order the hero learns it, which is what
+# `test_spells_play.py::test_a_book_found_as_loot_teaches_its_spell_and_is_spent`
+# pins.
+# Re-cut again 2026-10-11, onto `main` one landing further on: the spells
+# stack now meets vefr #395 (FOGSHAPE), whose lit-area reader grew a branch
+# and whose floor-fog writer grew a line. That is a third move in the same
+# player template as the identify service and the spells, so the union of
+# all three is measured here and is again no side's value (the earlier
+# union measured `d4e5136d...`, `main` alone `7b672cc2...`, and the source
+# stack's last step `abeaef56...`). The sample world names no shape and no
+# skin, so its own baked bytes still do not move.
+# Last moved 2026-10-11: the spells slice's `window.VEFR_SPELLS` line was
+# dropped for a pack that declares no `spells` block, because a new
+# `VEFR_*` line for a pack that does not use the feature is exactly what
+# ADR 0017 slice 2's additive rule forbids (test_identify.py's
+# `test_the_reader_needs_no_new_baked_block`). The sample world names no
+# spells, so its baked data went back to pristine `main`'s bytes - the
+# whole-weave pin still moves because the player template keeps the
+# `225-spells.js` part (and 050's now-accurate spells comment), so the
+# merged weave was re-measured here.
+# Measured twice with the documented command above (as
+# `PYTHONPATH=src python3 -c ...`, no uv in the sandbox):
+#   7b672cc24f806fdf7f0bfd2d05b0f6318ad8d9626e6cd1e00838df6ab5d118c7
+#   2260620a961dd59f91af65b88b356cfcb2412936eefb1e28e6d57fb6297caff7
+#   cd70c89312c0da7a60691b0aa6b3e0ded7aa03006bb4687bef61a07389146dfa
+NO_SKIN_WEAVE_SHA256 = "7607f208eb55cd11bd4a3dce90bff5cfa8b00967607c1bf6417102f2945ba7f0"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

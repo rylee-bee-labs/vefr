@@ -637,6 +637,36 @@ gameplay features over new core machinery.
       `tests/test_identify.py`, `tests/test_identify_play.py`,
       `tests/test_interact.py`, `tests/fixtures/make_identify_pack.py`,
       `tests/fixtures/identify_harness.mjs`.
+- [x] **Spells, first slice — schools, levels, and the books found on the floor**
+      (2026-10-10): the engine had levels and rolled loot and nothing to
+      do with either. `world.json` may now carry an optional `spells` block
+      (`schools`, a list of the pack's own plain words; `spells`, a list of
+      `{id, name, school, level?, heal?}`), and an `items` entry one more
+      optional key, `spell` - the id a book teaches when it is read. Learning
+      by level is a **read of the level the `growth` block already derives**,
+      not a second counter: no counter is added, and the level cap (the
+      length of `levels.xp`) does not move, so a spell written above the
+      table is never learned by level. A spellbook is an ordinary item, so a
+      book found on a floor is a drop like every other drop and what it
+      teaches follows from the id the draw already chose - no second draw,
+      no second stream - and reading it rides the `use` verb a potion is
+      already drunk with. Casting recovers the spell's `heal`, never above
+      the max, and keeps the potion's already-whole rule; known spells are
+      one section of the Bag panel, not a second action system. Every key is
+      optional and additive: a pack that names none bakes no
+      `window.VEFR_SPELLS` line at all, drops the same ids and bakes the
+      same `VEFR_ITEMS` (hashed both ways in `tests/test_spells.py`), and
+      its baked data is byte-identical to `main`'s. `vefr check` refuses four things, one
+      sentence each: a school the block does not declare, a `level` under 1,
+      a book teaching a spell the pack does not declare, and a spell with no
+      school - and each goes red when its own refusal is removed. Gaps,
+      deliberately: nothing says what a *school* does in play, `heal` is the
+      whole of what a spell does, nothing sets `identified` true so the
+      lesson rides `use`, and no event carries a spell. ADR:
+      `docs/adr/0018-spells-schools-and-spellbooks.md` (Proposed).
+      Guide: `docs/guides/rulesets.md` → spells. Tests:
+      `tests/test_spells.py`, `tests/test_spells_play.py`,
+      `tests/fixtures/make_spell_pack.py`.
 - [x] **Combat, first slice — bump to fight, and monsters that come for you**
       (2026-09-30): the dungeon had floors, fog, doors, stairs, books and a
       chest - and nothing to fight. A region's `contract.json` may now carry

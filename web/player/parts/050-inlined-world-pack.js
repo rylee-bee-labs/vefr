@@ -96,6 +96,12 @@ window.VEFR_ENEMIES = {{enemies_json}};
 window.VEFR_HERO = {{hero_json}};
 window.VEFR_SKIN = {{skin_json}};
 window.VEFR_GROWTH = {{growth_json}};
+// The pack's optional spells block (ADR 0018): {"schools": [...],
+// "spells": [{"id", "name", "school", "level?", "heal?"}]}. Every word in
+// it is the pack's own. A pack that declares none carries no line at all,
+// so it reads as no spells - the hero learns nothing by level and a book
+// teaches nothing.
+window.VEFR_SPELLS = {{spells_json}};
 
 // The woven pool - real model output baked in at weave time
 // (--pool N). Drawn when no live endpoint answers; see poolDraw.

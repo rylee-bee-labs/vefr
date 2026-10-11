@@ -187,6 +187,29 @@ IDENTIFY SERVICE (ADR 0017, T3 slice 2): a speaker whose spec carries
   object or a number could carry a chance, a roll or a model), and a
   speaker that offers identify in a region the pack does not have.
 
+SPELLS (ADR 0018): world.json may carry an optional top-level `spells`
+  block: the schools the pack teaches and the spells in them.
+      {"spells": {"schools": ["ember", "tide"],
+                  "spells": [{"id": "ember-bolt", "name": "an ember bolt",
+                              "school": "ember", "level": 1, "heal": 3}]}}
+  `schools` is a list of the pack's own plain words and `spells` a list of
+  records; `id`, `name` and `school` are required and `level` and `heal`
+  are not. A spell with a `level` is learned when the hero's level
+  reaches it, read from the `growth` block's own derived level - there is
+  no second level counter and the level cap (the length of `levels.xp`)
+  does not move, so a spell written above that table is never learned by
+  level. A spell with no `level` waits for a book. A spellbook is an
+  ordinary `items` entry carrying one more optional key, `spell` (the id
+  it teaches), so a book found as loot is a drop like every other drop and
+  what it teaches follows from the id the draw already chose - no second
+  draw, no second stream. Reading it is the `use` verb the bag already
+  has; casting a known spell from the Bag panel recovers its `heal` and
+  never above the max. maplab checks the shape and the four refusals: a
+  school the block does not declare, a `level` under 1, a book teaching a
+  spell the pack does not declare, and a spell with no school. What a
+  school does in play, and what a spell does beyond healing, are not
+  decided here.
+
 REWARD (first slice): `world.player` may carry `gold`, the starting
   purse (a non-negative int; default 0), kept per world at
   `localStorage['vefr-gold-<world>']`. A speaker whose spec carries

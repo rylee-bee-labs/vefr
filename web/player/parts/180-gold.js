@@ -158,8 +158,9 @@ function bagRemoveOne(id) {
 
 // Use a carried thing. A thing the pack gave a `light` lights the dark
 // (see setupTown); a thing with a `heal` raises health by `heal` (never
-// above the max). Either way it takes one copy out of the bag and says
-// so in the panel's live line. With neither, nothing happens.
+// above the max); a thing with a `spell` teaches it (ADR 0018). Either
+// way it takes one copy out of the bag and says so in the panel's live
+// line. With none of them, nothing happens.
 function useItem(id) {
   var def = itemCatalog()[id];
   if (!def) return false;
@@ -182,6 +183,27 @@ function useItem(id) {
     return window.useLightItem(id, def);
   }
   var verb = def.use || 'use';
+  // A spellbook is an ordinary item that teaches one spell when it is used
+  // (ADR 0018), so the lesson rides the verb the bag has always had: the
+  // book is read, one copy leaves the bag, and the spell is learned. The
+  // `keep` rule is the item's own - a book the pack wants to stay in the
+  // bag is used and stays.
+  if (typeof def.spell === 'string' && def.spell) {
+    if (!spellById(def.spell)) {
+      // Only a pack `vefr check` refused gets here: the book names a
+      // spell the pack never wrote. Say so in words rather than taking a
+      // book away for a spell nobody can learn.
+      bagSay('Nothing in ' + itemName(id) + ' is a spell this world teaches.');
+      return false;
+    }
+    if (!keep && !bagRemoveOne(id)) return false;
+    var fresh = learnSpellFromBook(def.spell);
+    var learned = fresh ? (' You learn ' + spellName(def.spell) + '.')
+      : ' You already know that one.';
+    bagSay('You ' + verb + ' ' + itemName(id) + '.' + learned);
+    renderSpellList();
+    return true;
+  }
   if (!(typeof def.heal === 'number' && def.heal > 0)) {
     bagSay('You ' + verb + ' ' + itemName(id) + '.');
     return true;
@@ -418,16 +440,19 @@ function takeOffSlot(slot) {
 
 // The pause-menu panel: a "You" section of five slots, then one row
 // per carried (not worn) thing, sprite then name. A slotted thing in
-// the bag gets an Equip button; anything with `use`, `heal` or `light`
-// keeps its Use button. A worn thing is never in this list. A row names
+// the bag gets an Equip button; anything with `use`, `heal`, `light` or
+// `spell` keeps its Use button. A worn thing is never in this list. A row names
 // the thing and its rarity together (ADR 0017), in one line of text with
 // no timer behind it, so with motion off the rarity is there the moment
 // the panel opens - and the traits it does not name (an unread thing)
 // are not in the DOM at all, so nothing is only hidden from the eye. A
 // thing the town's identify service has read names its traits here, in
-// the same line and the same pass, with nothing behind a timer.
+// the same line and the same pass, with nothing behind a timer. The
+// Spells section below the list is ADR 0018's, and it is nothing at all
+// for a pack that declares no spells.
 function renderBagPanel() {
   renderEquipSlots();
+  renderSpellList();
   var list = document.getElementById('bag-list');
   var count = document.getElementById('bag-count');
   if (!list) return;
@@ -478,13 +503,15 @@ function renderBagPanel() {
       eb.addEventListener('click', function () { equipItem(id); });
       row.appendChild(eb);
     }
-    // Anything the pack gave a `use`, a `heal` or a `light` can be
-    // used from here. The words are the pack's own verb, so a potion
-    // is drunk, bread is eaten, and a torch is lit. Usable is not
-    // the same as consumable: a `keep` thing is used and stays.
+    // Anything the pack gave a `use`, a `heal`, a `light` or a `spell`
+    // can be used from here. The words are the pack's own verb, so a
+    // potion is drunk, bread is eaten, a torch is lit and a book is
+    // read. Usable is not the same as consumable: a `keep` thing is used
+    // and stays.
     if (def && (def.use
         || (typeof def.heal === 'number' && def.heal > 0)
-        || (def.light && typeof def.light === 'object'))) {
+        || (def.light && typeof def.light === 'object')
+        || (typeof def.spell === 'string' && def.spell))) {
       var use = document.createElement('button');
       use.type = 'button';
       use.className = 'cta';

@@ -611,6 +611,8 @@
       <h3 class="equip-heading" id="equip-heading">You</h3>
       <div id="equip-slots" role="list" aria-label="What you are wearing"></div>
       <div id="bag-list"></div>
+      <h3 class="equip-heading" id="spells-heading" hidden>Spells</h3>
+      <div id="spell-list" role="list" aria-label="Spells you know" hidden></div>
       <p class="status" id="bag-count"></p>
       <p class="status" id="bag-live" role="status" aria-live="polite"></p>
     </div>
@@ -752,6 +754,12 @@ window.VEFR_ENEMIES = {{enemies_json}};
 window.VEFR_HERO = {{hero_json}};
 window.VEFR_SKIN = {{skin_json}};
 window.VEFR_GROWTH = {{growth_json}};
+// The pack's optional spells block (ADR 0018): {"schools": [...],
+// "spells": [{"id", "name", "school", "level?", "heal?"}]}. Every word in
+// it is the pack's own. A pack that declares none carries no line at all,
+// so it reads as no spells - the hero learns nothing by level and a book
+// teaches nothing.
+window.VEFR_SPELLS = {{spells_json}};
 
 // The woven pool - real model output baked in at weave time
 // (--pool N). Drawn when no live endpoint answers; see poolDraw.
@@ -1744,8 +1752,9 @@ function bagRemoveOne(id) {
 
 // Use a carried thing. A thing the pack gave a `light` lights the dark
 // (see setupTown); a thing with a `heal` raises health by `heal` (never
-// above the max). Either way it takes one copy out of the bag and says
-// so in the panel's live line. With neither, nothing happens.
+// above the max); a thing with a `spell` teaches it (ADR 0018). Either
+// way it takes one copy out of the bag and says so in the panel's live
+// line. With none of them, nothing happens.
 function useItem(id) {
   var def = itemCatalog()[id];
   if (!def) return false;
@@ -1768,6 +1777,27 @@ function useItem(id) {
     return window.useLightItem(id, def);
   }
   var verb = def.use || 'use';
+  // A spellbook is an ordinary item that teaches one spell when it is used
+  // (ADR 0018), so the lesson rides the verb the bag has always had: the
+  // book is read, one copy leaves the bag, and the spell is learned. The
+  // `keep` rule is the item's own - a book the pack wants to stay in the
+  // bag is used and stays.
+  if (typeof def.spell === 'string' && def.spell) {
+    if (!spellById(def.spell)) {
+      // Only a pack `vefr check` refused gets here: the book names a
+      // spell the pack never wrote. Say so in words rather than taking a
+      // book away for a spell nobody can learn.
+      bagSay('Nothing in ' + itemName(id) + ' is a spell this world teaches.');
+      return false;
+    }
+    if (!keep && !bagRemoveOne(id)) return false;
+    var fresh = learnSpellFromBook(def.spell);
+    var learned = fresh ? (' You learn ' + spellName(def.spell) + '.')
+      : ' You already know that one.';
+    bagSay('You ' + verb + ' ' + itemName(id) + '.' + learned);
+    renderSpellList();
+    return true;
+  }
   if (!(typeof def.heal === 'number' && def.heal > 0)) {
     bagSay('You ' + verb + ' ' + itemName(id) + '.');
     return true;
@@ -2004,16 +2034,19 @@ function takeOffSlot(slot) {
 
 // The pause-menu panel: a "You" section of five slots, then one row
 // per carried (not worn) thing, sprite then name. A slotted thing in
-// the bag gets an Equip button; anything with `use`, `heal` or `light`
-// keeps its Use button. A worn thing is never in this list. A row names
+// the bag gets an Equip button; anything with `use`, `heal`, `light` or
+// `spell` keeps its Use button. A worn thing is never in this list. A row names
 // the thing and its rarity together (ADR 0017), in one line of text with
 // no timer behind it, so with motion off the rarity is there the moment
 // the panel opens - and the traits it does not name (an unread thing)
 // are not in the DOM at all, so nothing is only hidden from the eye. A
 // thing the town's identify service has read names its traits here, in
-// the same line and the same pass, with nothing behind a timer.
+// the same line and the same pass, with nothing behind a timer. The
+// Spells section below the list is ADR 0018's, and it is nothing at all
+// for a pack that declares no spells.
 function renderBagPanel() {
   renderEquipSlots();
+  renderSpellList();
   var list = document.getElementById('bag-list');
   var count = document.getElementById('bag-count');
   if (!list) return;
@@ -2064,13 +2097,15 @@ function renderBagPanel() {
       eb.addEventListener('click', function () { equipItem(id); });
       row.appendChild(eb);
     }
-    // Anything the pack gave a `use`, a `heal` or a `light` can be
-    // used from here. The words are the pack's own verb, so a potion
-    // is drunk, bread is eaten, and a torch is lit. Usable is not
-    // the same as consumable: a `keep` thing is used and stays.
+    // Anything the pack gave a `use`, a `heal`, a `light` or a `spell`
+    // can be used from here. The words are the pack's own verb, so a
+    // potion is drunk, bread is eaten, a torch is lit and a book is
+    // read. Usable is not the same as consumable: a `keep` thing is used
+    // and stays.
     if (def && (def.use
         || (typeof def.heal === 'number' && def.heal > 0)
-        || (def.light && typeof def.light === 'object'))) {
+        || (def.light && typeof def.light === 'object')
+        || (typeof def.spell === 'string' && def.spell))) {
       var use = document.createElement('button');
       use.type = 'button';
       use.className = 'cta';
@@ -2630,6 +2665,9 @@ function growBump(kind) {
   (r.grown || []).forEach(function (g) { if (g && g.stat === 'hp') heal += g.gain; });
   healHeroBy(heal);
   renderGrowth();
+  // Practice keeps no level, so no spell is learned here; the call is
+  // cheap and it is the one place both modes pass through.
+  renderSpellList();
   return r.grown || [];
 }
 
@@ -2645,6 +2683,10 @@ function growAward(xp) {
   saveGrowth();
   if (r.grew) healHeroBy(r.grew.hp);
   renderGrowth();
+  // A level that has just been earned is the one moment a spell the hero
+  // knew the name of becomes a spell the hero can cast (ADR 0018), so the
+  // panel is redrawn here rather than only when the bag is opened.
+  renderSpellList();
   return r;
 }
 
@@ -2727,7 +2769,185 @@ function surfaceVerbs() {
 // Escape, a resolved verb or a bump clears it again.
 var VERB_TARGET = null;
 
-// -- startover start --
+// ---- spells: the schools a pack teaches, and what the hero has learned ----
+// Two ways in, one list out. A spell with a `level` is learned the moment
+// `growthStats().level` reaches it - a read of the level that already
+// exists, never a second level counter, and never a cap that moves: the
+// growth block's own table is still the only thing that says how high the
+// hero gets. A spell with no `level` is learned by reading a book found as
+// loot, and that one is stored, because nothing else remembers it.
+//
+// Only the books are stored, under `vefr-spells-<world>`: the level-learned
+// half is derived on every read from the growth state, exactly as the
+// growth part derives its own level rather than keeping it. A pack with no
+// `spells` block bakes no `window.VEFR_SPELLS` line at all, so every
+// function here answers "no spells" and the Bag panel draws nothing it did
+// not draw before.
+var SPELLS_KEY = 'vefr-spells-' + ((window.VEFR_WORLD && window.VEFR_WORLD.name) || 'world');
+
+// The pack's spell records, or an empty list when it declared none.
+function spellRecords() {
+  var block = window.VEFR_SPELLS;
+  if (!block || typeof block !== 'object' || !Array.isArray(block.spells)) return [];
+  return block.spells.filter(function (r) {
+    return r && typeof r === 'object' && typeof r.id === 'string' && r.id;
+  });
+}
+function spellById(id) {
+  var found = null;
+  spellRecords().forEach(function (r) { if (r.id === id) found = r; });
+  return found;
+}
+// What a spell is called in a sentence: its own name, or the id the pack
+// filed it under when the name is not one there is.
+function spellName(id) {
+  var spell = spellById(id);
+  return (spell && spell.name) ? spell.name : id;
+}
+// The spell ids a book taught, stored per playthrough. A malformed or
+// hostile save reads as no books rather than as a broken turn.
+function loadSpellBooks() {
+  var raw = store.getJSON(SPELLS_KEY, []);
+  if (!Array.isArray(raw)) return [];
+  return raw.filter(function (id) { return typeof id === 'string' && id; });
+}
+function saveSpellBooks(ids) {
+  store.setJSON(SPELLS_KEY, ids);
+}
+// Every spell the hero has learned by reading a book: what the drop named,
+// once each, in the order it was read. Adding one that is already known
+// changes nothing and says so rather than pretending a second lesson.
+function learnSpellFromBook(id) {
+  var spell = spellById(id);
+  if (!spell) return false;
+  var books = loadSpellBooks();
+  if (books.indexOf(id) >= 0) return false;
+  books.push(id);
+  saveSpellBooks(books);
+  return true;
+}
+// The spells the hero's level has already taught. The level is the growth
+// engine's own derived number, and it is already clamped to the pack's
+// xp table - so this reads the cap and never has to hold one. A null
+// level (no growth block, or a practice pack, which keeps no level) and
+// a pack with no spells both teach nothing.
+function spellsByLevel() {
+  var level = growthStats().level;
+  if (typeof level !== 'number' || level < 1) return [];
+  var out = [];
+  spellRecords().forEach(function (r) {
+    if (typeof r.level === 'number' && r.level >= 1 && r.level <= level) out.push(r);
+  });
+  return out;
+}
+function spellKnown(id) {
+  var records = spellsByLevel();
+  for (var i = 0; i < records.length; i++) if (records[i].id === id) return true;
+  return loadSpellBooks().indexOf(id) >= 0;
+}
+// Everything the hero knows, in the pack's own order, each spell once:
+// this is the list the panel draws and the only list anything else should
+// ask for. The level-learned half comes from the growth engine and the
+// book half from storage, and neither is written back here - reading what
+// the hero knows must never change what it is.
+function spellsKnown() {
+  var out = [];
+  var seen = {};
+  var books = loadSpellBooks();
+  var byLevel = {};
+  spellsByLevel().forEach(function (r) { byLevel[r.id] = true; });
+  // The pack's own order is the order the hero learns in: a spell is
+  // learned when the level reaches it or when its book is read, and the
+  // list must not reorder one way of learning ahead of the other.
+  spellRecords().forEach(function (r) {
+    if (seen[r.id]) return;
+    if (!byLevel[r.id] && books.indexOf(r.id) < 0) return;
+    seen[r.id] = true;
+    out.push(r);
+  });
+  return out;
+}
+// Cast one the hero knows. The whole effect is the item `heal` the bag has
+// always had, and the "already whole" rule is the potion's: a spell is not
+// spent on nothing, so a mis-tap costs nothing and says why. A spell the
+// pack gave no `heal` casts and changes no number, which is the honest
+// answer for a pack that has not written the numbers yet.
+function castSpell(id) {
+  if (!spellKnown(id)) {
+    bagSay('You have not learned that spell.');
+    return false;
+  }
+  var spell = spellById(id);
+  var line = 'You cast ' + (spell.name || id) + '.';
+  var heal = spell && typeof spell.heal === 'number' && spell.heal > 0
+    ? spell.heal : 0;
+  if (!heal) {
+    bagSay(line);
+    return true;
+  }
+  if (HERO_HP >= heroMax()) {
+    bagSay(line + ' You are already whole.');
+    return true;
+  }
+  var before = HERO_HP;
+  healHeroBy(heal);
+  bagSay(line + ' You recover ' + (HERO_HP - before) + ' health.');
+  syncCombat();
+  return true;
+}
+// The Bag panel's "Spells" section. Nothing at all for a pack that
+// declares no spells: the heading is hidden and the list is empty, so a
+// pack with no `spells` block draws the panel it always drew. Each row
+// names the spell and its school in one line of text and the button names
+// the same two words in its own label, so the eye and a screen reader are
+// told the same thing in the same sentence.
+//
+// The schools list is not read here on purpose. A school is a name the
+// pack chose, a spell outside the list is a pack `vefr check` refuses,
+// and nothing in this slice decides what a school is FOR - so the player
+// prints the name the pack wrote and asks nothing of it.
+function renderSpellList() {
+  var list = document.getElementById('spell-list');
+  var head = document.getElementById('spells-heading');
+  var known = spellsKnown();
+  if (!list) return;
+  if (head) {
+    head.hidden = !known.length;
+    head.textContent = known.length
+      ? 'Spells (' + known.length + ')' : '';
+  }
+  list.textContent = '';
+  if (!known.length) {
+    // A pack with no spells block has no section at all, so the words are
+    // cleared rather than left behind for a later pack to read.
+    list.hidden = true;
+    list.setAttribute('aria-label', '');
+    return;
+  }
+  list.hidden = false;
+  known.forEach(function (spell) {
+    var row = document.createElement('div');
+    row.className = 'bag-row';
+    row.setAttribute('role', 'listitem');
+    var name = document.createElement('span');
+    name.className = 'bag-row-name';
+    name.textContent = spell.school ? (spell.name + ' (' + spell.school + ')')
+      : spell.name;
+    row.appendChild(name);
+    var button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'cta';
+    button.textContent = 'Cast';
+    button.dataset.spell = spell.id;
+    button.dataset.action = 'cast';
+    button.setAttribute('aria-label', 'Cast ' + (spell.name || spell.id));
+    button.addEventListener('click', function () { castSpell(spell.id); });
+    row.appendChild(button);
+    list.appendChild(row);
+  });
+  list.setAttribute('aria-label', 'Spells you know: '
+    + known.map(function (s) { return s.name; }).join(', ') + '.');
+}// -- startover start --
 // Start over: remove every save this site keeps for a vefr game, so an
 // old save left by another game cannot surprise the player. Pure: it
 // takes any object with `length`, `key(i)` and `removeItem(k)` - a
