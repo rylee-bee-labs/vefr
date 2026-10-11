@@ -65,7 +65,9 @@ def test_the_stair_past_the_last_section_says_what_it_waits_for(page, woven):
     open_woven(page, woven)
     last = descend_to(page, LAST)
     _interact(page)
-    assert page.locator("#combat-live").inner_text() == SHUT
+    # innerText is the rendered text and reads empty on a browser that lays out no glyphs;
+    # textContent is the line the element carries. The region assertion below proves the gate held.
+    assert page.locator("#combat-live").text_content() == SHUT
     assert page.evaluate("() => window.VEFR_COMBAT.region") == last["name"]
 
 
@@ -84,5 +86,5 @@ def test_another_flag_does_not_open_the_stair(page, woven):
     last = descend_to(page, LAST)
     page.evaluate("() => window.VEFR_DESCENT.setFlag('king-slain', true)")
     _interact(page)
-    assert page.locator("#combat-live").inner_text() == SHUT
+    assert page.locator("#combat-live").text_content() == SHUT
     assert page.evaluate("() => window.VEFR_COMBAT.region") == last["name"]
