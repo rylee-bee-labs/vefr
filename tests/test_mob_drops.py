@@ -247,8 +247,13 @@ def test_the_check_is_skipped_where_there_is_no_catalog_to_read(tmp_path):
     from vefr import shapes
 
     section = dict(mk.SECTION)
-    resolve = lambda fid: {"hp": 3, "atk": 1, "drops": ["tarn"]}
-    refused = lambda sid, family, record: "the family pays nothing"
+
+    def resolve(fid):
+        return {"hp": 3, "atk": 1, "drops": ["tarn"]}
+
+    def refused(sid, family, record):
+        return "the family pays nothing"
+
     assert shapes.check_section(section, None, resolve) == []
     assert shapes.check_section(section, None, resolve, refused) != []
 
