@@ -1,0 +1,13 @@
+{
+ "blueprint": 1,
+ "families": {
+  "beetle": {"defaults": {"name": "a beetle", "sprite": "beetle",
+                           "hp": 3, "atk": 1, "xp": 2}},
+  "deep-beetle": {"extends": "beetle", "defaults": {"hp": 4}},
+  "moth": {"defaults": {"name": "a moth", "sprite": "moth",
+                        "hp": 2, "atk": 1, "xp": 1, "sight": 3}},
+  "rat": {"defaults": {"name": "a rat", "sprite": "rat",
+                       "hp": 2, "atk": 1, "xp": 1}}
+ },
+ "regions": {}
+}
