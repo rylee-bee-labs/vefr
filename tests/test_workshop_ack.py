@@ -20,7 +20,6 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-HARNESS = Path(__file__).resolve().parent / "fixtures" / "workshop_ack_harness.mjs"
 
 pytestmark = pytest.mark.skipif(
     shutil.which("node") is None,
@@ -154,27 +153,18 @@ console.log('workshop ack harness passed');
 
 def _run_harness(tests):
     """Run workshop ack tests through the node VM harness."""
-    HARNESS.parent.mkdir(parents=True, exist_ok=True)
-    HARNESS.write_text(HarnessScript, encoding="utf-8")
-    try:
-        with tempfile.NamedTemporaryFile(
-            "w", suffix=".json", delete=False, encoding="utf-8"
-        ) as f:
-            json.dump({"tests": tests}, f)
-            spec_path = f.name
-        try:
-            result = subprocess.run(
-                ["node", str(HARNESS), str(ROOT), spec_path],
-                capture_output=True,
-                text=True,
-                timeout=30,
-                env={**os.environ},
-            )
-        finally:
-            Path(spec_path).unlink(missing_ok=True)
-        return result
-    finally:
-        HARNESS.unlink(missing_ok=True)
+    with tempfile.TemporaryDirectory() as td:
+        harness = Path(td) / "workshop_ack_harness.mjs"
+        harness.write_text(HarnessScript, encoding="utf-8")
+        spec = Path(td) / "spec.json"
+        spec.write_text(json.dumps({"tests": tests}), encoding="utf-8")
+        return subprocess.run(
+            ["node", str(harness), str(ROOT), str(spec)],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            env={**os.environ},
+        )
 
 
 def test_detect_quiet_when_no_entries():
