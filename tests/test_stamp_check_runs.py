@@ -168,8 +168,6 @@ def a_pack(tmp_path, stamps=GOOD_STAMPS, section=None):
 
 def check(pack):
     """The real `vefr check` front door, in-process: the exit code and output."""
-    argv = ['check', '--pack', str(pack)]
-
     class _Cap:
         def __init__(self):
             self.out = []
@@ -340,11 +338,21 @@ def test_the_shipped_sample_world_still_checks_ok():
 
 def test_a_pack_with_no_stamps_directory_says_nothing(tmp_path):
     """Every pack in the tree today. The gate costs it nothing and prints
-    nothing - not a header, not a count, not a usage line."""
+    nothing - not a header, not a count, not a usage line.
+
+    The claim is measured on the findings, not on the word: a pack's own
+    path can carry the word `stamp` (a tmp folder named after this very
+    test), so `'stamp' not in out` would be unsatisfiable. What the gate
+    would print if it ran is a finding - a line `stamp_check.report`
+    builds, `stamp <id>: ...` - so that is what is asserted to be absent.
+    Every other thing the word could have carried already has its own
+    assertion in this file: the header and the count in
+    `test_a_green_stamp_pack_says_nothing_about_its_stamps`, and the two
+    usage lines in the two tests after this one."""
     pack = a_pack(tmp_path, stamps=None)
     code, out = check(pack)
     assert code == cli.EXIT_OK, out
-    assert 'stamp' not in out, out
+    assert not [ln for ln in out.splitlines() if ln.startswith('stamp ')], out
 
 
 def test_a_pack_with_no_stamps_is_not_given_the_usage_error(tmp_path):
