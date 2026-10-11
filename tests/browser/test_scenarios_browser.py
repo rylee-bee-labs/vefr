@@ -82,7 +82,8 @@ keys = scenarios.storage(w, {"start": {"depth": 2}, "gold": 9})
 keys.pop(scenarios.DESCENT_KEY + scenarios.world_name(w))
 boot = {"name": "bare", "storage": keys, "start": {"depth": 2},
         "world": scenarios.world_name(w), "gold": 9}
-with devtools._session(None, pack, 800, plant=keys) as page:
+with devtools._player_file(None, pack) as player, \
+        devtools._session(player, 800, plant=keys) as page:
     if page is None:
         sys.exit(2)
     report, problem = devtools._arrive(page, boot)

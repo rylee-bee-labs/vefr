@@ -16,17 +16,38 @@ has and how to install the ones it does not.
 import contextlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from urllib.parse import quote
 
 # The install hint for the browser both devtools verbs drive.
 BROWSER_HINT = 'uv run playwright install chromium'
 
 # Where an absent gallery is documented - one hint, one place.
 GALLERY_HINT = 'see ~/.agents/skills/gallery'
+
+# The viewport `look` opens the woven player at when no size is asked
+# for. Unchanged since the first `look`; `--sizes` is the way to say a
+# different one.
+DEFAULT_VIEWPORT = (1280, 800)
+
+# The URL parameter the player reads a run seed from (`?vefr-seed=`),
+# and the seed length the player itself caps it at. The name lives in
+# `397-the-descent.js` too, and `tests/test_look_sizes.py` pins the two
+# together, so neither can move without the other.
+SEED_PARAM = 'vefr-seed'
+SEED_MAX = 120
+
+# `--sizes 390x844` - one width, one height, both whole and positive.
+SIZE = re.compile(r'([0-9]{1,5})[xX]([0-9]{1,5})')
+SIZE_MAX = 10000
+
+# `--at REGION X,Y`: a region id (which may hold spaces) then one tile.
+AT = re.compile(r'(.+?)\s+(-?\d+)\s*,\s*(-?\d+)')
 
 
 def _gallery_bin(which=shutil.which, home=None):
@@ -109,12 +130,51 @@ def _no_browser() -> None:
 
 
 @contextlib.contextmanager
-def _session(html, pack, wait_ms, plant=None):
-    """Open `html` (or weave `pack`) in headless Chromium and press Begin.
+def _player_file(html, pack):
+    """The player file to open: `html`, or a weave of `pack` in a temp file.
+
+    A woven copy is always removed afterwards. Woven ONCE per command,
+    not once per size: every size photographs the same bytes.
+    """
+    if html is not None:
+        yield Path(html)
+        return
+    from .cli import weave_html
+
+    fd, tmp = tempfile.mkstemp(prefix='vefr-devtools-', suffix='.html')
+    os.close(fd)
+    temp = Path(tmp)
+    try:
+        temp.write_text(weave_html(Path(pack)), encoding='utf-8')
+        yield temp
+    finally:
+        temp.unlink(missing_ok=True)
+
+
+def _page_uri(html, seed=None):
+    """The URI to open, carrying `?vefr-seed=` when a seed is asked for.
+
+    The parameter is the player's own (ADR 0016's start-position seam,
+    not a second save format): the woven game reads it and answers with
+    that seed. Percent-encoded, because a seed is a URL parameter value
+    and a URL is untrusted input.
+    """
+    uri = Path(html).resolve().as_uri()
+    if not seed:
+        return uri
+    return f'{uri}?{SEED_PARAM}={quote(seed, safe="")}'
+
+
+@contextlib.contextmanager
+def _session(path, wait_ms, plant=None, size=None, seed=None):
+    """Open the player file `path` in headless Chromium and press Begin.
 
     Yields the page once the game is up, or None when Playwright/Chromium
     is missing (the install hint goes to STDERR and the caller returns 2).
-    A pack is woven into a temp file that is always removed afterwards.
+    `size` is the `(width, height)` viewport; without one the viewport is
+    `DEFAULT_VIEWPORT`, which is what `look` always opened.
+    `seed` rides the `?vefr-seed=` parameter.
+
     Playwright is imported here, lazily - nothing imports it at module load.
 
     `plant` is a scenario's save keys (`vefr.scenarios.storage`): written
@@ -129,36 +189,24 @@ def _session(html, pack, wait_ms, plant=None):
         yield None
         return
 
-    temp = None
-    if html is None:
-        from .cli import weave_html
-
-        fd, tmp = tempfile.mkstemp(prefix='vefr-devtools-', suffix='.html')
-        os.close(fd)
-        temp = Path(tmp)
-        temp.write_text(weave_html(Path(pack)), encoding='utf-8')
-        html = temp
-    try:
-        with sync_playwright() as p:
-            try:
-                browser = p.chromium.launch()
-            except Exception:  # noqa: BLE001 - Chromium not installed
-                _no_browser()
-                yield None
-                return
-            page = browser.new_page(viewport={'width': 1280, 'height': 800})
-            if plant:
-                page.add_init_script(_PLANT_JS % json.dumps(plant))
-            page.goto(Path(html).resolve().as_uri())
-            page.click('#ts-enter')
-            page.wait_for_timeout(wait_ms)
-            try:
-                yield page
-            finally:
-                browser.close()
-    finally:
-        if temp is not None:
-            temp.unlink(missing_ok=True)
+    width, height = size or DEFAULT_VIEWPORT
+    with sync_playwright() as p:
+        try:
+            browser = p.chromium.launch()
+        except Exception:  # noqa: BLE001 - Chromium not installed
+            _no_browser()
+            yield None
+            return
+        page = browser.new_page(viewport={'width': width, 'height': height})
+        if plant:
+            page.add_init_script(_PLANT_JS % json.dumps(plant))
+        page.goto(_page_uri(path, seed))
+        page.click('#ts-enter')
+        page.wait_for_timeout(wait_ms)
+        try:
+            yield page
+        finally:
+            browser.close()
 
 
 # A scenario's save keys, written before the game's own scripts run. A
@@ -213,37 +261,85 @@ def scenario_boot(pack, name):
     problems = scenarios.check(w, data)
     if problems:
         return None, [f'scenarios/{name}.json: {p}' for p in problems]
-    return {'name': name, 'storage': scenarios.storage(w, data),
+    return {'name': name, 'label': f'scenario {name!r}',
+            'storage': scenarios.storage(w, data),
             'start': data['start'], 'world': scenarios.world_name(w),
             'gold': data.get('gold')}, None
 
 
+def at_boot(pack, spec):
+    """`(boot, None)` for a `--at REGION X,Y` start, or `(None, sentences)`.
+
+    `--at` is a start-position override and nothing more: the small
+    half of what a scenario does, for the case where the state is not
+    worth a checked-in file (ADR 0016). It needs `--pack`, because the
+    region and the tile are checked against the pack - with the same
+    `vefr check` sentences - before any browser opens, and it cannot be
+    combined with `--scenario`, which already names a start.
+    """
+    from . import maplab, scenarios
+
+    # `REGION X,Y`, and a region id may itself contain spaces, so the
+    # coordinates are matched off the end and everything before them is
+    # the region.
+    usage = f'--at takes REGION X,Y, such as --at town 4,6: {spec!r}'
+    match = AT.fullmatch(str(spec).strip())
+    if not match:
+        return None, [usage]
+    name = match.group(1).strip()
+    x, y = int(match.group(2)), int(match.group(3))
+    if not name:
+        return None, [usage]
+    w = maplab.load_pack(Path(pack))
+    regions = maplab.region_geometry(w)
+    if name not in regions:
+        return None, [f'--at {name!r} is not a region of this pack; it has '
+                      + (', '.join(sorted(regions)) or 'none')]
+    geo = regions[name]
+    walkable = maplab._map_tile_walkable(geo.get('map') or [],
+                                         geo.get('legend') or {}, x, y)
+    if walkable is None:
+        rows = geo.get('map') or []
+        size = f'{len(rows[0]) if rows else 0}x{len(rows)}'
+        return None, [f'--at {[x, y]} is outside {name} ({size} tiles)']
+    if not walkable:
+        return None, [f'--at {[x, y]} is not a tile the hero can stand on in {name}']
+    return {'name': None, 'label': f'--at {name} {x},{y}', 'storage': None,
+            'start': {'region': name, 'at': [x, y]},
+            'world': scenarios.world_name(w), 'gold': None}, None
+
+
 def _arrive(page, boot):
-    """Walk the hero to the scenario's start; `(report, problem or None)`."""
+    """Walk the hero to the boot's start; `(report, problem or None)`.
+
+    `who` names the boot: its `label` where it has one, else its `name`,
+    so a hand-built boot from before `label` existed still reads as itself.
+    """
+    who = boot.get('label') or boot.get('name') or 'this look'
     page.wait_for_timeout(200)
     report = page.evaluate(_ARRIVE_JS, boot['start'])
     page.wait_for_timeout(300)
     start = boot['start']
     if report['world'] != boot['world']:
         return report, (f"the woven game names this world {report['world']!r}, "
-                        f"but the scenario's keys were written for "
+                        f"but {who} was written for "
                         f"{boot['world']!r}")
-    if report['card']:
-        return report, (f"scenario {boot['name']!r}: the game took the planted "
+    if report['card'] and boot.get('storage'):
+        return report, (f'{who}: the game took the planted '
                         'state for a Release 1 save and opened its generation card')
     if boot.get('gold') is not None and report['gold'] != boot['gold']:
-        return report, (f"scenario {boot['name']!r} planted {boot['gold']} gold "
+        return report, (f'{who} planted {boot["gold"]} gold '
                         f"and the game holds {report['gold']}")
     if not report['entered']:
-        return report, f"scenario {boot['name']!r}: the game would not enter its start"
+        return report, f'{who}: the game would not enter its start'
     if 'depth' in start and report['depth'] != start['depth']:
-        return report, (f"scenario {boot['name']!r} asked for depth "
+        return report, (f'{who} asked for depth '
                         f"{start['depth']} and the hero is at depth {report['depth']}")
     if 'region' in start and report['region'] != start['region']:
-        return report, (f"scenario {boot['name']!r} asked for {start['region']} "
+        return report, (f'{who} asked for {start["region"]} '
                         f"and the hero is in {report['region']}")
     if start.get('at') and report['at'] != list(start['at']):
-        return report, (f"scenario {boot['name']!r} asked for {list(start['at'])} "
+        return report, (f'{who} asked for {list(start["at"])} '
                         f"and the hero stands at {report['at']}")
     return report, None
 
@@ -274,16 +370,130 @@ _LEAF_JS = """() => {
 }"""
 
 
-def _scenario_or_refusal(verb, pack, scenario):
-    """`(boot or None, exit code or None)`: a scenario needs `--pack`, and
-    an invalid one is refused with its sentences before a browser opens."""
-    if scenario is None:
+# Every visible HUD piece and control, with its rectangle, plus the
+# stage rectangle the player itself published (`440-the-camera.js`).
+# The stage and not the viewport is what a containment report has to
+# measure: a check that measures the viewport cannot tell a control that
+# sits inside the framed play panel from one that has fallen out of it
+# onto the page around it, which is how the fight verb row passed for
+# years (issue #353).
+_CONTAINMENT_JS = """() => {
+  const sel = '#play .hud .glass, #play .hud button, #play .gbtn, #play .toasts p,'
+    + ' #play .toasts-toggle, #dpad button, #play #interact, #play .acts button,'
+    + ' #play .verb-row button';
+  const out = [];
+  for (const el of document.querySelectorAll(sel)) {
+    const cs = getComputedStyle(el);
+    if (cs.display === 'none' || cs.visibility === 'hidden' || el.hidden
+        || el.closest('[hidden]')) continue;
+    if (el.classList.contains('sr-only') || el.closest('.sr-only')) continue;
+    const r = el.getBoundingClientRect();
+    if (r.width < 2 || r.height < 2) continue;
+    out.push({id: el.id || (typeof el.className === 'string'
+          ? el.className.split(' ')[0] : '') || el.tagName.toLowerCase(),
+      l: r.left, t: r.top, r: r.right, b: r.bottom});
+  }
+  return {stage: window.VEFR_STAGE || null, els: out,
+          vw: innerWidth, vh: innerHeight};
+}"""
+
+
+def _containment(info):
+    """One size's containment report: what was measured and what fell out.
+
+    `{measured: 'stage'|'viewport-only', stage, map, window, outside}`.
+    `measured: 'viewport-only'` says out loud that the game published no
+    stage, so a reader never mistakes an unmeasured run for a clean one.
+    """
+    stage = info.get('stage')
+    window = [info.get('vw'), info.get('vh')]
+    if not stage:
+        return {'measured': 'viewport-only', 'stage': None, 'map': None,
+                'window': window,
+                'outside': ['the game published no window.VEFR_STAGE']}
+    outside = [e['id'] for e in info['els']
+               if e['l'] < stage['x'] - 1 or e['t'] < stage['y'] - 1
+               or e['r'] > stage['x'] + stage['w'] + 1
+               or e['b'] > stage['y'] + stage['h'] + 1]
+    return {'measured': 'stage',
+            'stage': {k: stage[k] for k in ('x', 'y', 'w', 'h')},
+            'map': stage.get('map'),
+            'window': window,
+            'outside': outside}
+
+
+def _parse_sizes(sizes):
+    """`([(w, h), ...], sentence or None)` for a `--sizes` list.
+
+    Each entry is one `WxH`, and the flag repeats or comma-separates, so
+    `--sizes 390x844,1440x900` and `--sizes 390x844 --sizes 1440x900`
+    say the same thing. A size that is not two positive whole numbers is
+    a usage error, refused before any browser opens.
+    """
+    out = []
+    for spec in sizes or ():
+        for part in str(spec).split(','):
+            part = part.strip()
+            if not part:
+                continue
+            match = SIZE.fullmatch(part)
+            if not match:
+                return None, (f'use WxH, such as 390x844 or 1440x900: {part!r}')
+            width, height = int(match.group(1)), int(match.group(2))
+            if not 0 < width <= SIZE_MAX or not 0 < height <= SIZE_MAX:
+                return None, (f'a viewport must be between 1 and {SIZE_MAX} '
+                              f'pixels on a side: {part!r}')
+            out.append((width, height))
+    return out, None
+
+
+def _sized_path(out: Path, size) -> Path:
+    """`out` with the size in its name: `look.png` -> `look-390x844.png`."""
+    return out.with_name(f'{out.stem}-{size[0]}x{size[1]}{out.suffix}')
+
+
+def _seed_or_refusal(seed):
+    """The seed to ask the game for, or `None` and a sentence on STDERR."""
+    if seed is None:
         return None, None
-    if pack is None:
+    seed = str(seed).strip()
+    if not seed:
+        print('--seed takes a seed, such as --seed hello', file=sys.stderr)
+        return None, 2
+    if len(seed) > SEED_MAX or any(c in seed for c in '\r\n\t'):
+        print(f'a seed is at most {SEED_MAX} characters of plain text',
+              file=sys.stderr)
+        return None, 2
+    return seed, None
+
+
+def _boot_or_refusal(verb, pack, scenario, at):
+    """`(boot or None, exit code or None)`: where the run starts.
+
+    A scenario needs `--pack`, and an invalid one is refused with its
+    sentences before a browser opens. `--at` needs `--pack` too, because
+    the region and the tile are checked against the pack the same way a
+    scenario's are; the two name the same thing, so asking for both is
+    refused rather than silently preferring one.
+    """
+    if scenario is not None and at is not None:
+        print(f'vefr {verb} --at and --scenario both name a start; pass one',
+              file=sys.stderr)
+        return None, 2
+    if at is not None and pack is None:
+        print(f'vefr {verb} --at needs --pack: the region and the tile are '
+              'checked against the pack', file=sys.stderr)
+        return None, 2
+    if at is not None:
+        boot, problems = at_boot(pack, at)
+    elif scenario is not None and pack is None:
         print(f'vefr {verb} --scenario needs --pack: a scenario lives in its '
               'pack', file=sys.stderr)
         return None, 2
-    boot, problems = scenario_boot(pack, scenario)
+    elif scenario is not None:
+        boot, problems = scenario_boot(pack, scenario)
+    else:
+        return None, None
     if problems:
         for sentence in problems:
             print(sentence, file=sys.stderr)
@@ -292,7 +502,7 @@ def _scenario_or_refusal(verb, pack, scenario):
 
 
 def look(html=None, pack=None, out=None, steps='', json_out=False,
-         scenario=None) -> int:
+         scenario=None, sizes=None, at=None, seed=None) -> int:
     """Screenshot the woven player and list the text standing over the map.
 
     Opens `html` (or weaves `pack`), presses Begin, replays the comma-
@@ -301,47 +511,94 @@ def look(html=None, pack=None, out=None, steps='', json_out=False,
     the toasts strip: `{id, cls, tag, y, text}`. The tool for catching
     text that has drifted onto the map.
 
-    With `scenario` (a name in the pack's `scenarios/`), the game opens in
-    that state first: its save keys planted, the hero walked to its start.
+    `sizes` photographs the pack at each `WxH` it names, one file per
+    size with the size in the name (`look-390x844.png`), and repeats
+    the containment report at every one of them - a piece that sits
+    inside the stage at 1280x800 can be outside it at 390x844, and a
+    report measured once cannot see that. One size (or none) writes
+    `out` exactly as before.
+
+    `seed` asks the game for a run seed of its own, through the player's
+    own `?vefr-seed=` parameter, and `at` (`REGION X,Y`) starts the run
+    somewhere other than the world's start region. `scenario` (a name in
+    the pack's `scenarios/`) opens the game in that state first: its
+    save keys planted, the hero walked to its start.
     """
     if html is None and pack is None:
         print('vefr look needs --html or --pack', file=sys.stderr)
         return 2
-    boot, refused = _scenario_or_refusal('look', pack, scenario)
+    sizes, why = _parse_sizes(sizes)
+    if why is not None:
+        print(why, file=sys.stderr)
+        return 2
+    seed, refused = _seed_or_refusal(seed)
+    if refused is not None:
+        return refused
+    boot, refused = _boot_or_refusal('look', pack, scenario, at)
     if refused is not None:
         return refused
 
     out = Path(out or 'look.png')
+    wanted = sizes or [DEFAULT_VIEWPORT]
+    runs = []
     arrival = None
-    with _session(html, pack, 800, plant=boot and boot['storage']) as page:
-        if page is None:
-            return 2
-        if boot is not None:
-            arrival, problem = _arrive(page, boot)
-            if problem is not None:
-                print(problem, file=sys.stderr)
-                return 1
-        for key in (k.strip() for k in steps.split(',') if k.strip()):
-            page.keyboard.press(key)
-            page.wait_for_timeout(250)
-        page.wait_for_timeout(3000)
-        page.screenshot(path=str(out))
-        leaves = page.evaluate(_LEAF_JS)
+    with _player_file(html, pack) as player:
+        for size in wanted:
+            path = out if len(wanted) == 1 else _sized_path(out, size)
+            with _session(player, 800, plant=boot and boot['storage'],
+                          size=size, seed=seed) as page:
+                if page is None:
+                    return 2
+                if boot is not None:
+                    arrival, problem = _arrive(page, boot)
+                    if problem is not None:
+                        print(problem, file=sys.stderr)
+                        return 1
+                for key in (k.strip() for k in steps.split(',') if k.strip()):
+                    page.keyboard.press(key)
+                    page.wait_for_timeout(250)
+                page.wait_for_timeout(3000)
+                page.screenshot(path=str(path))
+                runs.append({'size': [size[0], size[1]], 'screenshot': str(path),
+                             'containment': _containment(page.evaluate(_CONTAINMENT_JS)),
+                             'overlay_text': page.evaluate(_LEAF_JS)})
 
     if json_out:
-        report = {'screenshot': str(out), 'overlay_text': leaves}
-        if arrival is not None:
+        if len(wanted) == 1:
+            # One size is today's run, exactly: the same keys at the top level.
+            report = {'screenshot': runs[0]['screenshot'],
+                      'overlay_text': runs[0]['overlay_text'],
+                      'containment': runs[0]['containment']}
+        else:
+            report = {'sizes': [list(s) for s in wanted], 'runs': runs}
+        if arrival is not None and boot['name'] is not None:
             report['scenario'] = {'name': boot['name'], **arrival}
+        if at is not None:
+            report['at'] = dict(boot['start'])
+        if seed is not None:
+            report['seed'] = seed
         print(json.dumps(report))
         return 0
-    if arrival is not None:
-        where = (f"depth {arrival['depth']}" if arrival['depth']
-                 else arrival['region'])
-        print(f"scenario: {boot['name']} - {where} at {arrival['at']}")
-    print(f'screenshot: {out}')
-    print(f'{"y":>6}  {"tag":<6} {"id":<18} text')
-    for e in leaves:
-        print(f'{e["y"]:>6}  {e["tag"]:<6} {e["id"]:<18} {e["text"]}')
+    for run in runs:
+        if len(wanted) > 1:
+            print(f'size: {run["size"][0]}x{run["size"][1]}')
+        if arrival is not None:
+            where = (f"depth {arrival['depth']}" if arrival['depth']
+                     else arrival['region'])
+            print(f'{boot["label"]} - {where} at {arrival["at"]}')
+        print(f'screenshot: {run["screenshot"]}')
+        report = run['containment']
+        if report['stage']:
+            stage = report['stage']
+            print(f"stage: {stage['x']},{stage['y']} {stage['w']}x{stage['h']}")
+        else:
+            print('stage: none published by the game')
+        print(f"containment: {len(report['outside'])} piece(s) outside "
+              f"({report['measured']})"
+              + (f" - {', '.join(report['outside'])}" if report['outside'] else ''))
+        print(f'{"y":>6}  {"tag":<6} {"id":<18} text')
+        for e in run['overlay_text']:
+            print(f'{e["y"]:>6}  {e["tag"]:<6} {e["id"]:<18} {e["text"]}')
     return 0
 
 
@@ -392,12 +649,13 @@ def probe(html=None, pack=None, fire=(), json_out=False, scenario=None) -> int:
     if html is None and pack is None:
         print('vefr probe needs --html or --pack', file=sys.stderr)
         return 2
-    boot, refused = _scenario_or_refusal('probe', pack, scenario)
+    boot, refused = _boot_or_refusal('probe', pack, scenario, None)
     if refused is not None:
         return refused
 
     arrival = None
-    with _session(html, pack, 300, plant=boot and boot['storage']) as page:
+    with _player_file(html, pack) as player, \
+            _session(player, 300, plant=boot and boot['storage']) as page:
         if page is None:
             return 2
         if boot is not None:

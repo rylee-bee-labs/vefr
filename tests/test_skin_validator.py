@@ -214,12 +214,13 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # whole-weave pin still moves because the player template keeps the
 # `225-spells.js` part (and 050's now-accurate spells comment), so the
 # merged weave was re-measured here.
+# Re-cut 2026-10-11, onto current `main`: U353 moves the woven player (the fight verbs now stand in the HUD frame; the look slice's `--sizes`/`--at`/`--seed` reach the descent).
 # Measured twice with the documented command above (as
 # `PYTHONPATH=src python3 -c ...`, no uv in the sandbox):
 #   7b672cc24f806fdf7f0bfd2d05b0f6318ad8d9626e6cd1e00838df6ab5d118c7
 #   2260620a961dd59f91af65b88b356cfcb2412936eefb1e28e6d57fb6297caff7
 #   cd70c89312c0da7a60691b0aa6b3e0ded7aa03006bb4687bef61a07389146dfa
-NO_SKIN_WEAVE_SHA256 = "7607f208eb55cd11bd4a3dce90bff5cfa8b00967607c1bf6417102f2945ba7f0"
+NO_SKIN_WEAVE_SHA256 = "0a478d306f3dfa249f1f7b2545deaef1f77497aa93f1afa2192b230416de012d"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

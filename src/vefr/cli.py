@@ -4894,7 +4894,10 @@ def cmd_look(args) -> int:
     pack = None if args.html else _devtools_pack(args.pack)
     return devtools.look(html=args.html, pack=pack, out=args.out,
                          steps=args.steps, json_out=args.json,
-                         scenario=getattr(args, "scenario", None))
+                         scenario=getattr(args, "scenario", None),
+                         sizes=getattr(args, "sizes", None),
+                         at=getattr(args, "at", None),
+                         seed=getattr(args, "seed", None))
 
 
 def cmd_probe(args) -> int:
@@ -5109,6 +5112,16 @@ def vefr_main() -> int:
     lk.add_argument('--scenario', default=None, metavar='NAME',
                     help="open the game in the pack's scenarios/NAME.json "
                          'state first (needs --pack)')
+    lk.add_argument('--sizes', action='append', default=None, metavar='WxH',
+                    help='photograph the pack at this size; repeatable or '
+                         'comma-separated, one file per size '
+                         '(default: 1280x800)')
+    lk.add_argument('--at', default=None, metavar='REGION X,Y',
+                    help='start the run in this region at this tile '
+                         '(needs --pack)')
+    lk.add_argument('--seed', default=None, metavar='SEED',
+                    help="ask the game for this run seed (the descent's "
+                         '?vefr-seed= parameter)')
     lk.add_argument('--json', action='store_true', help='print the report as JSON')
     lk.set_defaults(fn=cmd_look)
 

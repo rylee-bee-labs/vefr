@@ -63,7 +63,35 @@ window.VEFR_DESCENT = (function () {
     return (window.VEFR_WORLD && window.VEFR_WORLD.name) || 'world';
   }
 
+  // The URL parameter a caller uses to ask for a run seed of their own:
+  // `player.html?vefr-seed=hello`. Read at call time, so a page opened
+  // with it answers with it and a page opened without it changes not at
+  // all - `vefr look --seed`, a share link and a headless reviewer all
+  // name a seed without editing world.json. Length-capped because the
+  // seed is part of every floor key (and of the save), and a URL is
+  // untrusted input.
+  var SEED_PARAM = 'vefr-seed';
+  var SEED_MAX = 120;
+
+  function seedParam() {
+    try {
+      if (!window.location || !window.location.search) return '';
+      var asked = new URLSearchParams(window.location.search).get(SEED_PARAM);
+      return (typeof asked === 'string') ? asked.trim().slice(0, SEED_MAX) : '';
+    } catch (e) {
+      // A browser without URLSearchParams gets the pack's own seed, the
+      // same one it got before this parameter existed.
+      return '';
+    }
+  }
+
+  // The base seed every floor key is built on. The parameter wins over
+  // the pack's `run_seed` when it is there; the pack's seed is what
+  // every other caller already gets. A pack with no descent never asks
+  // (see `on`), so the parameter is ignored there exactly as it was.
   function baseSeed() {
+    var asked = seedParam();
+    if (asked) return asked;
     var d = def();
     return (d && d.run_seed) || '';
   }
@@ -1740,6 +1768,7 @@ window.VEFR_DESCENT = (function () {
     locate: locate, floorName: floorName, floorKey: floorKey,
     streamSeed: streamSeed, lootSeed: lootSeed, chestSeed: chestSeed,
     runSeed: runSeed, sectionHash: sectionHash, parseName: parseName,
+    baseSeed: baseSeed, seedParam: seedParam, seedFor: seedFor,
     isGenerated: isGenerated, depthOfName: depthOfName, floorPlan: floorPlan,
     floorSize: floorSize, floorKindOf: floorKindOf, mobsAt: mobsAt, mobDrops: mobDrops, placeBooks: placeBooks,
     ensureRegion: ensureRegion, onEnter: onEnter, entryHere: entryHere,

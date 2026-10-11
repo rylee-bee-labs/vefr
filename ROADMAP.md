@@ -65,6 +65,7 @@ gameplay features over new core machinery.
 2. [authoring + QA] **Scenarios**: open the game, `vefr look` and the bot in any named state; generalises #260. (finding 2, new)
    - **Scenario half landed (2026-10-09):** `scenarios/<name>.json` in a pack, checked by `vefr check`; `vefr look|probe --pack P --scenario NAME` open the woven game in that state (ADR 0016 P2). Next: the capsule's capture and import, and the Cottage bot reading scenarios.
 3. [QA] **Stage containment and panel accessibility**: every control inside the stage at many sizes, and every menu panel walked with axe. (finding 3, new; the containment and no-overlap tests are written and drive the interface slices; the panel walk is still to do)
+   - **Sizing and seeding landed (2026-10-09):** `vefr look --sizes WxH[,WxH]` photographs a pack at each size, one file per size, and repeats its containment report at every one — so "the check measured the viewport, not the stage" stops being possible; `--at REGION X,Y` starts a run off the world's start region and `--seed` asks the descent for a run seed through the player's own `?vefr-seed=`. The fight verb row now stands inside the painted play panel rather than the page, and `#interact` keeps its whole label at phone widths (#353, #344).
 4. [QA] **Obtainability**: widen the lock check to gear, books, stickers and creatures. (finding 4, deepened)
 5. [authoring] Region display names for hints (#259).
 
