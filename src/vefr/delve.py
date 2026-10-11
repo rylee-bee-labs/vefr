@@ -973,21 +973,27 @@ def _hp_range(family: dict) -> tuple[int, int]:
     return _range_of(family, 'hp', (1, 1))
 
 
-def _mob_budget(rows: list[str]) -> int:
-    """How many randoms this floor's area asks for.
+def _mob_budget(rows: list[str], section: dict | None = None,
+                k: int = 1) -> int:
+    """How many randoms this floor carries.
 
-    The budget is not a draw: it is the same area budget the v3 pop
-    stage clamps (PLAN.md section 2, step 4 - "randoms by area budget"),
-    read off the floor's own walkable tiles. One tile `TILES_PER_MOB`
-    times is one monster slot, clamped to the same two numbers, so a
-    descent Section carries no `mobs` key at all - the count is generator
-    policy, not pack data.
+    Two answers and one place (`delve_v3.mob_budget`, the same function the
+    v3 pop stage calls): the count the Section's own `mobs` table names for
+    floor `k`, or - for a Section that names none for it, which is every
+    Section written before vefr#357 - the area budget, one monster slot per
+    `TILES_PER_MOB` walkable tiles clamped into `MOBS_MIN..MOBS_MAX` (PLAN.md
+    section 2, step 4, "randoms by area budget"). The budget is not a draw
+    either way.
+
+    `rows` is counted here rather than handed over, because this floor's
+    walkable tiles are counted off the rows it drew - `delve_v3` counts the
+    canvas it carved - and each counts what it has always counted.
     """
     from . import delve_v3  # here, not at the top: delve_v3 imports this module
 
     walkable = sum(row.count('.') for row in rows)
-    return min(delve_v3.MOBS_MAX,
-               max(delve_v3.MOBS_MIN, walkable // delve_v3.TILES_PER_MOB))
+    return delve_v3.mob_budget(section if isinstance(section, dict) else {},
+                              walkable, k)
 
 
 def _family_on_floor(family: dict, k: int) -> bool:
@@ -1017,19 +1023,21 @@ def mobs_at(key: str, section: dict, rows: list[str], up: tuple[int, int],
     from both stairs, one per tile, in a fixed order: the count first,
     then for each monster its tile, its family, its health, its reach and
     its drops (the drops from that monster's own loot stream). The count
-    is the area budget (`_mob_budget`) and costs no draw, so a floor's
-    size alone decides how full it is. A floor too small to hold them all
-    carries as many as fit, never fewer than none. `source` is the
-    descent's Blueprint: the families are resolved through it, so a
-    monster carries the stats its family id names rather than the floor of
-    1 a bare Section entry gives. `k` is this floor's position inside its
-    Section, and it is what a family's `depth` range is read against.
+    is `_mob_budget` - the Section's own `mobs` for this floor where it
+    names one, the area budget otherwise - and costs no draw, so a floor's
+    size decides how full it is for every Section that names no count. A
+    floor too small to hold them all carries as many as fit, never fewer
+    than none. `k` is the floor's 1-based position in its Section, which
+    is what the `mobs` table is read against and what a family's `depth`
+    range is read against; `source` is the descent's Blueprint: the
+    families are resolved through it, so a monster carries the stats its
+    family id names rather than the floor of 1 a bare Section entry gives.
     `catalog` is the pack's item catalog, where an item's `roll` is read
     from (ADR 0017); with none, every drop is the bare id it was before
     this argument existed.
     """
     rng = prng(stream_seed(key, 'pop'))
-    count = _mob_budget(rows)
+    count = _mob_budget(rows, section, k)
     families = [f for f in _families_of(section, source)
                 if _family_on_floor(f, k)]
     pool: list[dict] = []

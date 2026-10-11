@@ -3580,7 +3580,7 @@
    }
   ],
   "errors": [
-   "sections/cellar.json: /section/zeta section has an unknown key 'zeta'; it may only hold section, id, floors, size, rooms, tiles, fog, families, pattern, specials, elites, groups, curve, loot, stamps, pois, warden, vault and endless"
+   "sections/cellar.json: /section/zeta section has an unknown key 'zeta'; it may only hold section, id, floors, size, rooms, tiles, fog, families, pattern, specials, elites, groups, mobs, curve, loot, stamps, pois, warden, vault and endless"
   ]
  },
  {
@@ -3693,8 +3693,8 @@
    }
   ],
   "errors": [
-   "sections/cellar.json: /section/zeta section has an unknown key 'zeta'; it may only hold section, id, floors, size, rooms, tiles, fog, families, pattern, specials, elites, groups, curve, loot, stamps, pois, warden, vault and endless",
-   "sections/cellar.json: /section/alpha section has an unknown key 'alpha'; it may only hold section, id, floors, size, rooms, tiles, fog, families, pattern, specials, elites, groups, curve, loot, stamps, pois, warden, vault and endless",
+   "sections/cellar.json: /section/zeta section has an unknown key 'zeta'; it may only hold section, id, floors, size, rooms, tiles, fog, families, pattern, specials, elites, groups, mobs, curve, loot, stamps, pois, warden, vault and endless",
+   "sections/cellar.json: /section/alpha section has an unknown key 'alpha'; it may only hold section, id, floors, size, rooms, tiles, fog, families, pattern, specials, elites, groups, mobs, curve, loot, stamps, pois, warden, vault and endless",
    "sections/cellar.json: /section/section section.section must be between 1 and 99",
    "sections/cellar.json: /section/rooms/0 section.rooms[0] must be between 6 and 40"
   ]
@@ -7285,6 +7285,463 @@
   "errors": [
    "sections/cellar.json: /section/pattern/8 section.pattern[8] must be \"entry\" or \"n\" or \"special\" or \"landing\" or \"warden\"",
    "sections/cellar.json: /families/0/family unknown family 'ghost'"
+  ]
+ },
+ {
+  "block": "section",
+  "case": "a section's own monster count",
+  "section": {
+   "section": 1,
+   "id": "cellar",
+   "floors": 9,
+   "size": {
+    "w": [
+     64,
+     80
+    ],
+    "h": [
+     44,
+     56
+    ]
+   },
+   "rooms": [
+    12,
+    18
+   ],
+   "tiles": {
+    "#": "cellar-wall",
+    ".": "cellar-floor"
+   },
+   "fog": {
+    "radius": 4
+   },
+   "families": [
+    {
+     "family": "rat",
+     "weight": 5,
+     "depth": [
+      1,
+      6
+     ]
+    }
+   ],
+   "pattern": [
+    "entry",
+    "n",
+    "n",
+    "special",
+    "landing",
+    "n",
+    "special",
+    "n",
+    "warden"
+   ],
+   "specials": [
+    "treasure",
+    "infested",
+    "hub"
+   ],
+   "elites": {
+    "per_floor": [
+     1,
+     2
+    ],
+    "affixes": [
+     "broad",
+     "quick"
+    ]
+   },
+   "groups": {
+    "per_floor": [
+     1,
+     2
+    ],
+    "minions": [
+     2,
+     3
+    ]
+   },
+   "curve": {
+    "hp": [
+     1.0,
+     1.4
+    ],
+    "atk": [
+     1.0,
+     1.3
+    ]
+   },
+   "loot": {
+    "tier": 1
+   },
+   "stamps": [
+    "cellar",
+    "any"
+   ],
+   "pois": [
+    "the rusted grate"
+   ],
+   "warden": "ashwing",
+   "vault": "vault-cellar",
+   "mobs": {
+    "1": 0,
+    "99": 36,
+    "from": 12
+   }
+  },
+  "affixes": [
+   {
+    "id": "broad",
+    "label": "Broad {name}"
+   },
+   {
+    "id": "quick",
+    "label": "Quick {name}"
+   }
+  ],
+  "errors": []
+ },
+ {
+  "block": "section",
+  "case": "a count out of range and one that is not a whole number",
+  "section": {
+   "section": 1,
+   "id": "cellar",
+   "floors": 9,
+   "size": {
+    "w": [
+     64,
+     80
+    ],
+    "h": [
+     44,
+     56
+    ]
+   },
+   "rooms": [
+    12,
+    18
+   ],
+   "tiles": {
+    "#": "cellar-wall",
+    ".": "cellar-floor"
+   },
+   "fog": {
+    "radius": 4
+   },
+   "families": [
+    {
+     "family": "rat",
+     "weight": 5,
+     "depth": [
+      1,
+      6
+     ]
+    }
+   ],
+   "pattern": [
+    "entry",
+    "n",
+    "n",
+    "special",
+    "landing",
+    "n",
+    "special",
+    "n",
+    "warden"
+   ],
+   "specials": [
+    "treasure",
+    "infested",
+    "hub"
+   ],
+   "elites": {
+    "per_floor": [
+     1,
+     2
+    ],
+    "affixes": [
+     "broad",
+     "quick"
+    ]
+   },
+   "groups": {
+    "per_floor": [
+     1,
+     2
+    ],
+    "minions": [
+     2,
+     3
+    ]
+   },
+   "curve": {
+    "hp": [
+     1.0,
+     1.4
+    ],
+    "atk": [
+     1.0,
+     1.3
+    ]
+   },
+   "loot": {
+    "tier": 1
+   },
+   "stamps": [
+    "cellar",
+    "any"
+   ],
+   "pois": [
+    "the rusted grate"
+   ],
+   "warden": "ashwing",
+   "vault": "vault-cellar",
+   "mobs": {
+    "1": 40,
+    "from": "twelve"
+   }
+  },
+  "affixes": [
+   {
+    "id": "broad",
+    "label": "Broad {name}"
+   },
+   {
+    "id": "quick",
+    "label": "Quick {name}"
+   }
+  ],
+  "errors": [
+   "sections/cellar.json: /section/mobs/1 section.mobs['1'] must be between 0 and 36"
+  ]
+ },
+ {
+  "block": "section",
+  "case": "a monster count against a key that names no floor",
+  "section": {
+   "section": 1,
+   "id": "cellar",
+   "floors": 9,
+   "size": {
+    "w": [
+     64,
+     80
+    ],
+    "h": [
+     44,
+     56
+    ]
+   },
+   "rooms": [
+    12,
+    18
+   ],
+   "tiles": {
+    "#": "cellar-wall",
+    ".": "cellar-floor"
+   },
+   "fog": {
+    "radius": 4
+   },
+   "families": [
+    {
+     "family": "rat",
+     "weight": 5,
+     "depth": [
+      1,
+      6
+     ]
+    }
+   ],
+   "pattern": [
+    "entry",
+    "n",
+    "n",
+    "special",
+    "landing",
+    "n",
+    "special",
+    "n",
+    "warden"
+   ],
+   "specials": [
+    "treasure",
+    "infested",
+    "hub"
+   ],
+   "elites": {
+    "per_floor": [
+     1,
+     2
+    ],
+    "affixes": [
+     "broad",
+     "quick"
+    ]
+   },
+   "groups": {
+    "per_floor": [
+     1,
+     2
+    ],
+    "minions": [
+     2,
+     3
+    ]
+   },
+   "curve": {
+    "hp": [
+     1.0,
+     1.4
+    ],
+    "atk": [
+     1.0,
+     1.3
+    ]
+   },
+   "loot": {
+    "tier": 1
+   },
+   "stamps": [
+    "cellar",
+    "any"
+   ],
+   "pois": [
+    "the rusted grate"
+   ],
+   "warden": "ashwing",
+   "vault": "vault-cellar",
+   "mobs": {
+    "three": 4
+   }
+  },
+  "affixes": [
+   {
+    "id": "broad",
+    "label": "Broad {name}"
+   },
+   {
+    "id": "quick",
+    "label": "Quick {name}"
+   }
+  ],
+  "errors": [
+   "sections/cellar.json: /section/mobs/three section.mobs['three'] must name a floor of the section, such as \"3\", or \"from\" for every floor it does not name"
+  ]
+ },
+ {
+  "block": "section",
+  "case": "a monster count that is not a table",
+  "section": {
+   "section": 1,
+   "id": "cellar",
+   "floors": 9,
+   "size": {
+    "w": [
+     64,
+     80
+    ],
+    "h": [
+     44,
+     56
+    ]
+   },
+   "rooms": [
+    12,
+    18
+   ],
+   "tiles": {
+    "#": "cellar-wall",
+    ".": "cellar-floor"
+   },
+   "fog": {
+    "radius": 4
+   },
+   "families": [
+    {
+     "family": "rat",
+     "weight": 5,
+     "depth": [
+      1,
+      6
+     ]
+    }
+   ],
+   "pattern": [
+    "entry",
+    "n",
+    "n",
+    "special",
+    "landing",
+    "n",
+    "special",
+    "n",
+    "warden"
+   ],
+   "specials": [
+    "treasure",
+    "infested",
+    "hub"
+   ],
+   "elites": {
+    "per_floor": [
+     1,
+     2
+    ],
+    "affixes": [
+     "broad",
+     "quick"
+    ]
+   },
+   "groups": {
+    "per_floor": [
+     1,
+     2
+    ],
+    "minions": [
+     2,
+     3
+    ]
+   },
+   "curve": {
+    "hp": [
+     1.0,
+     1.4
+    ],
+    "atk": [
+     1.0,
+     1.3
+    ]
+   },
+   "loot": {
+    "tier": 1
+   },
+   "stamps": [
+    "cellar",
+    "any"
+   ],
+   "pois": [
+    "the rusted grate"
+   ],
+   "warden": "ashwing",
+   "vault": "vault-cellar",
+   "mobs": [
+    4
+   ]
+  },
+  "affixes": [
+   {
+    "id": "broad",
+    "label": "Broad {name}"
+   },
+   {
+    "id": "quick",
+    "label": "Quick {name}"
+   }
+  ],
+  "errors": [
+   "sections/cellar.json: /section/mobs section.mobs must be a table of monster counts, such as {\"1\": 4, \"from\": 12}"
   ]
  },
  {

@@ -220,7 +220,17 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 #   7b672cc24f806fdf7f0bfd2d05b0f6318ad8d9626e6cd1e00838df6ab5d118c7
 #   2260620a961dd59f91af65b88b356cfcb2412936eefb1e28e6d57fb6297caff7
 #   cd70c89312c0da7a60691b0aa6b3e0ded7aa03006bb4687bef61a07389146dfa
-NO_SKIN_WEAVE_SHA256 = "0a478d306f3dfa249f1f7b2545deaef1f77497aa93f1afa2192b230416de012d"
+# Re-cut 2026-10-11, the union of the D357 monster-count stack onto current
+# `main`: vefr#357's player's own descent part (397) and its generator part
+# (396) read the new `mobs` key, so every pack's woven player carries the new
+# lines - which is the one thing this digest is allowed to move for - on top
+# of every earlier move. The value below is this merged tree's weave and
+# neither side's could be carried across. Re-measured twice with the
+# documented command above (as `PYTHONPATH=src python3 -c ...`, no uv in the
+# sandbox) and the two readings matched:
+#   73fe8996400b939e781cf8eb8df13ca848d645c2858f3d187b585c6dd6dd006c
+#   73fe8996400b939e781cf8eb8df13ca848d645c2858f3d187b585c6dd6dd006c
+NO_SKIN_WEAVE_SHA256 = "73fe8996400b939e781cf8eb8df13ca848d645c2858f3d187b585c6dd6dd006c"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

@@ -233,9 +233,12 @@ def test_the_mob_roster_is_within_the_packs_bounds_and_ids_by_index():
         walkable = sum(row.count('.') for row in plan["rows"])
         lo = max(delve_v3.MOBS_MIN, walkable // delve_v3.TILES_PER_MOB)
         lo = min(lo, delve_v3.MOBS_MAX)
-        # How many live on a floor is the generator's area budget, not a
-        # pack key: one tile every TILES_PER_MOB is one slot, clamped to
-        # the same two numbers the v3 pop stage clamps.
+        # How many live on a floor is the generator's area budget whenever
+        # the Section names no count of its own (`mobs`, vefr#357 - this
+        # descent names none): one tile every TILES_PER_MOB is one slot,
+        # clamped to the same two numbers the v3 pop stage clamps.
+        # `tests/test_section_monster_count.py` is where the key's own
+        # half of this is pinned.
         assert len(plan["mobs"]) == min(lo, len([
             1 for y, row in enumerate(plan["rows"]) for x, ch in enumerate(row)
             if ch == '.'

@@ -1,0 +1,23 @@
+{
+ "section": 3,
+ "id": "gentle",
+ "floors": 5,
+ "size": {"w": [48, 56], "h": [32, 40]},
+ "rooms": [10, 14],
+ "tiles": {"#": "dungeon-wall", ".": "dungeon-floor", "u": "dungeon-stairs-up",
+           "d": "dungeon-stairs-down"},
+ "fog": {"radius": 3},
+ "families": [
+  {"family": "rat", "weight": 3, "depth": [1, 5]},
+  {"family": "moth", "weight": 2, "depth": [1, 5]}
+ ],
+ "pattern": ["entry", "n", "landing", "n", "warden"],
+ "specials": ["treasure"],
+ "mobs": {"1": 4, "from": 12},
+ "elites": {"per_floor": [0, 1], "affixes": ["broad", "quick"]},
+ "groups": {"per_floor": [0, 2], "minions": [2, 3], "leader": "normal",
+            "same_family": true, "wake": "all", "leash": 4},
+ "curve": {"hp": [1.0, 1.2], "atk": [1.0, 1.2]},
+ "loot": {"tier": 1},
+ "pois": ["the low stair", "the narrow shelf"]
+}

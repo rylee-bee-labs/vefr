@@ -39,7 +39,7 @@ from pathlib import Path
 
 import pytest
 
-from vefr import cli, delve_v3, stamps
+from vefr import cli, delve_v3, sections, stamps
 
 import floor_v3_parity_cases as cases
 
@@ -66,6 +66,9 @@ EXPECTED_CONSTANTS = {
     "TILES_PER_MOB": delve_v3.TILES_PER_MOB,
     "MOBS_MIN": delve_v3.MOBS_MIN,
     "MOBS_MAX": delve_v3.MOBS_MAX,
+    # The Section shape's own floor bound, held by the twin so the two agree
+    # on how deep a `mobs` count may be written (vefr#357).
+    "MOB_FLOOR_MAX": sections.MOB_FLOOR_MAX,
     "LONE_ELITES_MAX": delve_v3.LONE_ELITES_MAX,
     "GROUPS_MAX": delve_v3.GROUPS_MAX,
     "GROUP_MEMBERS_MAX": delve_v3.GROUP_MEMBERS_MAX,

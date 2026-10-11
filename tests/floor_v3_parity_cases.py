@@ -213,7 +213,7 @@ def staged(seed: str, width: int, height: int, kind: str,
     down = (anchors["down"][0], anchors["down"][1])
     spawns, chests = delve_v3._pop_stage(
         delve_v3.prng(f"v3|{key}|pop"), canvas, graph, plan, pack,
-        up, down, secrets, key)
+        up, down, secrets, key, STAMP_DEPTH)
 
     floor = {
         "gen": 3,

@@ -59,6 +59,16 @@ not an id:
   pool holding "quick brown" is refused at that entry rather than
   half-drawn at play time.
 
+and vefr#357 added the sixth, which is a table keyed by FLOOR rather than by
+name:
+
+- `depths` - a table of whole numbers keyed either by a floor of the Section
+  (`"1": 4`) or by `"from"`, the count every floor it does not name
+  carries: the monster count of a Section (`mobs`). Its pointer carries the
+  key, the way a tile table's does, because a table has no order to point
+  into and the floor a bad count was written against is the whole of the
+  sentence.
+
 A wrong element of a `pair`, an `ids` or an `enums` is reported at that
 element's pointer, and the first wrong element is the one reported, so a
 key earns one sentence however wrong its value is.
@@ -96,13 +106,22 @@ Problem = namedtuple('Problem', 'code pointer sentence')
 # (ADR 0017).
 WORD = re.compile(r'[A-Za-z][A-Za-z0-9_-]{0,23}')
 
+# The two literals a `depths` table is read against, named here because this
+# module cannot import the one place they live: `shapes` is standard-library
+# only (see the module docstring), so the reader is
+# `vefr.sections.MOB_FLOOR_MAX` and `vefr.sections.MOBS_EVERY`. They are
+# written out because a table is a table and a `str.format` template is a
+# `str.format` template, so both also appear inside sentences below.
+_MOB_FLOOR_MAX = 99
+_MOBS_EVERY = 'from'
+
 
 @dataclass(frozen=True)
 class Key:
     name: str
     kind: str               # 'str' | 'int' | 'bool' | 'enum' | 'obj' | 'list' | 'ref'
                              # | 'hundredths' | 'pair' | 'ids' | 'name-label'
-                             # | 'enums' | 'glyphs' | 'hundredths-pair'
+                             # | 'enums' | 'glyphs' | 'hundredths-pair' | 'depths'
                              # | 'words' (a list of plain words)
                              # | 'word' (one plain word)
                              # | 'place-label' (a pack's own sentence, which
@@ -205,6 +224,12 @@ _KIND_SAY = {
                        '{{"#": "wall", ".": "floor"}}'),
         'wrong-element': '{path} must name a tileset, such as "wall"',
     },
+    'depths': {
+        'wrong-type': ('{path} must be a table of monster counts, such as '
+                       '{{"1": 4, "from": 12}}'),
+        'wrong-element': ('{path} must name a floor of the section, such as '
+                          '"3", or "from" for every floor it does not name'),
+    },
     'hundredths': {
         'wrong-type': '{path} must be a number, such as 1.5',
         'not-hundredths': ('{path} must be a whole number of hundredths, '
@@ -297,6 +322,8 @@ def _type_ok(kind: str, value) -> bool:
         return isinstance(value, str)
     if kind == 'glyphs':
         return isinstance(value, dict)
+    if kind == 'depths':
+        return isinstance(value, dict)
     if kind == 'ref':
         return isinstance(value, str)
     if kind == 'hundredths':
@@ -329,7 +356,10 @@ def _out_of_range(key: Key, value) -> bool:
     """
     if key.kind in ('pair', 'hundredths-pair') and isinstance(value, (list, tuple)):
         return any(_out_of_range(key, n) for n in value)
-    if key.kind in ('int', 'pair'):
+    if key.kind in ('int', 'pair', 'depths'):
+        # `depths` is an `int` bound applied to one ENTRY of its table
+        # rather than to the table, which is what `_value_problem` checks
+        # before it ever gets here - a table is never compared to a bound.
         return ((key.lo is not None and value < key.lo)
                 or (key.hi is not None and value > key.hi))
     if key.kind in ('str', 'name-label', 'place-label') or (key.kind == 'str-or-obj' and isinstance(value, str)):
@@ -406,12 +436,54 @@ def _glyph_problem(block, key, value, path):
     return None
 
 
+def _floor_key(key) -> bool:
+    """Whether a `depths` table's key names a floor, or the `from` entry.
+
+    One rule, and the same one in `vefr.sections`, which is what reads the
+    table: a key is a floor only if it is the decimal spelling of that
+    floor, so `"03"`, `"+3"` and `"three"` name nothing and are refused
+    here rather than quietly ignored at play time. ASCII digits only -
+    `str.isdigit` is also true of `"٣"`, and `int("²")` raises.
+    """
+    return isinstance(key, str) and (key == _MOBS_EVERY
+                                     or (key.isascii() and key.isdigit()
+                                         and 1 <= int(key) <= _MOB_FLOOR_MAX
+                                         and str(int(key)) == key))
+
+
+def _depths_problem(block, key, value, path):
+    """The one entry of a table of monster counts that cannot be read.
+
+    Three ways to be wrong and one sentence each, in the table's own order:
+    a key that names no floor, a count that is not a whole number, and a
+    count outside the range the key bounds. The pointer carries the key
+    rather than an index, for the reason `_glyph_problem` gives.
+    """
+    for depth, count in value.items():
+        here = f'{path}[{depth!r}]'
+        pointer = f'/{block.name}/{key.name}/{depth}'
+        if not _floor_key(depth):
+            return Problem(
+                'wrong-element', pointer,
+                _say(block, key, 'wrong-element').format(path=here))
+        if not isinstance(count, int) or isinstance(count, bool):
+            # The kind's own `wrong-type` is the TABLE's sentence, and the
+            # table is fine; an entry that is not a whole number is an
+            # `int`'s sentence, so it is spoken as one.
+            return Problem(
+                'wrong-type', pointer,
+                _KIND_SAY['int']['wrong-type'].format(path=here))
+        if _out_of_range(key, count):
+            return _range_problem(block, key, count, here, pointer)
+    return None
+
+
 def _shape_problem(block, key, value, path):
     """The one problem with a value that is the right type and still
     cannot be read: a label that does not name its monster, a pack's own
     sentence that does not name its place or says nothing at all, a
     hundredth that is not whole, a wrong pair half, a glyph with no
-    tileset, or a wrong list element."""
+    tileset, a monster count against no floor, or a wrong list element."""
     pointer = f'/{block.name}/{key.name}'
     if key.kind == 'name-label':
         if '{name}' not in value:
@@ -436,6 +508,8 @@ def _shape_problem(block, key, value, path):
         return None
     if key.kind == 'glyphs':
         return _glyph_problem(block, key, value, path)
+    if key.kind == 'depths':
+        return _depths_problem(block, key, value, path)
     if key.kind == 'hundredths':
         # Whole hundredths before range: a value that is not a hundredth
         # at all is reported as that, not as a bound it never met.
@@ -492,11 +566,11 @@ def _value_problem(block, key, value, path):
         problem = _shape_problem(block, key, value, path)
         if problem is not None:
             return problem
-    if key.kind in ('pair', 'glyphs', 'enums'):
+    if key.kind in ('pair', 'glyphs', 'enums', 'depths'):
         # A pair always reports at the half that is wrong, so it never
         # answers as one value: `groups.minions[1]` names the problem.
-        # A tile table and a pattern are read the same way: the glyph
-        # and the entry, not the whole key.
+        # A tile table, a pattern and a table of monster counts are read
+        # the same way: the glyph, the entry or the floor, not the whole key.
         return _shape_problem(block, key, value, path)
     if key.kind == 'hundredths-pair':
         # The halves first - a curve end that is not a whole hundredth is
@@ -737,6 +811,11 @@ DESCENT_ENTRY = Block(
 # `size`, `rooms`, `tiles`, `fog`, `families`, `pattern`, `specials`,
 # `elites`, `groups`, `curve`, `loot`, `stamps`, `pois`, `warden`,
 # `vault`. Nothing here is invented and nothing is dropped.
+#
+# One key is later than the plan: `mobs` (vefr#357), which sits beside
+# `elites` and `groups` because it is the same kind of answer - how many of
+# this Section's monsters there are - and sits after them because it is the
+# budget the other two are drawn out of.
 #
 # Only TWO keys are required: `id` and `families`. `id` is the floor key's
 # middle - a Section without one gives every floor of the pack the same
@@ -1161,6 +1240,18 @@ SECTION = Block(
             wired=False,
             wires='slice E7 hands the pop stage\'s groups to the floor plan, '
                   'the same way it hands over the elites'),
+        # vefr#357: how many monsters a floor of this Section carries. The
+        # budget the pop stage clamps was area policy - one per thirty
+        # walkable tiles - which put 20 to 35 monsters on a first floor no
+        # pack could argue with. A count the pack writes replaces the area
+        # budget for the floors it names, and costs no draw: the `size`,
+        # `plan` and `layout` streams do not read it, so setting it moves
+        # no tile a pack has already placed by coordinate. `from` is the
+        # count every floor the table does not name carries, and `0` is a
+        # floor with nothing on it - both of which the area budget could
+        # not express. 36 is ADR 0014's own hard cap, so a count past it
+        # is refused rather than quietly clamped.
+        Key('mobs', 'depths', lo=0, hi=36),
         Key('curve', 'obj', sub=CURVE,
             doc='the `[lo, hi]` multipliers monster hp and atk rise by '
                 'across this Section\'s floors.',
