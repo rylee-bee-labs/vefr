@@ -7261,6 +7261,22 @@ window.VEFR_DESCENT = (function () {
     return rangeOf(family, 'hp', [1, 1]);
   }
 
+  // What one kill of this family is worth, on this floor (the twin of
+  // `vefr.sections.xp_for`). A family's own `xp` is the number it
+  // wrote; a family that writes none takes the documented default -
+  // `XP_BASE` on the first floor, `XP_PER_DEPTH` more for every floor
+  // below - so a descent that climbs pays more as it climbs. Pure, and
+  // no draw is spent on it, so it moves no wall, no monster and no
+  // drop.
+  var XP_BASE = 1;
+  var XP_PER_DEPTH = 2;
+  function xpFor(family, depth) {
+    var declared = family ? family.xp : null;
+    if (isWhole(declared) && declared >= 0) return declared;
+    var d = (isWhole(depth) && depth >= 1) ? depth : 1;
+    return XP_BASE + XP_PER_DEPTH * (d - 1);
+  }
+
   // ---- where a depth leads (the twin of `locate`) ----------------------
   function locate(depth) {
     var list = sections();
@@ -7488,7 +7504,7 @@ window.VEFR_DESCENT = (function () {
   // `k` is the floor's 1-based position in its Section, which is what the
   // Section's own `mobs` table is read against. The twin of
   // `vefr.delve.mobs_at`.
-  function mobsAt(key, section, rows, up, down, k) {
+  function mobsAt(key, section, rows, up, down, k, depth) {
     var rng = window.VEFR_DELVE.prng(streamSeed(key, 'pop'));
     var count = mobBudget(rows, section, k);
     var families = familiesOf(section).filter(function (f) {
@@ -7523,7 +7539,8 @@ window.VEFR_DESCENT = (function () {
         id: 'm' + i, family: family.family,
         name: (typeof family.name === 'string' && family.name) ? family.name : DEFAULT_FAMILY,
         at: [at[0], at[1]], hp: Math.max(1, hp), atk: Math.max(1, atk),
-        sight: Math.max(1, sight), drops: mobDrops(key, 'm' + i, family.drops)
+        sight: Math.max(1, sight), xp: xpFor(family, depth),
+        drops: mobDrops(key, 'm' + i, family.drops)
       });
     }
     return mobs;
@@ -7615,7 +7632,7 @@ window.VEFR_DESCENT = (function () {
   }
   function withChar(row, x, ch) { return row.slice(0, x) + ch + row.slice(x + 1); }
 
-  function withWarden(mobs, key, section, k, at) {
+  function withWarden(mobs, key, section, k, at, depth) {
     if (!wardenRecord(section, k, 0, at)) return mobs;
     var family = wardenOf(section).family;
     var base = familyBase(family) || {};
@@ -7629,7 +7646,8 @@ window.VEFR_DESCENT = (function () {
       id: WARDEN_MOB, family: family,
       name: (typeof base.name === 'string' && base.name) ? base.name : DEFAULT_FAMILY,
       at: [at[0], at[1]], hp: Math.max(1, hp), atk: Math.max(1, atk),
-      sight: Math.max(1, sight), drops: mobDrops(key, WARDEN_MOB, base.drops), warden: true
+      sight: Math.max(1, sight), xp: xpFor(base, depth),
+      drops: mobDrops(key, WARDEN_MOB, base.drops), warden: true
     });
     return kept;
   }
@@ -7767,8 +7785,8 @@ window.VEFR_DESCENT = (function () {
       rooms: floor.rooms.length, rows: rows,
       anchors: { up: up, down: down, warden: tileOrNull(floor.anchors.warden),
                  vault: tileOrNull(floor.anchors.vault) },
-      mobs: withWarden(mobsAt(key, section, rows, up, down, at.k), key, section,
-                       at.k, tileOrNull(floor.anchors.warden)),
+      mobs: withWarden(mobsAt(key, section, rows, up, down, at.k, depth), key, section,
+                       at.k, tileOrNull(floor.anchors.warden), depth),
       warden: wardenRecord(section, at.k, at.cycle, tileOrNull(floor.anchors.warden)),
       vault: vaultRecord(floor, section, at.k, at.cycle),
       legend: sectionLegend(section),
@@ -8092,9 +8110,14 @@ window.VEFR_DESCENT = (function () {
     };
   }
 
+  // The region's own enemy record. It carries the `xp` the plan gave the
+  // monster, which is what `loadEnemies` reads and `heroAttack` pays
+  // through `growAward`: a generated monster that arrived here without
+  // one is a kill worth nothing, and the floor it stood on is the only
+  // place that number could have come from.
   function enemyEntry(mob) {
     return { id: mob.id, name: mob.name, sprite: '', at: mob.at.slice(),
-             hp: mob.hp, atk: mob.atk, sight: mob.sight,
+             hp: mob.hp, atk: mob.atk, sight: mob.sight, xp: mob.xp,
              drops: mob.drops.slice(), warden: mob.warden === true };
   }
 
@@ -8850,6 +8873,7 @@ window.VEFR_DESCENT = (function () {
     baseSeed: baseSeed, seedParam: seedParam, seedFor: seedFor,
     isGenerated: isGenerated, depthOfName: depthOfName, floorPlan: floorPlan,
     floorSize: floorSize, floorKindOf: floorKindOf, mobsAt: mobsAt, mobDrops: mobDrops, placeBooks: placeBooks,
+    xpFor: xpFor,
     ensureRegion: ensureRegion, onEnter: onEnter, entryHere: entryHere,
     wireEntry: wireEntry, docKey: docKey,
     loadDoc: loadDoc, saveDoc: saveDoc, trimDoc: trimDoc, fitDoc: fitDoc,
