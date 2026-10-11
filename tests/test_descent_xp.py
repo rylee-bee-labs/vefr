@@ -272,7 +272,7 @@ LEVELS = {"mode": "levels",
           "levels": {"xp": [0, 1], "gain": {"hp": 2, "atk": 1}}}
 SOUND = {"theme": "soft"}
 PATCH = {"world.json": {"growth": LEVELS, "sound": SOUND}}
-WORLD = "sample-world"
+WORLD = "descent-test"
 GROWTH_KEY = f"vefr-growth-{WORLD}"
 
 
@@ -296,7 +296,7 @@ def _fight_a_monster_on(tmp_path, descent, depth):
             "read": ["VEFR_DESCENT.floor", "VEFR_COMBAT", "VEFR_SOUND.played",
                      "store", "text:#combat-live"]}
     play = play_kit.play(html, spec)
-    slain = play["store"].get("vefr-descent-sample-world", "")
+    slain = play["store"].get(f"vefr-descent-{WORLD}", "")
     assert mob["id"] in json.loads(slain or "{}").get(
         "floors", {}).get(plan["name"], {}).get("kills", []), \
         f'{mob["id"]} did not die: {play["errors"]}'
