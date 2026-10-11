@@ -236,7 +236,16 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # above (as `PYTHONPATH=src python3 -c ...`, no uv in the sandbox), readings equal:
 #   ebff7450540b050ca83d6796c6184264314040eeb4ac90c3e5dc7a7ef9770348
 #   ebff7450540b050ca83d6796c6184264314040eeb4ac90c3e5dc7a7ef9770348
-NO_SKIN_WEAVE_SHA256 = "ebff7450540b050ca83d6796c6184264314040eeb4ac90c3e5dc7a7ef9770348"
+# Re-cut 2026-10-11, the vefr#350 death-resume stack onto current `main`:
+# a death on a floor of the descent wakes the hero on that floor instead of
+# at the pack's baked wake point. That is `deathResume` beside `cozyDeath` in
+# the player template, and `cozyDeath` reads it, so every pack's weave moves,
+# skinned or not; this pack's own bytes do not (no skin, no `VEFR_ITEMS`
+# change). Measured twice with the documented command above (as
+# `PYTHONPATH=src python3 -c ...`, no uv in the sandbox), readings equal:
+#   4927bff9b106baf362e253589a9e01f6a1e2e41c70e3af8ea2339fc4ca66cfc5
+#   4927bff9b106baf362e253589a9e01f6a1e2e41c70e3af8ea2339fc4ca66cfc5
+NO_SKIN_WEAVE_SHA256 = "4927bff9b106baf362e253589a9e01f6a1e2e41c70e3af8ea2339fc4ca66cfc5"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

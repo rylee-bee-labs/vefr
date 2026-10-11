@@ -120,7 +120,9 @@ floor of the generated descent, named `<section>-<cycle>-<floor>`
 (`cellar-0-3` is the third floor of the `cellar` Section, first cycle).
 A generated floor is redrawn every run ("New descent") and whenever its
 Section changes, so such a book names **where** on the floor to lie
-instead of a tile:
+instead of a tile. Starting a new run redraws floor one from a fresh
+seed, and the stair in the town is rewired with it: going into the deep
+lands the hero on that run's floor-one up-stair, never mid-floor.
 
 ```markdown
 ---
@@ -579,8 +581,9 @@ point:
            "wake": {"region": "town", "at": [11, 11]}}
 ```
 
-`hp`/`atk` default to 6/2. `wake` is where Cozy death wakes the hero;
-it defaults to the act's first region at its `hero_start`. A `wake`
+`hp`/`atk` default to 6/2. `wake` is where Cozy death wakes the hero
+(a floor of the descent answers for itself instead - see "Cozy death"
+below); it defaults to the act's first region at its `hero_start`. A `wake`
 that names no real region is dropped, and one on a missing or solid
 tile falls back to that region's `hero_start` - the baked point is
 always real.
@@ -633,6 +636,13 @@ resets when the page reloads.
 **Cozy death.** At zero hp the hero is restored to `hp`, one plain
 line is shown ("You wake in the temple. You lost nothing that
 mattered."), and the hero wakes at `wake`. Nothing is lost.
+
+A floor of the descent is the one place `wake` does not answer: a death
+there wakes the hero on that same floor, at its up-stair and whole, with
+the descent still around them - the kills, the drops, the bag and the
+stairs are the ones they left. The why-log names the floor they resumed
+on. Every other region, the town and a baked one included, wakes at
+`wake` exactly as before.
 
 The HUD's health line shows the hero's real `hp/max`; a small
 `aria-live` line speaks each hit. Baked per region (`VEFR_ENEMIES`)
