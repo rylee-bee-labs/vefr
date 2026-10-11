@@ -8,12 +8,16 @@ on, at its up-stair, with the kills, the drops, the bag and the stairs
 they left behind.
 
 Played through the REAL woven file in jsdom, against the floor the
-generator drew: the fight is planned from `delve.floor_plan`, so the hero
-walks to a monster it can reach and falls on it on purpose. The harness
-stops pressing the moment the hero wakes, because a hero that wakes and
-then keeps walking says nothing about where they woke.
+generator drew: every step of the walk is planned from `delve.floor_plan`,
+so each one is a tile the hero can reach. The hero walks out of the town,
+down cellar 1-3 and into the hollow. Every monster the walk bumps dies to
+that bump, so on the way down the hero kills the vermin it passes and
+takes their pebbles. The brute on the acceptance floor is what falls the
+hero: the walk ends bumping it, and the harness stops pressing the moment
+the hero wakes, because a hero that wakes and then keeps walking says
+nothing about where they woke.
 
-Where the fight is staged is not a detail, and it is spelled out below:
+Where the brute is placed is not a detail, and it is spelled out below:
 a Section carries ONE family table for all of its floors, so a brute
 planted on the cellar is a brute the hero must cross as well as fight,
 and crossing is not a fight the hero can win. The brutes go on the
@@ -204,10 +208,12 @@ def _staged(plan):
 def fall(tmp_path_factory):
     """One death on the fifth floor, played once and read by the tests below.
 
-    A real descent and a real fight: walk four floors down past the
-    fixture's own monsters, kill the vermin on the fifth, take its
-    pebble, then walk into the brute and keep bumping it until it
-    finishes the job.
+    A real descent, walked: out of the town, down cellar 1-3 and into the
+    hollow, one stair at a time. Every monster the walk bumps dies to that
+    bump, so the vermin it passes are killed and their pebbles taken on
+    the way. On the fifth floor the walk goes to a vermin first and then
+    to the brute; the brute is what falls the hero, and the walk stops on
+    the wake.
     """
     tmp_path = tmp_path_factory.mktemp("descent-death")
     plan = _plan(DEPTH)
@@ -239,7 +245,7 @@ def test_a_death_on_a_generated_floor_wakes_the_hero_on_that_floor(fall):
 def test_the_death_costs_the_floor_nothing(fall):
     result, plan, vermin, brute = fall
     # The bag: the pebble picked up before the fall is still in it.
-    assert result["reads"]["combat"]["bag"] == ["pebble"]
+    assert "pebble" in result["reads"]["combat"]["bag"]
     # The floor: its own memory of the kill, and where the hero walked.
     record = result["reads"]["doc"]["floors"][FLOOR]
     assert vermin["id"] in record["kills"], record["kills"]

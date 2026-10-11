@@ -84,7 +84,18 @@ async function main() {
   // floor the test never meant to measure.
   for (const [verb, arg] of plan.walk || []) {
     if (verb === 'wait') { await wait(Number(arg) || 0); continue; }
-    if (verb === 'dir') press(arg);
+    if (verb === 'dir') {
+      const began = (((window.VEFR_COMBAT || {}).hero || {}).at || []).slice();
+      for (let k = 0; k < 60; k++) {
+        press(arg);
+        await wait(20);
+        if (woke()) { died = true; break; }
+        const now = (((window.VEFR_COMBAT || {}).hero || {}).at || []);
+        if (now[0] !== began[0] || now[1] !== began[1]) break;
+      }
+      if (died) break;
+      continue;
+    }
     else if (verb === 'click') document.querySelector(arg).click();
     await wait(verb === 'click' ? 150 : 20);
     if (woke()) { died = true; break; }
