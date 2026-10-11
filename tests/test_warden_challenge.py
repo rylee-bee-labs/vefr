@@ -396,11 +396,15 @@ def test_a_story_end_a_rule_sets_on_entering_a_region_ends_the_story_with_no_bos
 # is woven into every pack, so the whole-document digest in
 # tests/test_skin_validator.py moves whenever the player does; this line is
 # the pack's own half - the descent block and every Section in it - and it
-# moved for nothing in this slice. Measured before and after on the town
+# moved for nothing in this slice. E8d measured 467fecd4... on its own branch,
+# but the stack was then rebased onto a main that had gained S349: that slice
+# bakes an empty `"section_tiles": {}` into every descent, so the merged tree's
+# own bytes were already fa71190... before E8d, and 467fecd4... is the value of
+# the pre-S349 base the stack predates. Re-measured on the merged tree's town
 # fixture pack (two Sections, two wardens, none of them naming a challenge):
-#   467fecd444998015ff39f970c470be10d7f9a20bc303645bc563b723ec78b66d
+#   fa7119034df3e3920be40aeff01bce0336626dde512a5f0ed0f101f7caed5ed4
 BAKED_DESCENT_SHA256 = \
-    "467fecd444998015ff39f970c470be10d7f9a20bc303645bc563b723ec78b66d"
+    "fa7119034df3e3920be40aeff01bce0336626dde512a5f0ed0f101f7caed5ed4"
 
 
 def _baked_descent_line(html):
