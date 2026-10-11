@@ -249,13 +249,15 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # is a state, not the pack's key - so `enemyEntry` no longer copies it and
 # the player template moved again. The template is woven into every pack,
 # so the digest had to be recomputed rather than carried over.
-># Nothing about this pack's own bytes moved - `worlds/sample-world`
+# Nothing about this pack's own bytes moved - `worlds/sample-world`
 # declares no skin and no descent, so `window.VEFR_TOWN_STATES` and
 # `window.VEFR_DESCENT_DEF` bake the literal null here exactly as
 # `window.VEFR_SKIN` does, and E8d did not touch the pack at all.
 # `tests/test_warden_challenge.py` holds the pin that says so for a pack
 # that DOES name a descent: the bytes the pack itself contributes.
-NO_SKIN_WEAVE_SHA256 = "ebff7450540b050ca83d6796c6184264314040eeb4ac90c3e5dc7a7ef9770348"
+# Re-cut 2026-10-11, the E8d warden stack onto current `main`: the player template moved again. Measured twice (`PYTHONPATH=src python3 -c ...`, no uv in the sandbox), readings equal:
+#   eba4e9c8619b9c135a1371628d70ca4a0a13f32d76f5d9551670479e278c0009
+NO_SKIN_WEAVE_SHA256 = "eba4e9c8619b9c135a1371628d70ca4a0a13f32d76f5d9551670479e278c0009"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():
