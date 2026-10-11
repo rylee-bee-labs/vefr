@@ -277,13 +277,20 @@ GROWTH_KEY = f"vefr-growth-{WORLD}"
 
 
 def _fight_a_monster_on(tmp_path, descent, depth):
-    """Walk the real woven player down to `depth` and bump one monster.
+    """Walk the real woven player down to `depth` and fight what it meets.
 
     The path and the fight are the ones `test_descent_deltas.py` already
     plays: a breadth-first walk over the floor the generator drew, then
     presses the last direction until the bump lands. So this is a walk a
-    player could perform and not a teleport, and the fight is the
-    shipped one.
+    player could perform and not a teleport, and the fight is the shipped
+    one.
+
+    A monster that sees the hero coming may step into the walk, and a
+    monster the walk bumps is a fight too - which is the game, not a
+    fault, in `test_descent_deltas.py`'s own words. So the walk aims at a
+    monster and takes the fight it gets, and this returns the monsters the
+    save itself records as dead on the floor the hero really ends on,
+    with their spawn records.
     """
     from test_descent_deltas import _descend, _go_fight, _reachable_mob
 
@@ -296,46 +303,71 @@ def _fight_a_monster_on(tmp_path, descent, depth):
             "read": ["VEFR_DESCENT.floor", "VEFR_COMBAT", "VEFR_SOUND.played",
                      "store", "text:#combat-live"]}
     play = play_kit.play(html, spec)
-    slain = play["store"].get(f"vefr-descent-{WORLD}", "")
-    assert mob["id"] in json.loads(slain or "{}").get(
-        "floors", {}).get(plan["name"], {}).get("kills", []), \
-        f'{mob["id"]} did not die: {play["errors"]}'
-    return play, mob
+    region = play["reads"]["VEFR_COMBAT"]["region"]
+    assert region == plan["name"], (region, plan["name"])
+    slain = json.loads(play["store"].get(f"vefr-descent-{WORLD}") or "{}").get(
+        "floors", {}).get(region, {}).get("kills", [])
+    assert slain, f'nothing on {region} died: {play["errors"]}'
+    assert set(slain) <= {m["id"] for m in plan["mobs"]}, slain
+    return play, plan, [m for m in plan["mobs"] if m["id"] in slain]
 
 
 def test_a_kill_on_a_generated_floor_pays_and_says_so(tmp_path):
-    play, mob = _fight_a_monster_on(tmp_path, copy.deepcopy(DESCENT), 1)
+    play, plan, slain = _fight_a_monster_on(tmp_path, copy.deepcopy(DESCENT), 1)
     assert play["errors"] == [], play["errors"]
 
     # The spawned record carries the xp, so the enemy table does too.
     spawned = play["reads"]["VEFR_DESCENT.floor"]["mobs"]
     assert spawned and all(isinstance(m["xp"], int) and m["xp"] > 0
                            for m in spawned), spawned
-    assert mob["xp"] in [m["xp"] for m in spawned]
+    assert {m["id"] for m in slain} <= {m["id"] for m in spawned}, slain
 
-    # The kill paid: the growth state holds the experience, under the
-    # world's own `vefr-growth-<world>` key - the same key an authored
-    # region's kill writes.
+    # The kill paid: the growth state holds exactly the experience of the
+    # monsters the save records as dead, under the world's own
+    # `vefr-growth-<world>` key - the same key an authored region's kill
+    # writes.
     state = json.loads(play["store"][GROWTH_KEY])
-    assert state["xp"] == mob["xp"], (state, mob)
+    assert state["xp"] == sum(m["xp"] for m in slain), (state, slain)
 
-    # And the player was told, in the same words an authored kill uses,
-    # with the level cue beside it.
+    # And the player was told, in the same words an authored kill uses. The
+    # live line holds the last thing said, and every floor-1 monster here is
+    # worth the same, so the announced award is the one they carry.
     said = play["reads"]["text:#combat-live"]
-    assert f"You earn {mob['xp']} experience." in said, said
-    assert "Level 2" in said, said
+    for mob in slain:
+        assert f"You earn {mob['xp']} experience." in said, (mob, said)
+
+    # The step was crossed: the level cue fired, and the gain it promises is
+    # in the hero's own numbers. The hero starts at the pack's own 40/4
+    # (measured with this same patch and a bare "begin").
     assert "level" in play["reads"]["VEFR_SOUND.played"], \
         play["reads"]["VEFR_SOUND.played"]
+    hero = play["reads"]["VEFR_COMBAT"]["hero"]
+    assert hero["max"] == 40 + LEVELS["levels"]["gain"]["hp"], hero
+    assert hero["atk"] == 4 + LEVELS["levels"]["gain"]["atk"], hero
 
 
 def test_a_deeper_kill_pays_more(tmp_path):
-    """The Section ramp, paid: floor 3's monster beats floor 1's."""
+    """The Section ramp, paid: a floor-2 monster's kill beats a floor-1 one.
+
+    Two rungs, not three. The descent walk is walked by the monsters the
+    floors drew, and past floor 2 one of them bumps the walk off the
+    corridor before it reaches the next down-stair, so floor 2 is the
+    deepest rung a played walk lands on (measured on the host). The ramp
+    itself is the pack's own: every floor-1 monster pays 1 and every
+    floor-2 monster pays 3.
+    """
     paid = []
-    for depth in (1, 3):
-        play, mob = _fight_a_monster_on(tmp_path, copy.deepcopy(DESCENT), depth)
+    for depth in (1, 2):
+        play, plan, slain = _fight_a_monster_on(tmp_path,
+                                                copy.deepcopy(DESCENT), depth)
         assert play["errors"] == [], play["errors"]
-        paid.append(json.loads(play["store"][GROWTH_KEY])["xp"])
-    assert paid[0] < paid[1], paid
+        assert slain, depth
+        paid.append((json.loads(play["store"][GROWTH_KEY])["xp"], slain))
+    assert paid[0][0] < paid[1][0], paid
+    # The ramp is the monsters' own, not the walk's luck: what died deeper
+    # was worth more apiece than anything that died higher up.
+    assert max(m["xp"] for m in paid[0][1]) < min(m["xp"] for m in paid[1][1]), \
+        paid
 
 
 def test_every_spawned_monster_is_worth_a_finite_number(tmp_path):
