@@ -5,8 +5,9 @@
   // is still lying there. A drop a generated floor drew also carries the
   // rarity it was drawn at and the traits it is hiding (ADR 0017), and
   // the bag keeps that instance rather than drawing it again. Taking a
-  // drop removes it. No weight, no use, no drop, no sell; identifying is
-  // the slice after this one.
+  // drop removes it. No weight, no use, no drop, no sell; a trait stays
+  // hidden on the floor and in the bag until the town's identify service
+  // reads it (`195-the-identify-service.js`).
   var floor = [];
 
   function floorKey() {

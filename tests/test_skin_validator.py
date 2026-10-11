@@ -126,20 +126,24 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # refresh it, and to say in the commit message why it moved:
 #   uv run python -c "import hashlib, vefr.cli as c; from pathlib import Path; \
 #     print(hashlib.sha256(c.weave_html(Path('worlds/sample-world')).encode()).hexdigest())"
-# Last moved 2026-10-10, rebasing the S349 Section-tiles stack onto E8c.
-# Two player changes reach the woven pack from opposite sides of that rebase:
-# E8c adds the town gate, the state a region shows and the descent's
-# story-end handling, and S349 adds the per-Section tiles and the descent
-# lines that name them. Both land in the player template, which is woven into
-# every pack skinned or not, so neither side's digest could be carried over
-# and the two could not be composed: the digest is over the whole weave, not
-# a sum. Both sides were self-consistent before the rebase (E8c's tree
-# computed `7ef6d441...` and the S349 tip computed `86311d4c...`), so this
-# value is the digest of the merged tree and nothing else. Recomputed by the
-# documented command above. Nothing about this pack's own bytes moved -
-# `worlds/sample-world` declares no skin, so every new bake lands the literal
-# null here exactly as `window.VEFR_SKIN` does.
-NO_SKIN_WEAVE_SHA256 = "b9c4c3dae1f7a007c60401bc0d2037ac4a5dca84da600e5c5a56e6588f18b9b4"
+# Last moved 2026-10-10, for ADR 0017 slice 2. The identify service and its
+# reveal now reach the woven player: a new part (195-the-identify-service.js)
+# and the bag strip, bag panel and Interact verb beside it all sit in the
+# player template, which is woven into every pack skinned or not, so every
+# pack's weave moved by 13989 bytes of engine code.
+#
+# This digest is over the WHOLE weave and does not compose: it is measured,
+# never derived, and it must be re-measured after every union of two stacks
+# that each changed the player. The value a stack computes on its own is
+# worth nothing here, and neither side's can be carried across a merge.
+#
+# What was checked before this value was written, and is the reason it is a
+# pack-neutrality proof rather than a golden: the pack's OWN baked content
+# did not move. All 41 `window.VEFR_*` data lines this pack weaves are
+# byte-identical before and after - only the player around them grew - and
+# `worlds/sample-world` declares no skin, so `window.VEFR_SKIN` lands the
+# literal null exactly as it did.
+NO_SKIN_WEAVE_SHA256 = "93c1815350c196b59d014dbfb4375f0532b889369c4d209bcaddb85682d76a7d"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

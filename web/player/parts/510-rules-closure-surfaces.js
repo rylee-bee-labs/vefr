@@ -161,6 +161,16 @@
       }
       return;
     }
+    // While the identify panel is open, the same two keys close it and
+    // movement stops, exactly as they do for the Trade panel above.
+    var identifyOpen = !document.getElementById('identify').hidden;
+    if (identifyOpen) {
+      if (e.key === 'Escape') { e.preventDefault(); closeIdentify(); }
+      else if ((e.key === 'e' || e.key === 'E' || e.key === 'f' || e.key === 'F') && !e.repeat) {
+        e.preventDefault(); closeIdentify();
+      }
+      return;
+    }
     var menuOpen = !document.getElementById('menu').hidden;
     if (e.key === 'Escape') {
       closeEnemyVerbs();

@@ -634,7 +634,8 @@ bake drops an unknown id instead. The bag has no size limit.
 ADR 0017. A drop on a generated floor now yields a base item **and** a
 rarity, and the bag says both together the moment it is picked up
 ("a cloudy potion (uncommon)"). An item may also carry traits, which
-stay hidden: nothing renders them and nothing identifies them yet.
+stay hidden until the thing has been read at a reader (see identify,
+below): nothing renders them, and nothing identifies them.
 
 Three optional keys on an `items` entry, all additive - a catalog that
 names none of them bakes and drops exactly what it always did:
@@ -677,7 +678,8 @@ and draws nothing.
 **What the bag holds.** An entry is either a bare id (every bag before
 this slice, and every bag of a pack that declares no `roll`) or the
 instance a rolled drop left behind: `{"id": …, "rarity": …, "traits":
-[…], "identified": false}`. The traits are read and printed nowhere.
+[…], "identified": false}`. The traits are read and printed nowhere
+until the thing has been read at a reader (see identify, below).
 
 **`vefr check` refuses four things,** one plain sentence each: a
 `rarity` outside the item's own table, a trait that is not one plain
@@ -694,10 +696,52 @@ determinism, compatibility) + `tests/test_rolled_loot_play.py` (the bag
 in the real player) + `tests/test_descent_parity.py` (the same floor in
 both languages) + `tests/fixtures/make_rolled_pack.py`.
 
-Known gaps (this slice): no identifying (nothing sets `identified`
-true), no reveal moment beyond the rarity simply being there, no idea
-yet what a trait *does*, no bag size, and no rolled drops anywhere but a
-generated floor's monsters.
+Known gaps of this slice, since narrowed by identify (below): no
+identifying (nothing set `identified` true), no reveal moment beyond the
+rarity simply being there, no idea yet what a trait *does*, no bag size,
+and no rolled drops anywhere but a generated floor's monsters.
+
+## identify (second slice: the town reads a thing)
+
+ADR 0017, slice 2. One optional flag on one speaker:
+
+```json
+"speakers": {
+  "reader": {"name": "The Reader", "at": [6, 4], "identify": "true"}
+}
+```
+
+`true` (also `yes`/`1`, or the boolean) makes that speaker the reader of
+its region - the same kind of flag `shop` is, read the same way. Stand
+beside them, press Interact, and an Identify panel lists what the hero
+carries that has not been read; reading one sets `identified: true` on
+that instance in `localStorage['vefr-bag-<world>']` and writes the bag
+back. Nothing else is written: the rarity and the traits are the ones
+the drop drew, so reading the same thing twice gives the same words
+twice, and a save written before this slice still reads.
+
+Once read, the traits are named in the bag row and in the HUD strip's
+`aria-label` - in text, in the same call as the click, with no timer and
+no animation anywhere in the path, so with reduced motion the words are
+there on the first frame. Before a read they are in no part of the page.
+
+No model call, no second draw, no clock, and no way to charge for a read.
+The flag rides the speaker the weave already inlines, so a pack that
+names no reader bakes every `VEFR_*` data line exactly as before.
+
+**`vefr check` refuses three things,** one plain sentence each: an
+`identify` naming some other service, an `identify` that is not the word
+true (an object could carry a chance, a roll or a model), and a speaker
+that offers identify in a region the pack does not have.
+
+Code: `src/vefr/maplab.py` (`identifies`, `identify_errors`) +
+`web/player/parts/195-the-identify-service.js` and the one line of
+`180-gold.js` that names a read thing's traits. Tests:
+`tests/test_identify.py` + `tests/test_identify_play.py` +
+`tests/fixtures/make_identify_pack.py`.
+
+Known gaps: no bag capacity, no bag upgrades, no cost for a read, and
+still no answer to what a trait *does*.
 
 ## reward (first slice: gold, trade, and using a thing)
 

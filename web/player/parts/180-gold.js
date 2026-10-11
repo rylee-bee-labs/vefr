@@ -49,9 +49,13 @@ function itemSpriteSrc(id) {
 // in: `{id, rarity, traits, identified}`. `bagCarried` reads both the same
 // way, so every caller below can ask for what it needs and get it.
 //
-// The traits are read here and printed NOWHERE while `identified` is false.
-// Nothing in this slice turns it true; the identify service is the next
-// one, and when it arrives this is the one line it has to change.
+// The traits are read here and printed NOWHERE while `identified` is
+// false - not covered up, absent from the page, so nothing is hidden
+// from a screen reader that is not also hidden from the eye. Since ADR
+// 0017's slice 2 something does turn it true: the identify service
+// (`195-the-identify-service.js`) sets it on the instance in the saved
+// bag, and `carriedName` below is the one line that changes - it is the
+// only place the traits are allowed to become words.
 function bagCarried() {
   var raw = store.getJSON(BAG_KEY, []);
   var cat = itemCatalog();
@@ -75,15 +79,21 @@ function bagCarried() {
 function bagItems() {
   return bagCarried().map(function (carried) { return carried.id; });
 }
-// What one carried thing is called: its own words, and its rarity beside
-// them the moment it is picked up - the base item and its rarity at once,
-// which is the whole reveal this slice owes the player. The traits are
-// never part of it (see `bagCarried`). This runs with no timer and no
-// animation, so with motion off the rarity is there on the first frame:
-// there is nothing here to turn off.
+// What one carried thing is called: its own words, its rarity beside them
+// the moment it is picked up (ADR 0017, slice 1), and - once the town has
+// read it - its traits after that, in the same string. Nothing here
+// animates, nothing waits on a timer and no trait is revealed by a
+// picture: the whole reveal is this concatenation, so with motion off it
+// is there on the first frame, and a screen reader reads the same
+// sentence the eye reads. The traits are in it only while `identified`
+// is true; before that they are in no part of the page.
 function carriedName(carried) {
   var name = itemName(carried.id);
-  return carried.rarity ? (name + ' (' + carried.rarity + ')') : name;
+  var words = carried.rarity ? (name + ' (' + carried.rarity + ')') : name;
+  if (carried.identified && carried.traits.length) {
+    words += ' - traits: ' + carried.traits.join(', ');
+  }
+  return words;
 }
 // Rebuild the harness-readable fight snapshot after bag/gold changes.
 // setupTown installs the real builder; before that (or in a pack with no
@@ -412,8 +422,10 @@ function takeOffSlot(slot) {
 // keeps its Use button. A worn thing is never in this list. A row names
 // the thing and its rarity together (ADR 0017), in one line of text with
 // no timer behind it, so with motion off the rarity is there the moment
-// the panel opens - and the traits it does not name are not in the DOM
-// at all, so nothing is only hidden from the eye.
+// the panel opens - and the traits it does not name (an unread thing)
+// are not in the DOM at all, so nothing is only hidden from the eye. A
+// thing the town's identify service has read names its traits here, in
+// the same line and the same pass, with nothing behind a timer.
 function renderBagPanel() {
   renderEquipSlots();
   var list = document.getElementById('bag-list');

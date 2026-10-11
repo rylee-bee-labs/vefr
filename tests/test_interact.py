@@ -163,6 +163,17 @@ TIE_PAIRS = {
                           "at": [4, 5], "dist": 1, "label": "Look at the old well"},
     "tieEnemyThenPlace": {"kind": "place", "id": "poi-well", "name": "the old well",
                           "at": [6, 5], "dist": 1, "label": "Look at the old well"},
+    # the two town services, and a reader against a talk (ADR 0017, T3 slice 2)
+    "tieTraderThenIdentifier": {"kind": "trader", "id": "tr-bram", "name": "Bram",
+                                "at": [4, 5], "dist": 1, "label": "Trade with Bram"},
+    "tieIdentifierThenTrader": {"kind": "trader", "id": "tr-bram", "name": "Bram",
+                                "at": [6, 5], "dist": 1, "label": "Trade with Bram"},
+    "tieIdentifierThenResident": {"kind": "identifier", "id": "id-wren", "name": "Wren",
+                                  "at": [4, 5], "dist": 1,
+                                  "label": "Ask Wren to read things"},
+    "tieResidentThenIdentifier": {"kind": "identifier", "id": "id-wren", "name": "Wren",
+                                  "at": [6, 5], "dist": 1,
+                                  "label": "Ask Wren to read things"},
 }
 
 
@@ -183,6 +194,15 @@ def test_reach_rules(report):
         "at": [7, 5], "dist": 2, "label": "Talk to Toki"}
     assert report["reachResident3Targets"] == []
     assert report["reachResident3Pick"] is None
+    # A reader is a person: the same two tiles a resident reaches.
+    assert report["reachIdentifier2Targets"] == [
+        {"kind": "identifier", "id": "id-two", "name": "Wren",
+         "at": [7, 5], "dist": 2, "label": "Ask Wren to read things"}]
+    assert report["reachIdentifier2Pick"] == {
+        "kind": "identifier", "id": "id-two", "name": "Wren",
+        "at": [7, 5], "dist": 2, "label": "Ask Wren to read things"}
+    assert report["reachIdentifier3Targets"] == []
+    assert report["reachIdentifier3Pick"] is None
 
 
 def test_nothing_in_reach_is_null_everywhere(report):
@@ -191,10 +211,11 @@ def test_nothing_in_reach_is_null_everywhere(report):
     assert report["nothingLabel"] is None
 
 
-def test_all_seven_labels(report):
+def test_all_eight_labels(report):
     assert report["labelChest"] == "Open the chest"
     assert report["labelResident"] == "Talk to Ada"
     assert report["labelTrader"] == "Trade with Bram"
+    assert report["labelIdentifier"] == "Ask Wren to read things"
     assert report["labelDoor"] == "Go through the door"
     assert report["labelStairs"] == "Go down the stairs"
     assert report["labelStairsUp"] == "Go up the stairs"      # a stair named "... up" climbs

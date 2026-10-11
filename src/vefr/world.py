@@ -126,9 +126,9 @@ ITEMS / LOOT (first slice): world.json may carry an optional top-level
   catalog (`VEFR_ITEMS`) and each drop. An item may also carry optional
   `value` (a positive int: what a shop pays and asks), `heal` (a positive
   int) and `use` (a verb such as `drink`); with none of them the item
-  bakes exactly as before. Nothing identifies a thing yet: ADR 0017 gives
-  a drop hidden traits and an `identified` flag that starts false, and
-  nothing in this slice ever turns it true.
+  bakes exactly as before. ADR 0017 gives a drop hidden traits and an
+  `identified` flag that starts false; the town reads a thing where a
+  pack names a reader (IDENTIFY SERVICE below).
   An item may carry an optional `light`, in one of two forms:
       {"light": {"radius": 2, "turns": 5}}   # wider for a while
       {"light": {"reveal": true}}            # the whole region at once
@@ -139,7 +139,7 @@ ITEMS / LOOT (first slice): world.json may carry an optional top-level
   off) it says so and spends nothing. With no `light` the item bakes
   exactly as before. maplab checks the shape and ranges.
 
-ROLLED ITEMS (ADR 0017, T3 slice 1): an item may also carry a `rarity`
+ROLLED ITEMS (ADR 0017, T3 slices 1-2): an item may also carry a `rarity`
   (one plain word), `traits` (a list of plain words) and an optional
   `roll`:
       {"ring": {"name": "a brass ring", "rarity": "common",
@@ -157,13 +157,35 @@ ROLLED ITEMS (ADR 0017, T3 slice 1): an item may also carry a `rarity`
   instance rides on the drop and then in the bag as
   `{"item": id, "rarity": ..., "traits": [...], "identified": false}`;
   the bag strip and the Bag panel name the item and its rarity together
-  from the moment of pickup, and the traits stay hidden until something
-  identifies the thing (a later slice). An item with no `roll` is the
+  from the moment of pickup, and the traits stay hidden - in no part of
+  the page - until the thing has been read (IDENTIFY SERVICE below).
+  Reading sets `identified` on that instance in the bag and saves it; it
+  never re-draws, so a rarity and its traits are the ones the drop drew.
+  Once read, the traits are named in the bag row and in the HUD strip's
+  `aria-label`, in the same pass and with nothing behind a timer, so the
+  reveal is instant with motion off or on. An item with no `roll` is the
   bare id it always was, unless it declared a fixed `rarity`/`traits`, in
   which case those ride along unchanged. maplab checks the shape, the
-  ranges, and the three refusals: a `rarity` outside the item's own
+  ranges, and the four refusals: a `rarity` outside the item's own
   table, a trait that is not one plain word, a `roll` with no rarity
   table, and a `roll` that asks for traits and names no pool.
+
+IDENTIFY SERVICE (ADR 0017, T3 slice 2): a speaker whose spec carries
+  `"identify": "true"` (also `yes`/`1`/`true`) is the reader of its
+  region, the same flag a shopkeeper carries and read the same way.
+  Standing beside that speaker and using the world's interact verb opens
+  an Identify panel listing the carried, not-yet-read things; reading one
+  sets `identified: true` on THAT instance in
+  `localStorage['vefr-bag-<world>']` and writes the bag back, so the
+  record that loads next run is the read one. Reading draws nothing and
+  calls no model - the traits were drawn once, at the drop - so nothing
+  in the panel is random, timed or model-written, and nothing needs a
+  second roll refused. With no `identify` anywhere a pack has no reader,
+  the interact verb never offers one, and the woven player is the same
+  file plus this panel's code. maplab refuses three: an `identify` that
+  is some other word, an `identify` that is not the word true at all (an
+  object or a number could carry a chance, a roll or a model), and a
+  speaker that offers identify in a region the pack does not have.
 
 REWARD (first slice): `world.player` may carry `gold`, the starting
   purse (a non-negative int; default 0), kept per world at

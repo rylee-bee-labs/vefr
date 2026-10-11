@@ -4,9 +4,78 @@ Date: 2026-10-10
 
 ## Status
 
-**Proposed.** Slice 1 of 3 for phase 3. Becomes Accepted when all three slices land: this one (rolled loot), then identify-as-a-town-service, then bag capacity.
+**Proposed.** Three slices for phase 3. Becomes Accepted when all three land: rolled loot (slice 1), identify-as-a-town-service (slice 2), bag capacity (slice 3).
 
-Slice 1 is landed and proven (see Acceptance below). Slices 2 and 3 are deliberately **not** in this ADR's scope and no part of this slice pretends to them: there is no identify service, no reveal moment, no bag size and no bag upgrade. What a thing's traits *do* is still undefined, and that stays an open question rather than a guess.
+Slices 1 and 2 are landed and proven (see Acceptance). Slice 3 is deliberately **not** in this ADR's scope and nothing here pretends to it: there is no bag size, no bag capacity and no bag upgrade. What a thing's traits *do* is still undefined, and that stays an open question rather than a guess.
+
+This section states slice 2; the rest of the ADR is slice 1 and still reads as written.
+
+## Slice 2 - the identify service (ADR 0017, T3 slice 2)
+
+Slice 1 left one flag nothing could turn: `identified` starts false and stays false. Slice 2 gives the town a place to read a thing, and the read itself.
+
+### The pack contract: one flag on one speaker
+
+A pack names the reader the way it already names a shop - a speaker carries `"identify": "true"` (also `yes`/`1`, or the boolean `true`) and is the service of its region:
+
+```json
+"speakers": {
+  "reader": {"name": "The Reader", "at": [6, 4], "identify": "true"}
+}
+```
+
+Nothing else. There is no `identify` block, no chance, no cost, no roll, no model: the thing being read was drawn once, at the drop, and reading it is a read. `maplab.identifies` is the one reader, and `web/player/parts/195-the-identify-service.js` mirrors it exactly, so a pack that passes `vefr check` is a pack that offers the service in play.
+
+**Why the flag rides the speaker and bakes nothing new.** The shopkeeper's flag is read the same way, and `VEFR_WORLD` already carries every speaker of the pack in full. A new `window.VEFR_IDENTIFIES` line would have been a fourth thing to keep in step with nothing to gain, so this slice adds **no** baked block at all: a pack that names no reader weaves every `window.VEFR_*` data line exactly as `main` wove it. That is the compatibility proof below, and it is hash for hash.
+
+### The read
+
+Interacting with the reader (the same verb, the same reach, the same rank, that the Trade panel uses) opens a panel listing what the hero carries that has not been read. Reading one sets `identified: true` on **that instance** in `localStorage['vefr-bag-<world>']` and writes the bag back. That is the whole mechanism: no draw, no re-roll, no second record, no chance of naming the wrong copy when two copies of an id were drawn differently.
+
+### The reveal
+
+Once read, the traits are part of the thing's name in both bag surfaces - the panel row and the HUD strip's `aria-label` - as `a brass ring (rare) - traits: keen, cold`. In **text**, in the DOM, with nothing behind a timer, and in the same call as the click: `bagIdentifyOne` sets the flag, saves, and calls `renderBagPanel()` and `renderBagStrip()` itself. So with reduced motion on - and with it off - the words are on the first frame after the press. There is no animation in this slice to turn off, which is the strongest form the requirement can take; `tests/test_identify_play.py` reads the DOM in the same tick as the click and compares the two motion settings word for word.
+
+The standard slice 1 set is kept, not lowered: while `identified` is false the traits are in **no** part of the page - not a row, not an attribute, not a title - so nothing is hidden from the eye that is not also hidden from a screen reader.
+
+### The save
+
+No version marker, and none needed: the bag entry is read as either shape already. A bag saved by slice 1 is a list of bare ids and instance records with `identified: false`, and this slice writes `identified: true` into the record that is already there - a bag saved by a build that predates slice 1 is still a list of strings. `bagCarried` reads all three, so a save written before any of this still loads, and a save written by it loads in an older build with the extra key simply unread. This answers open question 3 below: **no marker**.
+
+### The refusals
+
+Three, each one plain sentence naming the speaker and the field, in the voice of `item_roll_errors`:
+
+1. `speaker 'The Reader' (reader) identify names 'alchemist', which is not a service this pack has: write true to make this speaker the one that reads things`
+2. `speaker 'The Reader' (reader) identify must be the word true: a thing is read once, at the place the pack names, so identifying carries no chance, no roll and no model`
+3. `speaker 'The Reader' (reader) offers identify in region 'hollow', which this pack does not have`
+
+Refusal two is the standing rule (models never run on deterministic surfaces) made into a check: an `identify` object is where a pack would put a `chance`, a `roll` or a `model`, and each of those is either nondeterministic or model-written. A flag that says no (`false`, blank) is silence, exactly as a blank `shop` is.
+
+### What is still missing
+
+- **Bag capacity and bag upgrades - slice 3.** Still unwritten. The bag is still an unbounded list with no weight, no slots beyond the five worn ones, and no upgrade.
+- **What a trait DOES.** Unchanged by this slice and still the open question below. The reveal makes the words visible; nothing in the engine reads them.
+- **A cost for reading.** A pack cannot charge gold or time for it yet. That is a bag-economy question and belongs with slice 3.
+
+### Acceptance for slice 2
+
+- `tests/test_identify.py` - the flag and its one reader, the three refusals on the fixture's own act block, the no-re-roll rule (the draw is unchanged, and the read writes one field and no other), the two backward-compatibility hashes, and the static proof that nothing in the read path draws, waits or animates.
+- `tests/test_identify_play.py` - the real woven player in jsdom: Interact beside the reader opens the panel; the Read button puts the traits into the HUD strip, the bag panel and the saved bag **on the first frame**; the same DOM with motion on and off; two copies of one draw read to the same words; the flag survives a reload.
+- `tests/test_interact.py` - the reader's kind, label, reach and rank beside the trade panel's.
+- `uv run --group test pytest -q` green, with the failures on `main` unchanged.
+
+### The compatibility claim, precisely
+
+The pack's own woven content is byte-identical for a pack that names no reader: every `window.VEFR_*` data line, hash for hash, on `worlds/sample-world` and on the rolled-loot fixture.
+
+The **player around those lines is not** byte-identical, and could not be: this slice adds the read to the bag strip, the bag panel and the Interact verb, which is what the slice is. Every one of those additions is behind `identified` or behind the flag, so a pack that names no reader sees a player that behaves exactly as it did - which is the claim the fixture and the hashes carry, and what the pack-facing compatibility here means.
+
+### Two sentences in the tree that said "not yet"
+
+- `src/vefr/world.py` - was: "Nothing identifies a thing yet... nothing in this slice ever turns it true." Now: the flag, and the town reads a thing where a pack names a reader.
+- `web/player/parts/160-the-bag.js` - was: "No weight, no dropping, no identifying yet." Now: no weight, no dropping, no bag size; the town reads what it reads, and slice 3 gives the bag its capacity.
+- `web/player/parts/430-loot-on-the-floor.js` and `web/player/parts/397-the-descent.js` - the same, in one line each.
 
 Rylee's picks this follows (2026-10-08): loot goes "Before E8 vaults"; the town gives "Rest, trade, identify"; danger rises. The brief for this slice is `docs/packets/`'s T3 packet.
 
@@ -125,8 +194,11 @@ The saved bag is read as either shape and the saved floor record carries the ext
 
 ## What this slice does not do
 
-- **Identify as a service.** Nothing turns `identified` true. Slice 2.
-- **The reveal moment.** The rarity is simply there from the pickup; there is no unfolding, no toast, no animation, and none is promised here.
+Slice 1's own record, kept as it was written. Two of these have since landed and are marked; the rest are still out.
+
+- **Identify as a service.** *Landed in slice 2* - the section above.
+- **The reveal moment.** *Landed in slice 2* - the traits in text on the
+  first frame, and still no animation of any kind.
 - **What a trait does.** Read in, stored, hidden, never rendered. Whether a trait changes a number, changes a line, or is only ever flavour is an open question for slice 2 or 3 - it is a *pack data* question the moment the reveal exists, and guessing now would put a half-decided mechanic in the pack contract.
 - **Bag capacity, weight, selling changes, grids, equipment.** Out of scope; slots and bag upgrades are slices 3 and later.
 - **Rolled drops outside a generated floor.** A town enemy or a chest with no stream carries the item's fixed rarity and traits, unchanged.

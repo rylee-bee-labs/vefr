@@ -326,19 +326,28 @@ def test_a_fixed_rarity_and_traits_ride_a_drop_without_a_draw():
 
 
 def test_a_drawn_thing_is_not_identified_yet():
-    """`identified` is False on every instance, and nothing ever sets it.
+    """`identified` is False on every instance the DRAW makes.
 
-    The identify service is the next slice; until it arrives the bag must
-    not pretend a thing has been read.
+    Since slice 2 something does turn it true - the town's identify
+    service - so the claim this test holds is now narrower and exact: the
+    DRAW never identifies anything, and the bag part that reads the bag
+    never writes the flag either. The one place in the player that writes
+    it is the service itself (`195-the-identify-service.js`), and that is
+    where slice 2 pins the rest of it (`tests/test_identify.py`).
     """
     for drop in (delve.mob_drops('k', 'm0', ['potion-1'], CATALOG)[0],
                  delve.mob_drops('k', 'm0', ['ring-1'],
                                  {'ring-1': {'name': 'r', 'rarity': 'common'}})[0]):
         assert drop['identified'] is False
+    draw = (ROOT / 'src' / 'vefr' / 'delve.py').read_text(encoding='utf-8')
+    assert set(re.findall(r"'identified': (\w+)", draw)) == {'False'}
     source = (PARTS / '180-gold.js').read_text(encoding='utf-8')
     assert 'identified: false' in source or 'identified = false' in source
     assert 'identified = true' not in source
     assert 'identified: true' not in source
+    # The reader part does write it - once, on the instance, in the bag.
+    assert 'raw[at].identified = true' in (
+        PARTS / '195-the-identify-service.js').read_text(encoding='utf-8')
 
 
 def test_the_javaScript_twin_draws_the_same_thing_the_python_draws():
