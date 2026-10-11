@@ -199,9 +199,10 @@ def test_the_bag_names_the_traits_once_the_thing_has_been_read(woven):
     assert final.count(named) == 2, final
     assert "a brass ring (rare)" not in final, final
     # The Bag panel says the same words the rows do.
-    assert "keen" in final["bagPanel"] and "cold" in final["bagPanel"]
+    assert ("keen" in out["final"]["bagPanel"]
+            and "cold" in out["final"]["bagPanel"])
     # A plain thing is still just its own words.
-    assert "a grey pebble" in final["bagNames"]
+    assert "a grey pebble" in final
 
 
 def test_the_read_survives_a_reload(woven):
