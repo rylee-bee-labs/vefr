@@ -270,7 +270,14 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # in the sandbox), readings equal:
 #   5fe9f907e61cf39c96f6d442605bce131fc15786d2491ddb61bc0824e82ff580
 #   5fe9f907e61cf39c96f6d442605bce131fc15786d2491ddb61bc0824e82ff580
-NO_SKIN_WEAVE_SHA256 = "5fe9f907e61cf39c96f6d442605bce131fc15786d2491ddb61bc0824e82ff580"
+# Re-cut 2026-10-11, the V352S stack (vefr #352 descent entry tile, #346 stamp
+# sweep) onto current `main`: the descent part's `claimTile` moves the woven
+# player, so every pack's weave moves. Measured twice with the documented
+# command above (as `PYTHONPATH=src python3 -c ...`, no uv in the sandbox),
+# readings equal:
+#   5c281472acffbba023480b7fc0fc4cf43d21cb2d67e093ab07fdfac5401703c0
+#   5c281472acffbba023480b7fc0fc4cf43d21cb2d67e093ab07fdfac5401703c0
+NO_SKIN_WEAVE_SHA256 = "5c281472acffbba023480b7fc0fc4cf43d21cb2d67e093ab07fdfac5401703c0"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():
