@@ -254,10 +254,22 @@ fraction of the floor it declares rather than against a fixed number -
 read it at the table as `shapes.FOG_RADIUS_MAX`, which is `SIZE`'s
 largest `w` over four. A Section that leaves `fog` out gets the engine's
 default (5) and plays exactly as before; this range bounds what a pack
-may ask for, and changes nothing a pack left out. The lit area is a
-disc, which a floor of rooms is not: what else to draw, and whether
-sight should grow with what the hero has seen, is #364's open question
-rather than this table's.
+may ask for, and changes nothing a pack left out.
+
+The lit area is a disc unless the Section names what to draw:
+`{"radius": 4, "shape": "square"}` lights every tile within `radius`
+steps on each axis instead of by straight line, which holds every tile
+the disc holds and reaches about 41% further at the corners - a floor of
+rooms lit like a floor of rooms. `"circle"` is the default and is not a
+second spelling of it: a Section that leaves `shape` out and one that
+writes `"circle"` produce the same floor record, the same save and the
+same digest, because the shape rides along in a floor's `fog` block only
+when it is the square (Rylee picked the square on 2026-10-09, #364).
+Anything else is refused by name: `section.fog.shape must be "circle" or
+"square", not 'triangle'`. A hand-written region's `contract.json` may
+say the same `shape` and the player draws it, though the validator pins
+only the Section's block. Whether sight should grow with what the hero
+has seen is still #364's open question, and is not this table's.
 
 A Section's `tiles` is the ground its own floors are drawn with, and its
 families' `depth` ranges are the floors of that Section they live on. Both

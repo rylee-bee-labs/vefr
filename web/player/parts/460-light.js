@@ -1,10 +1,15 @@
   // ---- light: a torch, or a one-shot reveal ----
   // An item with `light` is used from the Bag. `radius`/`turns` widen the
-  // lit circle for a while, then it gutters out; `reveal` marks every
+  // lit area for a while, then it gutters out; `reveal` marks every
   // tile of the region explored at once. The pack's own base radius is
   // restored when the turns run out or a new region is entered.
   var lightTurns = 0;   // hero turns left on a burning torch
   var lightBonus = 0;   // extra tiles the torch adds to the lit circle
+  // A torch widens the radius and nothing else. The lit area's shape is
+  // the pack's (`fog.shape`, circle or square) and is read in one place
+  // only - litNow(), in the fog part - so a torch widens whichever shape
+  // the pack declared without this part having to know what it is, and
+  // without a second reader the two could ever disagree about it.
   function lightBase() {
     return (town.fog && town.fog.radius) || 6;
   }

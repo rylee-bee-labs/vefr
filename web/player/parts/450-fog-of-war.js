@@ -101,15 +101,36 @@
     if (store.get(fog2Key()) === value) store.remove(fogKey());
     return true;
   }
+  // What the lit area is drawn as, and the shape a floor whose `fog`
+  // block names no shape is drawn as: the circle every floor has always
+  // drawn, so a pack written before the key plays exactly as it did.
+  var DEFAULT_FOG_SHAPE = 'circle';
+  // Read at call time rather than held beside `fogRadius`: the radius is
+  // reset on entering a region, and a second value to remember to reset
+  // is a second way to leave one behind.
+  function fogShape() {
+    return (town.fog && town.fog.shape === 'square') ? 'square'
+                                                      : DEFAULT_FOG_SHAPE;
+  }
   function litNow() {
     var out = {};
     if (!fogOn) return out;
+    // Both shapes are written over the same square of tiles: `fogRadius`
+    // steps out on each axis is the whole of either one, so the loop is
+    // the shape's bounding box and the test below decides the corners.
+    var square = fogShape() === 'square';
     for (var y = hero[1] - fogRadius; y <= hero[1] + fogRadius; y++) {
       for (var x = hero[0] - fogRadius; x <= hero[0] + fogRadius; x++) {
         if (x < 0 || y < 0 || y >= town.map.length || x >= town.map[0].length) continue;
-        if ((x - hero[0]) * (x - hero[0]) + (y - hero[1]) * (y - hero[1]) <= fogRadius * fogRadius) {
-          out[x + ',' + y] = 1;
-        }
+        var dx = x - hero[0], dy = y - hero[1];
+        // A circle counts the tiles within `fogRadius` steps by straight
+        // line; a square counts the tiles within `fogRadius` steps on
+        // each axis, so it holds every tile the circle holds and its
+        // corners reach sqrt(2) further out.
+        var inLight = square
+          ? Math.max(Math.abs(dx), Math.abs(dy)) <= fogRadius
+          : dx * dx + dy * dy <= fogRadius * fogRadius;
+        if (inLight) out[x + ',' + y] = 1;
       }
     }
     return out;

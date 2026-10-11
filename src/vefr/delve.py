@@ -1387,6 +1387,16 @@ def floor_plan(descent, depth: int, run: int = 0, catalog=None) -> dict:
     radius = fog.get('radius') if isinstance(fog, dict) else None
     radius = radius if isinstance(radius, int) and not isinstance(radius, bool) \
         else DEFAULT_FOG_RADIUS
+    block_fog = {'radius': max(1, radius)}
+    # `shape` rides along only when it is not the default circle. The
+    # block `shapes.FOG` is the door that lets a pack name `"square"`;
+    # here the only value carried is that one, so a Section that says
+    # nothing, and one that says `"circle"`, produce the very same floor
+    # record - the same bytes in the save, in the floor digest and in the
+    # parity harness. The player reads a missing shape as a circle
+    # (`fogShape`, in `450-fog-of-war.js`).
+    if isinstance(fog, dict) and fog.get('shape') == 'square':
+        block_fog['shape'] = 'square'
     block = descent
     if isinstance(descent, dict) and isinstance(descent.get('descent'), dict):
         block = descent['descent']
@@ -1408,7 +1418,7 @@ def floor_plan(descent, depth: int, run: int = 0, catalog=None) -> dict:
         'warden': _warden_record(section, k, cycle, floor['anchors'].get('warden')),
         'vault': _vault_record(floor, section, k, cycle),
         'legend': section_legend(section),
-        'fog': {'radius': max(1, radius)},
+        'fog': block_fog,
     }
 
 
