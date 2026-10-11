@@ -1158,9 +1158,17 @@ window.VEFR_DESCENT = (function () {
         var stair = { from: name, at: plan.anchors.down.slice(),
                       to: below.name, to_at: below.anchors.up.slice() };
         // The warden floor is the last floor of its Section, so its down
-        // stair is the gate into the next one.
-        var gate = townGate(plan.section, plan.cycle);
-        if (gate) { stair.requires = { flag: gate }; stair.locked_text = GATE_LOCKED; }
+        // stair is the gate into the next one. The stair that leads past
+        // the last Section into endless opens on the story end instead
+        // (ADR 0015 Amendment 1 section 1): one stair carries one flag.
+        var endless = down.cycle > plan.cycle;
+        var gate = endless ? storyEnd() : townGate(plan.section, plan.cycle);
+        if (gate) {
+          stair.requires = { flag: gate };
+          stair.locked_text = endless
+            ? 'The stair is shut until the story ends: ' + gate + ' must be set.'
+            : GATE_LOCKED;
+        }
         pushTransition(list, stair);
       }
     }
