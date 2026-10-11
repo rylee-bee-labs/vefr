@@ -143,7 +143,26 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # byte-identical before and after - only the player around them grew - and
 # `worlds/sample-world` declares no skin, so `window.VEFR_SKIN` lands the
 # literal null exactly as it did.
-NO_SKIN_WEAVE_SHA256 = "93c1815350c196b59d014dbfb4375f0532b889369c4d209bcaddb85682d76a7d"
+# Last moved 2026-10-10, rebasing the S349 Section-tiles stack onto E8c.
+# Two player changes reach the woven pack from opposite sides of that rebase:
+# E8c adds the town gate, the state a region shows and the descent's
+# story-end handling, and S349 adds the per-Section tiles and the descent
+# lines that name them. Both land in the player template, which is woven into
+# every pack skinned or not, so neither side's digest could be carried over
+# and the two could not be composed: the digest is over the whole weave, not
+# a sum. Both sides were self-consistent before the rebase (E8c's tree
+# computed `7ef6d441...` and the S349 tip computed `86311d4c...`), so this
+# value is the digest of the merged tree and nothing else. Recomputed by the
+# documented command above. Nothing about this pack's own bytes moved -
+# `worlds/sample-world` declares no skin, so every new bake lands the literal
+# null here exactly as `window.VEFR_SKIN` does.
+# Moved again 2026-10-11, rebasing the C4 player-words stack onto main. That
+# stack adds the woven player's message table (`VEFR_PLAYER_WORDS`, part 340)
+# and reads the where-next lines from it, so the player template - woven into
+# every pack, skinned or not - changed. The stack left the constant at its own
+# base's value, so it is the merged tree's digest and nothing else. Recomputed
+# with the documented command above; the pack's own bytes did not move.
+NO_SKIN_WEAVE_SHA256 = "9052f0c8b1d4f653d203757bd5a8f70d50fd921460b5b4029838be42a2efd110"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():
