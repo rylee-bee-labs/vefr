@@ -288,7 +288,7 @@ def test_two_sizes_write_two_files_that_hold_the_size_that_was_asked_for(
     for path, (width, height) in zip(paths, [(390, 844), (1440, 900)]):
         assert path.is_file(), path
         assert _png_size(path) == (width, height)
-        assert width in path.name, "the size is in the file's name too"
+        assert str(width) in path.name, "the size is in the file's name too"
 
 
 def test_one_size_is_todays_run(browser, woven, tmp_path, capsys):

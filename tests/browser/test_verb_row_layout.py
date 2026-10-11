@@ -223,7 +223,11 @@ def test_no_fight_verb_covers_the_pad_the_actions_or_the_messages(
 INTERACT = """() => {
   const btn = document.getElementById('interact');
   const r = btn.getBoundingClientRect();
-  const kids = Array.from(btn.querySelectorAll('*')).map(el => {
+  const kids = Array.from(btn.querySelectorAll('*'))
+    // A display: none descendant has no box, and the phone layouts hide
+    // the kbd on purpose (020-style.css), so report only the boxes that exist.
+    .filter(el => el.getClientRects().length > 0)
+    .map(el => {
     const k = el.getBoundingClientRect();
     return {tag: el.tagName.toLowerCase(),
             sw: el.scrollWidth, cw: el.clientWidth,
