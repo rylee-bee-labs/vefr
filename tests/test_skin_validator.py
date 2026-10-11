@@ -230,7 +230,13 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # sandbox) and the two readings matched:
 #   73fe8996400b939e781cf8eb8df13ca848d645c2858f3d187b585c6dd6dd006c
 #   73fe8996400b939e781cf8eb8df13ca848d645c2858f3d187b585c6dd6dd006c
-NO_SKIN_WEAVE_SHA256 = "73fe8996400b939e781cf8eb8df13ca848d645c2858f3d187b585c6dd6dd006c"
+# Re-cut 2026-10-11, the vefr#359 monster-reward piece onto current `main`: part
+# 397 reads a family's `xp` in `mobsAt` and `withWarden` and exports `xpFor`, so
+# every pack's woven player moves. Measured twice with the documented command
+# above (as `PYTHONPATH=src python3 -c ...`, no uv in the sandbox), readings equal:
+#   ebff7450540b050ca83d6796c6184264314040eeb4ac90c3e5dc7a7ef9770348
+#   ebff7450540b050ca83d6796c6184264314040eeb4ac90c3e5dc7a7ef9770348
+NO_SKIN_WEAVE_SHA256 = "ebff7450540b050ca83d6796c6184264314040eeb4ac90c3e5dc7a7ef9770348"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

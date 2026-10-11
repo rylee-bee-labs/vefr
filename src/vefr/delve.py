@@ -1016,7 +1016,7 @@ def _family_on_floor(family: dict, k: int) -> bool:
 
 def mobs_at(key: str, section: dict, rows: list[str], up: tuple[int, int],
             down: tuple[int, int], source=None, catalog=None,
-            k: int = 1) -> list[dict]:
+            k: int = 1, depth: int = 1) -> list[dict]:
     """Who lives on this floor, drawn from `v3|<key>|pop`.
 
     A floor's monsters are placed on floor tiles at least `MOB_SPACING`
@@ -1035,7 +1035,15 @@ def mobs_at(key: str, section: dict, rows: list[str], up: tuple[int, int],
     `catalog` is the pack's item catalog, where an item's `roll` is read
     from (ADR 0017); with none, every drop is the bare id it was before
     this argument existed.
+
+    Every monster carries an `xp`, so a kill pays: the family's own when
+    it declares one, and `vefr.sections.xp_for`'s documented default off
+    the floor's `depth` when it does not. It is read after the last draw
+    and consumes none, so the floor's monsters, tiles and drops are
+    exactly the ones a floor without this line drew.
     """
+    from . import sections  # here, not at the top: sections imports this module
+
     rng = prng(stream_seed(key, 'pop'))
     count = _mob_budget(rows, section, k)
     families = [f for f in _families_of(section, source)
@@ -1067,6 +1075,7 @@ def mobs_at(key: str, section: dict, rows: list[str], up: tuple[int, int],
             'name': family.get('name') or DEFAULT_FAMILY,
             'at': [at[0], at[1]], 'hp': max(1, hp), 'atk': max(1, atk),
             'sight': max(1, sight),
+            'xp': sections.xp_for(family, depth),
             'drops': mob_drops(key, f'm{i}', drops, catalog),
         })
     return mobs
@@ -1295,12 +1304,16 @@ def _warden_record(section: dict, k: int, cycle: int, at) -> dict | None:
 
 
 def _with_warden(mobs: list, key: str, section: dict, k: int, at, source,
-                 catalog=None) -> list:
+                 catalog=None, depth: int = 1) -> list:
     """The floor's monsters, plus its warden on the warden anchor when this is the warden floor.
 
     The warden's stats are its family's, its health drawn on its own `warden` stream and its drops on
     its own loot stream, so adding it moves no other monster; a random monster that drew the anchor tile
-    gives it up."""
+    gives it up. Its `xp` is `vefr.sections.xp_for`'s, the same line every other
+    monster on the floor takes: a warden that pays nothing is the deepest
+    monster on the floor paying nothing."""
+    from . import sections  # here, not at the top: sections imports this module
+
     if _warden_record(section, k, 0, at) is None:
         return mobs
     family = warden_of(section)['family']
@@ -1319,6 +1332,7 @@ def _with_warden(mobs: list, key: str, section: dict, k: int, at, source,
         'id': WARDEN_MOB, 'family': family,
         'name': base.get('name') or DEFAULT_FAMILY,
         'at': tile, 'hp': max(1, hp), 'atk': max(1, atk), 'sight': max(1, sight),
+        'xp': sections.xp_for(base, depth),
         'drops': mob_drops(key, WARDEN_MOB, base.get('drops'), catalog),
         'warden': True,
     }]
@@ -1420,9 +1434,10 @@ def floor_plan(descent, depth: int, run: int = 0, catalog=None) -> dict:
         'anchors': {'up': [up[0], up[1]], 'down': [down[0], down[1]],
                     'warden': _tile_or_none(floor['anchors'].get('warden')),
                     'vault': _tile_or_none(floor['anchors'].get('vault'))},
-        'mobs': _with_warden(mobs_at(key, section, rows, up, down, source, catalog, k),
+        'mobs': _with_warden(mobs_at(key, section, rows, up, down, source,
+                                     catalog, k, depth=depth),
                              key, section, k, floor['anchors'].get('warden'),
-                             source, catalog),
+                             source, catalog, depth=depth),
         'warden': _warden_record(section, k, cycle, floor['anchors'].get('warden')),
         'vault': _vault_record(floor, section, k, cycle),
         'legend': section_legend(section),

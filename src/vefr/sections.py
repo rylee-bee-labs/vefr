@@ -64,6 +64,8 @@ TOUCH POINTS (written down before the first edit, as the slice asks)
 | the bake | `cmd_delve --section`, which wires the doors and records the landings |
 | the golden | `tests/golden/validator/cases.json`, block `section` |
 | the tests | `tests/test_sections_e4.py`, the packs under `tests/fixtures/sections/` |
+| what a kill pays | `sections.xp_for` here; `mobs_at` in `delve.py`; the twin in the descent part |
+| the `xp` it reads | `shapes.FAMILY`'s `xp` key and `shapes._family_xp_problems` |
 
 THE MOB COUNT
 
@@ -962,3 +964,46 @@ def board_offer(section: dict) -> dict | None:
         'stars': limit,
         'omens': offered,
     }
+
+
+# What one kill is worth. A family may declare its own `xp` - the
+# Blueprint's base record or the Section's own row, the Section's row
+# winning the merge above - and that number is the kill, exactly.
+# A family that declares none gets the default below rather than
+# nothing at all, because a hero who walks four Sections and is exactly
+# as strong on the fourth floor as on the first has been told the truth
+# about nothing.
+#
+# The default is a ramp on DEPTH, the Section's own floor counted from
+# the top of the descent: `XP_BASE` on the first floor, `XP_PER_DEPTH`
+# more for every floor below it. Depth is the number the player already
+# reads (a floor's `k`, and the Section it belongs to), it is pure -
+# no draw, no clock, nothing the determinism rule of PLAN.md section 2
+# forbids - and because `locate` walks the Sections in order, a deeper
+# Section is a deeper depth and pays more. That is the whole curve.
+XP_BASE = 1
+XP_PER_DEPTH = 2
+
+
+def xp_for(family: dict, depth: int = 1) -> int:
+    """What one kill of `family` on floor `depth` is worth, in experience.
+
+    A family's own `xp` wins, whole or not: the number it declares is
+    the number a kill pays, because a pack that wrote a reward wrote a
+    reward, and `vefr check` has already refused one that is not a
+    whole number in range. Everything else - a family that says
+    nothing, and a Section naming a family the Blueprint does not have,
+    which carries no record at all - takes the documented default
+    above.
+
+    Pure, and takes no argument this module cannot read off its own:
+    the family record and the depth. No draw is consumed, so adding it
+    moves no tile, no monster and no drop on any floor.
+    """
+    declared = family.get('xp') if isinstance(family, dict) else None
+    if isinstance(declared, int) and not isinstance(declared, bool) \
+            and declared >= 0:
+        return declared
+    floor = depth if isinstance(depth, int) and not isinstance(depth, bool) \
+        and depth >= 1 else 1
+    return XP_BASE + XP_PER_DEPTH * (floor - 1)

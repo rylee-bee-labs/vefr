@@ -479,6 +479,16 @@ table through the same rule. Code: `src/vefr/sections.py`
 (`mob_count`), `src/vefr/delve_v3.py` (`mob_budget`); tests:
 `tests/test_section_monster_count.py`.
 
+A family row may carry an optional `xp`: the experience one kill of that
+family pays, on every floor it stands on. A row that leaves it out is
+not worth nothing - it takes the engine's default, which starts at 1 on
+the first floor of the descent and rises 2 a floor below that, so a
+deeper Section pays more (`vefr.sections.xp_for`, and its JavaScript
+twin). A kill on a generated floor therefore pays exactly as an
+authored region's kill does, and the `level` cue fires on the same
+words. `vefr check` refuses a bad `xp` with a sentence naming the
+Section and the family.
+
 ## regions + transitions (doors between maps)
 
 An act may declare several `regions`, each its own directory under

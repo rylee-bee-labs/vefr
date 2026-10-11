@@ -180,6 +180,8 @@ _DEFAULTS = {
     'no-affix-for-elite': ('a group led by an elite needs at least one affix, '
                            'and the section names none'),
     'unknown-family': 'unknown family {id!r}',
+    'family-xp': ('{who} in section {section!r} declares an xp, and it is '
+                  'not one: {said}'),
     'no-stat': ('every family a section names needs an {stat} in the '
                 'blueprint, and {id!r} has none'),
     'pattern-length': ("a section's pattern must have one entry for each of "
@@ -906,6 +908,19 @@ FOG = Block(
 # it is the floor a Darker omen stops at (`vefr.sections.fog_radius`).
 FOG_RADIUS_MIN = next(k.lo for k in FOG.keys if k.name == 'radius')
 
+
+# A Section's family row. `xp` is the one a pack MAY write: the
+# experience one kill of that family pays, and a pack that names it
+# names it for every floor that family stands on. A row that leaves it
+# out is not a family worth nothing - it is a family that took the
+# engine's documented default, which rises with the floor's depth
+# (`vefr.sections.xp_for`), so the key is optional and additive and a
+# pack written before it validates exactly as it did.
+#
+# The block's `example` is the one the golden pins in a `missing-key`
+# sentence, so it is left as PLAN.md section 2 wrote it: this key is
+# documented here and in the guide rather than by editing a frozen
+# sentence.
 FAMILY = Block(
     name='family',
     example='{"family": "rat", "weight": 5, "depth": [1, 6]}',
@@ -913,6 +928,9 @@ FAMILY = Block(
         Key('family', 'str', lo=1, hi=40, required=True),
         Key('weight', 'int', lo=1, hi=99),
         Key('depth', 'pair', lo=1, hi=99),
+        Key('xp', 'int', lo=0, hi=1_000_000,
+            say={'out-of-range': ('{path} must be between 0 and 1000000 - '
+                                  'what one kill of this family pays')}),
     ),
     say={'missing-key': '{name} must hold its {key}, such as {example}'},
 )
@@ -1519,6 +1537,40 @@ EVENTS = {
 
 # ------------------------------------------------- the checks that span records
 
+def _family_xp_problems(table_problems, section: dict) -> list[Problem]:
+    """Every Section problem but a family row's `xp`, and that one again
+    with the Section and the family named.
+
+    The `xp` key is additive and optional, so this is the same shape
+    check the table already ran - one problem per bad value, at the
+    pointer the table found it at - with the one thing a pointer cannot
+    say said in words: which family of which Section is wrong, and what
+    a kill of it would pay. Every other problem is passed through
+    untouched and in order, because this function is a filter, not a
+    second reading of the Section.
+    """
+    named = section.get('id') if isinstance(section, dict) else None
+    here = named if isinstance(named, str) and named else 'this section'
+    kept: list[Problem] = []
+    for problem in table_problems:
+        if not problem.pointer.endswith('/xp'):
+            kept.append(problem)
+            continue
+        # `/section/families/2/xp` -> the index is the second-to-last hop.
+        index = problem.pointer.split('/')[-2]
+        family = ''
+        listed = section.get('families') if isinstance(section, dict) else None
+        entry = listed[int(index)] if isinstance(listed, list) \
+            and index.isdigit() and int(index) < len(listed) else None
+        if isinstance(entry, dict) and isinstance(entry.get('family'), str):
+            family = entry['family']
+        who = f'family {family!r}' if family else f'family row {index}'
+        kept.append(Problem(problem.code, problem.pointer,
+                            _DEFAULTS['family-xp'].format(
+                                who=who, section=here, said=problem.sentence)))
+    return kept
+
+
 def check_descent(block: dict) -> list[Problem]:
     """Every problem with a descent's own Sections, at their own pointers.
 
@@ -1537,7 +1589,7 @@ def check_descent(block: dict) -> list[Problem]:
                 'wrong-type', f'/sections/{i}',
                 f'every Section must be a record, such as {SECTION.example}'))
             continue
-        for problem in check(SECTION, record):
+        for problem in _family_xp_problems(check(SECTION, record), record):
             problems.append(Problem(
                 problem.code, f'/sections/{i}{problem.pointer[len("/section"):]}',
                 problem.sentence))
@@ -1705,7 +1757,13 @@ def check_section(section: dict, affixes=None, resolve=None, drops=None) -> list
     elite leads, then the pattern.
     """
     problems: list[Problem] = []
-    problems.extend(check(SECTION, section))
+    # The table owns a family row's `xp` - whether it is a whole number
+    # in range, and at which pointer. The one thing a pointer cannot say
+    # is WHICH family of WHICH Section a pack author has to go and fix,
+    # so `_family_xp_problems` speaks those sentences again with both
+    # named. The table's own are dropped, so one mistake is one sentence
+    # and the order is the order the table emitted.
+    problems.extend(_family_xp_problems(check(SECTION, section), section))
     if not isinstance(section, dict):
         # A Section pack that is not an object is one `not-object`
         # sentence and nothing else: the checks below all read it as a
