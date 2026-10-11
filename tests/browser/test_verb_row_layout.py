@@ -265,7 +265,9 @@ def test_interact_keeps_its_whole_label_at_every_phone_width(browser, woven, wid
                 f"a descendant sits above #interact at {width}px: {kid}"
             assert kid["r"] <= info["r"] + 1 and kid["b"] <= info["b"] + 1, \
                 f"a descendant sits past #interact at {width}px: {kid}"
-        assert info["label"] in info["name"], (
+        # The pill renders the label in caps (text-transform) and innerText
+        # is rendered text, so the same words are compared in one case.
+        assert info["label"].upper() in info["name"].upper(), (
             f"the accessible name at {width}px is {info['name']!r}, "
             f"without the label {info['label']!r}")
         assert info["w"] >= 44 and info["h"] >= 44, (
