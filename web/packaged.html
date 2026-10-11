@@ -8302,16 +8302,16 @@ window.VEFR_DESCENT = (function () {
     if (!first) return;
     var plan = floorPlan(1);
     if (!plan) return;
-    var stair = { from: entry.region, at: entry.at.slice(),
-                  to: plan.name, to_at: plan.anchors.up.slice() };
     // The town stair's entry for the next Section carries the same gate
     // the warden's down stair does (ADR 0015). The pack's own stair enters
     // the FIRST Section, which nothing lies behind and so is never gated;
     // the moment the elevator rule offers a town stair per Section, this
     // is what carries the gate on it.
     var gate = gateFor(1);
-    if (gate) { stair.requires = { flag: gate }; stair.locked_text = GATE_LOCKED; }
-    claimTile(list, stair);
+    claimTile(list, { from: entry.region, at: entry.at.slice(),
+                      to: plan.name, to_at: plan.anchors.up.slice(),
+                      requires: gate ? { flag: gate } : null,
+                      locked_text: gate ? GATE_LOCKED : null });
     window.VEFR_TRANSITIONS = list;
   }
 
