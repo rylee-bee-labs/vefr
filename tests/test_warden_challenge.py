@@ -36,7 +36,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent / "fixtures"))
 import make_town_pack  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from test_descent_deltas import DOC_KEY, TOWN, TOWN_HERO, _doc, _go, _go_fight, _play  # noqa: E402
+from test_descent_deltas import TOWN, TOWN_HERO, _doc, _go, _go_fight, _play  # noqa: E402
 from test_descent_floors import DESCENT  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
