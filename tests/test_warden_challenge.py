@@ -170,6 +170,8 @@ def _rule_pack(tmp_path, warden, sets=True, **kwargs):
     fixture that was refused would prove nothing about the walk.
     """
     sections = copy.deepcopy(make_town_pack.SECTIONS)
+    for section in sections.values():
+        section["size"] = {"w": [64, 80], "h": [64, 80]}
     sections["cellar"]["warden"] = warden
     rules = copy.deepcopy(make_town_pack.RULES)
     flags = copy.deepcopy(make_town_pack.FLAGS)
