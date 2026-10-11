@@ -1066,15 +1066,19 @@ window.VEFR_DESCENT = (function () {
   // through `growAward`: a generated monster that arrived here without
   // one is a kill worth nothing, and the floor it stood on is the only
   // place that number could have come from.
-  // The two presentation keys ride it because they are read off the enemy
-  // and not off the floor plan: `fightable` refuses a blow and `yields`
-  // leaves a beaten warden standing. Neither is written unless the pack asked.
+  // `fightable` rides it because the player reads it off the enemy and not
+  // off the floor plan: it is what refuses a blow. `yields` is NOT copied
+  // here. On the entry it means the
+  // warden HAS yielded - a state, set below once it is beaten and again by
+  // `heroAttack` when it falls - while the plan's `yields` only says it
+  // WOULD stay. Copying the plan's key would put a fresh warden on the
+  // roster already yielded and, by `loadEnemies`'s `alive`, unattackable
+  // from the first turn, so its challenge could never be completed.
   function enemyEntry(mob) {
     var entry = { id: mob.id, name: mob.name, sprite: '', at: mob.at.slice(),
                   hp: mob.hp, atk: mob.atk, sight: mob.sight, xp: mob.xp,
                   drops: mob.drops.slice(), warden: mob.warden === true };
     if (mob.fightable === false) entry.fightable = false;
-    if (mob.yields === true) entry.yields = true;
     return entry;
   }
 
