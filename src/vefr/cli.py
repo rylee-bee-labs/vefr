@@ -605,6 +605,81 @@ def cmd_import(args) -> int:
     return 0
 
 
+# The seed count the stamp sweep inside `vefr check` draws, and what it
+# calls them: the same `check-<n>` names, at the same 200 of them, that
+# `vefr stamp check` sweeps - the default `stamp_check.report` is given.
+# It used to be 8, on the reasoning that the sweep is the slow half. See
+# `_stamp_findings` for the arithmetic that retired that reasoning and
+# for what the raise costs.
+CHECK_STAMP_SEEDS = 200
+
+
+def _stamp_findings(pack_dir, seeds: int = CHECK_STAMP_SEEDS) -> list[str]:
+    """Every stamp refusal `vefr check` prints for a pack, as sentences.
+
+    **The seam (vefr#346).** `vefr check` used to run the shape checks and
+    nothing else, so a pack could print `ok:` while carrying a REQUIRED
+    stamp that never places - and a room that never places is a floor with
+    no warden hall in it. The standalone gate that does catch it,
+    `vefr stamp check`, was a separate command nobody had to run. This is
+    the same `stamp_check.report` that command calls, so the two cannot
+    drift: there is one copy of the rule, not two.
+
+    **Why 200 seeds, and why that changed.** This seam shipped at 8 seeds
+    on the reasoning that the sweep is the slow half and `vefr check` runs
+    on every pack write. That reasoning priced the sweep and forgot what
+    the sweep is FOR. The bar a required room has to clear is 100% - one
+    floor in a hundred that loses its warden hall is a floor the hero
+    walks into an empty hall - so a room placing on 99 of 100 floors is
+    ALREADY a failure, and 8 seeds is a sample far too small to see it:
+    `0.99**8 = 0.9227`, so the check printed `ok:` on 92 packs in 100
+    carrying that room. A green light that is wrong 8 times in 100 is
+    worse than no light, because the creator stops looking. Taking a 99%
+    room 99% of the time takes `ceil(ln(0.01)/ln(0.99)) = 459` seeds - so
+    200 is the same order as the standalone gate, and the two are now at
+    one confidence instead of one of them being the weak one. 200 is also
+    what this command ALREADY pays for: `vefr check` sweeps every Section
+    at `locks.SECTION_SEEDS = 200` on the same pack and the same
+    `check-<n>` names, so raising this adds no new class of work.
+
+    **What the raise costs, measured.** Median of five runs each, same
+    machine, same pack, source edited between the two halves. On a
+    one-Section pack that ships three required stamps: **0.992s at 8
+    seeds, 3.906s at 200** - a delta of 2.91s. The stamp sweep alone is
+    0.12s at 8 and 3.03s at 200. On `worlds/sample-world`, which ships no
+    `stamps/` at all, it is 0.065s at 8 and 0.061s at 200: no change,
+    because the sweep is skipped before it costs anything. That is the
+    honest shape of the trade - every pack in the tree today is the second
+    case, and a pack that ships stamped rooms pays ~2.9s to stop being
+    green for free.
+
+    **A pack with no stamps says nothing.** No `stamps/` directory means
+    there is no stamp pack to check, which is every pack in the tree
+    today, so the sweep is skipped before it costs anything and prints
+    no line - the cost of this change to a pack that ships no stamps is
+    measured at 0.00s.
+    """
+    from . import stamp_check
+
+    pack = Path(pack_dir)
+    if not (pack / 'stamps').is_dir():
+        return []
+    code, lines = stamp_check.report(str(pack), seeds=seeds)
+    if code == stamp_check.USAGE:
+        # `stamps/` is there but `sections/` is not, or the sweep found
+        # nothing to say. `stamp check` reports that as a usage error
+        # about the command; inside `vefr check` the pack simply has no
+        # stamped room to place, so it is silent and unchanged.
+        return []
+    # `report` returns [header, *problems, 'N problems'] by its own
+    # docstring. The header and the count are `stamp check`'s framing; a
+    # check prints the refusals and lets `vefr check`'s own summary carry
+    # the rest. Each remaining line is the plain sentence `stamps.sentence`
+    # built - `stamp <id>: <what is wrong> <json pointer>` - which already
+    # names the stamp, so it is printed as it stands.
+    return lines[1:-1]
+
+
 def cmd_map(args) -> int:
     from .maplab import main as maplab_main
     # `vefr check --release` is the story-status gate (vefr #339): it
@@ -638,20 +713,30 @@ def cmd_map(args) -> int:
         from . import blueprint
         for note in blueprint.notes(Path(str(args.pack))):
             print(note)
-    # `vefr check` also follows the locks: print every key that cannot be
-    # obtained before its door and fail the check. A pack with no item
-    # lock (or no `requires` at all) prints nothing and is unchanged.
+    # `vefr check` does not stop at the geometry. Three more gates run over
+    # the same pack and each fails it on its own sentences: the item locks
+    # (every key that cannot be obtained before its door), the Sections (a
+    # sweep of every floor of every Section), and the stamped rooms (a
+    # required room that never places). Each prints nothing at all on a
+    # pack that does not carry that thing, and is otherwise unchanged.
     if args.map_cmd == 'validate' and getattr(args, 'pack', None):
         from . import locks
         pack_dir = Path(str(args.pack))
-        lock_findings = locks.findings(pack_dir)
+        findings = locks.findings(pack_dir)
         # ...and sweeps every Section of the pack, which is the E4 half:
         # every floor of every Section, over the section sweep's seeds.
         # A pack that ships no Sections sweeps nothing and is unchanged.
-        lock_findings += locks.section_findings(pack_dir)
-        for finding in lock_findings:
+        findings += locks.section_findings(pack_dir)
+        # ...and runs the stamp check over the same pack (vefr#346), so a
+        # required room that never places cannot be green. The same
+        # `stamp_check.report` `vefr stamp check` calls, over the same
+        # `check-<n>` seeds and the same 200 of them as the Section sweep
+        # above - see `_stamp_findings`. A pack with no `stamps/`
+        # directory is silent and costs nothing.
+        findings += _stamp_findings(pack_dir)
+        for finding in findings:
             print(finding)
-        if lock_findings:
+        if findings:
             return EXIT_ERROR
     # The release gate's own verdict, last: the list is already printed
     # above, so a strict run shows a human what is in the way before it

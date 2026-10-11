@@ -101,6 +101,30 @@ DESCENT = {
 }
 
 
+def _named_stamps(sections: dict) -> set[str]:
+    """The stamps the Sections can draw, by the engine's own rule.
+
+    A Section names its stamps by tag and its vault by id, and the
+    question a floor asks is `delve_v3`'s, so the answer is the rooms the
+    pack's own Sections can place and none of the ones they cannot. A
+    stamp no Section names never draws, and the fit rule `vefr check`
+    runs (vefr#346) would refuse the pack over a room it never uses:
+    `throne-hall` is 21x21 and these floors start at 48x36.
+    """
+    from vefr import delve_v3, stamps
+    records = stamps.load(STAMPS)
+    named = set()
+    for section in sections.values():
+        floors = section.get("floors")
+        depths = range(1, int(floors) + 1) \
+            if isinstance(floors, int) and not isinstance(floors, bool) and floors > 0 \
+            else range(1, 2)
+        for depth in depths:
+            named.update(record["id"]
+                         for record in delve_v3.stamp_pool(section, records, depth))
+    return named
+
+
 def stamp_records(pack: Path):
     """The pack's stamp records, the way the weave carries them.
 
@@ -138,13 +162,20 @@ def build(dest: Path, town_states=None, sections=None, descent=None,
     act_world.write_text(json.dumps(act, indent=2), encoding="utf-8")
 
     (pack / "sections").mkdir(exist_ok=True)
-    for ident, record in (sections if sections is not None else SECTIONS).items():
+    built = sections if sections is not None else SECTIONS
+    for ident, record in built.items():
         (pack / "sections" / f"{ident}.json").write_text(
             json.dumps(record, indent=2), encoding="utf-8")
 
     # The stamp pack the Sections draw their warden hall and vault from
-    # (ADR 0013). The same committed stamps E8b's fixtures use.
-    shutil.copytree(STAMPS, pack / "stamps")
+    # (ADR 0013): the same committed stamps E8b's fixtures use, carrying
+    # only the rooms these Sections name (`_named_stamps`), so the pack
+    # ships no room it can never place.
+    named = _named_stamps(built)
+    (pack / "stamps").mkdir()
+    for path in sorted(STAMPS.glob("*.json")):
+        if path.stem in named:
+            shutil.copy(path, pack / "stamps" / path.name)
 
     library = pack / "library"
     library.mkdir(exist_ok=True)

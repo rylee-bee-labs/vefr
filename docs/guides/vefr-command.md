@@ -21,7 +21,7 @@ order `vefr --help` prints them in, too.
 | `vefr chat` | interview a new world into existence | `norns chat` |
 | `vefr map` | rebuild the map from run-length rows | `norns build-map` |
 | `vefr delve` | generate dungeon floors from a seed, or a whole Section, and wire the stairs | `norns delve` |
-| `vefr check` | validate the pack geometry; `--release` lists every draft word (`--strict` to fail on one); `--live URL` validates a running deployment | `norns validate` / `norns verify` |
+| `vefr check` | validate the pack - geometry, item locks, Sections and stamped rooms (see below); `--release` lists every draft word (`--strict` to fail on one); `--live URL` validates a running deployment | `norns validate` / `norns verify` |
 | `vefr weave` | package a world into one self-contained HTML file | `ratatoskr weave` |
 | `vefr handbok` | write the mechanics manual from real play | `norns handbok` |
 | `vefr spark` | the resident small brain: `install`, `status`, `smoke`, `task` | `ratatoskr spark` |
@@ -35,6 +35,68 @@ order `vefr --help` prints them in, too.
 Two habits carry over unchanged: validate after every pack write
 (`uv run vefr check --pack worlds/<name>`), and read `--help` for the
 live list straight from the code.
+
+### What `vefr check` actually checks
+
+`vefr check` is not only the geometry. It runs four gates over the pack
+and each fails it on its own plain sentences:
+
+| Gate | What it refuses |
+|---|---|
+| geometry, reachability, voices | `maplab.validate` - a door that names no region, a hero who cannot reach the stair, a region with no walkable tile |
+| item locks | a key that cannot be obtained before its door |
+| Sections | a floor that does not hold over the sweep's seeds |
+| **stamped rooms** | **a required room that never places** |
+
+The stamp gate is `vefr stamp check`'s own work: `vefr check` calls the
+same `stamp_check.report` that command calls, over the same `check-<n>`
+seeds, so there is one copy of the rule rather than two and the two
+doors cannot drift apart. A pack that ships a `stamps/` directory gets
+it; a pack that ships none - every pack in the tree today - is skipped
+before it costs anything and prints nothing.
+
+A refusal reads the way `stamp check` writes it, naming the room, how
+often it placed, and the value to fix. It is one line on the terminal,
+wrapped here to fit the page:
+
+```
+stamp test-alcove: placed on 248 of 1600 cellar floors (15%); it needs 100%. It is 5 wide and cellar floors start at 64. /rows
+```
+
+**The same 200 seeds the standalone gate sweeps, and no flag.** Both
+doors draw `check-<n>` and both draw 200 of them (`cli.CHECK_STAMP_SEEDS`
+is the gate's own default), so a floor that fails one can be redrawn with
+the other and a pack cannot be green in one place and red in the other.
+That number was 8 until this change and the reason is worth keeping:
+
+- **No flag, no opt-in.** A pack must never be able to be green for
+  free while carrying a room that never places, and a flag is exactly a
+  way to be green for free. The check runs every time.
+- **Eight seeds could not see its own bar.** The bar is 100% - one floor
+  in a hundred that loses its warden hall is a floor the hero walks into
+  an empty hall - so a room on 99 of 100 floors is already a failure.
+  `0.99 ** 8 = 0.923`: an 8-seed sweep would have printed `ok:` on 92
+  packs in 100 like that. Taking a 99% room 99% of the time needs
+  `ceil(log(0.01) / log(0.99)) = 459` seeds, so 200 is the same order as
+  the gate and the two sit at one confidence instead of one of them
+  being the weak one.
+- **What the raise costs, measured** (median of five runs each, same
+  machine, same pack, source edited between the halves). A pack that
+  ships stamped rooms: **0.992s at 8 seeds, 3.906s at 200** - +2.91s.
+  `worlds/sample-world`, which ships no `stamps/` at all: **0.065s at 8,
+  0.061s at 200** - no change, because the sweep is skipped before it
+  costs anything. Every pack in the tree today is that second case.
+- **`vefr check` already paid for 200.** The Section gate above sweeps
+  every Section at 200 seeds (`locks.SECTION_SEEDS`) on the same pack and
+  the same `check-<n>` names, so this adds no new class of work to a
+  check that was already running it.
+
+The fixture that shows the gap is in
+[`tests/test_stamp_check_runs.py`](../../tests/test_stamp_check_runs.py):
+a required landmark weighed 99 against one rival weighed 1, so it lands on
+99 of every 100 floors. It misses on `check-58` and later, so the first
+eight seeds are clean - an 8-seed check says nothing at all, and a
+200-seed check refuses it.
 
 ## Developer verbs
 

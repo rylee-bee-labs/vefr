@@ -270,7 +270,26 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # in the sandbox), readings equal:
 #   5fe9f907e61cf39c96f6d442605bce131fc15786d2491ddb61bc0824e82ff580
 #   5fe9f907e61cf39c96f6d442605bce131fc15786d2491ddb61bc0824e82ff580
-NO_SKIN_WEAVE_SHA256 = "5fe9f907e61cf39c96f6d442605bce131fc15786d2491ddb61bc0824e82ff580"
+# Re-cut 2026-10-11, the V352S stack (vefr #352 descent entry tile, #346 stamp
+# sweep) onto current `main`: the descent part's `claimTile` moves the woven
+# player, so every pack's weave moves. Measured twice with the documented
+# command above (as `PYTHONPATH=src python3 -c ...`, no uv in the sandbox),
+# readings equal:
+#   5c281472acffbba023480b7fc0fc4cf43d21cb2d67e093ab07fdfac5401703c0
+#   5c281472acffbba023480b7fc0fc4cf43d21cb2d67e093ab07fdfac5401703c0
+# V352fix 2026-10-11, repairing that same re-cut: the union of the descent
+# part's `wireEntry` had kept main's gate on a `stair` variable and called
+# `claimTile(list, stair)`, which is the #352 precedence fix in behaviour but
+# not in the shape the acceptance test pins - the authored-door precedence
+# call is restored as the original inline `claimTile(list, { from: entry.region
+# ... })`, with main's gate folded into the literal, so the player template
+# moved again. Measured twice with the documented command above (as
+# `PYTHONPATH=src python3 -c ...`, no uv in the sandbox), readings equal, and
+# all 41 `window.VEFR_*` data lines of this pack are byte-identical before and
+# after - only the player around them changed:
+#   4f88895a4fe23ea81dda35e30c887d09540a29fac4ded1821ee29a5975a550c7
+#   4f88895a4fe23ea81dda35e30c887d09540a29fac4ded1821ee29a5975a550c7
+NO_SKIN_WEAVE_SHA256 = "4f88895a4fe23ea81dda35e30c887d09540a29fac4ded1821ee29a5975a550c7"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

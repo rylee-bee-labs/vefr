@@ -170,6 +170,8 @@ def _rule_pack(tmp_path, warden, sets=True, **kwargs):
     fixture that was refused would prove nothing about the walk.
     """
     sections = copy.deepcopy(make_town_pack.SECTIONS)
+    for section in sections.values():
+        section["size"] = {"w": [64, 80], "h": [64, 80]}
     sections["cellar"]["warden"] = warden
     rules = copy.deepcopy(make_town_pack.RULES)
     flags = copy.deepcopy(make_town_pack.FLAGS)
@@ -404,8 +406,23 @@ def test_a_story_end_a_rule_sets_on_entering_a_region_ends_the_story_with_no_bos
 # the pre-S349 base the stack predates. Re-measured on the merged tree's town
 # fixture pack (two Sections, two wardens, none of them naming a challenge):
 #   fa7119034df3e3920be40aeff01bce0336626dde512a5f0ed0f101f7caed5ed4
+# V352fix4 2026-10-11, the one red left on the V352S branch: #346 runs the
+# stamp sweep inside `vefr check`, and the town fixture copied the whole
+# committed stamps directory, so the pack shipped `throne-hall` (21x21, a
+# required role) on floors that start at 48x36 - a room no Section of the
+# pack names, never placed, and the good fixture failed its own check. The
+# fixture now ships only the stamps its own Sections draw
+# (`make_town_pack._named_stamps`): cistern-nook, crypt-hall, vault-cellar
+# and wine-alcove, where it shipped seven. The descent block carries the
+# pack's stamps, so this line moved with the fixture; the Sections, the two
+# wardens and the challenge-free shape did not (still two `"warden":`, no
+# `challenge`). Measured twice with the sandbox's own reader (`PYTHONPATH=src
+# python3`, weave the fixture, hash the `window.VEFR_DESCENT_DEF` line),
+# readings equal:
+#   f62b83f2b9ba714e2b3215e80f6844ffed975b2181572053993319c659af0815
+#   f62b83f2b9ba714e2b3215e80f6844ffed975b2181572053993319c659af0815
 BAKED_DESCENT_SHA256 = \
-    "fa7119034df3e3920be40aeff01bce0336626dde512a5f0ed0f101f7caed5ed4"
+    "f62b83f2b9ba714e2b3215e80f6844ffed975b2181572053993319c659af0815"
 
 
 def _baked_descent_line(html):
