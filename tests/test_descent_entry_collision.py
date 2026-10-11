@@ -58,6 +58,30 @@ CLI_RUNNER = ("import sys; from vefr.cli import vefr_main; "
 
 # ---- the two fixtures ----------------------------------------------------
 
+def _story_can_end(pack: Path) -> Path:
+    """The pack's story can end, the way the real town pack records it.
+
+    The descent fixture is sample-world plus a descent, and neither
+    carries a setter for the pack's own `story_end` flag - so `vefr
+    check`'s progress walk (main's E8c, ADR 0015 check 5) would refuse
+    this pack for a story that cannot end, and the collision tests
+    below would be proving nothing about the collision. The setter is
+    the town fixture's own shape: a rule sets the default `king-slain`
+    flag, and the flag is declared in `world.json`'s `flags` block,
+    because a rule that sets an undeclared flag is refused by the
+    pack's own rules. It fires on opening the satchel chest the sample
+    town already carries, which nothing in these tests opens.
+    """
+    path = pack / "world.json"
+    world = json.loads(path.read_text(encoding="utf-8"))
+    world["flags"] = {"king-slain": "the story is over"}
+    world["rules"] = [{"id": "the-satchel-ends-the-story",
+                       "when": {"opens": {"what": "a-travellers-satchel"}},
+                       "then": [{"set": "king-slain"}], "once": True}]
+    path.write_text(json.dumps(world), encoding="utf-8")
+    return pack
+
+
 def _with_shed(pack: Path, door_at) -> Path:
     """The descent fixture plus a `shed` region and one door from the town."""
     act_dir = pack / "acts" / "act-1"
@@ -73,7 +97,7 @@ def _with_shed(pack: Path, door_at) -> Path:
         "tile": 32, "bg": "#131311", "hero_start": [1, 1],
         "sanctuary_tiles": ["."], "water_by_phase": {}, "flood_tiles": [],
         "pois": {}, "legend": SHED_LEGEND}), encoding="utf-8")
-    return pack
+    return _story_can_end(pack)
 
 
 def _colliding(tmp_path) -> Path:
