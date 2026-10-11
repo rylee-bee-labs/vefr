@@ -190,19 +190,26 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # this merged tree's weave and neither side's could be carried across.
 # The spells refactor (one gate for what the hero knows) moved the player
 # once more, and measured `d993042f...` for the source stack on its own.
+# The source stack's own union repair moved the player again: `spellsKnown`
+# in `225-spells.js` published the book-learned spells ahead of the ones a
+# level had earned; it now walks the pack's own order and publishes each
+# known spell in the order the hero learns it, which is what
+# `test_spells_play.py::test_a_book_found_as_loot_teaches_its_spell_and_is_spent`
+# pins.
 # Re-cut again 2026-10-11, onto `main` one landing further on: the spells
 # stack now meets vefr #395 (FOGSHAPE), whose lit-area reader grew a branch
 # and whose floor-fog writer grew a line. That is a third move in the same
 # player template as the identify service and the spells, so the union of
 # all three is measured here and is again no side's value (the earlier
-# union measured `d4e5136d...` before the refactor landed, and `main` alone
-# measured `7b672cc2...`). The sample world names no shape and no skin, so
-# its own baked bytes still do not move.
+# union measured `d4e5136d...`, `main` alone `7b672cc2...`, and the source
+# stack's last step `abeaef56...`). The sample world names no shape and no
+# skin, so its own baked bytes still do not move.
 # Measured twice with the documented command above (as
 # `PYTHONPATH=src python3 -c ...`, no uv in the sandbox):
 #   7b672cc24f806fdf7f0bfd2d05b0f6318ad8d9626e6cd1e00838df6ab5d118c7
 #   2260620a961dd59f91af65b88b356cfcb2412936eefb1e28e6d57fb6297caff7
-NO_SKIN_WEAVE_SHA256 = "b6caf7545e0bcb2fc26a06537584ac56fee98abbae3084c38a003a5c50e8bbc3"
+#   cd70c89312c0da7a60691b0aa6b3e0ded7aa03006bb4687bef61a07389146dfa
+NO_SKIN_WEAVE_SHA256 = "c7f5e19fa55fa72edb3baadd94f6afed21fe0d225c3cdd4113ba0919128901fd"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():
