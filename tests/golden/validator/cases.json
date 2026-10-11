@@ -3580,7 +3580,7 @@
    }
   ],
   "errors": [
-   "section has an unknown key 'zeta'; it may only hold section, id, floors, size, rooms, tiles, fog, families, pattern, specials, elites, groups, mobs, curve, loot, stamps, pois, warden, vault and endless"
+   "sections/cellar.json: /section/zeta section has an unknown key 'zeta'; it may only hold section, id, floors, size, rooms, tiles, fog, families, pattern, specials, elites, groups, mobs, curve, loot, stamps, pois, warden, vault and endless"
   ]
  },
  {
@@ -3693,8 +3693,8 @@
    }
   ],
   "errors": [
-   "section has an unknown key 'zeta'; it may only hold section, id, floors, size, rooms, tiles, fog, families, pattern, specials, elites, groups, mobs, curve, loot, stamps, pois, warden, vault and endless",
-   "section has an unknown key 'alpha'; it may only hold section, id, floors, size, rooms, tiles, fog, families, pattern, specials, elites, groups, mobs, curve, loot, stamps, pois, warden, vault and endless",
+   "sections/cellar.json: /section/zeta section has an unknown key 'zeta'; it may only hold section, id, floors, size, rooms, tiles, fog, families, pattern, specials, elites, groups, mobs, curve, loot, stamps, pois, warden, vault and endless",
+   "sections/cellar.json: /section/alpha section has an unknown key 'alpha'; it may only hold section, id, floors, size, rooms, tiles, fog, families, pattern, specials, elites, groups, mobs, curve, loot, stamps, pois, warden, vault and endless",
    "sections/cellar.json: /section/section section.section must be between 1 and 99",
    "sections/cellar.json: /section/rooms/0 section.rooms[0] must be between 6 and 40"
   ]
