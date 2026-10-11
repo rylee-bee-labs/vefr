@@ -289,7 +289,13 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # after - only the player around them changed:
 #   4f88895a4fe23ea81dda35e30c887d09540a29fac4ded1821ee29a5975a550c7
 #   4f88895a4fe23ea81dda35e30c887d09540a29fac4ded1821ee29a5975a550c7
-NO_SKIN_WEAVE_SHA256 = "4f88895a4fe23ea81dda35e30c887d09540a29fac4ded1821ee29a5975a550c7"
+# ELSLICEFIX 2026-10-11, the endless gate (the stair past the last Section waits
+# for `story_end`) cherry-picked onto post-#405 main: its hunk in the descent
+# part moves the woven player, so this weave moves. Measured twice in separate
+# processes, readings equal; the pack's data lines are unchanged:
+#   bd38a6085259b6ec3fc987037c78d1d35fcecddb6105f69c99070c4cc6eaa8ff
+#   bd38a6085259b6ec3fc987037c78d1d35fcecddb6105f69c99070c4cc6eaa8ff
+NO_SKIN_WEAVE_SHA256 = "bd38a6085259b6ec3fc987037c78d1d35fcecddb6105f69c99070c4cc6eaa8ff"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():
