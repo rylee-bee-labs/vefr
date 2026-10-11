@@ -178,9 +178,10 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # spellbook's `spell` through the `use` verb it already had. The player
 # template is woven into every pack, so the digest had to be recomputed
 # rather than carried over. Nothing about this pack's own bytes moved -
-# `worlds/sample-world` declares no skin and no spells, so the new
-# `window.VEFR_SPELLS` bakes the literal null here exactly as
-# `window.VEFR_SKIN` does, and spells did not touch the pack at all. The
+# `worlds/sample-world` declares no skin and no spells, so the bake adds
+# no spells data for it (the line meant to bake the literal null was later
+# dropped entirely; see the last note below), and spells did not touch the
+# pack at all. The
 # proof that only the shared template moved: woven with `main`'s
 # `web/packaged.html` in place of this one, this branch's `cli.py` produces
 # `7ef6d4411e8a6f2661346fe6701d4a741173f33aaa94ec4085925c2649258dfe` for
@@ -204,12 +205,21 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # union measured `d4e5136d...`, `main` alone `7b672cc2...`, and the source
 # stack's last step `abeaef56...`). The sample world names no shape and no
 # skin, so its own baked bytes still do not move.
+# Last moved 2026-10-11: the spells slice's `window.VEFR_SPELLS` line was
+# dropped for a pack that declares no `spells` block, because a new
+# `VEFR_*` line for a pack that does not use the feature is exactly what
+# ADR 0017 slice 2's additive rule forbids (test_identify.py's
+# `test_the_reader_needs_no_new_baked_block`). The sample world names no
+# spells, so its baked data went back to pristine `main`'s bytes - the
+# whole-weave pin still moves because the player template keeps the
+# `225-spells.js` part (and 050's now-accurate spells comment), so the
+# merged weave was re-measured here.
 # Measured twice with the documented command above (as
 # `PYTHONPATH=src python3 -c ...`, no uv in the sandbox):
 #   7b672cc24f806fdf7f0bfd2d05b0f6318ad8d9626e6cd1e00838df6ab5d118c7
 #   2260620a961dd59f91af65b88b356cfcb2412936eefb1e28e6d57fb6297caff7
 #   cd70c89312c0da7a60691b0aa6b3e0ded7aa03006bb4687bef61a07389146dfa
-NO_SKIN_WEAVE_SHA256 = "c7f5e19fa55fa72edb3baadd94f6afed21fe0d225c3cdd4113ba0919128901fd"
+NO_SKIN_WEAVE_SHA256 = "7607f208eb55cd11bd4a3dce90bff5cfa8b00967607c1bf6417102f2945ba7f0"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

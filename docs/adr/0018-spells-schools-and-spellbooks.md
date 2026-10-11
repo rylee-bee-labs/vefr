@@ -190,8 +190,12 @@ pristine `main` against this branch:
 - every drop drawn on twelve floors and three runs, sha256
   `e97feb4abd76e2d4728ec2b5100adde0b305323fd74c89bd22e32b6a030e870f` on
   both;
-- the new `window.VEFR_SPELLS` line bakes the literal `null`, exactly as
-  `window.VEFR_SKIN` does;
+- a pack that declares no `spells` adds no `window.VEFR_SPELLS` line at
+  all - the line meant to bake the literal `null` was dropped, because a
+  new `VEFR_*` line for a pack that does not use the feature is what the
+  additive rule forbids (`tests/test_identify.py`'s
+  `test_the_reader_needs_no_new_baked_block`) - so the pack's own baked
+  data is byte for byte `main`'s;
 - **and the whole weave is byte-identical**: woven with `main`'s
   `web/packaged.html` in place of this branch's, this branch's `cli.py`
   produces `7ef6d4411e8a6f2661346fe6701d4a741173f33aaa94ec4085925c2649258dfe`

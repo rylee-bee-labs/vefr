@@ -653,11 +653,10 @@ gameplay features over new core machinery.
       already drunk with. Casting recovers the spell's `heal`, never above
       the max, and keeps the potion's already-whole rule; known spells are
       one section of the Bag panel, not a second action system. Every key is
-      optional and additive: a pack that names none bakes the literal `null`
-      for `window.VEFR_SPELLS`, drops the same ids and bakes the same
-      `VEFR_ITEMS` (hashed both ways in `tests/test_spells.py`), and with
-      `main`'s player template this branch's weave of `worlds/sample-world`
-      is byte-identical to `main`'s. `vefr check` refuses four things, one
+      optional and additive: a pack that names none bakes no
+      `window.VEFR_SPELLS` line at all, drops the same ids and bakes the
+      same `VEFR_ITEMS` (hashed both ways in `tests/test_spells.py`), and
+      its baked data is byte-identical to `main`'s. `vefr check` refuses four things, one
       sentence each: a school the block does not declare, a `level` under 1,
       a book teaching a spell the pack does not declare, and a spell with no
       school - and each goes red when its own refusal is removed. Gaps,

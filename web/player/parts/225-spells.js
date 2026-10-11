@@ -9,8 +9,9 @@
 // Only the books are stored, under `vefr-spells-<world>`: the level-learned
 // half is derived on every read from the growth state, exactly as the
 // growth part derives its own level rather than keeping it. A pack with no
-// `spells` block bakes the literal `null`, so every function here answers
-// "no spells" and the Bag panel draws nothing it did not draw before.
+// `spells` block bakes no `window.VEFR_SPELLS` line at all, so every
+// function here answers "no spells" and the Bag panel draws nothing it did
+// not draw before.
 var SPELLS_KEY = 'vefr-spells-' + ((window.VEFR_WORLD && window.VEFR_WORLD.name) || 'world');
 
 // The pack's spell records, or an empty list when it declared none.

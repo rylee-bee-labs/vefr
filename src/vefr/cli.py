@@ -1880,11 +1880,12 @@ def _player_spells(world: dict):
     `maplab.spells_errors` validated them with, so what the player is
     handed is what the check looked at.
 
-    None when the pack declares no block at all, and that literal `null`
-    is what the woven file holds: a pack with no spells bakes exactly the
-    player it baked before this slice, and `window.VEFR_SPELLS` reads as
-    no spells rather than as an empty object that looks like a pack that
-    declared none of anything.
+    None when the pack declares no block at all, and then the weave
+    carries no `window.VEFR_SPELLS` line: a pack with no spells bakes
+    exactly the bytes it baked before this slice, and the player's
+    `spellRecords` reads the missing global as no spells rather than as
+    an empty object that looks like a pack that declared none of
+    anything.
     """
     block = world.get('spells') if isinstance(world, dict) else None
     if not isinstance(block, dict):
@@ -2700,11 +2701,19 @@ def weave_html(pack: Path, *, pool: dict | None = None) -> str:
     out_html = out_html.replace('{{growth_json}}',
                                 _json.dumps(world.get('growth'), ensure_ascii=False))
     # The pack's optional spells block (ADR 0018): the schools it teaches
-    # and the spells in them, each with the level it is learned at. The
-    # literal `null` for a pack that declares none, which is every pack
-    # but a spellbook's.
-    out_html = out_html.replace('{{spells_json}}',
-                                _json.dumps(_player_spells(world), ensure_ascii=False))
+    # and the spells in them, each with the level it is learned at. A pack
+    # that declares none carries no `window.VEFR_SPELLS` line at all - the
+    # additive rule the identify reader follows (test_identify.py's
+    # `test_the_reader_needs_no_new_baked_block`), so a pack that names no
+    # spells weaves byte for byte what it wove before this slice, and the
+    # player reads the missing global as no spells.
+    spells = _player_spells(world)
+    if spells is None:
+        out_html = out_html.replace(
+            'window.VEFR_SPELLS = {{spells_json}};\n', '')
+    else:
+        out_html = out_html.replace('{{spells_json}}',
+                                    _json.dumps(spells, ensure_ascii=False))
     out_html = out_html.replace('{{start_json}}', _json.dumps(start, ensure_ascii=False))
     # The woven pool: real generations baked into the file, so a
     # player with no LLM endpoint still hears the world. Empty unless

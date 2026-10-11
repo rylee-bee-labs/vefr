@@ -121,8 +121,8 @@ def test_casting_heals_and_never_spends_the_hero_on_nothing(tmp_path):
 
 
 def test_a_pack_with_no_spells_draws_no_spell_section_at_all(tmp_path):
-    """The no-op half: the sample world bakes the literal `null`, so the
-    Spells section is off the page and nothing is added to the panel."""
+    """The no-op half: the sample world bakes no spells line at all, so
+    the Spells section is off the page and nothing is added to the panel."""
     out = play(tmp_path, [{"do": "openBag"}, {"do": "snap", "tag": "plain"}],
                spells=None, tome=False)
     snap = out["snaps"]["plain"]

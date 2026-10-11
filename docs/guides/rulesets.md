@@ -964,8 +964,9 @@ Code: `src/vefr/maplab.py` (validation) + `src/vefr/cli.py` (bake) +
 ## spells (schools, levels, and the books found on the floor)
 
 Spells are optional and additive: **a pack with no `spells` key plays
-exactly as it did**, and one that declares none bakes the literal `null`
-for `window.VEFR_SPELLS`. A pack may declare the schools it teaches and
+exactly as it did**, and one that declares none bakes no
+`window.VEFR_SPELLS` line at all, so its woven bytes are the ones it wove
+before this feature. A pack may declare the schools it teaches and
 the spells in them:
 
 ```json

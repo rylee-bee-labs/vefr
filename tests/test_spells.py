@@ -363,13 +363,14 @@ def test_the_woven_player_carries_the_pack_s_own_words(tmp_path):
     assert items['tide-tome']['spell'] == 'tide-mend'
 
 
-def test_a_pack_with_no_spells_bakes_null_and_keeps_its_catalog(tmp_path):
-    """The backward-compatibility proof: `VEFR_SPELLS` is the literal
-    `null` and `VEFR_ITEMS` is byte for byte the catalog of `main`."""
+def test_a_pack_with_no_spells_bakes_no_line_and_keeps_its_catalog(tmp_path):
+    """The backward-compatibility proof: a pack that names no spells
+    carries no `VEFR_SPELLS` line at all - the additive rule, so nothing
+    new is baked - and `VEFR_ITEMS` is byte for byte the catalog of `main`."""
     pack = tmp_path / "worlds" / "plain"
     plain = mk.build(pack, spells=None, tome=False)
     html = cli.weave_html(plain)
-    assert 'window.VEFR_SPELLS = null;' in html
+    assert 'window.VEFR_SPELLS =' not in html
     line = re.search(r'window\.VEFR_ITEMS = (\{.*?\});', html, re.S).group(0)
     assert hashlib.sha256(line.encode()).hexdigest() == \
         'e81e8873e4d5cb793ffae1b08f86861399e09eedbee15b9a2db8f52a9d270df5'
@@ -384,7 +385,7 @@ def test_the_shipped_sample_world_bakes_the_same_catalog_as_main():
     a pristine `main` prints for the same pack.
     """
     html = cli.weave_html(ROOT / "worlds" / "sample-world")
-    assert 'window.VEFR_SPELLS = null;' in html
+    assert 'window.VEFR_SPELLS =' not in html
     baked = re.search(r'window\.VEFR_ITEMS = (\{.*?\});', html, re.S).group(0)
     assert hashlib.sha256(baked.encode('utf-8')).hexdigest() == \
         'e81e8873e4d5cb793ffae1b08f86861399e09eedbee15b9a2db8f52a9d270df5'
