@@ -82,13 +82,17 @@ function spellsKnown() {
   var out = [];
   var seen = {};
   var books = loadSpellBooks();
-  var add = function (r) {
-    if (!seen[r.id]) { seen[r.id] = true; out.push(r); }
-  };
+  var byLevel = {};
+  spellsByLevel().forEach(function (r) { byLevel[r.id] = true; });
+  // The pack's own order is the order the hero learns in: a spell is
+  // learned when the level reaches it or when its book is read, and the
+  // list must not reorder one way of learning ahead of the other.
   spellRecords().forEach(function (r) {
-    if (books.indexOf(r.id) >= 0) add(r);
+    if (seen[r.id]) return;
+    if (!byLevel[r.id] && books.indexOf(r.id) < 0) return;
+    seen[r.id] = true;
+    out.push(r);
   });
-  spellsByLevel().forEach(add);
   return out;
 }
 // Cast one the hero knows. The whole effect is the item `heal` the bag has
