@@ -404,8 +404,19 @@ def test_a_story_end_a_rule_sets_on_entering_a_region_ends_the_story_with_no_bos
 # the pre-S349 base the stack predates. Re-measured on the merged tree's town
 # fixture pack (two Sections, two wardens, none of them naming a challenge):
 #   fa7119034df3e3920be40aeff01bce0336626dde512a5f0ed0f101f7caed5ed4
+# Moved again 2026-10-11, repairing the V352S re-cut: with vefr#346 in, `vefr
+# check` runs the stamp sweep, and the town fixture's own `throne-hall` - a
+# required landmark 21 wide and 21 tall - is too big for the 48x36 floors its
+# Sections declare (a required room has to be a third of the small side or
+# smaller). The stamp was shrunk to 11x9 in tests/fixtures/stamps, and the
+# descent block a pack bakes carries its stamp records, so the fixture pack's
+# own bytes moved with it. Nothing the warden keys contribute moved: the two
+# Sections, their wardens and every `challenge` reading are the same bytes.
+# Re-measured twice on the merged tree's town fixture pack, readings equal:
+#   ee38bcbc25bc82b2ac4cde9667b14c3e374eb5be4f3e3648d19a333bec8020c1
+#   ee38bcbc25bc82b2ac4cde9667b14c3e374eb5be4f3e3648d19a333bec8020c1
 BAKED_DESCENT_SHA256 = \
-    "fa7119034df3e3920be40aeff01bce0336626dde512a5f0ed0f101f7caed5ed4"
+    "ee38bcbc25bc82b2ac4cde9667b14c3e374eb5be4f3e3648d19a333bec8020c1"
 
 
 def _baked_descent_line(html):
