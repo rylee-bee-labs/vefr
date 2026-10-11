@@ -102,7 +102,9 @@ if (which === 'silent') {
 pin('unknownKey', playerWord('where_next.nope', { place: 'floor-1' }),
   'where_next.nope');
 pin('unfilledSlot', playerWord('where_next.reach', { place: 'floor-1' }),
-  'To reach floor-1, go {direction}.');
+  which === 'override'
+    ? 'To get to floor-1, head {direction}.'
+    : 'To reach floor-1, go {direction}.');
 
 report.ok = true;
 process.stdout.write(JSON.stringify(report));
