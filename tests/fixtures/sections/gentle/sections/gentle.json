@@ -4,8 +4,8 @@
  "floors": 5,
  "size": {"w": [48, 56], "h": [32, 40]},
  "rooms": [10, 14],
- "tiles": {"#": "gentle-wall", ".": "gentle-floor", "u": "gentle-stair-up",
-           "d": "gentle-stair-down"},
+ "tiles": {"#": "dungeon-wall", ".": "dungeon-floor", "u": "dungeon-stairs-up",
+           "d": "dungeon-stairs-down"},
  "fog": {"radius": 3},
  "families": [
   {"family": "rat", "weight": 3, "depth": [1, 5]},
