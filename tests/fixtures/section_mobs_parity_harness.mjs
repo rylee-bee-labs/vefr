@@ -33,8 +33,8 @@ import fs from 'node:fs';
 import { JSDOM } from 'jsdom';
 
 const noop = () => {};
-const cases = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
-const dom = new JSDOM(fs.readFileSync(process.argv[1], 'utf8'), {
+const cases = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'));
+const dom = new JSDOM(fs.readFileSync(process.argv[2], 'utf8'), {
   runScripts: 'dangerously', pretendToBeVisual: true, url: 'http://localhost/',
   beforeParse: (window) => {
     window.HTMLCanvasElement.prototype.getContext = function () {
@@ -73,7 +73,7 @@ if (out.hasApi) {
   for (const run of cases.runs) out.plans.push(G.floorPlan(1, run));
 }
 
-fs.writeFileSync(process.argv[3], JSON.stringify({
+fs.writeFileSync(process.argv[4], JSON.stringify({
   hasApi: out.hasApi,
   cases: { floors: cases.floors, runs: cases.runs },
   floors: out.floors,
