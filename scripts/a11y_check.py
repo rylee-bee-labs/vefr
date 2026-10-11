@@ -109,7 +109,9 @@ def layout_findings(info, width):
         for kid in btn["kids"]:
             if kid["sw"] > kid["cw"]:
                 out.append(f"a descendant of #interact is clipped at {width}px: {kid}")
-        if btn["label"] and btn["label"] not in btn["name"]:
+        # innerText reflects text-transform, the accessible name does not, so
+        # the comparison must fold case; the message prints the real strings.
+        if btn["label"] and btn["label"].casefold() not in btn["name"].casefold():
             out.append(f"#interact's accessible name at {width}px is {btn['name']!r}, "
                        f"without its label {btn['label']!r}")
         if btn["w"] < 44 or btn["h"] < 44:
