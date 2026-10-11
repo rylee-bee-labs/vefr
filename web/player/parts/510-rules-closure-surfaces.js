@@ -36,7 +36,7 @@
     }
     var at = fromHere || entrance;
     if (!at) {
-      var lost = 'No way to ' + place + ' is declared from here.';
+      var lost = playerWord('where_next.no_way', { place: place });
       combatSay(lost);
       rulesNextRecord(place, lost);
       return;
@@ -45,8 +45,13 @@
     var vert = dy < 0 ? 'north' : (dy > 0 ? 'south' : '');
     var horiz = dx < 0 ? 'west' : (dx > 0 ? 'east' : '');
     var dir = vert && horiz ? vert + '-' + horiz : (vert || horiz);
-    var line = dir ? 'To reach ' + place + ', go ' + dir + '.'
-                   : 'The way to ' + place + ' is right here.';
+    // The line the player reads to know what to do, spoken from the
+    // message table rather than built here: a pack may name its own
+    // word for it (part 340), and a pack that names none gets these
+    // exact bytes.
+    var line = dir
+      ? playerWord('where_next.reach', { place: place, direction: dir })
+      : playerWord('where_next.here', { place: place });
     combatSay(line);
     // The hint is an intention, not a flash: it stays in the menu's
     // Where next? panel until the world points somewhere new.

@@ -21,6 +21,13 @@ user of).
 spoken by the validators that own the pack, in their own author's
 words, and they read `EVENTS` below rather than `check`.
 
+`PLAYER_WORDS` is the one row set for words rather than for data: one
+row per action-critical line a player reads in order to act, which a
+pack may replace with its own wording and may leave out entirely. The
+woven player holds the JavaScript twin of the key set (its message
+table, which also holds each row's engine default), and
+`tests/test_player_words.py` fails if the two drift.
+
 Three of the values a block closes on are not plain scalars, and each
 has a kind of its own:
 
@@ -98,6 +105,9 @@ class Key:
                              # | 'enums' | 'glyphs' | 'hundredths-pair'
                              # | 'words' (a list of plain words)
                              # | 'word' (one plain word)
+                             # | 'place-label' (a pack's own sentence, which
+                             #   must name its `{place}` slot and must be
+                             #   words rather than blanks)
                              # | 'str-or-obj' (a string, or an object checked by `sub`)
     choices: tuple = ()     # enum values, in sentence order
     lo: int | None = None   # int bounds, str length bounds, or hundredths
@@ -142,6 +152,8 @@ _DEFAULTS = {
     'wrong-element': '{path} must be {noun}, such as {sample}',
     'not-hundredths': '{path} must be a whole number of hundredths, such as {sample}',
     'no-name-slot': '{path} must name the monster as {{name}}',
+    'no-place-slot': '{path} must name the place as {{place}}',
+    'blank-word': '{path} must be words a player can read, not blanks',
     'not-a-list': 'affixes must be a list of affix records',
     'duplicate-id': 'every affix id must be its own, and {id!r} is used twice',
     'undefined-affix': ('every affix a section names must be defined by the '
@@ -177,6 +189,7 @@ _DEFAULTS = {
 # wins over its block's, and a block's over these - `sections` above.
 _KIND_SAY = {
     'str': {'wrong-type': '{path} must be a string'},
+    'place-label': {'wrong-type': '{path} must be the pack\'s own words for it'},
     'int': {'wrong-type': '{path} must be a whole number'},
     'bool': {'wrong-type': '{path} must be a yes or a no'},
     'obj': {'wrong-type': '{path} must be an object'},
@@ -267,7 +280,7 @@ def _as_hundredths(n) -> str:
 
 
 def _type_ok(kind: str, value) -> bool:
-    if kind in ('str', 'name-label'):
+    if kind in ('str', 'name-label', 'place-label'):
         return isinstance(value, str)
     if kind == 'str-or-obj':
         return isinstance(value, (str, dict))
@@ -319,7 +332,7 @@ def _out_of_range(key: Key, value) -> bool:
     if key.kind in ('int', 'pair'):
         return ((key.lo is not None and value < key.lo)
                 or (key.hi is not None and value > key.hi))
-    if key.kind in ('str', 'name-label') or (key.kind == 'str-or-obj' and isinstance(value, str)):
+    if key.kind in ('str', 'name-label', 'place-label') or (key.kind == 'str-or-obj' and isinstance(value, str)):
         n = len(value)
         return ((key.lo is not None and n < key.lo)
                 or (key.hi is not None and n > key.hi))
@@ -395,9 +408,10 @@ def _glyph_problem(block, key, value, path):
 
 def _shape_problem(block, key, value, path):
     """The one problem with a value that is the right type and still
-    cannot be read: a label that does not name its monster, a hundredth
-    that is not whole, a wrong pair half, a glyph with no tileset, or a
-    wrong list element."""
+    cannot be read: a label that does not name its monster, a pack's own
+    sentence that does not name its place or says nothing at all, a
+    hundredth that is not whole, a wrong pair half, a glyph with no
+    tileset, or a wrong list element."""
     pointer = f'/{block.name}/{key.name}'
     if key.kind == 'name-label':
         if '{name}' not in value:
@@ -409,6 +423,17 @@ def _shape_problem(block, key, value, path):
             return None
         return Problem('wrong-element', pointer,
                        _say(block, key, 'wrong-element').format(path=path))
+    if key.kind == 'place-label':
+        # The blank first, then the slot: a sentence that says nothing at
+        # all cannot be missing its place, and telling an author to add
+        # `{place}` to a string of spaces is not what is wrong with it.
+        if not value.strip():
+            return Problem('blank-word', pointer,
+                           _say(block, key, 'blank-word').format(path=path))
+        if '{place}' not in value:
+            return Problem('no-place-slot', pointer,
+                           _say(block, key, 'no-place-slot').format(path=path))
+        return None
     if key.kind == 'glyphs':
         return _glyph_problem(block, key, value, path)
     if key.kind == 'hundredths':
@@ -458,6 +483,15 @@ def _value_problem(block, key, value, path):
                 path=path, kind=key.kind))
     if key.kind == 'hundredths' and not _whole_hundredths(value):
         return _shape_problem(block, key, value, path)
+    if key.kind == 'place-label':
+        # A pack's own sentence is read before it is measured: a blank
+        # one is a blank one whatever its length, and a length bound on
+        # an empty string would say "between 1 and 200" instead of the
+        # thing the author has to go and write. A sentence that reads
+        # well is still measured after it.
+        problem = _shape_problem(block, key, value, path)
+        if problem is not None:
+            return problem
     if key.kind in ('pair', 'glyphs', 'enums'):
         # A pair always reports at the half that is wrong, so it never
         # answers as one value: `groups.minions[1]` names the problem.
@@ -1226,6 +1260,39 @@ SCENARIO = Block(
     ),
 )
 
+# ------------------------------------------------ the player's own words
+#
+# v0 of the player-words contract: one row per action-critical line a
+# player has to read in order to act, and a pack may name its own word
+# for any of them (`world.json`'s `player_words`). It is optional and
+# additive - a pack that names none plays the engine's own wording,
+# byte for byte, and is never told a word it did not ask about.
+#
+# Every key here is the same key as one row of the woven player's
+# message table (`VEFR_PLAYER_WORDS` in `web/player/parts/340-where-next-hints.js`),
+# which holds the engine's known-good wording as each row's default:
+# the one place a player's sentence is written, and the one place a
+# pack replaces it. `tests/test_player_words.py` fails if the two
+# tables drift, the same way `tests/test_event_table.py` does for
+# `EVENTS`.
+#
+# Every row is a `place-label`: the sentence must name its `{place}`
+# slot (the engine hands it the place being pointed at) and must be
+# words rather than blanks. Nothing is required, and a wrong value is
+# one plain sentence naming this file and the key - never a default
+# substitution, because a pack that meant to speak and did not would
+# otherwise see its own line in play without being told.
+PLAYER_WORDS = Block(
+    name='player_words',
+    example='{"where_next.reach": "To get to {place}, head {direction}."}',
+    keys=(
+        Key('where_next.goal', 'place-label', lo=1, hi=200),
+        Key('where_next.reach', 'place-label', lo=1, hi=200),
+        Key('where_next.here', 'place-label', lo=1, hi=200),
+        Key('where_next.no_way', 'place-label', lo=1, hi=200),
+    ),
+)
+
 BLOCKS = {
     'saves': SAVES,
     'sound': SOUND,
@@ -1240,6 +1307,7 @@ BLOCKS = {
     'scenario': SCENARIO,
     'scenario start': SCENARIO_START,
     'item': ITEM,
+    'player_words': PLAYER_WORDS,
 }
 
 
