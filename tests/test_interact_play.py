@@ -97,7 +97,8 @@ def test_the_fixture_wakes_on_the_pinned_tiles(play):
     assert log["start-hero"] == {"hp": 3, "max": 3, "atk": 2, "at": [1, 1]}
     assert log["start-gold"] == 5
     assert log["start-rat"] == {"id": "storeroom-rat", "at": [2, 1],
-                                "hp": 4, "atk": 1, "sight": 0, "alive": True}
+                                "hp": 4, "atk": 1, "sight": 0, "alive": True,
+                                "yields": False}
     assert log["start-hint"] == "Fight a storeroom rat"
     assert log["start-label"] == "Fight a storeroom rat"
 
