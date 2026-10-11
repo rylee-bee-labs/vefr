@@ -30,6 +30,7 @@ import shutil
 from collections import deque
 from pathlib import Path
 
+from . import library
 from .maplab import _map_tile_walkable, load_pack
 
 NORMALIZER_VERSION = 1
@@ -780,8 +781,8 @@ def _write_map_cells(path: Path, cells: dict, region_key: str) -> str:
     return "".join(out)
 
 
-def _declared_items(pack_dir: Path) -> set[str]:
-    """The item ids the pack declares, via the loader then world.json."""
+def _pack_items(pack_dir: Path) -> dict:
+    """The pack's `items` catalog as the file holds it, loader first."""
     items = None
     try:
         items = load_pack(pack_dir).get("items")
@@ -793,7 +794,56 @@ def _declared_items(pack_dir: Path) -> set[str]:
             items = world.get("items")
         except (OSError, ValueError):
             items = None
-    return set(items) if isinstance(items, dict) else set()
+    return items if isinstance(items, dict) else {}
+
+
+def _declared_items(pack_dir: Path) -> set[str]:
+    """The item ids the player can really be given.
+
+    The catalog `weave` bakes, not the raw `items` keys the file holds:
+    `cli._player_items` drops an entry with no `name`, so a drop naming
+    it passes a raw-key check and then pays nothing at play, and there
+    is no honest way to call that declared.
+
+    "Real" is read by `library._declared_items`, the same read the chest
+    check, the region enemy and the Section families read, so a Blueprint
+    family and a chest book cannot hold two opinions about one id. The
+    caller adds this Blueprint's own things to the answer, which the
+    weave bakes too.
+    """
+    return library._declared_items(_pack_items(pack_dir))
+
+
+def _written_items(pack_dir: Path) -> set[str]:
+    """Every id `items` names on disk, named or not.
+
+    A file question rather than a catalog one: "does a hand-written
+    entry already hold this key?" is about the file, whatever the item
+    reader would make of it.
+    """
+    return set(_pack_items(pack_dir))
+
+
+def _refuse_unknown_item(item_id, word: str, where: str,
+                         offered: set, written: set) -> None:
+    """Refuse an id the player can never be given, naming which failure.
+
+    `offered` is what the weave bakes (the catalog, plus this
+    Blueprint's own things) and `written` every key on disk, so the
+    sentence can tell a typo (the pack never declared it) from an entry
+    the item reader drops (declared, but with no `name`, so the weave
+    filters the drop and the player is given nothing at all).
+    """
+    if not isinstance(item_id, str):
+        raise BlueprintError(f"unknown item {item_id!r} in {word}", where)
+    if item_id in offered:
+        return
+    if item_id in written:
+        raise BlueprintError(
+            f"the item {item_id!r} in {word} is not one the player can be "
+            f"given: an `items` entry with no `name` is dropped from the "
+            f"weave", where)
+    raise BlueprintError(f"unknown item {item_id!r} in {word}", where)
 
 
 def _pack_item(pack: Path, item_id: str):
@@ -935,11 +985,13 @@ def plan(source: dict, *, pack_dir: str | Path) -> tuple[dict[str, dict], list[d
     families = source.get("families") or {}
     regions = source.get("regions") or {}
     declared = _declared_items(pack)
+    written = _written_items(pack)
     owned = _owned_pointers(pack)
     listed = source.get("things") or []
     # A thing's own id is an item this Blueprint declares, so a carrier
     # in this same file may drop it without tripping the check that
-    # refuses an unknown item in `drops`.
+    # refuses an unknown item in `drops`. A thing always carries a name,
+    # so its entry bakes.
     items = declared | {thing["id"] for thing in listed}
 
     # Every family is resolved, used or not: an unused family with an
@@ -952,7 +1004,7 @@ def plan(source: dict, *, pack_dir: str | Path) -> tuple[dict[str, dict], list[d
         rbase = f"/regions/{_esc(region_key)}"
         _region_dir(pack, region_key, rbase)
         records = _expand_enemies(
-            region.get("enemies") or [], rbase, families, items)
+            region.get("enemies") or [], rbase, families, items, written)
         entry = {
             "enemies": records,
             # A format-3 region that says nothing about `enemies` owns
@@ -962,14 +1014,14 @@ def plan(source: dict, *, pack_dir: str | Path) -> tuple[dict[str, dict], list[d
         }
         if version == 3 and region.get("places"):
             entry["places"] = _expand_places(
-                pack, region_key, region, rbase, items, owned)
+                pack, region_key, region, rbase, items, written, owned)
         out[region_key] = entry
-    things = _expand_things(pack, source, listed, out, declared, owned)
+    things = _expand_things(pack, source, listed, out, written, owned)
     return out, things
 
 
 def _expand_enemies(instances: list, rbase: str, families: dict,
-                    items: set) -> list[dict]:
+                    items: set, written: set) -> list[dict]:
     """One region's enemy records, in file order."""
     records: list[dict] = []
     seen_ids: set = set()
@@ -1007,17 +1059,14 @@ def _expand_enemies(instances: list, rbase: str, families: dict,
         drops, where = fields.get("drops", (None, ""))
         if isinstance(drops, list):
             for drop in drops:
-                if not isinstance(drop, str) or drop not in items:
-                    raise BlueprintError(
-                        f"unknown item {drop!r} in drops", where
-                    )
+                _refuse_unknown_item(drop, "drops", where, items, written)
 
         records.append({key: record[key] for key in FIELD_ORDER if key in record})
     return records
 
 
 def _expand_things(pack: Path, source: dict, listed: list,
-                   expanded: dict, declared: set, owned: dict) -> list[dict]:
+                   expanded: dict, written: set, owned: dict) -> list[dict]:
     """The `items` entries one source's things write, and the drops they
     append to their carriers.
 
@@ -1052,7 +1101,7 @@ def _expand_things(pack: Path, source: dict, listed: list,
         # lock that no longer names it only means the list was edited
         # (deleting `things` and putting it back), and the round trip
         # has to work.
-        if (tid in declared and pointer not in owned.get("world.json", set())
+        if (tid in written and pointer not in owned.get("world.json", set())
                 and _pack_item(pack, tid) != item):
             raise BlueprintError(
                 f"the pack declares the item {tid!r} by hand, and a thing "
@@ -1132,7 +1181,7 @@ def _pack_enemies(pack: Path) -> dict[str, list[dict]]:
 
 
 def _expand_places(pack: Path, region_key: str, region: dict, rbase: str,
-                   items: set, owned: dict) -> list[dict]:
+                   items: set, written: set, owned: dict) -> list[dict]:
     """One region's places, each resolved to the tile it stands on.
 
     Places resolve in source order, so a later one may anchor an
@@ -1190,9 +1239,8 @@ def _expand_places(pack: Path, region_key: str, region: dict, rbase: str,
                           "to_at": [to_at[0], to_at[1]]}
             needs = place.get("needs")
             if needs is not None:
-                if needs not in items:
-                    raise BlueprintError(
-                        f"unknown item {needs!r} in needs", f"{pbase}/needs")
+                _refuse_unknown_item(
+                    needs, "needs", f"{pbase}/needs", items, written)
                 transition["requires"] = {"item": needs}
             if place.get("locked_text") is not None:
                 transition["locked_text"] = place["locked_text"]
