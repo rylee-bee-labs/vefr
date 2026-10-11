@@ -310,8 +310,12 @@ def at_boot(pack, spec):
 
 
 def _arrive(page, boot):
-    """Walk the hero to the boot's start; `(report, problem or None)`."""
-    who = boot['label']
+    """Walk the hero to the boot's start; `(report, problem or None)`.
+
+    `who` names the boot: its `label` where it has one, else its `name`,
+    so a hand-built boot from before `label` existed still reads as itself.
+    """
+    who = boot.get('label') or boot.get('name') or 'this look'
     page.wait_for_timeout(200)
     report = page.evaluate(_ARRIVE_JS, boot['start'])
     page.wait_for_timeout(300)
