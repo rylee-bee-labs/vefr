@@ -103,7 +103,21 @@ def _open(browser, html, width, height):
     page.goto(html.as_uri())
     page.click("#ts-enter")
     page.wait_for_function("window.VEFR_COMBAT", timeout=15000)
-    page.wait_for_timeout(400)
+    # The game paints its verbs and its Interact label on its own frame loop,
+    # and `textContent` is live while a box comes from the last layout pass. A
+    # fixed pause therefore reads whatever pass the machine happened to be on;
+    # under the whole suite at once that was the pass before the acts were
+    # rendered, and a label with no box (0x0) is what the read used to see.
+    # Wait, bounded, for the pieces this file measures, instead.
+    page.wait_for_function(
+        "() => {"
+        "  const lab = document.getElementById('interact-label');"
+        "  const box = lab && lab.getBoundingClientRect();"
+        "  const row = document.getElementById('verb-row');"
+        "  return !!box && box.width > 0 && box.height > 0"
+        "    && !!row && !row.hidden"
+        "    && row.querySelectorAll('button').length >= 1;"
+        "}", timeout=15000)
     return ctx, page
 
 
@@ -291,7 +305,11 @@ def test_interact_keeps_its_label_when_the_target_names_something_long(
         page.evaluate(
             "() => { document.getElementById('interact-label').textContent ="
             " 'Go down the stairs to the cellar below'; }")
-        page.wait_for_timeout(100)
+        # The same staleness as in `_open`: `innerText` is rendered text, so
+        # this waits for the pass that carries the new words.
+        page.wait_for_function(
+            "() => document.getElementById('interact-label').innerText"
+            ".toUpperCase().includes('CELLAR')", timeout=15000)
         info = page.evaluate(INTERACT)
         assert "Go down the stairs" in info["label"]
         assert info["sw"] <= info["cw"], (
