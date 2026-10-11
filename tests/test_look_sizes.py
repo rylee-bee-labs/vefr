@@ -60,8 +60,11 @@ def browser():
             if os.environ.get("VEFR_BROWSER_REQUIRED") == "1":
                 pytest.fail(f"browser required but unavailable: {e}")
             pytest.skip(f"no Chromium for Playwright: {e}")
-        yield instance
         instance.close()
+    # This is only the skip guard. It holds no live browser because
+    # `devtools._session` opens its own `sync_playwright()` per `look`, and two
+    # sync Playwright sessions cannot share one thread.
+    yield instance
 
 
 def _png_size(path):
@@ -368,17 +371,22 @@ SEED_JS = """() => {
 }"""
 
 
-def _read_seed(browser, html, seed=None):
-    ctx = browser.new_context()
-    page = ctx.new_page()
-    try:
-        page.goto(devtools._page_uri(html, seed))
-        page.click("#ts-enter")
-        page.wait_for_function("window.VEFR_DESCENT", timeout=15000)
-        page.wait_for_timeout(500)
-        return page.evaluate(SEED_JS)
-    finally:
-        ctx.close()
+def _read_seed(html, seed=None):
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        ctx = browser.new_context()
+        page = ctx.new_page()
+        try:
+            page.goto(devtools._page_uri(html, seed))
+            page.click("#ts-enter")
+            page.wait_for_function("window.VEFR_DESCENT", timeout=15000)
+            page.wait_for_timeout(500)
+            return page.evaluate(SEED_JS)
+        finally:
+            ctx.close()
+            browser.close()
 
 
 def test_the_seed_parameter_starts_the_descent_with_that_base_seed(
@@ -387,10 +395,10 @@ def test_the_seed_parameter_starts_the_descent_with_that_base_seed(
     `run_seed: hello`: the same base seed and the same floor, drawn from
     the same key."""
     baked, other = descent_packs
-    with_param = _read_seed(browser, _woven(baked, tmp_path, "baked.html"),
+    with_param = _read_seed(_woven(baked, tmp_path, "baked.html"),
                             seed="hello")
-    without = _read_seed(browser, _woven(baked, tmp_path, "baked2.html"))
-    other_pack = _read_seed(browser, _woven(other, tmp_path, "other.html"),
+    without = _read_seed(_woven(baked, tmp_path, "baked2.html"))
+    other_pack = _read_seed(_woven(other, tmp_path, "other.html"),
                             seed="hello")
     assert with_param["baseSeed"] == "hello"
     assert with_param["seedFor0"] == "hello"
@@ -407,10 +415,10 @@ def test_the_seed_parameter_starts_the_descent_with_that_base_seed(
 def test_no_seed_parameter_leaves_the_pages_seed_exactly_as_it_was(
         browser, descent_packs, tmp_path):
     baked, other = descent_packs
-    opened = _read_seed(browser, _woven(baked, tmp_path, "plain.html"))
+    opened = _read_seed(_woven(baked, tmp_path, "plain.html"))
     assert opened["param"] == ""
     assert opened["baseSeed"] == "hello", "the pack's own seed still wins"
-    its_own = _read_seed(browser, _woven(other, tmp_path, "own.html"))
+    its_own = _read_seed(_woven(other, tmp_path, "own.html"))
     assert its_own["baseSeed"] == "run-a"
     assert its_own["rows"] != opened["rows"], "the fixtures are not one floor"
 
@@ -420,21 +428,26 @@ def test_a_pack_with_no_descent_ignores_the_seed_exactly_as_it_did_today(
     """No descent means no seed to choose. The parameter is read by the
     descent, which is off, so the game is the game it was - and `vefr
     look --seed` still writes its screenshot."""
-    ctx = browser.new_context()
-    page = ctx.new_page()
-    try:
-        page.goto(devtools._page_uri(woven, seed="hello"))
-        page.click("#ts-enter")
-        page.wait_for_function("window.VEFR_COMBAT", timeout=15000)
-        page.wait_for_timeout(400)
-        state = page.evaluate(
-            "() => ({on: !!(window.VEFR_DESCENT && window.VEFR_DESCENT.on()),"
-            " url: location.search, combat: !!window.VEFR_COMBAT})")
-        assert state["on"] is False, "the sample world does carry a descent"
-        assert state["url"] == f"?{devtools.SEED_PARAM}=hello"
-        assert state["combat"] is True, "the game came up and played"
-    finally:
-        ctx.close()
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as p:
+        instance = p.chromium.launch()
+        ctx = instance.new_context()
+        page = ctx.new_page()
+        try:
+            page.goto(devtools._page_uri(woven, seed="hello"))
+            page.click("#ts-enter")
+            page.wait_for_function("window.VEFR_COMBAT", timeout=15000)
+            page.wait_for_timeout(400)
+            state = page.evaluate(
+                "() => ({on: !!(window.VEFR_DESCENT && window.VEFR_DESCENT.on()),"
+                " url: location.search, combat: !!window.VEFR_COMBAT})")
+            assert state["on"] is False, "the sample world does carry a descent"
+            assert state["url"] == f"?{devtools.SEED_PARAM}=hello"
+            assert state["combat"] is True, "the game came up and played"
+        finally:
+            ctx.close()
+            instance.close()
     out = Path(woven).parent / "seeded.png"
     assert _look(html=str(woven), out=str(out), seed="hello") == 0
     assert out.is_file()
