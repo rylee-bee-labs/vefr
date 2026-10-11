@@ -245,7 +245,32 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # `PYTHONPATH=src python3 -c ...`, no uv in the sandbox), readings equal:
 #   4927bff9b106baf362e253589a9e01f6a1e2e41c70e3af8ea2339fc4ca66cfc5
 #   4927bff9b106baf362e253589a9e01f6a1e2e41c70e3af8ea2339fc4ca66cfc5
-NO_SKIN_WEAVE_SHA256 = "4927bff9b106baf362e253589a9e01f6a1e2e41c70e3af8ea2339fc4ca66cfc5"
+# Last moved 2026-10-10, on the E8d tree. E8d changed the player: it adds
+# ADR 0015 Amendment 1's warden's `challenge`, `yields` and `fightable`
+# (the key a rule challenge delivers, a beaten warden that stays, and a
+# warden a blow cannot land on). The player template is woven into every
+# pack, so the digest had to be recomputed rather than carried over.
+# Last moved 2026-10-11, repairing the E8d union. E8d changed the player:
+# it adds ADR 0015 Amendment 1's warden's `challenge`, `yields` and
+# `fightable` (the key a rule challenge delivers, a beaten warden that
+# stays, and a warden a blow cannot land on). The repair keeps a `yields`
+# warden hostile until it is actually beaten - on the live entry `yields`
+# is a state, not the pack's key - so `enemyEntry` no longer copies it and
+# the player template moved again. The template is woven into every pack,
+# so the digest had to be recomputed rather than carried over.
+# Nothing about this pack's own bytes moved - `worlds/sample-world`
+# declares no skin and no descent, so `window.VEFR_TOWN_STATES` and
+# `window.VEFR_DESCENT_DEF` bake the literal null here exactly as
+# `window.VEFR_SKIN` does, and E8d did not touch the pack at all.
+# `tests/test_warden_challenge.py` holds the pin that says so for a pack
+# that DOES name a descent: the bytes the pack itself contributes.
+# Re-cut 2026-10-11, the E8d warden stack onto current `main` (after #402): the
+# woven player moved on the union, so every pack's weave moves. Measured twice
+# with the documented command above (as `PYTHONPATH=src python3 -c ...`, no uv
+# in the sandbox), readings equal:
+#   5fe9f907e61cf39c96f6d442605bce131fc15786d2491ddb61bc0824e82ff580
+#   5fe9f907e61cf39c96f6d442605bce131fc15786d2491ddb61bc0824e82ff580
+NO_SKIN_WEAVE_SHA256 = "5fe9f907e61cf39c96f6d442605bce131fc15786d2491ddb61bc0824e82ff580"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

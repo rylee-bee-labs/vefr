@@ -362,8 +362,8 @@ what it says; the list is one block per region.
 ### the vault, the warden and the town gate
 
 A Section's `warden` is a family id, or a record
-`{"family", "id"?, "carries"?}`. Its `vault` is a stamp id, or a record
-`{"stamp", "sets"}`:
+`{"family", "id"?, "carries"?, "challenge"?, "yields"?, "fightable"?}`. Its
+`vault` is a stamp id, or a record `{"stamp", "sets"}`:
 
 ```json
 {"id": "cellar", "floors": 9,
@@ -384,6 +384,32 @@ rule on the note's `opens` - and it is what the town gate is guarded by:
 {"id": "the-first-note-is-read",
  "when": {"opens": {"what": "the-first-note"}},
  "then": [{"set": "vault-1-read"}], "once": true}
+```
+
+Three optional keys say how this particular warden is passed, and every
+one of them defaults to what the two lines above already do - so a pack
+that names none of them plays exactly as it did:
+
+- **`"challenge": "rule"`** - a pack rule sets `warden:<id>:c<c>` instead
+  (on `picks-up`, `uses-with`, `comes-near` or any other event), and the
+  key it `carries` goes into the bag **the moment that flag is set**,
+  with a line, the same as on death. Killing such a warden passes
+  nothing: the flag is the rule's to set. The vault door, the town gate
+  and the save rules read only the flag, so none of them change.
+- **`"yields": true`** - a beaten warden stays on its anchor, no longer
+  hostile, instead of vanishing. It is drawn in a muted colour and it
+  comes back the same way when the floor is rebuilt.
+- **`"fightable": false`** - only with `"challenge": "rule"`, and only
+  beside it: a warden that cannot be struck is one no rule can complete,
+  so `vefr check` refuses the pair in one sentence. Everything else
+  about it is unchanged - it still sleeps, wakes and hunts by ADR 0014,
+  so the hall stays dangerous and the Section's danger still rises.
+
+```json
+{"id": "cellar", "floors": 9,
+ "warden": {"family": "cellar-king", "id": "ashwing",
+            "carries": "ashwing-key", "challenge": "rule"},
+ "vault": {"stamp": "vault-small", "sets": "vault-1-read"}}
 ```
 
 The gate itself is never written by a pack. A Section whose vault names a
@@ -409,13 +435,22 @@ A Section ends its story on its vault's `sets` flag, so name the **last**
 one the same flag the descent ends on. A pack that ends without a final
 boss sets `story_end` with any rule instead.
 
-Code: `src/vefr/delve.py` (`warden_of`, `vault_of`, `town_seen_flag`,
-`story_end_of`, `act_number`), `src/vefr/locks.py`
-(`progress_findings`), `web/player/parts/397-the-descent.js` (the Section
-expansion that emits the gate and the `enters town` rule);
-tests: `tests/test_wardens.py`, `tests/test_vault_door.py`,
-`tests/test_vault_contents.py`, `tests/test_town_states.py`,
-`tests/test_progress_walk.py`, `tests/test_descent_story_end.py`.
+A warden's first step is its **challenge**, not its killing: a `defeat`
+warden is beaten by the walk, and a `rule` warden is completed by the
+rule that sets its flag - so a `rule` warden with no such rule is one
+sentence, the same missing setter a vault note's flag is.
+
+Code: `src/vefr/delve.py` (`warden_of`, `warden_challenge`, `warden_yields`,
+`warden_fightable`, `vault_of`, `town_seen_flag`, `story_end_of`,
+`act_number`), `src/vefr/locks.py` (`progress_findings`),
+`web/player/parts/397-the-descent.js` (the Section expansion that emits
+the gate and the `enters town` rule, and `challengeSet`, the one seam a
+rule's `set` asks);
+tests: `tests/test_wardens.py`, `tests/test_warden_challenge.py`,
+`tests/test_vault_door.py`, `tests/test_vault_contents.py`,
+`tests/test_town_states.py`, `tests/test_progress_walk.py`,
+`tests/test_descent_story_end.py`.
+
 ### the Section contract: what a Section may hold
 
 The keys a Section pack (`sections/<id>.json`) may hold, in the order

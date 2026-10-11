@@ -76,7 +76,7 @@ def test_the_fight_starts_where_the_fixture_says(fight):
     assert log["gold-line0-hidden"] is False
     rat = _by_id(start)["cellar-rat"]
     assert rat == {"id": "cellar-rat", "at": [2, 1], "hp": 4, "atk": 1,
-                   "sight": 6, "alive": True}
+                   "sight": 6, "alive": True, "yields": False}
     pale = _by_id(start)["pale-thing"]
     assert pale["at"] == [7, 1] and pale["atk"] == 2 and pale["sight"] == 6
 
@@ -123,7 +123,7 @@ def test_death_is_cozy_and_the_hero_wakes_whole(fight):
     assert _by_id(after)["cellar-rat"]["alive"] is False
     assert _by_id(after)["pale-thing"] == {
         "id": "pale-thing", "at": [7, 1], "hp": 4, "atk": 2,
-        "sight": 6, "alive": True}
+        "sight": 6, "alive": True, "yields": False}
 
 
 def test_a_kill_leaves_its_drop_on_the_floor(fight):

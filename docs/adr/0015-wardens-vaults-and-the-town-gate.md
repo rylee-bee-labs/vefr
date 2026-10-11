@@ -4,7 +4,7 @@ Date: 2026-10-04
 
 ## Status
 
-Proposed. Becomes Accepted when slice E8 merges. Plan: `docs/plans/endless-dungeon/PLAN.md` sections 1, 2, 4 and 5.
+Accepted. E8 merged in five parts (E8-0, E8a, E8b, E8c, E8d), 2026-10-05 to 2026-10-10. Plan: `docs/plans/endless-dungeon/PLAN.md` sections 1, 2, 4 and 5.
 
 **Progress (2026-10-09).** E8a has landed the warden, in two parts:
 - **Spawn and flag:** the Section's warden stands on the v3 warden anchor as `w`, and its defeat sets `warden:<id>:c<c>`, which keeps it beaten.
@@ -18,6 +18,13 @@ E8b landed the vault: the stamp's socket is a door shut until the warden's flag 
 - **The gate and the walk.** A Section's `vault` may be a record `{"stamp", "sets"}`; `sets` is the flag its note records, and it guards `town-seen:<section>:c<c>`, which the Section expansion's rule on `enters town` sets. The gate rides `requires` on the warden's down stair (and on any town stair entering a Section, which is the elevator rule's to grow). `vefr check` runs the flag-only progress walk inside its 200-seed Section sweep: checks 4 and 5, one clear sentence for a flag nobody can set.
 
 The vault record's `note`, `chest`, `needs` and `home`, the warden record's other keys (`hp`, `atk`, `scale`, `hall`, `placement`) and Amendment 1's `challenge`, `yields` and `fightable` are refused as unknown until their slices (E8d for the amendment) add them. E10 has since added the warden record's `endless` (the `affixes` bound this ADR names) and the Section's own `endless` block. The paid shortcut is E10, and so is cycle 1 of the walk.
+
+**E8d has landed Amendment 1's `challenge`, `yields` and `fightable** (2026-10-10), and with it the last of E8:
+- **The challenge.** `challenge` is `defeat` (the default, and exactly what E8a shipped) or `rule`. A `rule` warden is completed by a pack rule setting `warden:<id>:c<c>`, and the moment that flag is set the key it `carries` goes into the bag with a line, the same as on death. The vault door, the town gate and the save rules read only the flag and did not change.
+- **The two presentation keys.** `yields: true` leaves a beaten warden on its anchor, no longer hostile, instead of vanishing - including when the floor is rebuilt, which is the one exception to "a warden whose flag is set is not spawned". The flag is what makes it stay, so a `rule` warden killed in passing leaves its anchor and comes back hostile when the floor is rebuilt: its challenge is not complete, and nothing else may say that it is. `fightable: false` takes the blow away and nothing else: the warden still sleeps, wakes and hunts by ADR 0014, and it is refused beside any challenge but `"rule"`, because a warden nobody can fight and no rule can pass is a Section that cannot be finished.
+- **Check 5's first step** is now the challenge rather than the killing, and a `rule` warden with no rule to set its flag fails the walk with one sentence, the same missing setter a vault note's flag is.
+
+**What is still not here, and is not this ADR's slices.** The paid shortcut and cycle 1 of the walk are E10 (see below). The vault record's `note`, `chest`, `needs` and `home` and the warden record's `hp`, `atk`, `scale`, `hall`, `placement` and `endless` are still refused as unknown keys: `needs` is already covered by `carries` (check 3), the note and the chest are library books pinned to the vault's anchors, and no E8 slice reads the rest. `endless.affixes` is with endless mode. Note that `docs/plans/endless-dungeon/PLAN.md` line 260 lists the paid shortcut inside its E8 row, which is the one place this ADR's own numbering (the shortcut is E10, here and in the Progress paragraph above) and the plan's slice table disagree.
 
 This ADR amends **ADR 0006**: "act advance" becomes **town states**. The edit to 0006 landed with E8c, in which ADR 0006's Status changed to **Superseded in part**.
 
