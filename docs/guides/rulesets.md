@@ -421,6 +421,10 @@ read. Both are ordinary `requires` locks - the one gate mechanism - and
 `lockOpen` reads the story flag out of the descent's own save. A Section
 whose `vault` is the bare stamp id names no flag and gates nothing.
 
+The stair that leads past the last Section into endless cycle 1 is the one
+stair that does not take the town gate: it requires the pack's `story_end`
+flag (default `king-slain`) and says so while it is shut.
+
 ### the progress walk (`vefr check`)
 
 `vefr check` walks every Section's story before it sweeps its floors: a
