@@ -265,19 +265,20 @@ def test_the_walk_finds_the_missing_rule_where_the_author_looks(tmp_path):
 
 def _drop_pack(where, drops):
     """A real pack directory: the catalog, the Blueprint and one Section
-    whose warden is that family. The checks are asked of the pack, not of
-    the helper, because a check nothing calls is not a check."""
+    whose warden is a family of its own, outside its spawning list as the
+    town fixture's is. The checks are asked of the pack, not of the helper,
+    because a check nothing calls is not a check."""
     (where / "sections").mkdir(parents=True)
     (where / "world.json").write_text(json.dumps(
         {"items": {"pebble": {"name": "a grey pebble"}}}))
+    defaults = {"name": "a grey rat", "hp": 1, "atk": 1, "sight": 5}
     (where / "blueprint.json").write_text(json.dumps({
         "blueprint": 1,
-        "families": {"rat": {"defaults": {"name": "a grey rat", "hp": 1,
-                                          "atk": 1, "sight": 5,
-                                          "drops": drops}}},
+        "families": {"rat": {"defaults": {**defaults, "drops": ["pebble"]}},
+                     "cellar-boss": {"defaults": {**defaults, "drops": drops}}},
         "regions": {}}))
     section = copy.deepcopy(make_town_pack.SECTIONS["cellar"])
-    section["warden"] = {"family": "rat"}
+    section["warden"] = {"family": "cellar-boss"}
     (where / "sections" / "cellar.json").write_text(json.dumps(section, indent=2))
     return where.resolve()
 
@@ -315,7 +316,7 @@ def test_a_drop_the_pack_declares_with_no_name_is_still_no_item(tmp_path):
     an id under a nameless entry is an id no drop can hand over."""
     where = _drop_pack(tmp_path / "nameless", ["brass-key"])
     world = json.loads((where / "world.json").read_text(encoding="utf-8"))
-    world["items"] = {"brass-key": {"sprite": "key"}}
+    world["items"]["brass-key"] = {"sprite": "key"}
     (where / "world.json").write_text(json.dumps(world), encoding="utf-8")
     said = maplab.section_errors(where)
     assert len(said) == 1 and "brass-key" in said[0], said
