@@ -7,7 +7,7 @@ sample world (Emberfield).
 ## Quick start
 
 ```sh
-git clone https://github.com/Rylee-Bee/vefr.git
+git clone https://github.com/rylee-bee-labs/vefr.git
 cd vefr
 podman compose up -d
 open http://localhost:8820

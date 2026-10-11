@@ -28,7 +28,7 @@ Get the code and run it, from a checkout (Python 3.11+ and
 [`uv`](https://docs.astral.sh/uv/)):
 
 ```sh
-git clone https://github.com/Rylee-Bee/vefr.git
+git clone https://github.com/rylee-bee-labs/vefr.git
 cd vefr
 uv sync --group test
 uv run uvicorn vefr.main:app --app-dir src --port 8820

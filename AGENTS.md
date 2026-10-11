@@ -295,7 +295,7 @@ Journalism, a journalism and taqueria game, as a single asset in v2.0.0
 
 ## Project identity
 
-This repository adopts [Play-Nice Contracts](https://github.com/Rylee-Bee/play-nice-contracts)
+This repository adopts [Play-Nice Contracts](https://github.com/rylee-bee-labs/play-nice-contracts)
 as its shared working rules: evidence before generating content,
 explicit state, asking instead of guessing, and minimum accessibility
 standards. See `.project/contracts/adoption.yaml` for the adoption

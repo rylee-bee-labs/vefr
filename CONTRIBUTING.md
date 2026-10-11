@@ -6,7 +6,7 @@ playable worlds.
 **Quick start:** clone, install, test, run:
 
 ```sh
-git clone https://github.com/Rylee-Bee/vefr.git
+git clone https://github.com/rylee-bee-labs/vefr.git
 cd vefr
 uv sync --group test
 uv run --group test pytest -q       # should pass — count varies; check no new failures
@@ -26,7 +26,7 @@ From here, pick what you want to do:
 
 ## Play-Nice Contracts
 
-This project adopts [Play-Nice Contracts](https://github.com/Rylee-Bee/play-nice-contracts)
+This project adopts [Play-Nice Contracts](https://github.com/rylee-bee-labs/play-nice-contracts)
 as its shared cooperation constitution: truth and evidence before
 generating content, explicit state, asking instead of guessing,
 and accessibility floors. If your change touches a player-facing
@@ -200,13 +200,13 @@ For messages with quotes or newlines, use `git commit -F <file>`.
 
 ## Play-Nice Contracts
 
-This project adopts [Play-Nice Contracts](https://github.com/Rylee-Bee/play-nice-contracts) as its shared cooperation constitution. Every design, engineering, documentation, and release decision must point to the Play-Nice Contract it preserves or changes. See `.project/contracts/adoption.yaml` for the pinned revision.
+This project adopts [Play-Nice Contracts](https://github.com/rylee-bee-labs/play-nice-contracts) as its shared cooperation constitution. Every design, engineering, documentation, and release decision must point to the Play-Nice Contract it preserves or changes. See `.project/contracts/adoption.yaml` for the pinned revision.
 
 ## Getting help
 
-- **[Issues](https://github.com/Rylee-Bee/vefr/issues):** Bug reports
+- **[Issues](https://github.com/rylee-bee-labs/vefr/issues):** Bug reports
   and feature requests welcome
-- **[Discussions](https://github.com/Rylee-Bee/vefr/discussions):**
+- **[Discussions](https://github.com/rylee-bee-labs/vefr/discussions):**
   For questions about building your own world
 - **Security:** See [`SECURITY.md`](SECURITY.md) — never paste
   secrets in issues
