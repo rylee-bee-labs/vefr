@@ -258,7 +258,7 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # is a state, not the pack's key - so `enemyEntry` no longer copies it and
 # the player template moved again. The template is woven into every pack,
 # so the digest had to be recomputed rather than carried over.
-># Nothing about this pack's own bytes moved - `worlds/sample-world`
+# Nothing about this pack's own bytes moved - `worlds/sample-world`
 # declares no skin and no descent, so `window.VEFR_TOWN_STATES` and
 # `window.VEFR_DESCENT_DEF` bake the literal null here exactly as
 # `window.VEFR_SKIN` does, and E8d did not touch the pack at all.
