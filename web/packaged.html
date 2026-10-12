@@ -11905,7 +11905,8 @@ function setupTown() {
   // every candidate in this region, gathered in this order:
   //
   //   resident - every speaker here with a real `at` (the people
-  //              talkToSpeaker talks to);
+  //              talkToSpeaker talks to); with no brain configured, a
+  //              speaker with no offline line is not a target at all;
   //   trader   - the region's shopkeeper, found the way
   //              shopkeeperNear finds it (shopKeyHere) but with NO
   //              distance cut, so the pure block's own reach rules
@@ -11936,6 +11937,7 @@ function setupTown() {
     Object.keys(speakers || {}).forEach(function (key) {
       var s = speakers[key];
       if (!s || !Array.isArray(s.at)) return;
+      if (!brainConfigured() && !hasOfflineLine(key, s)) return;
       candidates.push({ kind: 'resident', id: key, name: s.name,
                         at: [s.at[0], s.at[1]] });
     });
@@ -12278,11 +12280,37 @@ function setupTown() {
   // its own name so Interact and Talk share one road.
   function talkNearest() { tryNPC(); }
 
+  function brainConfigured() { return Boolean(llmUrl && llmModel); }
+
+  // The speaker's seeded lines in the pack's own order.
+  function seededLines(spec) {
+    var seeds = (spec && spec.seeds) || {};
+    return Object.keys(seeds).map(function (k) { return seeds[k]; })
+      .filter(function (l) { return typeof l === 'string' && l.trim(); });
+  }
+
+  // The seeded line for the time of day, else the first one: seeds are
+  // keyed by phase, so a dawn line is never said at dusk. Every Talk says
+  // it again, the way a resident repeats themselves.
+  function seededLine(spec, ph) {
+    var own = spec && spec.seeds && spec.seeds[ph];
+    if (typeof own === 'string' && own.trim()) return own;
+    return seededLines(spec)[0] || null;
+  }
+
+  // Whether the offline talk path can produce any line for this speaker.
+  function hasOfflineLine(key, spec) {
+    if (seededLines(spec).length) return true;
+    if (fragmentSpeakers().indexOf(key) !== -1) return true;
+    var pool = window.VEFR_POOL || {};
+    return Object.keys(pool).some(function (k) { return (pool[k] || []).length > 0; });
+  }
+
   // One speaker's line - the talk path itself, shared by the Talk
   // button, the canvas click, the old E key, and Interact's resident
   // pick. The line is the pack's own: straight from the model when
   // one answers, else from the woven pool, else spliced from this
-  // character's fragments.
+  // character's fragments, else the speaker's seeded line in turn.
   function talkToSpeaker(nearest) {
     var ph = phase();
     libraryFromSpeaker(nearest.key);
@@ -12317,6 +12345,12 @@ function setupTown() {
           ? ''
           : respliced ? "Mixed from the game's saved lines."
           : "From this character's own lines.");
+        return;
+      }
+      var seeded = seededLine(nearest.spec, ph);
+      if (seeded) {
+        document.getElementById('near').textContent = '';
+        showSpeech(nearest.spec.name, seeded, '');
       } else {
         document.getElementById('near').textContent = "They didn't answer.";
       }

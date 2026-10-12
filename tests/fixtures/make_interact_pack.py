@@ -25,6 +25,8 @@ SAMPLE = ROOT / "worlds" / "sample-world"
 #   door spot ............... [9, 4]  stand -> "Go through the door"
 #   trader "the peddler" .... [6, 5]  shop: "true", talk reach 2
 #   trader spot ............. [6, 4]  stand -> "Trade with the peddler"
+#   cat "the cat" ........... [9, 1]  seeds only, no fragments: offline talk
+#   stranger "the stranger" . [8, 5]  no seeds, no fragments: no offline line
 #   empty spot .............. [1, 5]  nothing in reach in any direction
 #   cellar arrival .......... [1, 1]  where the door drops the hero
 #
@@ -86,6 +88,20 @@ SPEAKERS = {
             "dusk": "Cheap now, dearer after dark.",
             "dawn": "Fresh stock, fair prices.",
         },
+    },
+    "cat": {
+        "name": "the cat",
+        "at": [9, 1],
+        "near": "the hearth",
+        "seeds": {
+            "dusk": "The cat looks at you, then away.",
+            "dawn": "The cat stretches in the first light.",
+        },
+    },
+    "stranger": {
+        "name": "the stranger",
+        "at": [8, 5],
+        "near": "the wall",
     },
 }
 
