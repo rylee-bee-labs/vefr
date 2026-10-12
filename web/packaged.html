@@ -3983,15 +3983,21 @@ function rulesNextLoad() {
     return e && typeof e.place === 'string' && typeof e.line === 'string';
   }) : [];
 }
-function rulesNextRecord(place, line) {
+// `shown` is the words the player reads for the place when they are not
+// its id (a labelled Section's floor, vefr#363); the row is still keyed by
+// the id, and a place shown by its own id stores exactly what it always did.
+function rulesNextRecord(place, line, shown) {
   if (typeof place !== 'string' || !place) return;
   rulesNextLoad();
+  var name = (typeof shown === 'string' && shown) ? shown : place;
   // one row per place: the newest word wins
   window.VEFR_NEXT = window.VEFR_NEXT.filter(function (e) { return e.place !== place; });
-  window.VEFR_NEXT.push({
+  var row = {
     place: place,
-    line: line || playerWord('where_next.goal', { place: place })
-  });
+    line: line || playerWord('where_next.goal', { place: name })
+  };
+  if (name !== place) row.name = name;
+  window.VEFR_NEXT.push(row);
   store.setJSON(rulesNextKey(), window.VEFR_NEXT);
 }
 
@@ -4009,7 +4015,7 @@ function renderNextPanel() {
     var p = document.createElement('p');
     p.className = 'status';
     var b = document.createElement('b');
-    b.textContent = e.place + ' - ';
+    b.textContent = (typeof e.name === 'string' && e.name ? e.name : e.place) + ' - ';
     p.appendChild(b);
     p.appendChild(document.createTextNode(e.line));
     list.appendChild(p);
@@ -7587,6 +7593,66 @@ window.VEFR_DESCENT = (function () {
 
   function isGenerated(name) { return parseName(name) !== null; }
 
+  // ---- what a player is told a floor is (vefr#362, #363) --------------
+  // The twin of `sections.floor_title`: a Section that declares its own
+  // `label` names its floors "<label>, floor <k>"; one that declares none
+  // answers '' and every caller keeps the words it had (the region id,
+  // the stair). The region id itself is never touched - it is the save's
+  // key and the rules' id - only what the player reads changes.
+  function floorTitle(name) {
+    var at = parseName(name);
+    if (!at) return '';
+    var label = at.section.label;
+    if (typeof label !== 'string' || !label) return '';
+    return label + ', floor ' + at.k;
+  }
+
+  // The words for a place a hint names: a labelled floor's title, else the
+  // name exactly as given.
+  function placeName(name) {
+    return floorTitle(name) || String(name === undefined ? '' : name);
+  }
+
+  // The compass from one tile to another, in the words `point-to` uses.
+  function compass(from, to) {
+    var dx = to[0] - from[0], dy = to[1] - from[1];
+    var vert = dy < 0 ? 'north' : (dy > 0 ? 'south' : '');
+    var horiz = dx < 0 ? 'west' : (dx > 0 ? 'east' : '');
+    return vert && horiz ? vert + '-' + horiz : (vert || horiz);
+  }
+
+  // Arriving on a floor of a labelled Section, on its up-stair: what the
+  // floor is, and which way its stair down lies, so the player is greeted
+  // by the place and a goal ahead rather than by the way back up. The
+  // stair itself is unchanged - still drawn, still walkable, still the way
+  // up once the hero steps off it and back. Null for anything else: a
+  // Section with no label, a baked region, the town, a hero who climbed
+  // up onto the down-stair. The hint names the floor below by its own
+  // title when it has one, else "the stair down"; a floor with no stair
+  // down wired has no hint.
+  function arrival(name, at) {
+    var title = floorTitle(name);
+    if (!title || !Array.isArray(at)) return null;
+    var region = (window.VEFR_REGIONS || {})[name];
+    var up = region ? region.hero_start : null;
+    if (!Array.isArray(up) || up[0] !== at[0] || up[1] !== at[1]) return null;
+    var here = depthOfName(name);
+    var down = null;
+    (window.VEFR_TRANSITIONS || []).forEach(function (t) {
+      if (!down && t && t.from === name && Array.isArray(t.at) &&
+          depthOfName(t.to) > here) down = t;
+    });
+    var line = '';
+    if (down && typeof playerWord === 'function') {
+      var place = floorTitle(down.to) || 'the stair down';
+      var dir = compass(at, down.at);
+      line = dir
+        ? playerWord('where_next.reach', { place: place, direction: dir })
+        : playerWord('where_next.here', { place: place });
+    }
+    return { at: [at[0], at[1]], name: title, line: line };
+  }
+
   // ---- a floor, drawn (the twin of `floor_plan`) ----------------------
   function seedFor(run) { return runSeed(baseSeed(), run); }
 
@@ -8872,7 +8938,7 @@ window.VEFR_DESCENT = (function () {
     var depth = depthOfName(name);
     var plan = depth ? floorPlan(depth) : null;
     if (!plan) return null;
-    whySay('descent-death', 'You fell on ' + name + ' and woke at its up '
+    whySay('descent-death', 'You fell on ' + placeName(name) + ' and woke at its up '
       + 'stair; the descent is unbroken.');
     return { region: name, at: plan.anchors.up.slice() };
   }
@@ -9349,6 +9415,7 @@ window.VEFR_DESCENT = (function () {
     runSeed: runSeed, sectionHash: sectionHash, parseName: parseName,
     baseSeed: baseSeed, seedParam: seedParam, seedFor: seedFor,
     isGenerated: isGenerated, depthOfName: depthOfName, floorPlan: floorPlan,
+    floorTitle: floorTitle, placeName: placeName, arrival: arrival,
     floorSize: floorSize, floorKindOf: floorKindOf, mobsAt: mobsAt, mobDrops: mobDrops, placeBooks: placeBooks,
     xpFor: xpFor,
     ensureRegion: ensureRegion, onEnter: onEnter, entryHere: entryHere,
@@ -12349,6 +12416,11 @@ function setupTown() {
     seeNow();
     loadEnemies();
     combatSnapshot();
+    // What this floor is, while the hero stands where they arrived
+    // (vefr#362): only a floor of a labelled Section answers, so every
+    // other region arrives exactly as it did.
+    arrivalNote = (window.VEFR_DESCENT && typeof window.VEFR_DESCENT.arrival === 'function')
+      ? window.VEFR_DESCENT.arrival(name, hero) : null;
     resize();
     draw();
     refreshPoi();
@@ -12596,9 +12668,19 @@ function setupTown() {
       candidates.push({ kind: 'book', id: b.id, name: b.title || 'the note',
                         at: [b.at[0], b.at[1]] });
     });
+    // Just arrived on a labelled floor (vefr#362): the tile the hero
+    // stands on is the floor itself, not the stair under them, until they
+    // step off or read it. The stair is only set aside for that moment.
+    var arrived = arrivalHere();
+    if (arrived) {
+      candidates.push({ kind: 'place', id: ARRIVAL_ID, name: arrivalNote.name,
+                        at: [hero[0], hero[1]] });
+    }
+    function onArrival(x, y) { return arrived && x === hero[0] && y === hero[1]; }
     transitions().forEach(function (tr) {
       if (!tr || tr.from !== regionName || !Array.isArray(tr.at)) return;
       if (typeof tr.at[0] !== 'number' || typeof tr.at[1] !== 'number') return;
+      if (onArrival(tr.at[0], tr.at[1])) return;
       candidates.push(transitionCandidate(tr));
     });
     var texts = town.poi_text || {};
@@ -12606,6 +12688,7 @@ function setupTown() {
       var xy = key.split(',');
       var x = Number(xy[0]), y = Number(xy[1]);
       if (!isFinite(x) || !isFinite(y)) return;
+      if (onArrival(x, y)) return;
       candidates.push({ kind: 'place', id: key,
                         name: (pois || {})[key] || texts[key],
                         at: [x, y] });
@@ -12766,6 +12849,11 @@ function setupTown() {
       } else if (t.kind === 'resident') {
         if (!speakers[t.id]) throw new Error('speaker gone');
         talkToSpeaker({ key: t.id, spec: speakers[t.id], dist: t.dist });
+      } else if (t.kind === 'place' && t.id === ARRIVAL_ID) {
+        // The floor, read: its name and the way on. Once read, the tile
+        // is the stair again, so the next press offers the way back up.
+        showSpeech(arrivalNote.name, arrivalNote.line, '');
+        arrivalNote = null;
       } else if (t.kind === 'place') {
         showSpeech((pois || {})[t.id] || '', (town.poi_text || {})[t.id] || '',
                    '');
@@ -12833,12 +12921,23 @@ function setupTown() {
     vrow.hidden = !near;
   }
 
+  // The floor the hero has just arrived on (vefr#362), from
+  // VEFR_DESCENT.arrival: `{at, name, line}` while they still stand on the
+  // tile they arrived at and have not read it, else null. `ARRIVAL_ID` is
+  // its Interact id, which no `x,y` poi key can be.
+  var ARRIVAL_ID = 'arrival';
+  var arrivalNote = null;
+  function arrivalHere() {
+    return !!(arrivalNote && hero[0] === arrivalNote.at[0] && hero[1] === arrivalNote.at[1]);
+  }
+
   // The named place the hero now stands on, written to the POI line.
   var POI_QUIET_MS = 4000;
   var poiTimer = null;
   function refreshPoi() {
     var here = '';
-    for (var k in pois) {
+    if (arrivalHere()) here = arrivalNote.name;
+    else for (var k in pois) {
       if (k === hero[0] + ',' + hero[1]) { here = pois[k]; break; }
     }
     var poiEl = document.getElementById('poi');
@@ -12914,6 +13013,7 @@ function setupTown() {
       return;
     }
     hero = [nx, ny];
+    arrivalNote = null;   // the arrival is over at the first step
     quietTutorial();
     // Draw-only: start the hop now, but the game state above is already
     // settled and the turn below is never gated on the animation.
@@ -13262,10 +13362,16 @@ function setupTown() {
       }
     }
     var at = fromHere || entrance;
+    // The words the player reads for the place (vefr#363): a floor of a
+    // labelled Section is its title ("the Cellar, floor 1"), anything
+    // else the region id exactly as before. The id stays the record's
+    // key, so the rules and the save never see the label.
+    var D = window.VEFR_DESCENT;
+    var shown = (D && typeof D.placeName === 'function') ? D.placeName(place) : place;
     if (!at) {
-      var lost = playerWord('where_next.no_way', { place: place });
+      var lost = playerWord('where_next.no_way', { place: shown });
       combatSay(lost);
-      rulesNextRecord(place, lost);
+      rulesNextRecord(place, lost, shown);
       return;
     }
     var dx = at[0] - hero[0], dy = at[1] - hero[1];
@@ -13277,12 +13383,12 @@ function setupTown() {
     // word for it (part 340), and a pack that names none gets these
     // exact bytes.
     var line = dir
-      ? playerWord('where_next.reach', { place: place, direction: dir })
-      : playerWord('where_next.here', { place: place });
+      ? playerWord('where_next.reach', { place: shown, direction: dir })
+      : playerWord('where_next.here', { place: shown });
     combatSay(line);
     // The hint is an intention, not a flash: it stays in the menu's
     // Where next? panel until the world points somewhere new.
-    rulesNextRecord(place, line);
+    rulesNextRecord(place, line, shown);
   };
   // show/hide/reveal: the floor is the only surface a thing has in
   // this player - an item can lie where the hero stands (shown) or be

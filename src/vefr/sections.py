@@ -161,6 +161,28 @@ def section_label(section: dict) -> str:
     return label if isinstance(label, str) and label else section_id(section)
 
 
+# The words a player reads for one floor of a labelled Section (vefr#362,
+# #363): the label and the floor's number inside its Section. The cycle is
+# left out on purpose - a player walking the Cellar a second time is still
+# on the Cellar's second floor - and the region id is untouched.
+FLOOR_TITLE = '{label}, floor {k}'
+
+
+def floor_title(section: dict, k: int) -> str:
+    """What a player is told floor `k` of `section` is, or '' with no label.
+
+    Only a Section that declares its own `label` has a title: one that
+    declares none answers the empty string, so every caller keeps saying
+    exactly what it said before (the region id, the stair) and a pack
+    with no label plays byte for byte as it did. The player's twin is
+    `floorTitle` in web/player/parts/397-the-descent.js.
+    """
+    label = section.get('label') if isinstance(section, dict) else None
+    if not isinstance(label, str) or not label:
+        return ''
+    return FLOOR_TITLE.format(label=label, k=k)
+
+
 def load(pack_dir) -> list[dict]:
     """Every Section pack in `pack_dir/sections`, sorted by id.
 
