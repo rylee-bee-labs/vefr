@@ -317,7 +317,10 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # #418 phone camera merged with #419 (Talk) on 2026-10-12; measured twice in separate processes, readings equal:
 #   3efab5dcd619fc4e4510f3297cf3e6ea5dcb1a059341f4fcad5c5476b014113d
 #   3efab5dcd619fc4e4510f3297cf3e6ea5dcb1a059341f4fcad5c5476b014113d
-NO_SKIN_WEAVE_SHA256 = "3efab5dcd619fc4e4510f3297cf3e6ea5dcb1a059341f4fcad5c5476b014113d"
+# Touch controls (P3TOUCH) on top of #418 and #419, 2026-10-12; measured twice in separate processes, readings equal:
+#   b583865d4fab64337b692b5bb27fe0593f44d783665ca0938df3f1071d18cc46
+#   b583865d4fab64337b692b5bb27fe0593f44d783665ca0938df3f1071d18cc46
+NO_SKIN_WEAVE_SHA256 = "b583865d4fab64337b692b5bb27fe0593f44d783665ca0938df3f1071d18cc46"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():
