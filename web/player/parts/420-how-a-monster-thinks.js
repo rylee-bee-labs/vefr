@@ -97,8 +97,15 @@
     if (!best) return false;
     if (best[0] === hero[0] && best[1] === hero[1]) return enemyAttack(e);
     if (!tileOpenForEnemy(best[0], best[1])) return false;
+    e.face = faceOf(e.at, best);
     e.at = best;
     return false;
+  }
+  // The way a step from one tile to a neighbour points: the longer delta wins.
+  function faceOf(from, to) {
+    var dx = to[0] - from[0], dy = to[1] - from[1];
+    if (Math.abs(dx) >= Math.abs(dy)) return dx < 0 ? 'left' : 'right';
+    return dy < 0 ? 'up' : 'down';
   }
   // One step toward the group's home, on the home flood: the neighbour
   // with the LOWER count. A member stops within one tile of home and
@@ -116,6 +123,7 @@
     }
     if (!best) return false;
     if (!tileOpenForEnemy(best[0], best[1])) return false;
+    e.face = faceOf(e.at, best);
     e.at = best;
     return false;
   }

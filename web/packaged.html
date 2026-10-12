@@ -9415,8 +9415,15 @@ function setupTown() {
     if (!best) return false;
     if (best[0] === hero[0] && best[1] === hero[1]) return enemyAttack(e);
     if (!tileOpenForEnemy(best[0], best[1])) return false;
+    e.face = faceOf(e.at, best);
     e.at = best;
     return false;
+  }
+  // The way a step from one tile to a neighbour points: the longer delta wins.
+  function faceOf(from, to) {
+    var dx = to[0] - from[0], dy = to[1] - from[1];
+    if (Math.abs(dx) >= Math.abs(dy)) return dx < 0 ? 'left' : 'right';
+    return dy < 0 ? 'up' : 'down';
   }
   // One step toward the group's home, on the home flood: the neighbour
   // with the LOWER count. A member stops within one tile of home and
@@ -9434,6 +9441,7 @@ function setupTown() {
     }
     if (!best) return false;
     if (!tileOpenForEnemy(best[0], best[1])) return false;
+    e.face = faceOf(e.at, best);
     e.at = best;
     return false;
   }
@@ -9746,6 +9754,7 @@ function setupTown() {
     });
     saveFloor();
     if (names.length) {
+      playOneShot('hero', 'act');
       soundCue('pickup');
       combatSay('You pick up ' + names.join(', ') + '.');
     }
@@ -9764,6 +9773,8 @@ function setupTown() {
     }
     var dmg = heroAtk();
     e.hp = Math.max(0, e.hp - dmg);
+    playOneShot('hero', 'attack');
+    playOneShot('enemy:' + e.id, 'hurt');
     // A blow is the loudest thing on the floor, and it is also the one
     // wake no sight can miss: the monster that was hit is awake from
     // here, and so is every sleeper within earshot of the fight.
@@ -9815,6 +9826,8 @@ function setupTown() {
   // One enemy's attack: the hero loses its `atk`, clamped at zero.
   function enemyAttack(e) {
     HERO_HP = Math.max(0, HERO_HP - e.atk);
+    playOneShot('enemy:' + e.id, 'attack');
+    playOneShot('hero', 'hurt');
     saveHeroHp();
     renderHp();
     combatSay(e.name + ' hits you for ' + e.atk + '.');
@@ -11115,6 +11128,11 @@ function setupTown() {
     scheduleAnim();
   }
   document.addEventListener('visibilitychange', scheduleAnim);
+  // A speech box opened or closed changes who is talking; the talk path itself never redraws.
+  if (window.MutationObserver && document.getElementById('npc-box')) {
+    new MutationObserver(function () { draw(); })
+      .observe(document.getElementById('npc-box'), { attributes: true, attributeFilter: ['hidden'] });
+  }
 
   // A harness-readable view of this region's props, read-only.
   window.VEFR_PROPS = function () {
@@ -11242,22 +11260,73 @@ function setupTown() {
     return (typeof v === 'number' && isFinite(v) && v >= 0.2 && v <= 2) ? v : 1;
   };
   // -- spriteScale end --
+  // The direction's frames, a missing side or `up` falling back as the
+  // validator allows: a missing left or right is the other mirrored, and
+  // anything else missing is `down`.
+  var oneShots = {};
+  function sheetPick(key, dir) {
+    var dirs = ((spriteSheets[key] || {}).directions) || {};
+    if (dirs[dir]) return { frames: dirs[dir], mirror: false };
+    if (dir === 'left' && dirs.right) return { frames: dirs.right, mirror: true };
+    if (dir === 'right' && dirs.left) return { frames: dirs.left, mirror: true };
+    return { frames: dirs.down, mirror: false };
+  }
+  // The sheet cell a character shows now. A one-shot (act, attack, hurt)
+  // plays its frames once, then the character is idle again; a looping
+  // state (idle, talk) moves on at the sheet's fps, or holds frame 0 under
+  // reduced motion. A walk frame follows the step counter, as it always did.
+  function sheetCell(key, actor, dir, state, walkStep) {
+    var pick = sheetPick(key, dir);
+    if (!pick || !pick.frames) return null;
+    var f = pick.frames, fps = spriteSheets[key].fps;
+    var now = nowMs();
+    var shot = oneShots[actor];
+    if (shot && !reducedMotion()) {
+      var list = f[shot.state] || [];
+      var t = (now - shot.start) / 1000 * fps;
+      if (t < list.length) {
+        animWant = true;
+        return { idx: list[Math.floor(t)], mirror: pick.mirror };
+      }
+    }
+    delete oneShots[actor];
+    if (state === 'walk' && f.walk && f.walk.length) {
+      return { idx: f.walk[(walkStep - 1) % f.walk.length], mirror: pick.mirror };
+    }
+    var loop = (state === 'talk' && f.talk && f.talk.length) ? f.talk : f.idle;
+    if (loop.length > 1 && !reducedMotion()) {
+      animWant = true;
+      return { idx: loop[Math.floor(now / 1000 * fps) % loop.length], mirror: pick.mirror };
+    }
+    return { idx: loop[0], mirror: pick.mirror };
+  }
+  // A one-shot starts now. Reduced motion shows none.
+  function playOneShot(actor, state) {
+    if (reducedMotion()) return;
+    oneShots[actor] = { state: state, start: nowMs() };
+  }
   // A character stands taller than its tile, feet on the tile's bottom.
-  // A character with a ready walk sheet shows its down-facing idle frame.
-  function drawSprite(key, tx, ty) {
+  // `pose` names who it is (`actor`, the key one-shots are kept under), the
+  // way it faces and the state it is in; a character with a ready walk
+  // sheet draws the cell that pose picks, mirrored when its side is missing.
+  function drawSprite(key, tx, ty, pose) {
     var im = spriteImgs[key];
     var h = T * 1.5 * spriteScale(window.VEFR_SPRITE_SCALE, key);
     var sheet = spriteSheets[key];
-    if (sheetUsable(sheet) && spriteSheetReady(key)) {
+    var cell = (sheetUsable(sheet) && spriteSheetReady(key))
+      ? sheetCell(key, pose.actor, pose.dir, pose.state, 0) : null;
+    if (cell) {
       var sim = spriteSheetImgs[key];
       var fw = sheet.frame[0], fh = sheet.frame[1];
       var cols = Math.max(1, Math.floor(sim.naturalWidth / fw));
-      var down = (sheet.directions && sheet.directions.down) || {};
-      var idx = (down.idle && down.idle.length) ? down.idle[0] : 0;
-      var col = idx % cols, row = Math.floor(idx / cols);
+      var col = cell.idx % cols, row = Math.floor(cell.idx / cols);
       var sw = h * (fw / fh || 1);
-      ctx.drawImage(sim, col * fw, row * fh, fw, fh,
-                    tx * T + (T - sw) / 2, ty * T + T - h, sw, h);
+      var dx = tx * T + (T - sw) / 2, dy = ty * T + T - h;
+      if (cell.mirror) {
+        ctx.drawImage(sim, col * fw, row * fh, fw, fh, dx + sw, dy, -sw, h);
+      } else {
+        ctx.drawImage(sim, col * fw, row * fh, fw, fh, dx, dy, sw, h);
+      }
       return;
     }
     var w = h * (im.naturalWidth / im.naturalHeight || 1);
@@ -11325,12 +11394,8 @@ function setupTown() {
   // the picture flips: a missing side uses the other side's frames
   // mirrored, a missing up falls back to down.
   function heroSheetFrames() {
-    var dirs = (spriteSheets.hero || {}).directions || {};
-    if (dirs[heroFacing]) return { frames: dirs[heroFacing], mirror: false };
-    if (heroFacing === 'left' && dirs.right) return { frames: dirs.right, mirror: true };
-    if (heroFacing === 'right' && dirs.left) return { frames: dirs.left, mirror: true };
-    if (heroFacing === 'up' && dirs.down) return { frames: dirs.down, mirror: false };
-    return null;
+    var pick = sheetPick('hero', heroFacing);
+    return pick.frames ? pick : null;
   }
   // Advance and publish the hero's pose. Only a hero with a sheet gets
   // window.VEFR_HERO_FRAME; a pack without one never gets the global at
@@ -11420,19 +11485,22 @@ function setupTown() {
       ctx.rotate(off.lean * Math.PI / 180);
     }
     if (heroHasSheet && spriteSheetReady('hero')) {
-      // One frame of the sheet: the cell at (idx mod cols, idx / cols),
-      // drawn 1.5 tiles tall with the same squash and mirror as the
-      // single picture. A missing side's frames are drawn flipped.
+      // One cell of the sheet, drawn 1.5 tiles tall with the same squash
+      // and mirror as the single picture. A missing side's frames are
+      // drawn flipped.
       var sheet = spriteSheets.hero;
       var sim = spriteSheetImgs.hero;
       var fw = sheet.frame[0], fh = sheet.frame[1];
       var cols = Math.max(1, Math.floor(sim.naturalWidth / fw));
-      var col = heroSheetIdx % cols, row = Math.floor(heroSheetIdx / cols);
+      var cell = sheetCell('hero', 'hero', heroFacing, heroAnim ? 'walk' : 'idle', heroWalkStep)
+        || { idx: heroSheetIdx, mirror: heroSheetMirror };
+      var col = cell.idx % cols, row = Math.floor(cell.idx / cols);
+      if (window.VEFR_HERO_FRAME) window.VEFR_HERO_FRAME.frame = cell.idx;
       var sheetH = T * 1.5 * spriteScale(window.VEFR_SPRITE_SCALE, 'hero');
       var sheetW = sheetH * (fw / fh || 1);
       var sh = sheetH * (1 - off.squash);
       var sw = sheetW * (1 + off.squash);
-      if (heroSheetMirror) {
+      if (cell.mirror) {
         ctx.drawImage(sim, col * fw, row * fh, fw, fh, sw / 2, -sh, -sw, sh);
       } else {
         ctx.drawImage(sim, col * fw, row * fh, fw, fh, -sw / 2, -sh, sw, sh);
@@ -11611,12 +11679,21 @@ function setupTown() {
     });
     // The people: their own sprite when the pack names one, else the
     // drawn figure (a body and a head), so you can see who is here.
+    var npcBox = document.getElementById('npc-box');
+    var speechOpen = !!npcBox && !npcBox.hidden;
     Object.keys(speakers || {}).forEach(function (key) {
       var s = speakers[key];
       if (!s || !Array.isArray(s.at)) return;
       if (hideUnseen(s.at[0], s.at[1])) return;
       stand(s.at[1], 'speaker:' + key, function () {
-        if (spriteReady(key)) { drawSprite(key, s.at[0], s.at[1]); return; }
+        if (spriteReady(key)) {
+          var beside = Math.abs(s.at[0] - hero[0]) + Math.abs(s.at[1] - hero[1]) === 1;
+          drawSprite(key, s.at[0], s.at[1], {
+            actor: 'speaker:' + key,
+            dir: beside ? faceOf(s.at, hero) : 'down',
+            state: beside && speechOpen ? 'talk' : 'idle' });
+          return;
+        }
         var px = s.at[0] * T, py = s.at[1] * T;
         ctx.fillStyle = town.speaker_color || '#8b939c';
         ctx.beginPath();
@@ -11645,7 +11722,8 @@ function setupTown() {
       stand(e.at[1], 'enemy:' + e.id, function () {
         if (e.sprite && spriteReady(e.sprite)) {
           if (!e.alive) ctx.globalAlpha = 0.45;
-          drawSprite(e.sprite, e.at[0], e.at[1]);
+          drawSprite(e.sprite, e.at[0], e.at[1], {
+            actor: 'enemy:' + e.id, dir: e.face || 'down', state: 'idle' });
           ctx.globalAlpha = 1;
           return;
         }

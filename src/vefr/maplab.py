@@ -2241,11 +2241,19 @@ def skin_errors(w: dict, pack_dir: Path | None = None) -> list[str]:
 
 
 # Walk sheets (design/pack-art-proposal.md, phase B): the directions a
-# sheet may name, the frame size and fps bounds, and the walk length.
+# sheet may name, the frame size and fps bounds, and the frame lists.
 SHEET_DIRECTIONS = ('down', 'up', 'left', 'right')
 SHEET_FRAME_MIN, SHEET_FRAME_MAX = 8, 512
 SHEET_FPS_MIN, SHEET_FPS_MAX = 1, 30
 SHEET_WALK_MIN, SHEET_WALK_MAX = 2, 16
+SHEET_IDLE_MIN, SHEET_IDLE_MAX = 1, 16
+SHEET_STATES = ('act', 'attack', 'hurt', 'talk')
+SHEET_STATE_MIN, SHEET_STATE_MAX = 1, 16
+
+
+def _sheet_frames(v, lo: int, hi: int) -> bool:
+    return (isinstance(v, list) and lo <= len(v) <= hi
+            and all(_is_whole(i) for i in v))
 
 
 def _sprite_sheet_files(pack_dir: Path) -> list[tuple[Path, Path]]:
@@ -2292,8 +2300,9 @@ def sprite_sheet_errors(pack_dir: Path | None) -> list[str]:
     check is shape-only: the JSON must be an object; `image` must name
     a real picture beside the sheet and inside the pack; `frame` two
     whole numbers from 8 to 512; `fps` a whole number from 1 to 30;
-    every direction an object with an `idle` of exactly one frame and a
-    `walk` of 2 to 16; and every frame inside the sheet's grid. `down`
+    every direction an object with an `idle` of 1 to 16 frames, a `walk`
+    of 2 to 16, and optional `act`, `attack`, `hurt` and `talk` lists of
+    1 to 16; and every frame inside the sheet's grid. `down`
     is required. Each message names the sheet file, plainly. A pack
     that ships no sheet gets nothing here at all.
     """
@@ -2364,21 +2373,28 @@ def sprite_sheet_errors(pack_dir: Path | None) -> list[str]:
                                   'object with idle and walk lists')
                     continue
                 idle = frames.get('idle')
-                if (not isinstance(idle, list) or len(idle) != 1
-                        or not _is_whole(idle[0])):
+                if not _sheet_frames(idle, SHEET_IDLE_MIN, SHEET_IDLE_MAX):
                     errors.append(f"{label} direction '{dname}' needs an "
-                                  "'idle' list of exactly one frame")
+                                  f"'idle' list of {SHEET_IDLE_MIN} to "
+                                  f'{SHEET_IDLE_MAX} frames')
                 else:
-                    indices.append(idle[0])
+                    indices.extend(idle)
                 walk = frames.get('walk')
-                if (not isinstance(walk, list)
-                        or not SHEET_WALK_MIN <= len(walk) <= SHEET_WALK_MAX
-                        or not all(_is_whole(v) for v in walk)):
+                if not _sheet_frames(walk, SHEET_WALK_MIN, SHEET_WALK_MAX):
                     errors.append(f"{label} direction '{dname}' needs a "
                                   f"'walk' list of {SHEET_WALK_MIN} to "
                                   f'{SHEET_WALK_MAX} frames')
                 else:
                     indices.extend(walk)
+                for state in SHEET_STATES:
+                    if state not in frames:
+                        continue
+                    if not _sheet_frames(frames[state], SHEET_STATE_MIN, SHEET_STATE_MAX):
+                        errors.append(f"{label} direction '{dname}' has an "
+                                      f"'{state}' that is not a list of "
+                                      f'{SHEET_STATE_MIN} to {SHEET_STATE_MAX} frames')
+                    else:
+                        indices.extend(frames[state])
 
         # The grid: image size / frame size, read from the picture's own
         # header. An unreadable header (None) skips only this check.

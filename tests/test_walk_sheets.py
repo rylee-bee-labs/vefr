@@ -9,13 +9,17 @@ A pack may put a sprite sheet next to a sprite:
   - `*.sheet.json` files are never sprites themselves. A missing `left`/`right` is the other side mirrored; a
     missing `up` falls back to `down`; `down` is required.
   - validator: image must exist beside it; frame two ints 8..512; fps int 1..30; every index an int inside the
-    sheet's grid (image size / frame size); idle exactly one index; walk 2..16 indexes. Plain sentences naming the
-    sheet file.
+    sheet's grid (image size / frame size); idle 1..16 indexes; walk 2..16 indexes; optional act, attack, hurt and
+    talk lists of 1..16 indexes each. Plain sentences naming the sheet file.
   - weave: window.VEFR_SPRITE_SHEETS = {<key>: {image: data URI, frame, fps, directions}} — `{}` for a pack with no sheets.
   - player: window.VEFR_HERO_FRAME = {dir, state: "idle"|"walk", frame: <sheet index>, mirrored: bool} exists only when the
     hero has a sheet. Facing the hero's last move (down at the start); standing shows `idle`; a step shows a `walk`
     frame of that direction; it returns to `idle` after the step settles. A missing side is drawn mirrored
-    (`mirrored: true`). No sheet: Phase A hop as today, no VEFR_HERO_FRAME.
+    (`mirrored: true`). No sheet: Phase A hop as today, no VEFR_HERO_FRAME. `frame` is the cell drawn last, so a
+    looping idle or a one-shot moves it.
+  - FROZEN CONTRACT change (characters move slice): `idle` was exactly one index and is now 1..16, looping at the
+    sheet's fps; a one-frame idle still stands still. The optional act, attack, hurt (one-shots, then idle) and talk
+    (looped while the speech box is open) lists are new; a pack that names none plays as before.
 Neutral fixtures only.
 """
 
@@ -82,6 +86,12 @@ def test_no_sheet_is_unchanged(tmp_path):
     assert extra_errors(tmp_path, sheet=None) == []
 
 
+def test_idle_loops_and_the_optional_states_validate(tmp_path):
+    loops = {"down": {"idle": [0, 1, 2], "walk": [1, 2, 3, 4], "talk": [5, 6],
+                      "attack": [7, 8, 9], "hurt": [9], "act": [0, 1]}}
+    assert extra_errors(tmp_path, sheet=mod(directions=loops)) == []
+
+
 def mod(**over):
     s = json.loads(json.dumps(SHEET))
     for k, v in over.items():
@@ -94,7 +104,9 @@ def mod(**over):
     (mod(frame=[2, 2]), "hero.sheet.json"),
     (mod(fps=0), "hero.sheet.json"),
     (mod(directions={"left": SHEET["directions"]["right"]}), "down"),                 # down required
-    (mod(directions={"down": {"idle": [0, 1], "walk": [1, 2]}}), "idle"),
+    (mod(directions={"down": {"idle": [], "walk": [1, 2]}}), "idle"),
+    (mod(directions={"down": {"idle": [0], "walk": [1, 2], "attack": []}}), "attack"),
+    (mod(directions={"down": {"idle": [0], "walk": [1, 2], "talk": [1, 99]}}), "99"),
     (mod(directions={"down": {"idle": [0], "walk": [1]}}), "walk"),
     (mod(directions={"down": {"idle": [0], "walk": [1, 2, 99]}}), "99"),              # outside the grid
     (mod(image="missing.png"), "missing.png"),

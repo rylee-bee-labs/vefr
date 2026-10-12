@@ -92,6 +92,11 @@
     scheduleAnim();
   }
   document.addEventListener('visibilitychange', scheduleAnim);
+  // A speech box opened or closed changes who is talking; the talk path itself never redraws.
+  if (window.MutationObserver && document.getElementById('npc-box')) {
+    new MutationObserver(function () { draw(); })
+      .observe(document.getElementById('npc-box'), { attributes: true, attributeFilter: ['hidden'] });
+  }
 
   // A harness-readable view of this region's props, read-only.
   window.VEFR_PROPS = function () {

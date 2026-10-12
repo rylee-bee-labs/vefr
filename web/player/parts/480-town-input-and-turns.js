@@ -13,12 +13,8 @@
   // the picture flips: a missing side uses the other side's frames
   // mirrored, a missing up falls back to down.
   function heroSheetFrames() {
-    var dirs = (spriteSheets.hero || {}).directions || {};
-    if (dirs[heroFacing]) return { frames: dirs[heroFacing], mirror: false };
-    if (heroFacing === 'left' && dirs.right) return { frames: dirs.right, mirror: true };
-    if (heroFacing === 'right' && dirs.left) return { frames: dirs.left, mirror: true };
-    if (heroFacing === 'up' && dirs.down) return { frames: dirs.down, mirror: false };
-    return null;
+    var pick = sheetPick('hero', heroFacing);
+    return pick.frames ? pick : null;
   }
   // Advance and publish the hero's pose. Only a hero with a sheet gets
   // window.VEFR_HERO_FRAME; a pack without one never gets the global at
@@ -108,19 +104,22 @@
       ctx.rotate(off.lean * Math.PI / 180);
     }
     if (heroHasSheet && spriteSheetReady('hero')) {
-      // One frame of the sheet: the cell at (idx mod cols, idx / cols),
-      // drawn 1.5 tiles tall with the same squash and mirror as the
-      // single picture. A missing side's frames are drawn flipped.
+      // One cell of the sheet, drawn 1.5 tiles tall with the same squash
+      // and mirror as the single picture. A missing side's frames are
+      // drawn flipped.
       var sheet = spriteSheets.hero;
       var sim = spriteSheetImgs.hero;
       var fw = sheet.frame[0], fh = sheet.frame[1];
       var cols = Math.max(1, Math.floor(sim.naturalWidth / fw));
-      var col = heroSheetIdx % cols, row = Math.floor(heroSheetIdx / cols);
+      var cell = sheetCell('hero', 'hero', heroFacing, heroAnim ? 'walk' : 'idle', heroWalkStep)
+        || { idx: heroSheetIdx, mirror: heroSheetMirror };
+      var col = cell.idx % cols, row = Math.floor(cell.idx / cols);
+      if (window.VEFR_HERO_FRAME) window.VEFR_HERO_FRAME.frame = cell.idx;
       var sheetH = T * 1.5 * spriteScale(window.VEFR_SPRITE_SCALE, 'hero');
       var sheetW = sheetH * (fw / fh || 1);
       var sh = sheetH * (1 - off.squash);
       var sw = sheetW * (1 + off.squash);
-      if (heroSheetMirror) {
+      if (cell.mirror) {
         ctx.drawImage(sim, col * fw, row * fh, fw, fh, sw / 2, -sh, -sw, sh);
       } else {
         ctx.drawImage(sim, col * fw, row * fh, fw, fh, -sw / 2, -sh, sw, sh);
@@ -299,12 +298,21 @@
     });
     // The people: their own sprite when the pack names one, else the
     // drawn figure (a body and a head), so you can see who is here.
+    var npcBox = document.getElementById('npc-box');
+    var speechOpen = !!npcBox && !npcBox.hidden;
     Object.keys(speakers || {}).forEach(function (key) {
       var s = speakers[key];
       if (!s || !Array.isArray(s.at)) return;
       if (hideUnseen(s.at[0], s.at[1])) return;
       stand(s.at[1], 'speaker:' + key, function () {
-        if (spriteReady(key)) { drawSprite(key, s.at[0], s.at[1]); return; }
+        if (spriteReady(key)) {
+          var beside = Math.abs(s.at[0] - hero[0]) + Math.abs(s.at[1] - hero[1]) === 1;
+          drawSprite(key, s.at[0], s.at[1], {
+            actor: 'speaker:' + key,
+            dir: beside ? faceOf(s.at, hero) : 'down',
+            state: beside && speechOpen ? 'talk' : 'idle' });
+          return;
+        }
         var px = s.at[0] * T, py = s.at[1] * T;
         ctx.fillStyle = town.speaker_color || '#8b939c';
         ctx.beginPath();
@@ -333,7 +341,8 @@
       stand(e.at[1], 'enemy:' + e.id, function () {
         if (e.sprite && spriteReady(e.sprite)) {
           if (!e.alive) ctx.globalAlpha = 0.45;
-          drawSprite(e.sprite, e.at[0], e.at[1]);
+          drawSprite(e.sprite, e.at[0], e.at[1], {
+            actor: 'enemy:' + e.id, dir: e.face || 'down', state: 'idle' });
           ctx.globalAlpha = 1;
           return;
         }
