@@ -9,6 +9,9 @@ there because you were in the room for it.
 Along the way you also pick up how small models are taught: through templates, approved examples,
 command-line tools and searchable records. [Making art](making-art.md) shows that part in the open.
 
+New to making games? Start with [Make your first game](make-your-first-game.md): one page, six steps, no
+code and no AI needed.
+
 This page is the map. It is a suggested path, not a rule: the engine never makes
 you finish one room before you open the next, and a world can start from any of
 them. Every stop ends the same way, with something alive you can look at: a map
@@ -82,7 +85,8 @@ your orientation. The rules that keep it fun and safe:
 - **Write it down.** One feature means a guide section for a stranger and a line in
   the lessons log above.
 
-Where to go next: [GETTING_STARTED.md](../../GETTING_STARTED.md) to run it,
+Where to go next: [Make your first game](make-your-first-game.md) for the shortest path,
+[GETTING_STARTED.md](../../GETTING_STARTED.md) to run it,
 [world-creation.md](world-creation.md) for the full walkthrough of making a world,
 [rulesets.md](rulesets.md) for what each act can play, and
 [making-art.md](making-art.md) for how pictures get made, and

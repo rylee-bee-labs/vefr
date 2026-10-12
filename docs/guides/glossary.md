@@ -83,7 +83,9 @@ The Norse or studio name sits beside it. It never replaces it. If you add a new 
 | Plain word | Means | Old or clashing words | Status |
 |---|---|---|---|
 | **draft** | Made, not yet judged. | (same) | in use |
-| **approved** | The owner said yes. | "accepted" | proposed |
+| **mockup** | A design idea shown as a picture: to look at, not a decision. | "concept", "comp" | decided 2026-10-12 |
+| **prototype** | A design idea that works well enough to try: still not a decision. | "proof of concept" | decided 2026-10-12 |
+| **approved** | The owner said yes. For a design, the only stage that gets built for real (mockup, then prototype, then approved). | "accepted" | decided 2026-10-12 |
 | **released** | Shared with others. | "live" (for a pack), "published" | proposed |
 | **running** | A program is on right now. | "live" (for a process) | proposed |
 | **ok** | Checked and fine. | "healthy", "passing" | proposed |
