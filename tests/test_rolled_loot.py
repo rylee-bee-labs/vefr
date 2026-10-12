@@ -486,7 +486,7 @@ def test_the_bag_names_the_item_and_its_rarity_in_one_line():
     assert "carried.rarity" in named
     assert "itemName(carried.id)" in named
     assert "carriedName(entry)" in _body('180-gold.js', 'renderBagPanel')
-    assert "carried.map(carriedName)" in _body('180-gold.js', 'renderBagStrip')
+    assert "carriedName(kind.first)" in _body('180-gold.js', 'renderBagStrip')
     assert "carriedName(inst)" in _body('430-loot-on-the-floor.js', 'takeHere')
 
 

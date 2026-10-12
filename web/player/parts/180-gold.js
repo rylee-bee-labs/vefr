@@ -247,40 +247,77 @@ function addGold(n) {
   return g;
 }
 
-// The top-of-screen strip: a small sprite per carried thing, beside the
-// health bar. A thing with no ready sprite is a neutral dot. A worn
-// thing is not in the bag list and is not shown here - it sits in its
-// slot in the Bag panel instead.
+// The top-of-screen strip: one picture per kind of thing carried, beside
+// the health bar, with a count when there is more than one. Past
+// BAG_STRIP_KINDS kinds the rest are a `+N` pip. A thing with no ready
+// sprite is a neutral dot. A worn thing is not in the bag list and is not
+// shown here - it sits in its slot in the Bag panel instead.
+var BAG_STRIP_KINDS = 8;
+function bagKinds(carried) {
+  var kinds = [];
+  carried.forEach(function (c) {
+    var kind = null;
+    for (var i = 0; i < kinds.length; i++) {
+      // one pip per id AND rarity: a rare potion is never hidden behind two common ones
+      if (kinds[i].first.id === c.id && (kinds[i].first.rarity || '') === (c.rarity || '')) { kind = kinds[i]; break; }
+    }
+    if (!kind) { kind = { first: c, count: 0 }; kinds.push(kind); }
+    kind.count++;
+  });
+  return kinds;
+}
+function bagPip(carried) {
+  var src = itemSpriteSrc(carried.id);
+  var node;
+  if (src) {
+    node = document.createElement('img');
+    node.src = src;
+    node.alt = '';
+    node.className = 'bag-pip';
+  } else {
+    node = document.createElement('span');
+    node.className = 'bag-pip bag-pip--dot';
+    node.setAttribute('aria-hidden', 'true');
+  }
+  return node;
+}
 function renderBagStrip() {
   var strip = document.getElementById('bag-strip');
   if (!strip) return;
   strip.textContent = '';
-  var carried = bagCarried().filter(function (c) { return !isWorn(c.id); });
-  if (!carried.length) {
+  var kinds = bagKinds(bagCarried().filter(function (c) { return !isWorn(c.id); }));
+  if (!kinds.length) {
     strip.hidden = true;
     strip.setAttribute('aria-label', 'Nothing carried');
     return;
   }
   strip.hidden = false;
-  carried.forEach(function (c) {
-    var src = itemSpriteSrc(c.id);
-    var node;
-    if (src) {
-      node = document.createElement('img');
-      node.src = src;
-      node.alt = '';
-      node.className = 'bag-pip';
-    } else {
-      node = document.createElement('span');
-      node.className = 'bag-pip bag-pip--dot';
-      node.setAttribute('aria-hidden', 'true');
-    }
-    strip.appendChild(node);
+  kinds.slice(0, BAG_STRIP_KINDS).forEach(function (kind) {
+    var pip = bagPip(kind.first);
+    if (kind.count === 1) { strip.appendChild(pip); return; }
+    var cell = document.createElement('span');
+    cell.className = 'bag-cell';
+    var badge = document.createElement('span');
+    badge.className = 'bag-pip-count';
+    badge.setAttribute('aria-hidden', 'true');
+    badge.textContent = String(kind.count);
+    cell.appendChild(pip);
+    cell.appendChild(badge);
+    strip.appendChild(cell);
   });
-  // The strip's own words carry the rarity too, so a screen reader hears
-  // what the eye sees and neither has to wait for anything.
-  strip.setAttribute('aria-label',
-    'Carrying: ' + carried.map(carriedName).join(', ') + '.');
+  if (kinds.length > BAG_STRIP_KINDS) {
+    var more = document.createElement('span');
+    more.className = 'bag-pip bag-pip--more';
+    more.setAttribute('aria-hidden', 'true');
+    more.textContent = '+' + (kinds.length - BAG_STRIP_KINDS);
+    strip.appendChild(more);
+  }
+  // The strip's own words carry the rarity and every kind's count, so a
+  // screen reader hears what the eye sees and neither has to wait for anything.
+  strip.setAttribute('aria-label', 'Carrying: ' + kinds.map(function (kind) {
+    var words = carriedName(kind.first);
+    return kind.count > 1 ? words + ' (' + kind.count + ')' : words;
+  }).join(', ') + '.');
 }
 
 // The Bag panel's "You" section: five slots in a fixed order, each

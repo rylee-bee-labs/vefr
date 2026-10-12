@@ -313,4 +313,5 @@ def test_the_traits_are_named_only_once_the_thing_has_been_read():
     # The two bag surfaces read the one name, so both name the traits and
     # neither keeps a second copy of the truth somewhere else.
     assert 'carriedName(entry)' in _body('180-gold.js', 'renderBagPanel')
-    assert 'carried.map(carriedName)' in _body('180-gold.js', 'renderBagStrip')
+    # the strip names each KIND once (vefr#412), still through carriedName
+    assert 'carriedName(kind.first)' in _body('180-gold.js', 'renderBagStrip')
