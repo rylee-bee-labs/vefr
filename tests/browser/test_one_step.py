@@ -11,7 +11,7 @@ What looks like a multi-tile jump is display scale, not a logic bug. The
 player draws a tile at T = town.tile * fitZoom(), and fitZoom() scales a
 whole map up as far as 3x (and the hero sprite is drawn 1.5 tiles tall), so
 one tile of travel can LOOK like several pack tiles: measured, one step was
-32px in the foggy sample town (T = 32) and 96px on the no-fog wall fixture
+48px in the foggy sample town (T = 48, the largest a dark floor is drawn at) and 96px on the no-fog wall fixture
 (T = 3 x town.tile = 96). In addition, a HELD arrow key chains moves because
 the keydown handler has no e.repeat guard: the browser's own key auto-repeat
 delivers repeated keydown events, each calling move() once (4 synthetic

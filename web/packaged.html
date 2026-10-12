@@ -10159,10 +10159,17 @@ function setupTown() {
     var fitW = viewW / (cols * town.tile);
     var dock = window.innerWidth <= 600 && window.innerHeight > window.innerWidth;
     if (fogOn) {
-      // A dark map is read up close at one tile. A map already small enough
-      // to read whole shrinks into the HUD's band (and letterboxes on the
-      // dock); a bigger one still scrolls, exactly as it did.
+      // A dark map is read up close: a tile is as big as the lit circle lets
+      // fit the play height, 32 to 48 px. A phone keeps 32 px, since its fit
+      // cap would otherwise let a small map's tile grow past that. A map
+      // already small enough to read whole shrinks into the HUD's band (and
+      // letterboxes on the dock); a bigger one still scrolls.
       var z = 32 / town.tile;
+      if (!dock) {
+        var lit = 2 * fogRadius + 1;
+        var px = Math.floor(Math.max(viewH - 2 * HUD_BAND, 1) / lit);
+        z = Math.max(32, Math.min(48, px)) / town.tile;
+      }
       var fitH = Math.max(viewH - 2 * HUD_BAND, 1) / (rows * town.tile);
       var whole = cols * town.tile * z <= viewW && rows * town.tile * z <= viewH;
       return (dock || whole) ? Math.min(z, fitW, fitH) : z;
