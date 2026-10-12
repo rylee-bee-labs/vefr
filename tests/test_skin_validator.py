@@ -311,7 +311,14 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # the woven player for every pack; no pack's data lines change. Measured twice in separate processes, readings equal:
 #   13dd0c26425265f3f6a4ae727d5461dffc58d2fee05f4c4ee3cb241c885b7b8c
 #   13dd0c26425265f3f6a4ae727d5461dffc58d2fee05f4c4ee3cb241c885b7b8c
-NO_SKIN_WEAVE_SHA256 = "13dd0c26425265f3f6a4ae727d5461dffc58d2fee05f4c4ee3cb241c885b7b8c"
+# WAYART 2026-10-12: the woven player gains VEFR_WAY_ICONS and VEFR_REGION_WAY_ICONS (both `{}` here)
+# and picks a transition's picture by kind; measured twice in separate processes, readings equal:
+#   07f66d54ca31e402935a9a0d285bf1703d8fa283a6e7f7dfa1d319c807a4d116
+#   07f66d54ca31e402935a9a0d285bf1703d8fa283a6e7f7dfa1d319c807a4d116
+# Merged with #416 (way pictures) on 2026-10-12: both move the woven player; measured twice in separate processes, readings equal:
+#   2e795abbe35b9adb35d35c655a30b0b15bfde29e5aaa2c82b5e40232efbb4eee
+#   2e795abbe35b9adb35d35c655a30b0b15bfde29e5aaa2c82b5e40232efbb4eee
+NO_SKIN_WEAVE_SHA256 = "2e795abbe35b9adb35d35c655a30b0b15bfde29e5aaa2c82b5e40232efbb4eee"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

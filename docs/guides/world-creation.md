@@ -186,6 +186,23 @@ own processing step. A tile the region and the engine both lack is a
 validation error in a region that has a `tiles/`, while a region without
 one still falls back to the engine set silently.
 
+### Doors, stairs and trapdoors
+
+A way out is drawn with the engine's door picture unless the pack brings
+its own for that kind. Name the picture in `tiles/`:
+
+- `way-door` - a door
+- `way-stairs-up` - a stair that goes up
+- `way-stairs-down` - a stair that goes down
+- `way-trapdoor` - a trapdoor
+
+A stair is a transition whose point of interest names "stair" or whose
+map symbol is `u` or `d`; it goes up when its name has the word "up". A
+trapdoor is one whose point of interest or legend tile says "trapdoor" or
+"trap door". The region's own `tiles/` is tried first, then the pack's
+root `tiles/`; a kind neither names keeps the door picture. A way picture
+is drawn over the whole tile, so bake it at the same size as ground tiles.
+
 ## Where your world lives
 
 ```text

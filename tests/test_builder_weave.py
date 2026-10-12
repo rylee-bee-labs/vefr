@@ -148,6 +148,44 @@ def test_the_woven_file_carries_the_door_picture():
     assert _baked(cli.weave_html(pack), "VEFR_DOOR").startswith("data:image/webp;base64,")
 
 
+def _webp_uri(data: bytes) -> str:
+    import base64
+
+    return "data:image/webp;base64," + base64.b64encode(data).decode("ascii")
+
+
+def test_a_pack_way_picture_bakes_by_kind(tmp_path):
+    """A pack's own stair picture is baked under its kind; a kind it does not name is absent."""
+    pack = _two_region_pack(tmp_path)
+    (pack / "tiles").mkdir()
+    (pack / "tiles" / "way-stairs-down.webp").write_bytes(b"down stair")
+    assert _baked(cli.weave_html(pack), "VEFR_WAY_ICONS") == {
+        "stairs-down": _webp_uri(b"down stair"),
+    }
+
+
+def test_a_pack_without_way_pictures_bakes_empty_objects(tmp_path):
+    pack = _two_region_pack(tmp_path)
+    html = cli.weave_html(pack)
+    assert _baked(html, "VEFR_WAY_ICONS") == {}
+    assert _baked(html, "VEFR_REGION_WAY_ICONS") == {}
+
+
+def test_a_region_brings_its_own_way_picture(tmp_path):
+    """A region's own door wins for that region; the pack's root door serves the others."""
+    pack = _two_region_pack(tmp_path)
+    (pack / "tiles").mkdir()
+    (pack / "tiles" / "way-door.webp").write_bytes(b"pack door")
+    cottage_tiles = pack / "acts" / "act-1" / "cottage" / "tiles"
+    cottage_tiles.mkdir(parents=True)
+    (cottage_tiles / "way-door.webp").write_bytes(b"cottage door")
+    html = cli.weave_html(pack)
+    assert _baked(html, "VEFR_WAY_ICONS") == {"door": _webp_uri(b"pack door")}
+    assert _baked(html, "VEFR_REGION_WAY_ICONS") == {
+        "cottage": {"door": _webp_uri(b"cottage door")},
+    }
+
+
 def test_each_region_keeps_its_own_tiles(tmp_path):
     """Tiles travel with the region.
 

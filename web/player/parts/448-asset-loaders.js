@@ -79,6 +79,27 @@
     return doorImg && doorImg.complete && doorImg.naturalWidth > 0;
   }
 
+  // A pack's way pictures, preloaded the same way, keyed by their source.
+  var wayImgs = {};
+  function preloadWay(src) {
+    if (!src || wayImgs[src]) return;
+    var im = new Image();
+    im.onload = function () { draw(); };
+    im.src = src;
+    wayImgs[src] = im;
+  }
+  Object.keys(window.VEFR_WAY_ICONS || {}).forEach(function (kind) {
+    preloadWay(window.VEFR_WAY_ICONS[kind]);
+  });
+  Object.keys(window.VEFR_REGION_WAY_ICONS || {}).forEach(function (region) {
+    var pics = window.VEFR_REGION_WAY_ICONS[region];
+    Object.keys(pics).forEach(function (kind) { preloadWay(pics[kind]); });
+  });
+  function wayReady(src) {
+    var im = wayImgs[src];
+    return !!(im && im.complete && im.naturalWidth > 0);
+  }
+
   // The book markers, preloaded like the rest. A book with no marker is
   // invisible: a map book is a tile you step on, a gifted one is a line
   // of text. Draw where one can still be found.
