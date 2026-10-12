@@ -46,6 +46,7 @@ __all__ = [
     "fit_findings",
     "section_findings",
     "graph_findings",
+    "vault_reach_findings",
     "read_pack",
     "sweep",
     "report",
@@ -371,6 +372,38 @@ def graph_findings(plan: dict) -> list[str]:
     return found
 
 
+def vault_reach_findings(plan: dict, section_id: str) -> list[str]:
+    """Check 2 (ADR 0015): the vault's note, chest and home, walked from its door.
+
+    The walk starts at the vault door, the socket the corridor came in by,
+    and closes the secret sockets exactly as check 1 does. A vault has no
+    secret socket of its own, so the door is never one.
+    """
+    rows = plan.get("rows") or []
+    secrets = {tuple(spot) for spot in (plan.get("secrets") or [])
+               if isinstance(spot, (list, tuple)) and len(spot) == 2}
+    found = []
+    for index, placement in enumerate(plan.get("stamps") or []):
+        if not isinstance(placement, dict) or placement.get("role") != "vault":
+            continue
+        door = placement.get("socket")
+        honest_tiles = _flood(rows, door, secrets)
+        open_tiles = _flood(rows, door)
+        anchors = placement.get("anchors") or {}
+        for name in ("note", "chest", "home"):
+            tile = tuple(anchors[name])
+            if tile in honest_tiles:
+                continue
+            if tile in open_tiles:
+                how = "can only be reached from the vault door by opening a secret"
+            else:
+                how = "cannot be reached from the vault door at all"
+            found.append(
+                f"section {section_id}: its {name} at {tile[0]},{tile[1]} {how} "
+                f"/stamps/{index}/anchors/{name}")
+    return found
+
+
 # ------------------------------------------------------------------- a sweep
 
 
@@ -512,7 +545,7 @@ def sweep(records: list[dict], sections: list[dict], seeds: int
                             entry["sections"].append(section_id)
                         if not entry["min_width"] or small[0] < entry["min_width"]:
                             entry["min_width"] = small[0]
-                    for line in graph_findings(plan):
+                    for line in graph_findings(plan) + vault_reach_findings(plan, section_id):
                         if line not in findings:
                             findings.append(line)
     # The defects lead: they are the cause of the share findings the
