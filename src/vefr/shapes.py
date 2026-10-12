@@ -713,6 +713,14 @@ SOUND = Block(
     },
 )
 
+# The drawn tile, in CSS pixels, of a touch phone whose map is too big to fit (docs/guides/world-creation.md).
+PHONE_TILE_LO, PHONE_TILE_HI = 32, 72
+DISPLAY = Block(
+    name='display',
+    example='{"phone_tile": 52}',
+    keys=(Key('phone_tile', 'int', lo=PHONE_TILE_LO, hi=PHONE_TILE_HI),),
+)
+
 # An affix is one record in the pack's `affixes.json`, shared by every
 # Section. `id` and `label` are required; every other key is optional
 # and a default is no change - 1.0 for a multiplier, 0 for `sight` and
@@ -1489,6 +1497,7 @@ SPELLS = Block(
 BLOCKS = {
     'saves': SAVES,
     'sound': SOUND,
+    'display': DISPLAY,
     'affix': AFFIX,
     'elites': ELITES,
     'groups': GROUPS,

@@ -307,7 +307,11 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # Merged with #412 on 2026-10-12: both moved the woven player; measured twice in separate processes:
 #   c9ec6b7110edeb6fb3d3d3d8d0eba4d3a3475888339280a88042e866ab4b162e
 #   c9ec6b7110edeb6fb3d3d3d8d0eba4d3a3475888339280a88042e866ab4b162e
-NO_SKIN_WEAVE_SHA256 = "c9ec6b7110edeb6fb3d3d3d8d0eba4d3a3475888339280a88042e866ab4b162e"
+# P2CAM 2026-10-12: the phone camera (440-the-camera.js, and the draw() clamp in 480-town-input-and-turns.js) moves
+# the woven player for every pack; no pack's data lines change. Measured twice in separate processes, readings equal:
+#   13dd0c26425265f3f6a4ae727d5461dffc58d2fee05f4c4ee3cb241c885b7b8c
+#   13dd0c26425265f3f6a4ae727d5461dffc58d2fee05f4c4ee3cb241c885b7b8c
+NO_SKIN_WEAVE_SHA256 = "13dd0c26425265f3f6a4ae727d5461dffc58d2fee05f4c4ee3cb241c885b7b8c"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():
