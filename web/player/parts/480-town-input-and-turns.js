@@ -210,6 +210,7 @@
     var litSet = fogOn ? litNow() : null;   // what is lit right now
 
     var u = T / 32;   // the pack's mark sizes are authored for a 32px tile
+    edgesDrawn = 0;
     var x0 = Math.max(0, Math.floor(camX / T));
     var x1 = Math.min(cols - 1, Math.ceil((camX + viewW) / T));
     var y0 = Math.max(0, Math.floor(camY / T));
@@ -235,6 +236,17 @@
         } else {
           ctx.fillStyle = color;
           ctx.fillRect(x * T, y * T, T, T);
+        }
+        // A ground that blends: the piece of its edges sheet that matches which neighbours share
+        // this symbol, laid over the tile. All four the same (15) draws nothing.
+        var edgeImg = edgeImgs[ch];
+        if (edgeImg && edgeImg.complete && edgeImg.naturalWidth > 0) {
+          var mask = edgeMask(town.map, x, y);
+          if (mask !== 15) {
+            var ew = edgeImg.naturalWidth / 4, eh = edgeImg.naturalHeight / 4;
+            ctx.drawImage(edgeImg, (mask % 4) * ew, Math.floor(mask / 4) * eh, ew, eh, x * T, y * T, T, T);
+            edgesDrawn++;
+          }
         }
         if (info.solid && !hasTile && !hasGrid) {   // the grey inset marks a wall with no picture
           ctx.fillStyle = '#444';
@@ -576,6 +588,11 @@
     seeNow();
     loadEnemies();
     combatSnapshot();
+    // What this floor is, while the hero stands where they arrived
+    // (vefr#362): only a floor of a labelled Section answers, so every
+    // other region arrives exactly as it did.
+    arrivalNote = (window.VEFR_DESCENT && typeof window.VEFR_DESCENT.arrival === 'function')
+      ? window.VEFR_DESCENT.arrival(name, hero) : null;
     resize();
     draw();
     refreshPoi();
@@ -823,9 +840,19 @@
       candidates.push({ kind: 'book', id: b.id, name: b.title || 'the note',
                         at: [b.at[0], b.at[1]] });
     });
+    // Just arrived on a labelled floor (vefr#362): the tile the hero
+    // stands on is the floor itself, not the stair under them, until they
+    // step off or read it. The stair is only set aside for that moment.
+    var arrived = arrivalHere();
+    if (arrived) {
+      candidates.push({ kind: 'place', id: ARRIVAL_ID, name: arrivalNote.name,
+                        at: [hero[0], hero[1]] });
+    }
+    function onArrival(x, y) { return arrived && x === hero[0] && y === hero[1]; }
     transitions().forEach(function (tr) {
       if (!tr || tr.from !== regionName || !Array.isArray(tr.at)) return;
       if (typeof tr.at[0] !== 'number' || typeof tr.at[1] !== 'number') return;
+      if (onArrival(tr.at[0], tr.at[1])) return;
       candidates.push(transitionCandidate(tr));
     });
     var texts = town.poi_text || {};
@@ -833,6 +860,7 @@
       var xy = key.split(',');
       var x = Number(xy[0]), y = Number(xy[1]);
       if (!isFinite(x) || !isFinite(y)) return;
+      if (onArrival(x, y)) return;
       candidates.push({ kind: 'place', id: key,
                         name: (pois || {})[key] || texts[key],
                         at: [x, y] });
@@ -993,6 +1021,11 @@
       } else if (t.kind === 'resident') {
         if (!speakers[t.id]) throw new Error('speaker gone');
         talkToSpeaker({ key: t.id, spec: speakers[t.id], dist: t.dist });
+      } else if (t.kind === 'place' && t.id === ARRIVAL_ID) {
+        // The floor, read: its name and the way on. Once read, the tile
+        // is the stair again, so the next press offers the way back up.
+        showSpeech(arrivalNote.name, arrivalNote.line, '');
+        arrivalNote = null;
       } else if (t.kind === 'place') {
         showSpeech((pois || {})[t.id] || '', (town.poi_text || {})[t.id] || '',
                    '');
@@ -1060,12 +1093,23 @@
     vrow.hidden = !near;
   }
 
+  // The floor the hero has just arrived on (vefr#362), from
+  // VEFR_DESCENT.arrival: `{at, name, line}` while they still stand on the
+  // tile they arrived at and have not read it, else null. `ARRIVAL_ID` is
+  // its Interact id, which no `x,y` poi key can be.
+  var ARRIVAL_ID = 'arrival';
+  var arrivalNote = null;
+  function arrivalHere() {
+    return !!(arrivalNote && hero[0] === arrivalNote.at[0] && hero[1] === arrivalNote.at[1]);
+  }
+
   // The named place the hero now stands on, written to the POI line.
   var POI_QUIET_MS = 4000;
   var poiTimer = null;
   function refreshPoi() {
     var here = '';
-    for (var k in pois) {
+    if (arrivalHere()) here = arrivalNote.name;
+    else for (var k in pois) {
       if (k === hero[0] + ',' + hero[1]) { here = pois[k]; break; }
     }
     var poiEl = document.getElementById('poi');
@@ -1141,6 +1185,7 @@
       return;
     }
     hero = [nx, ny];
+    arrivalNote = null;   // the arrival is over at the first step
     quietTutorial();
     // Draw-only: start the hop now, but the game state above is already
     // settled and the turn below is never gated on the animation.

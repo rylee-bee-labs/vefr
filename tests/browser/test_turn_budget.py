@@ -10,8 +10,8 @@ It is a gate, not a bench. `tests/browser/bench_floor_play.py` measures
 the same thing across sizes and monster counts and writes a report; that
 one is skipped unless `VEFR_BENCH=1`, because a bench is not a contract.
 This one is the contract, so it runs with the rest of the browser suite
-and skips only when Chromium is not installed (the conftest's `browser`
-fixture), exactly like every other test in this directory.
+and skips only when Chromium is not installed (the `browser` fixture in
+fixtures.py), exactly like every other test in this directory.
 
 What is measured is the shipped AI, verbatim: parts 410, 420 and 430 are
 concatenated into a page and their `enemyTurn` is timed with everything

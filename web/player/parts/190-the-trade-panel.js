@@ -74,7 +74,12 @@ function sellItem(id) {
 function buyItem(id) {
   var price = itemValue(itemCatalog()[id]);
   if (!price || heroGold() < price) return false;
-  if (!bagAdd(id)) return false;
+  // A full bag refuses the purchase before any gold changes hands, and
+  // says so in the floor pickup's own words (bag capacity, ADR 0017).
+  if (!bagAdd(id)) {
+    tradeSay('Your bag is full.');
+    return false;
+  }
   addGold(-price);
   // Buying is acquiring: the same `picks-up` a floor drop fires,
   // plus the fact that it was bought.

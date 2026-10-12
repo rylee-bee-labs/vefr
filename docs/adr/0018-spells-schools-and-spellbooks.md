@@ -141,6 +141,12 @@ says why. A spell with no `heal` casts, says so and changes no number,
 which is the honest answer for a pack that has not written the numbers
 yet, and not a refusal.
 
+Every cast also writes one why-log entry (`VEFR_WHY`, the Why panel),
+`{id: "cast-<spell id>", why: <the line the panel said>}`, the way the
+descent writes a death there, so a cast can be read back after the live
+line has moved on. A refused cast (a spell not learned) writes nothing.
+This is a log line, not an event: no rule fires on it.
+
 **There is no second action system.** The known spells are one section of
 the Bag panel below the bag list, drawn as rows with a `Cast` button by
 `renderSpellList()` and called from `renderBagPanel()`. Each row names
@@ -167,8 +173,11 @@ Four, each one plain sentence naming the field:
 3. an item teaching a spell the pack does not declare -
    `item 'a tide-bound tome' (tide-tome) must teach a spell the pack
    declares, and 'ash-call' is not one of its spells`;
-4. a spell with no `school` at all - the table's own missing-key
-   sentence, `spell must hold a school, such as {...}`.
+4. a spell with no `school` at all - the table's missing-key sentence,
+   said again naming the spell and the file:
+   `world.json: spell 'ember-bolt' must hold a school, such as {...}`
+   (a record with no `id` either is named by its place,
+   `spells.spells[0]`).
 
 A refusal is a no-op, not a half-spell: a book naming a spell the pack
 does not have bakes the pack's own word and the player says the words
@@ -220,6 +229,9 @@ save written before this slice reads as no books.
   book found as loot teaches its spell and spends the copy, casting heals
   and the already-whole rule holds, and a pack with no spells draws no
   section at all.
+- `tests/test_spell_table.py` - the shape, the bake and the player held
+  to one another: the player reads exactly the keys `shapes.SPELL`
+  accepts, and the bake carries exactly those, in order.
 - `tests/fixtures/make_spell_pack.py` - the fixture: a three-step level
   table, three spells (one at level 1, one at level 2, one at level 9,
   above the cap) and one book.
@@ -253,3 +265,19 @@ its own test failed with nothing else failing.
    one that fires a rule?
 4. Should a school be a record with its own name rather than a plain
    word, the moment a school has more to say than one word?
+
+**Left for the owner.** Three calls this ADR does not make, and no later
+slice should make on its own: what a school *means* in play (question 1);
+what a cast *costs* - mana, a cooldown, a charge, or nothing; and what a
+spell does beyond `heal` (question 3).
+
+**Owner decisions (Rylee, 2026-10-12, closing vefr#345).**
+
+- **A school groups spells for learning and for loot, and means nothing
+  else in play.** It is the pack's label, the panel prints it, and a book
+  or a level teaches by it. Question 1 is answered: only ever a label.
+- **A cast costs nothing.** No mana, no cooldown, no charge: a cozy game
+  with no reflexes wants no bar to watch. A pack that later needs a cost
+  asks for it as a new ADR.
+- **Effects beyond `heal`** are new spell keys, each its own slice when a
+  game asks for one. None is promised here.

@@ -106,7 +106,7 @@ def test_the_drawn_hero_settles_on_the_new_tile(page, woven):
 
 def test_reduced_motion_draws_the_new_tile_at_once(browser, woven):
     # The shared `page` fixture builds its own context, so this one is
-    # written here with reduced motion asked for, in the conftest's shape.
+    # written here with reduced motion asked for, in the shape of fixtures.py's.
     ctx = browser.new_context(
         viewport={"width": 1100, "height": 1400}, reduced_motion="reduce")
     page = ctx.new_page()

@@ -17,7 +17,7 @@ import re
 import tempfile
 from pathlib import Path
 
-# The shared studio fixture (conftest.py) starts once per session; point
+# The shared studio fixture (fixtures.py) starts once per session; point
 # its weaves at a temp dir before it is created so the test never leaves
 # files in the checkout. Set at import time, during collection.
 os.environ.setdefault("VEFR_WEAVE_DIR", tempfile.mkdtemp(prefix="vefr-play-weave-"))

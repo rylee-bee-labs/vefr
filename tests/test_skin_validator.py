@@ -344,7 +344,34 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # The town gate on a Section's last stair only (the stair that leaves the Section), 2026-10-12; measured twice in separate processes, readings equal:
 #   7c1c8e962977b479584fc48b1bb106265bb9ae5f34cb7fbcee333c9fd9521b00
 #   7c1c8e962977b479584fc48b1bb106265bb9ae5f34cb7fbcee333c9fd9521b00
-NO_SKIN_WEAVE_SHA256 = "7c1c8e962977b479584fc48b1bb106265bb9ae5f34cb7fbcee333c9fd9521b00"
+# A full bag refuses a shop purchase in words (#343), 2026-10-12; measured twice in separate processes, readings equal:
+#   4d79733b09c9dec30d9c2421d34199f7b456b4f226cba5693dc2a0fa666b583c
+#   4d79733b09c9dec30d9c2421d34199f7b456b4f226cba5693dc2a0fa666b583c
+# A cast writes the why-log (#345), 2026-10-12; measured twice in separate processes, readings equal:
+#   bad7095e61c85cd26166562090bf77e0e3b2cacdf9b6288b8bf6d4d1d5abcc32
+#   bad7095e61c85cd26166562090bf77e0e3b2cacdf9b6288b8bf6d4d1d5abcc32
+# A deep landing's up-stair climbs to the entry (vefr#366), 2026-10-12; measured twice in separate processes, readings equal:
+#   6c5b2fd0008ad2ed6c6dd262b414c444f3a879f58c881e6cc638268ebda01218
+#   6c5b2fd0008ad2ed6c6dd262b414c444f3a879f58c881e6cc638268ebda01218
+# A Section's label in the player's hints (#363), 2026-10-12; measured twice in separate processes, readings equal:
+#   7289fe208fe7f306d626b1e154171f3a1848e4e1ad777471dc3a6491f1596442
+#   7289fe208fe7f306d626b1e154171f3a1848e4e1ad777471dc3a6491f1596442
+# A generated floor announced by its Section's label on arrival (#362), 2026-10-12; measured twice in separate processes, readings equal:
+#   0538c9bd605fa1debc42c2ede3176dda7bc2c17cbfa89ac9c20417967e9cf41b
+#   0538c9bd605fa1debc42c2ede3176dda7bc2c17cbfa89ac9c20417967e9cf41b
+# A family's `sight: 0` kept on a generated floor (#437, 397-the-descent.js), 2026-10-12; measured twice in separate processes, readings equal:
+#   e8cf6223969fede34b9133ae5afc07ef6b010f79e2ecce01a18f9367a816dbc4
+#   e8cf6223969fede34b9133ae5afc07ef6b010f79e2ecce01a18f9367a816dbc4
+# Whisper and Explore on the touch controls (#431), 2026-10-12; measured twice in separate processes, readings equal:
+#   253b11028d3f6657906310f375cf8cfe9151d681609720078163e76d4d7e89b0
+#   253b11028d3f6657906310f375cf8cfe9151d681609720078163e76d4d7e89b0
+# A whole lit map leaves the HUD bands clear (#424), 2026-10-12; measured twice in separate processes, readings equal:
+#   ec3f6c7a8ca6cb4c6e9185ec76030f14655a293d690f6b77af5c8095cc365811
+#   ec3f6c7a8ca6cb4c6e9185ec76030f14655a293d690f6b77af5c8095cc365811
+# All of the 2026-10-12 issue sweep merged together (#362 #363 #366 #422 #424 #425 #431 #437, #343/#345 parts); measured twice in separate processes, readings equal:
+#   68ced1bfc4e74836419c4adc4d54cb4928c375b31318c12cdb12b4969657d09a
+#   68ced1bfc4e74836419c4adc4d54cb4928c375b31318c12cdb12b4969657d09a
+NO_SKIN_WEAVE_SHA256 = "68ced1bfc4e74836419c4adc4d54cb4928c375b31318c12cdb12b4969657d09a"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

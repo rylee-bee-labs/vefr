@@ -253,6 +253,66 @@ window.VEFR_DESCENT = (function () {
 
   function isGenerated(name) { return parseName(name) !== null; }
 
+  // ---- what a player is told a floor is (vefr#362, #363) --------------
+  // The twin of `sections.floor_title`: a Section that declares its own
+  // `label` names its floors "<label>, floor <k>"; one that declares none
+  // answers '' and every caller keeps the words it had (the region id,
+  // the stair). The region id itself is never touched - it is the save's
+  // key and the rules' id - only what the player reads changes.
+  function floorTitle(name) {
+    var at = parseName(name);
+    if (!at) return '';
+    var label = at.section.label;
+    if (typeof label !== 'string' || !label) return '';
+    return label + ', floor ' + at.k;
+  }
+
+  // The words for a place a hint names: a labelled floor's title, else the
+  // name exactly as given.
+  function placeName(name) {
+    return floorTitle(name) || String(name === undefined ? '' : name);
+  }
+
+  // The compass from one tile to another, in the words `point-to` uses.
+  function compass(from, to) {
+    var dx = to[0] - from[0], dy = to[1] - from[1];
+    var vert = dy < 0 ? 'north' : (dy > 0 ? 'south' : '');
+    var horiz = dx < 0 ? 'west' : (dx > 0 ? 'east' : '');
+    return vert && horiz ? vert + '-' + horiz : (vert || horiz);
+  }
+
+  // Arriving on a floor of a labelled Section, on its up-stair: what the
+  // floor is, and which way its stair down lies, so the player is greeted
+  // by the place and a goal ahead rather than by the way back up. The
+  // stair itself is unchanged - still drawn, still walkable, still the way
+  // up once the hero steps off it and back. Null for anything else: a
+  // Section with no label, a baked region, the town, a hero who climbed
+  // up onto the down-stair. The hint names the floor below by its own
+  // title when it has one, else "the stair down"; a floor with no stair
+  // down wired has no hint.
+  function arrival(name, at) {
+    var title = floorTitle(name);
+    if (!title || !Array.isArray(at)) return null;
+    var region = (window.VEFR_REGIONS || {})[name];
+    var up = region ? region.hero_start : null;
+    if (!Array.isArray(up) || up[0] !== at[0] || up[1] !== at[1]) return null;
+    var here = depthOfName(name);
+    var down = null;
+    (window.VEFR_TRANSITIONS || []).forEach(function (t) {
+      if (!down && t && t.from === name && Array.isArray(t.at) &&
+          depthOfName(t.to) > here) down = t;
+    });
+    var line = '';
+    if (down && typeof playerWord === 'function') {
+      var place = floorTitle(down.to) || 'the stair down';
+      var dir = compass(at, down.at);
+      line = dir
+        ? playerWord('where_next.reach', { place: place, direction: dir })
+        : playerWord('where_next.here', { place: place });
+    }
+    return { at: [at[0], at[1]], name: title, line: line };
+  }
+
   // ---- a floor, drawn (the twin of `floor_plan`) ----------------------
   function seedFor(run) { return runSeed(baseSeed(), run); }
 
@@ -291,6 +351,10 @@ window.VEFR_DESCENT = (function () {
   var DEFAULT_PATTERN = ['entry', 'n', 'n', 'special', 'landing', 'n',
                          'special', 'n', 'warden'];
   var PATTERN_SLOTS = ['entry', 'n', 'special', 'landing', 'warden'];
+  // The two slots that are a landing (twin of `sections.LANDING_SLOTS`):
+  // `entry` is the floor a hero comes down to, and `landing` the one the
+  // pattern puts deeper in the Section.
+  var LANDING_SLOTS = ['entry', 'landing'];
   var DEFAULT_SPECIALS = ['treasure', 'infested', 'hub'];
 
   function wholePair(value, fallback) {
@@ -312,6 +376,14 @@ window.VEFR_DESCENT = (function () {
       : DEFAULT_PATTERN.slice();
     while (slots.length < sectionFloors(section)) slots.push('n');
     return slots;
+  }
+  // Whether floor `k` of a Section is one of its landings: the twin of
+  // `sections.is_landing`, which the bake (`vefr delve --section`) reads to
+  // wire a landing's up-stair to the descent's entry.
+  function isLanding(section, k) {
+    var slots = sectionPattern(section);
+    var slot = (isWhole(k) && k >= 1 && k <= slots.length) ? slots[k - 1] : 'n';
+    return LANDING_SLOTS.indexOf(slot) >= 0;
   }
   function sectionSpecials(section) {
     var raw = section ? section.specials : null;
@@ -466,7 +538,7 @@ window.VEFR_DESCENT = (function () {
         name: (typeof family.name === 'string' && family.name) ? family.name : DEFAULT_FAMILY,
         sprite: (typeof family.sprite === 'string') ? family.sprite : '',
         at: [at[0], at[1]], hp: Math.max(1, hp), atk: Math.max(1, atk),
-        sight: Math.max(1, sight), xp: xpFor(family, depth),
+        sight: Math.max(0, sight), xp: xpFor(family, depth),
         drops: mobDrops(key, 'm' + i, family.drops)
       });
     }
@@ -626,7 +698,7 @@ window.VEFR_DESCENT = (function () {
       name: (typeof base.name === 'string' && base.name) ? base.name : DEFAULT_FAMILY,
       sprite: (typeof base.sprite === 'string') ? base.sprite : '',
       at: [at[0], at[1]], hp: Math.max(1, hp), atk: Math.max(1, atk),
-      sight: Math.max(1, sight), xp: xpFor(base, depth),
+      sight: Math.max(0, sight), xp: xpFor(base, depth),
       drops: mobDrops(key, WARDEN_MOB, base.drops), warden: true
     };
     // The two presentation keys ride the monster as well as the record,
@@ -1183,7 +1255,12 @@ window.VEFR_DESCENT = (function () {
   }
 
   // The stairs of a generated floor: down to the next depth, up to the
-  // floor above - and the first floor's stair up is the way home.
+  // floor above - and the first floor's stair up is the way home. So is a
+  // landing's (vefr#366, the elevator rule of PLAN.md section 4): a floor
+  // whose pattern slot is `entry` or `landing` climbs straight to the
+  // descent's entry, exactly as the bake wires it, and the depth is kept
+  // in the save's `flags.landing` so the reached landings outlive the run.
+  // A Section whose pattern names neither slot keeps every stair as it was.
   function wireFloor(name, plan) {
     if (wired[name]) return;
     wired[name] = true;
@@ -1213,7 +1290,10 @@ window.VEFR_DESCENT = (function () {
       }
     }
     var up = locate(plan.depth - 1);
-    if (up) {
+    var here = parseName(name);
+    var landing = !!(here && isLanding(here.section, plan.k));
+    if (landing) recordLanding(plan.depth);
+    if (up && !landing) {
       var above = floorPlan(plan.depth - 1);
       if (above) {
         pushTransition(list, { from: name, at: plan.anchors.up.slice(),
@@ -1518,7 +1598,7 @@ window.VEFR_DESCENT = (function () {
     var depth = depthOfName(name);
     var plan = depth ? floorPlan(depth) : null;
     if (!plan) return null;
-    whySay('descent-death', 'You fell on ' + name + ' and woke at its up '
+    whySay('descent-death', 'You fell on ' + placeName(name) + ' and woke at its up '
       + 'stair; the descent is unbroken.');
     return { region: name, at: plan.anchors.up.slice() };
   }
@@ -1662,7 +1742,11 @@ window.VEFR_DESCENT = (function () {
     var kept = [];
     for (var j = 0; j < list.length; j++) {
       var t = list[j];
-      if (t && isGenerated(t.from) && isGenerated(t.to)) continue;
+      // Every stair OUT of a generated floor is wired by `wireFloor`, and
+      // a new run redraws the floor it stands on: the ones that climb to
+      // town (floor one's, a landing's, a vault's home) go too, or the old
+      // run's tile would stay a hidden stair home on the new floor.
+      if (t && isGenerated(t.from)) continue;
       kept.push(t);
     }
     window.VEFR_TRANSITIONS = kept;
@@ -1991,6 +2075,7 @@ window.VEFR_DESCENT = (function () {
     runSeed: runSeed, sectionHash: sectionHash, parseName: parseName,
     baseSeed: baseSeed, seedParam: seedParam, seedFor: seedFor,
     isGenerated: isGenerated, depthOfName: depthOfName, floorPlan: floorPlan,
+    floorTitle: floorTitle, placeName: placeName, arrival: arrival,
     floorSize: floorSize, floorKindOf: floorKindOf, mobsAt: mobsAt, mobDrops: mobDrops, placeBooks: placeBooks,
     xpFor: xpFor,
     ensureRegion: ensureRegion, onEnter: onEnter, entryHere: entryHere,
@@ -2004,7 +2089,7 @@ window.VEFR_DESCENT = (function () {
     loadSecrets: loadSecrets, saveSecrets: saveSecrets,
     loadFog: loadFog, saveFog: saveFog,
     flags: flags, setFlag: setFlag, landings: landings,
-    recordLanding: recordLanding,
+    recordLanding: recordLanding, isLanding: isLanding,
     // E8c: the story end, the town gate and the act, all derived reads.
     // `storyFlags` is how the ONE gate mechanism (`lockOpen`) sees a
     // story flag, which lives in the descent's own save beside the floors.

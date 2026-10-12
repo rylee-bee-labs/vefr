@@ -4,10 +4,23 @@
   // a list of preloaded Images; the draw loop then asks for one image.
   var tileImgs = {};
   var tileGrids = {};   // symbol -> { img, cols, rows } for a grid picture
+  // symbol -> the 4 x 4 edges sheet a legend entry's `edges` names, per region. Empty for a pack that
+  // names none, so the ground draws exactly as it did before edges existed.
+  var regionEdges = window.VEFR_TILE_EDGES || {};
+  var edgeImgs = {};
   function loadTiles() {
     var set = regionTiles[regionName] || window.VEFR_TILES || {};
     tileImgs = {};
     tileGrids = {};
+    edgeImgs = {};
+    var edges = regionEdges[regionName] || {};
+    Object.keys(edges).forEach(function (ch) {
+      if (typeof edges[ch] !== 'string') return;
+      var eim = new Image();
+      eim.onload = function () { draw(); };
+      eim.src = edges[ch];
+      edgeImgs[ch] = eim;
+    });
     Object.keys(set).forEach(function (ch) {
       var srcs = set[ch];
       if (srcs && typeof srcs === 'object' && !Array.isArray(srcs)) {

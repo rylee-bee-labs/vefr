@@ -120,6 +120,46 @@ def test_casting_heals_and_never_spends_the_hero_on_nothing(tmp_path):
     assert hurt["max"] == 8, hurt
 
 
+def test_a_cast_writes_the_why_log_naming_the_spell(tmp_path):
+    """A cast is read back from the why-log, not only from the panel's live
+    line: one `cast-<id>` entry per cast, in the words the panel said, and
+    the Why panel shows it. A refused cast (a spell not learned) writes
+    nothing."""
+    out = play(tmp_path, [{"do": "openBag"},
+                          {"do": "snap", "tag": "before"},
+                          {"do": "cast", "spell": "ember-bolt"},
+                          {"do": "snap", "tag": "whole"},
+                          {"do": "hurt", "by": 4},
+                          {"do": "cast", "spell": "ember-bolt"},
+                          {"do": "snap", "tag": "hurt"}])
+    before, whole, hurt = (out["snaps"]["before"], out["snaps"]["whole"],
+                           out["snaps"]["hurt"])
+    assert not any(e["id"].startswith("cast-") for e in before["why"]), before["why"]
+    casts = [e for e in whole["why"] if e["id"].startswith("cast-")]
+    assert casts == [{"id": "cast-ember-bolt",
+                      "why": "You cast an ember bolt. You are already whole."}]
+    casts = [e for e in hurt["why"] if e["id"].startswith("cast-")]
+    assert casts[-1] == {"id": "cast-ember-bolt",
+                         "why": "You cast an ember bolt. You recover 3 health."}
+    assert len(casts) == 2
+    # The Why panel prints the id as words, then the line: the spell's id
+    # and its name are both there to read.
+    assert "cast ember bolt - You cast an ember bolt. You recover 3 health." \
+        in hurt["whyText"], hurt["whyText"]
+
+
+def test_a_refused_cast_writes_no_why_log_entry(tmp_path):
+    """`tide-mend` is learned at level 2; at level 1 it has no Cast button,
+    and a cast asked for anyway is refused and leaves the why-log alone."""
+    out = play(tmp_path, [{"do": "openBag"},
+                          {"do": "castUnlisted", "spell": "tide-mend"},
+                          {"do": "snap", "tag": "refused"}])
+    snap = out["snaps"]["refused"]
+    assert out["steps"][-1] == {"ok": False, "what": "cast tide-mend"}
+    assert snap["live"] == "You have not learned that spell.", snap["live"]
+    assert not any(e["id"].startswith("cast-") for e in snap["why"]), snap["why"]
+
+
 def test_a_pack_with_no_spells_draws_no_spell_section_at_all(tmp_path):
     """The no-op half: the sample world bakes no spells line at all, so
     the Spells section is off the page and nothing is added to the panel."""

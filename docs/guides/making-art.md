@@ -133,7 +133,7 @@ out at the game's real phone size. Look at a style test where it will be played,
   hero's.
 - **Real pixels from painted ones.** An image model's "pixel art" is blocks that wander off a grid. Find the block
   size, take the middle of each block, key the backdrop, remove lone specks, and lock every picture to one master
-  palette (the pixel-art tools: vefr#426).
+  palette (`tools/art/pixelize.py`, below).
 - **Front-on, not isometric.** Say "the front wall facing straight down the screen, NOT isometric", or buildings
   come out at an angle and will not sit on the grid.
 - **Back views squash** unless a back view is the reference. Draw the front first, then use a good back view from an
@@ -147,3 +147,80 @@ out at the game's real phone size. Look at a style test where it will be played,
   roof is close enough in colour to a lamp to shimmer with it.
 - **Check what it added.** The image model put a cross on a village temple. Check every building for symbols nobody
   asked for.
+
+### The pixel-art tools
+
+Four tools in `tools/art/` do the steps above. Each needs Pillow and answers `--help`; run them as
+`uv run --with pillow tools/art/<tool>.py ...`. Each writes hard pixels (alpha 0 or 255) and takes `--palette`, a
+file of `{"colors": ["#rrggbb", ...]}`.
+
+1. **A master palette** from pictures the author approved. It keeps only colours those pictures already use:
+
+   ```sh
+   uv run --with pillow tools/art/pixelize.py palette art/palette.json approved/*.png --colors 32
+   ```
+
+2. **Real pixels** from one painted picture. The tool finds the block size and offset on each axis, follows a grid
+   that wanders, takes each block's middle pixel, keys a flat backdrop (`--key auto`, or `#00ff00`, or `none`),
+   removes lone specks and locks colours to the palette. It prints the block size it found. If that is wrong,
+   give `--block 16` (and `--offset X,Y`):
+
+   ```sh
+   uv run --with pillow tools/art/pixelize.py image painted/house.png art/house.png --palette art/palette.json --trim
+   ```
+
+3. **A walk sheet** from one-row strips of a character (pixelize each strip first). `PATH=SPEC` says where the
+   strip's figures go, left to right: `[dir/]state[:N]`, with the direction `down` when it is left out. `-:N`
+   skips figures. The tool cuts figures by shape, stands them on one baseline, scales them all by one factor
+   (`--height`), and writes `hero-sheet.png`, `hero.sheet.json` (the engine's shape, see
+   [rulesets.md](rulesets.md), "Walk sheets") and the still `hero.png`:
+
+   ```sh
+   uv run --with pillow tools/art/make_sheet.py --out sprites/hero --height 48 \
+       idle.png=idle walk.png=walk action.png=act,attack:3,up/idle,hurt
+   ```
+
+   If the tool counts more or fewer figures than the spec names, it stops. Usually two figures touch, or a speck is
+   left over.
+
+4. **Motion by recolouring.** A role is `KIND:COLOURS`, and the colours are the exact colours in the picture. There
+   are three kinds. `cycle` steps the colours along the list (water). `glow` makes them breathe (coals). `flicker`
+   dims them now and then (lamps, lit windows). `--smoke X,Y` adds small smoke above a chimney top. Nothing else
+   changes between frames. The output is one row of frames (`--split` also writes each frame):
+
+   ```sh
+   uv run --with pillow tools/art/animate.py art/house.png art/house-anim.png --frames 6 \
+       --role flicker:#ffe08a,#f0b050,#b07830 --role cycle:#5aa0d8,#7cc0f0,#a8dcff
+   ```
+
+   The engine does not play prop animations yet. The strip is ready for when it does.
+
+5. **A kit** of bundled sheets becomes props at their planned native sizes and seamless 3 x 3 ground grids
+   (`NAME.grid3x3.png`, one picture the player draws a cell of per tile), all locked to one palette. The tool cuts
+   each sheet by cell, never by shape. A plan file names every cell and its size:
+
+   ```json
+   {
+     "palette": "palette.json",
+     "tile": 32,
+     "sheets": [
+       {"image": "town-props.png", "grid": "3x1",
+        "props": [{"name": "lamp", "size": [12, 32]}, {"name": "barrel", "height": 20}, null]},
+       {"image": "town-ground.png", "grid": "2x2", "ground": ["grass", "cobbles", "dirt", null]}
+     ]
+   }
+   ```
+
+   ```sh
+   uv run --with pillow tools/art/process_kit.py kits/town/plan.json --out staging/town
+   ```
+
+   `null` skips a cell. A prop with `size` fits inside that box and stands on its bottom edge. A prop with only
+   `height` takes the width its shape needs. Props go to `staging/town/sprites/` and ground goes to
+   `staging/town/tiles/`. Look at them in the game before you copy them into the pack.
+
+The tests (`tests/art_cut/test_pixel_tools.py`) draw small pictures and check each promise:
+
+```sh
+uv run --group test --with pillow pytest -q tests/art_cut/test_pixel_tools.py
+```

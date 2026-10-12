@@ -6,7 +6,16 @@
   var cols = 0, rows = 0;
   var T = town.tile, viewW = 0, viewH = 0;
   var MIN_FIT_TILE = 16;   // below this, scroll at a readable size instead
-  var HUD_BAND = 72;       // room the HUD frame needs above and below a whole map
+  var HUD_BAND = 72;       // room the HUD frame needs above and below a whole dark map
+  // The room a whole lit map leaves above and below itself, taken back as stage, so the HUD
+  // pieces that hang off the stage's corners stand on spare room and not on its corner tiles
+  // (issue #424). Its depth is the deepest of those pieces: the Messages button starts 64 px
+  // down and is 44 px tall.
+  var HUD_BAND_LIT = 112;
+  // A whole lit map drawn smaller to leave those bands would also narrow its stage, and a
+  // narrow stage wraps the HUD's top row onto the Messages button and the fight verbs onto
+  // the action row. Such a stage keeps at least this width, centred on the map.
+  var HUD_STAGE_MIN_W = 800;
   var MIN_STAGE_W = 420, MIN_STAGE_H = 360;  // enough for the HUD frame's corners
   // The phone camera needs the pack's display.phone_tile; see docs/guides/world-creation.md.
   var PHONE_TILE = (window.VEFR_WORLD.display || {}).phone_tile || 0;
@@ -79,7 +88,12 @@
       var px = Math.floor(Math.max(viewH, 1) / lit);
       return Math.max(32, Math.min(48, px)) / town.tile;
     }
-    var fit = Math.min(fitW, viewH / (rows * town.tile));
+    // A lit map that reads whole leaves both bands clear: it takes a smaller tile until it
+    // does, and a map that cannot do that at a readable tile scrolls instead (issue #424).
+    // The dock letterboxes its map with its own spare room, so it keeps the fit that fills
+    // the canvas.
+    var fitH = dock ? viewH : Math.max(viewH - 2 * HUD_BAND_LIT, 1);
+    var fit = Math.min(fitW, fitH / (rows * town.tile));
     if (fit * town.tile >= MIN_FIT_TILE) return Math.min(fit, 3);  // the whole map reads
     return 32 / town.tile;   // a big map: scroll at a comfortable tile
   }
@@ -97,7 +111,9 @@
   // smaller than the stage's minimum would leave the HUD frame's corners
   // on map tiles, so the stage grows to the window there too and the map
   // is centred inside it, clear of every corner; a map big enough for
-  // its frame keeps the map rectangle as the stage. The `--map-*`
+  // its frame keeps the map rectangle as the stage, except that a whole
+  // lit map's stage also takes the HUD bands above and below it (and at
+  // least HUD_STAGE_MIN_W of width), issue #424. The `--map-*`
   // properties are the map inside #stage, using the same #stage-relative
   // convention as the `--stage-*` ones.
   function publishStage() {
@@ -123,8 +139,15 @@
     // A map too small for the HUD frame's corners gets the window as its
     // stage as well, so those corners fall on the spare room, not the map.
     var grow = dock || mw < MIN_STAGE_W || mh < MIN_STAGE_H;
-    var x = grow ? 0 : mx, y = grow ? 0 : my;
-    var w = grow ? window.innerWidth : mw, h = grow ? window.innerHeight : mh;
+    // A whole lit map left a band above and below itself (fitZoom); the stage takes it back,
+    // so the HUD pieces that hang off its corners stand there and not on corner tiles
+    // (issue #424). A dark map, a scrolling one and the phone camera keep the map rectangle.
+    var band = (!fogOn && !onPhone && mapW <= viewW && mapH <= viewH)
+      ? Math.max(0, Math.min(HUD_BAND_LIT, my - rect.top, rect.bottom - (my + mh))) : 0;
+    var sw = band ? Math.min(Math.max(mw, HUD_STAGE_MIN_W), rect.width) : mw;
+    var sx = band ? Math.max(rect.left, Math.min(mx - (sw - mw) / 2, rect.right - sw)) : mx;
+    var x = grow ? 0 : sx, y = grow ? 0 : my - band;
+    var w = grow ? window.innerWidth : sw, h = grow ? window.innerHeight : mh + 2 * band;
     window.VEFR_STAGE = {
       x: x, y: y, w: w, h: h,
       map: { x: mx, y: my, w: mw, h: mh },
@@ -172,6 +195,9 @@
     return out;
   };
   var backdropBands = [], backdropDrawn = 0;
+  // How many edge pieces the last draw() laid (a legend's `edges`); 0 for a pack that names none.
+  var edgesDrawn = 0;
+  window.VEFR_EDGES_DRAWN = function () { return edgesDrawn; };
   // The skin's picture, or nothing. A pack with no skin never paints a table:
   // the picture only ever arrives through applySkin, and only for a skin that
   // named one.
@@ -230,3 +256,19 @@
     return [((x % cols) + cols) % cols, ((y % rows) + rows) % rows];
   };
   // -- pickCell end --
+  // -- edgeMask start --
+  // A ground that blends (a legend entry's `edges`): which of the tile's four neighbours carry the SAME
+  // symbol, as a 4-bit mask - north 1, east 2, south 4, west 8. A neighbour past the map's edge counts
+  // as the same, so the border of the map never draws a seam. The piece drawn over the tile is cell
+  // (mask % 4, floor(mask / 4)) of the 4 x 4 edges sheet; mask 15 (all four the same) draws nothing.
+  window.edgeMask = function (map, x, y) {
+    var ch = (map[y] || '')[x];
+    function same(nx, ny) {
+      var row = map[ny];
+      if (row === undefined || nx < 0 || nx >= row.length) return true;
+      return row[nx] === ch;
+    }
+    return (same(x, y - 1) ? 1 : 0) | (same(x + 1, y) ? 2 : 0)
+      | (same(x, y + 1) ? 4 : 0) | (same(x - 1, y) ? 8 : 0);
+  };
+  // -- edgeMask end --

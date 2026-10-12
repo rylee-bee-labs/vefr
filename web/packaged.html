@@ -354,7 +354,7 @@
   #stage.stage--dock .gbtn--main:not(.touch-smart) { width: auto; min-width: 44px; max-width: calc(100vw - 176px); height: 44px; border-radius: 999px; padding: 0 10px; font-size: 0.6rem; }
   #stage.stage--dock .gbtn--tool { width: 44px; height: 44px; border-radius: 50%; }
   #stage.stage--dock .acts kbd { display: none; }
-  .touch-zone, .touch-hint, .touch-base, .touch-knob, .touch-cluster, .touch-quick, .touch-b, .touch-settings { display: none; }
+  .touch-zone, .touch-hint, .touch-base, .touch-knob, .touch-cluster, .touch-quick, .touch-b, .touch-tool, .touch-settings { display: none; }
   .touch-btn { min-width: 48px; min-height: 48px; padding: 0; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
   .touch-btn.is-down { transform: scale(0.94); filter: brightness(1.15); }
   .touch-btn:focus-visible { outline: 3px solid #D8AA4E; outline-offset: 3px; }
@@ -365,8 +365,18 @@
   .touch-smart .cap { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.62rem; }
   .touch-bag { grid-area: bag; width: max(48px, calc(56px * var(--touch-scale))); height: max(48px, calc(56px * var(--touch-scale))); }
   .touch-b { grid-area: b; width: max(48px, calc(56px * var(--touch-scale))); height: max(48px, calc(56px * var(--touch-scale))); }
+  /* Whisper and Explore (issue #431): the two tools a phone had no way to reach. They take the
+     cluster's left column, Explore sharing B's cell: B shows only while a panel is open, and
+     these two hide then, so the two never stand together. A word under the icon, no key letter. */
+  .touch-tool { width: max(48px, calc(56px * var(--touch-scale))); height: max(48px, calc(56px * var(--touch-scale)));
+    border-radius: 16px; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    font-size: 0.62rem; line-height: 1; text-transform: none; letter-spacing: 0.02em; }
+  .touch-tool svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .touch-tool[aria-pressed="true"] { border-color: #D8AA4E; box-shadow: inset 0 0 0 2px #D8AA4E; }
+  .touch-whisper { grid-area: whisper; }
+  .touch-explore { grid-area: b; }
   .touch-cluster { position: absolute; right: calc(12px + var(--sai-right)); bottom: calc(16px + var(--sai-bottom)); z-index: 55;
-    grid-template-columns: auto auto; grid-template-areas: ". bag" "b smart"; gap: 10px; align-items: end; justify-items: center; }
+    grid-template-columns: auto auto; grid-template-areas: "whisper bag" "b smart"; gap: 10px; align-items: end; justify-items: center; }
   .touch-zone { position: absolute; left: 0; top: calc(64px + var(--sai-top)); bottom: 0; width: 55%; z-index: 1; touch-action: none; }
   .touch-hint { position: absolute; left: calc(16px + var(--sai-left)); bottom: calc(16px + var(--sai-bottom));
     width: calc(96px * var(--touch-scale)); height: calc(96px * var(--touch-scale)); border-radius: 50%;
@@ -389,7 +399,7 @@
     body.in-game .touch-hint:not([hidden]), body.in-game .touch-base:not([hidden]), body.in-game .touch-knob:not([hidden]) { display: block; }
     body.in-game .touch-cluster { display: grid; }
     body.in-game .touch-quick:not([hidden]) { display: flex; }
-    body.in-game .touch-smart, body.in-game .touch-bag { display: flex; }
+    body.in-game .touch-smart, body.in-game .touch-bag, body.in-game .touch-tool { display: flex; }
     body.in-game #stage .acts, body.in-game #stage .dpad { display: none; }
     body.in-game.touch-dpad #stage .dpad { display: grid; }
     body.in-game.touch-dpad .touch-zone, body.in-game.touch-dpad .touch-hint { display: none; }
@@ -398,11 +408,11 @@
     body.in-game #play .reader-card { touch-action: pan-y; user-select: text; -webkit-user-select: text; }
     body.in-game.touch-modal .touch-zone, body.in-game.touch-modal .touch-hint, body.in-game.touch-modal .touch-base,
     body.in-game.touch-modal .touch-knob, body.in-game.touch-modal .touch-smart, body.in-game.touch-modal .touch-bag,
-    body.in-game.touch-modal .touch-quick { display: none; }
+    body.in-game.touch-modal .touch-quick, body.in-game.touch-modal .touch-tool { display: none; }
     body.in-game.touch-modal .touch-b { display: flex; }
     body.in-game.touch-left .touch-zone { left: auto; right: 0; }
     body.in-game.touch-left .touch-hint { left: auto; right: calc(16px + var(--sai-right)); }
-    body.in-game.touch-left .touch-cluster { right: auto; left: calc(12px + var(--sai-left)); grid-template-areas: "bag ." "smart b"; }
+    body.in-game.touch-left .touch-cluster { right: auto; left: calc(12px + var(--sai-left)); grid-template-areas: "bag whisper" "smart b"; }
     body.in-game.touch-left .verb-row { left: calc(12px + var(--sai-left)); right: auto; align-items: flex-start; }
     body.in-game.touch-left #stage .dpad { left: auto; right: calc(12px + var(--sai-right)); }
   }
@@ -516,6 +526,8 @@
           <button type="button" id="touch-smart" class="gbtn gbtn--main touch-btn touch-smart" aria-label="Interact"><span class="verb">Interact</span><span class="cap"></span></button>
           <button type="button" id="touch-bag" class="gbtn touch-btn touch-bag" aria-label="Bag"><span>Bag</span></button>
           <button type="button" id="touch-b" class="gbtn touch-btn touch-b" aria-label="Close panel (B)"><span>B</span></button>
+          <button type="button" id="touch-whisper" class="gbtn touch-btn touch-tool touch-whisper"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 9v6M9 6v12M13 9v6M17 7v10"/></svg><span>Whisper</span></button>
+          <button type="button" id="touch-explore" class="gbtn touch-btn touch-tool touch-explore" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg><span>Explore</span></button>
         </div>
         <div class="acts">
           <button type="button" id="interact" class="gbtn gbtn--main"><span id="interact-label">Interact</span> <kbd>F</kbd></button>
@@ -776,6 +788,9 @@ window.VEFR_ITEMS = {{items_json}};
 // Ground tiles per region: two regions can share a symbol for different
 // ground (a town's '.' is grass, a dungeon's '.' is stone floor).
 window.VEFR_REGION_TILES = {{region_tiles_json}};
+// Edges sheets per region, keyed by map symbol: a legend entry's `edges` (one 4 x 4 picture, the piece
+// drawn over a tile chosen by which neighbours share its symbol). Empty when no legend names edges.
+window.VEFR_TILE_EDGES = {{tile_edges_json}};
 window.VEFR_LOGBOK = {{logbok_json}};
 window.VEFR_LEDGER = {{ledger_json}};
 window.VEFR_VOICES = {{voices_json}};
@@ -1035,7 +1050,7 @@ function bootstrap() {
   var statusEl0 = document.getElementById('status');
   if (!tutorialDone()) {
     statusEl0.textContent = touch
-      ? 'Use the pad to move. Tap Talk when someone is near.'
+      ? 'Move on the left. Near someone, tap the round button.'
       : 'Move with the arrow keys or WASD. Press E to talk.';
     statusEl0.setAttribute('data-tutorial', '1');
   }
@@ -2436,7 +2451,12 @@ function sellItem(id) {
 function buyItem(id) {
   var price = itemValue(itemCatalog()[id]);
   if (!price || heroGold() < price) return false;
-  if (!bagAdd(id)) return false;
+  // A full bag refuses the purchase before any gold changes hands, and
+  // says so in the floor pickup's own words (bag capacity, ADR 0017).
+  if (!bagAdd(id)) {
+    tradeSay('Your bag is full.');
+    return false;
+  }
   addGold(-price);
   // Buying is acquiring: the same `picks-up` a floor drop fires,
   // plus the fact that it was bought.
@@ -3112,6 +3132,12 @@ function spellsKnown() {
 // spent on nothing, so a mis-tap costs nothing and says why. A spell the
 // pack gave no `heal` casts and changes no number, which is the honest
 // answer for a pack that has not written the numbers yet.
+//
+// Every cast - healing or not - also goes in the why-log (`VEFR_WHY`, the
+// Why panel) as `cast-<id>` with the same words the panel said, the way
+// the descent writes a death there, so what a cast did can be read back
+// after the panel's live line has moved on. A refused cast is not a cast
+// and writes nothing.
 function castSpell(id) {
   if (!spellKnown(id)) {
     bagSay('You have not learned that spell.');
@@ -3122,18 +3148,26 @@ function castSpell(id) {
   var heal = spell && typeof spell.heal === 'number' && spell.heal > 0
     ? spell.heal : 0;
   if (!heal) {
-    bagSay(line);
+    castSay(id, line);
     return true;
   }
   if (HERO_HP >= heroMax()) {
-    bagSay(line + ' You are already whole.');
+    castSay(id, line + ' You are already whole.');
     return true;
   }
   var before = HERO_HP;
   healHeroBy(heal);
-  bagSay(line + ' You recover ' + (HERO_HP - before) + ' health.');
+  castSay(id, line + ' You recover ' + (HERO_HP - before) + ' health.');
   syncCombat();
   return true;
+}
+// One cast's words: the panel's live line, and the same words in the
+// why-log. Guarded because the rules part may not be in a file, and a
+// cast that cannot be logged must still be cast.
+function castSay(id, text) {
+  bagSay(text);
+  if (typeof rulesWhyRecord !== 'function') return;
+  rulesWhyRecord([{ id: 'cast-' + id, why: text }]);
 }
 // The Bag panel's "Spells" section. Nothing at all for a pack that
 // declares no spells: the heading is hidden and the list is empty, so a
@@ -3961,15 +3995,21 @@ function rulesNextLoad() {
     return e && typeof e.place === 'string' && typeof e.line === 'string';
   }) : [];
 }
-function rulesNextRecord(place, line) {
+// `shown` is the words the player reads for the place when they are not
+// its id (a labelled Section's floor, vefr#363); the row is still keyed by
+// the id, and a place shown by its own id stores exactly what it always did.
+function rulesNextRecord(place, line, shown) {
   if (typeof place !== 'string' || !place) return;
   rulesNextLoad();
+  var name = (typeof shown === 'string' && shown) ? shown : place;
   // one row per place: the newest word wins
   window.VEFR_NEXT = window.VEFR_NEXT.filter(function (e) { return e.place !== place; });
-  window.VEFR_NEXT.push({
+  var row = {
     place: place,
-    line: line || playerWord('where_next.goal', { place: place })
-  });
+    line: line || playerWord('where_next.goal', { place: name })
+  };
+  if (name !== place) row.name = name;
+  window.VEFR_NEXT.push(row);
   store.setJSON(rulesNextKey(), window.VEFR_NEXT);
 }
 
@@ -3987,7 +4027,7 @@ function renderNextPanel() {
     var p = document.createElement('p');
     p.className = 'status';
     var b = document.createElement('b');
-    b.textContent = e.place + ' - ';
+    b.textContent = (typeof e.name === 'string' && e.name ? e.name : e.place) + ' - ';
     p.appendChild(b);
     p.appendChild(document.createTextNode(e.line));
     list.appendChild(p);
@@ -7565,6 +7605,66 @@ window.VEFR_DESCENT = (function () {
 
   function isGenerated(name) { return parseName(name) !== null; }
 
+  // ---- what a player is told a floor is (vefr#362, #363) --------------
+  // The twin of `sections.floor_title`: a Section that declares its own
+  // `label` names its floors "<label>, floor <k>"; one that declares none
+  // answers '' and every caller keeps the words it had (the region id,
+  // the stair). The region id itself is never touched - it is the save's
+  // key and the rules' id - only what the player reads changes.
+  function floorTitle(name) {
+    var at = parseName(name);
+    if (!at) return '';
+    var label = at.section.label;
+    if (typeof label !== 'string' || !label) return '';
+    return label + ', floor ' + at.k;
+  }
+
+  // The words for a place a hint names: a labelled floor's title, else the
+  // name exactly as given.
+  function placeName(name) {
+    return floorTitle(name) || String(name === undefined ? '' : name);
+  }
+
+  // The compass from one tile to another, in the words `point-to` uses.
+  function compass(from, to) {
+    var dx = to[0] - from[0], dy = to[1] - from[1];
+    var vert = dy < 0 ? 'north' : (dy > 0 ? 'south' : '');
+    var horiz = dx < 0 ? 'west' : (dx > 0 ? 'east' : '');
+    return vert && horiz ? vert + '-' + horiz : (vert || horiz);
+  }
+
+  // Arriving on a floor of a labelled Section, on its up-stair: what the
+  // floor is, and which way its stair down lies, so the player is greeted
+  // by the place and a goal ahead rather than by the way back up. The
+  // stair itself is unchanged - still drawn, still walkable, still the way
+  // up once the hero steps off it and back. Null for anything else: a
+  // Section with no label, a baked region, the town, a hero who climbed
+  // up onto the down-stair. The hint names the floor below by its own
+  // title when it has one, else "the stair down"; a floor with no stair
+  // down wired has no hint.
+  function arrival(name, at) {
+    var title = floorTitle(name);
+    if (!title || !Array.isArray(at)) return null;
+    var region = (window.VEFR_REGIONS || {})[name];
+    var up = region ? region.hero_start : null;
+    if (!Array.isArray(up) || up[0] !== at[0] || up[1] !== at[1]) return null;
+    var here = depthOfName(name);
+    var down = null;
+    (window.VEFR_TRANSITIONS || []).forEach(function (t) {
+      if (!down && t && t.from === name && Array.isArray(t.at) &&
+          depthOfName(t.to) > here) down = t;
+    });
+    var line = '';
+    if (down && typeof playerWord === 'function') {
+      var place = floorTitle(down.to) || 'the stair down';
+      var dir = compass(at, down.at);
+      line = dir
+        ? playerWord('where_next.reach', { place: place, direction: dir })
+        : playerWord('where_next.here', { place: place });
+    }
+    return { at: [at[0], at[1]], name: title, line: line };
+  }
+
   // ---- a floor, drawn (the twin of `floor_plan`) ----------------------
   function seedFor(run) { return runSeed(baseSeed(), run); }
 
@@ -7603,6 +7703,10 @@ window.VEFR_DESCENT = (function () {
   var DEFAULT_PATTERN = ['entry', 'n', 'n', 'special', 'landing', 'n',
                          'special', 'n', 'warden'];
   var PATTERN_SLOTS = ['entry', 'n', 'special', 'landing', 'warden'];
+  // The two slots that are a landing (twin of `sections.LANDING_SLOTS`):
+  // `entry` is the floor a hero comes down to, and `landing` the one the
+  // pattern puts deeper in the Section.
+  var LANDING_SLOTS = ['entry', 'landing'];
   var DEFAULT_SPECIALS = ['treasure', 'infested', 'hub'];
 
   function wholePair(value, fallback) {
@@ -7624,6 +7728,14 @@ window.VEFR_DESCENT = (function () {
       : DEFAULT_PATTERN.slice();
     while (slots.length < sectionFloors(section)) slots.push('n');
     return slots;
+  }
+  // Whether floor `k` of a Section is one of its landings: the twin of
+  // `sections.is_landing`, which the bake (`vefr delve --section`) reads to
+  // wire a landing's up-stair to the descent's entry.
+  function isLanding(section, k) {
+    var slots = sectionPattern(section);
+    var slot = (isWhole(k) && k >= 1 && k <= slots.length) ? slots[k - 1] : 'n';
+    return LANDING_SLOTS.indexOf(slot) >= 0;
   }
   function sectionSpecials(section) {
     var raw = section ? section.specials : null;
@@ -7778,7 +7890,7 @@ window.VEFR_DESCENT = (function () {
         name: (typeof family.name === 'string' && family.name) ? family.name : DEFAULT_FAMILY,
         sprite: (typeof family.sprite === 'string') ? family.sprite : '',
         at: [at[0], at[1]], hp: Math.max(1, hp), atk: Math.max(1, atk),
-        sight: Math.max(1, sight), xp: xpFor(family, depth),
+        sight: Math.max(0, sight), xp: xpFor(family, depth),
         drops: mobDrops(key, 'm' + i, family.drops)
       });
     }
@@ -7938,7 +8050,7 @@ window.VEFR_DESCENT = (function () {
       name: (typeof base.name === 'string' && base.name) ? base.name : DEFAULT_FAMILY,
       sprite: (typeof base.sprite === 'string') ? base.sprite : '',
       at: [at[0], at[1]], hp: Math.max(1, hp), atk: Math.max(1, atk),
-      sight: Math.max(1, sight), xp: xpFor(base, depth),
+      sight: Math.max(0, sight), xp: xpFor(base, depth),
       drops: mobDrops(key, WARDEN_MOB, base.drops), warden: true
     };
     // The two presentation keys ride the monster as well as the record,
@@ -8495,7 +8607,12 @@ window.VEFR_DESCENT = (function () {
   }
 
   // The stairs of a generated floor: down to the next depth, up to the
-  // floor above - and the first floor's stair up is the way home.
+  // floor above - and the first floor's stair up is the way home. So is a
+  // landing's (vefr#366, the elevator rule of PLAN.md section 4): a floor
+  // whose pattern slot is `entry` or `landing` climbs straight to the
+  // descent's entry, exactly as the bake wires it, and the depth is kept
+  // in the save's `flags.landing` so the reached landings outlive the run.
+  // A Section whose pattern names neither slot keeps every stair as it was.
   function wireFloor(name, plan) {
     if (wired[name]) return;
     wired[name] = true;
@@ -8525,7 +8642,10 @@ window.VEFR_DESCENT = (function () {
       }
     }
     var up = locate(plan.depth - 1);
-    if (up) {
+    var here = parseName(name);
+    var landing = !!(here && isLanding(here.section, plan.k));
+    if (landing) recordLanding(plan.depth);
+    if (up && !landing) {
       var above = floorPlan(plan.depth - 1);
       if (above) {
         pushTransition(list, { from: name, at: plan.anchors.up.slice(),
@@ -8830,7 +8950,7 @@ window.VEFR_DESCENT = (function () {
     var depth = depthOfName(name);
     var plan = depth ? floorPlan(depth) : null;
     if (!plan) return null;
-    whySay('descent-death', 'You fell on ' + name + ' and woke at its up '
+    whySay('descent-death', 'You fell on ' + placeName(name) + ' and woke at its up '
       + 'stair; the descent is unbroken.');
     return { region: name, at: plan.anchors.up.slice() };
   }
@@ -8974,7 +9094,11 @@ window.VEFR_DESCENT = (function () {
     var kept = [];
     for (var j = 0; j < list.length; j++) {
       var t = list[j];
-      if (t && isGenerated(t.from) && isGenerated(t.to)) continue;
+      // Every stair OUT of a generated floor is wired by `wireFloor`, and
+      // a new run redraws the floor it stands on: the ones that climb to
+      // town (floor one's, a landing's, a vault's home) go too, or the old
+      // run's tile would stay a hidden stair home on the new floor.
+      if (t && isGenerated(t.from)) continue;
       kept.push(t);
     }
     window.VEFR_TRANSITIONS = kept;
@@ -9303,6 +9427,7 @@ window.VEFR_DESCENT = (function () {
     runSeed: runSeed, sectionHash: sectionHash, parseName: parseName,
     baseSeed: baseSeed, seedParam: seedParam, seedFor: seedFor,
     isGenerated: isGenerated, depthOfName: depthOfName, floorPlan: floorPlan,
+    floorTitle: floorTitle, placeName: placeName, arrival: arrival,
     floorSize: floorSize, floorKindOf: floorKindOf, mobsAt: mobsAt, mobDrops: mobDrops, placeBooks: placeBooks,
     xpFor: xpFor,
     ensureRegion: ensureRegion, onEnter: onEnter, entryHere: entryHere,
@@ -9316,7 +9441,7 @@ window.VEFR_DESCENT = (function () {
     loadSecrets: loadSecrets, saveSecrets: saveSecrets,
     loadFog: loadFog, saveFog: saveFog,
     flags: flags, setFlag: setFlag, landings: landings,
-    recordLanding: recordLanding,
+    recordLanding: recordLanding, isLanding: isLanding,
     // E8c: the story end, the town gate and the act, all derived reads.
     // `storyFlags` is how the ONE gate mechanism (`lockOpen`) sees a
     // story flag, which lives in the descent's own save beside the floors.
@@ -10409,7 +10534,16 @@ function setupTown() {
   var cols = 0, rows = 0;
   var T = town.tile, viewW = 0, viewH = 0;
   var MIN_FIT_TILE = 16;   // below this, scroll at a readable size instead
-  var HUD_BAND = 72;       // room the HUD frame needs above and below a whole map
+  var HUD_BAND = 72;       // room the HUD frame needs above and below a whole dark map
+  // The room a whole lit map leaves above and below itself, taken back as stage, so the HUD
+  // pieces that hang off the stage's corners stand on spare room and not on its corner tiles
+  // (issue #424). Its depth is the deepest of those pieces: the Messages button starts 64 px
+  // down and is 44 px tall.
+  var HUD_BAND_LIT = 112;
+  // A whole lit map drawn smaller to leave those bands would also narrow its stage, and a
+  // narrow stage wraps the HUD's top row onto the Messages button and the fight verbs onto
+  // the action row. Such a stage keeps at least this width, centred on the map.
+  var HUD_STAGE_MIN_W = 800;
   var MIN_STAGE_W = 420, MIN_STAGE_H = 360;  // enough for the HUD frame's corners
   // The phone camera needs the pack's display.phone_tile; see docs/guides/world-creation.md.
   var PHONE_TILE = (window.VEFR_WORLD.display || {}).phone_tile || 0;
@@ -10482,7 +10616,12 @@ function setupTown() {
       var px = Math.floor(Math.max(viewH, 1) / lit);
       return Math.max(32, Math.min(48, px)) / town.tile;
     }
-    var fit = Math.min(fitW, viewH / (rows * town.tile));
+    // A lit map that reads whole leaves both bands clear: it takes a smaller tile until it
+    // does, and a map that cannot do that at a readable tile scrolls instead (issue #424).
+    // The dock letterboxes its map with its own spare room, so it keeps the fit that fills
+    // the canvas.
+    var fitH = dock ? viewH : Math.max(viewH - 2 * HUD_BAND_LIT, 1);
+    var fit = Math.min(fitW, fitH / (rows * town.tile));
     if (fit * town.tile >= MIN_FIT_TILE) return Math.min(fit, 3);  // the whole map reads
     return 32 / town.tile;   // a big map: scroll at a comfortable tile
   }
@@ -10500,7 +10639,9 @@ function setupTown() {
   // smaller than the stage's minimum would leave the HUD frame's corners
   // on map tiles, so the stage grows to the window there too and the map
   // is centred inside it, clear of every corner; a map big enough for
-  // its frame keeps the map rectangle as the stage. The `--map-*`
+  // its frame keeps the map rectangle as the stage, except that a whole
+  // lit map's stage also takes the HUD bands above and below it (and at
+  // least HUD_STAGE_MIN_W of width), issue #424. The `--map-*`
   // properties are the map inside #stage, using the same #stage-relative
   // convention as the `--stage-*` ones.
   function publishStage() {
@@ -10526,8 +10667,15 @@ function setupTown() {
     // A map too small for the HUD frame's corners gets the window as its
     // stage as well, so those corners fall on the spare room, not the map.
     var grow = dock || mw < MIN_STAGE_W || mh < MIN_STAGE_H;
-    var x = grow ? 0 : mx, y = grow ? 0 : my;
-    var w = grow ? window.innerWidth : mw, h = grow ? window.innerHeight : mh;
+    // A whole lit map left a band above and below itself (fitZoom); the stage takes it back,
+    // so the HUD pieces that hang off its corners stand there and not on corner tiles
+    // (issue #424). A dark map, a scrolling one and the phone camera keep the map rectangle.
+    var band = (!fogOn && !onPhone && mapW <= viewW && mapH <= viewH)
+      ? Math.max(0, Math.min(HUD_BAND_LIT, my - rect.top, rect.bottom - (my + mh))) : 0;
+    var sw = band ? Math.min(Math.max(mw, HUD_STAGE_MIN_W), rect.width) : mw;
+    var sx = band ? Math.max(rect.left, Math.min(mx - (sw - mw) / 2, rect.right - sw)) : mx;
+    var x = grow ? 0 : sx, y = grow ? 0 : my - band;
+    var w = grow ? window.innerWidth : sw, h = grow ? window.innerHeight : mh + 2 * band;
     window.VEFR_STAGE = {
       x: x, y: y, w: w, h: h,
       map: { x: mx, y: my, w: mw, h: mh },
@@ -10575,6 +10723,9 @@ function setupTown() {
     return out;
   };
   var backdropBands = [], backdropDrawn = 0;
+  // How many edge pieces the last draw() laid (a legend's `edges`); 0 for a pack that names none.
+  var edgesDrawn = 0;
+  window.VEFR_EDGES_DRAWN = function () { return edgesDrawn; };
   // The skin's picture, or nothing. A pack with no skin never paints a table:
   // the picture only ever arrives through applySkin, and only for a skin that
   // named one.
@@ -10633,6 +10784,22 @@ function setupTown() {
     return [((x % cols) + cols) % cols, ((y % rows) + rows) % rows];
   };
   // -- pickCell end --
+  // -- edgeMask start --
+  // A ground that blends (a legend entry's `edges`): which of the tile's four neighbours carry the SAME
+  // symbol, as a 4-bit mask - north 1, east 2, south 4, west 8. A neighbour past the map's edge counts
+  // as the same, so the border of the map never draws a seam. The piece drawn over the tile is cell
+  // (mask % 4, floor(mask / 4)) of the 4 x 4 edges sheet; mask 15 (all four the same) draws nothing.
+  window.edgeMask = function (map, x, y) {
+    var ch = (map[y] || '')[x];
+    function same(nx, ny) {
+      var row = map[ny];
+      if (row === undefined || nx < 0 || nx >= row.length) return true;
+      return row[nx] === ch;
+    }
+    return (same(x, y - 1) ? 1 : 0) | (same(x + 1, y) ? 2 : 0)
+      | (same(x, y + 1) ? 4 : 0) | (same(x - 1, y) ? 8 : 0);
+  };
+  // -- edgeMask end --
   // -- rules start --
   // The rules engine: one event in, the actions to perform out. Pure
   // logic only - no DOM, no clock, no randomness, no fetch, no network
@@ -11053,10 +11220,23 @@ function setupTown() {
   // a list of preloaded Images; the draw loop then asks for one image.
   var tileImgs = {};
   var tileGrids = {};   // symbol -> { img, cols, rows } for a grid picture
+  // symbol -> the 4 x 4 edges sheet a legend entry's `edges` names, per region. Empty for a pack that
+  // names none, so the ground draws exactly as it did before edges existed.
+  var regionEdges = window.VEFR_TILE_EDGES || {};
+  var edgeImgs = {};
   function loadTiles() {
     var set = regionTiles[regionName] || window.VEFR_TILES || {};
     tileImgs = {};
     tileGrids = {};
+    edgeImgs = {};
+    var edges = regionEdges[regionName] || {};
+    Object.keys(edges).forEach(function (ch) {
+      if (typeof edges[ch] !== 'string') return;
+      var eim = new Image();
+      eim.onload = function () { draw(); };
+      eim.src = edges[ch];
+      edgeImgs[ch] = eim;
+    });
     Object.keys(set).forEach(function (ch) {
       var srcs = set[ch];
       if (srcs && typeof srcs === 'object' && !Array.isArray(srcs)) {
@@ -11893,6 +12073,7 @@ function setupTown() {
     var litSet = fogOn ? litNow() : null;   // what is lit right now
 
     var u = T / 32;   // the pack's mark sizes are authored for a 32px tile
+    edgesDrawn = 0;
     var x0 = Math.max(0, Math.floor(camX / T));
     var x1 = Math.min(cols - 1, Math.ceil((camX + viewW) / T));
     var y0 = Math.max(0, Math.floor(camY / T));
@@ -11918,6 +12099,17 @@ function setupTown() {
         } else {
           ctx.fillStyle = color;
           ctx.fillRect(x * T, y * T, T, T);
+        }
+        // A ground that blends: the piece of its edges sheet that matches which neighbours share
+        // this symbol, laid over the tile. All four the same (15) draws nothing.
+        var edgeImg = edgeImgs[ch];
+        if (edgeImg && edgeImg.complete && edgeImg.naturalWidth > 0) {
+          var mask = edgeMask(town.map, x, y);
+          if (mask !== 15) {
+            var ew = edgeImg.naturalWidth / 4, eh = edgeImg.naturalHeight / 4;
+            ctx.drawImage(edgeImg, (mask % 4) * ew, Math.floor(mask / 4) * eh, ew, eh, x * T, y * T, T, T);
+            edgesDrawn++;
+          }
         }
         if (info.solid && !hasTile && !hasGrid) {   // the grey inset marks a wall with no picture
           ctx.fillStyle = '#444';
@@ -12259,6 +12451,11 @@ function setupTown() {
     seeNow();
     loadEnemies();
     combatSnapshot();
+    // What this floor is, while the hero stands where they arrived
+    // (vefr#362): only a floor of a labelled Section answers, so every
+    // other region arrives exactly as it did.
+    arrivalNote = (window.VEFR_DESCENT && typeof window.VEFR_DESCENT.arrival === 'function')
+      ? window.VEFR_DESCENT.arrival(name, hero) : null;
     resize();
     draw();
     refreshPoi();
@@ -12506,9 +12703,19 @@ function setupTown() {
       candidates.push({ kind: 'book', id: b.id, name: b.title || 'the note',
                         at: [b.at[0], b.at[1]] });
     });
+    // Just arrived on a labelled floor (vefr#362): the tile the hero
+    // stands on is the floor itself, not the stair under them, until they
+    // step off or read it. The stair is only set aside for that moment.
+    var arrived = arrivalHere();
+    if (arrived) {
+      candidates.push({ kind: 'place', id: ARRIVAL_ID, name: arrivalNote.name,
+                        at: [hero[0], hero[1]] });
+    }
+    function onArrival(x, y) { return arrived && x === hero[0] && y === hero[1]; }
     transitions().forEach(function (tr) {
       if (!tr || tr.from !== regionName || !Array.isArray(tr.at)) return;
       if (typeof tr.at[0] !== 'number' || typeof tr.at[1] !== 'number') return;
+      if (onArrival(tr.at[0], tr.at[1])) return;
       candidates.push(transitionCandidate(tr));
     });
     var texts = town.poi_text || {};
@@ -12516,6 +12723,7 @@ function setupTown() {
       var xy = key.split(',');
       var x = Number(xy[0]), y = Number(xy[1]);
       if (!isFinite(x) || !isFinite(y)) return;
+      if (onArrival(x, y)) return;
       candidates.push({ kind: 'place', id: key,
                         name: (pois || {})[key] || texts[key],
                         at: [x, y] });
@@ -12676,6 +12884,11 @@ function setupTown() {
       } else if (t.kind === 'resident') {
         if (!speakers[t.id]) throw new Error('speaker gone');
         talkToSpeaker({ key: t.id, spec: speakers[t.id], dist: t.dist });
+      } else if (t.kind === 'place' && t.id === ARRIVAL_ID) {
+        // The floor, read: its name and the way on. Once read, the tile
+        // is the stair again, so the next press offers the way back up.
+        showSpeech(arrivalNote.name, arrivalNote.line, '');
+        arrivalNote = null;
       } else if (t.kind === 'place') {
         showSpeech((pois || {})[t.id] || '', (town.poi_text || {})[t.id] || '',
                    '');
@@ -12743,12 +12956,23 @@ function setupTown() {
     vrow.hidden = !near;
   }
 
+  // The floor the hero has just arrived on (vefr#362), from
+  // VEFR_DESCENT.arrival: `{at, name, line}` while they still stand on the
+  // tile they arrived at and have not read it, else null. `ARRIVAL_ID` is
+  // its Interact id, which no `x,y` poi key can be.
+  var ARRIVAL_ID = 'arrival';
+  var arrivalNote = null;
+  function arrivalHere() {
+    return !!(arrivalNote && hero[0] === arrivalNote.at[0] && hero[1] === arrivalNote.at[1]);
+  }
+
   // The named place the hero now stands on, written to the POI line.
   var POI_QUIET_MS = 4000;
   var poiTimer = null;
   function refreshPoi() {
     var here = '';
-    for (var k in pois) {
+    if (arrivalHere()) here = arrivalNote.name;
+    else for (var k in pois) {
       if (k === hero[0] + ',' + hero[1]) { here = pois[k]; break; }
     }
     var poiEl = document.getElementById('poi');
@@ -12824,6 +13048,7 @@ function setupTown() {
       return;
     }
     hero = [nx, ny];
+    arrivalNote = null;   // the arrival is over at the first step
     quietTutorial();
     // Draw-only: start the hop now, but the game state above is already
     // settled and the turn below is never gated on the animation.
@@ -13099,7 +13324,7 @@ function setupTown() {
   // A click anywhere else also stops the walk.
   document.addEventListener('click', function (e) {
     if (!exploring()) return;
-    if (e.target && e.target.closest && e.target.closest('#explore')) return;
+    if (e.target && e.target.closest && e.target.closest('#explore, #touch-explore')) return;
     exploreStop('Stopped.');
   });
 
@@ -13172,10 +13397,16 @@ function setupTown() {
       }
     }
     var at = fromHere || entrance;
+    // The words the player reads for the place (vefr#363): a floor of a
+    // labelled Section is its title ("the Cellar, floor 1"), anything
+    // else the region id exactly as before. The id stays the record's
+    // key, so the rules and the save never see the label.
+    var D = window.VEFR_DESCENT;
+    var shown = (D && typeof D.placeName === 'function') ? D.placeName(place) : place;
     if (!at) {
-      var lost = playerWord('where_next.no_way', { place: place });
+      var lost = playerWord('where_next.no_way', { place: shown });
       combatSay(lost);
-      rulesNextRecord(place, lost);
+      rulesNextRecord(place, lost, shown);
       return;
     }
     var dx = at[0] - hero[0], dy = at[1] - hero[1];
@@ -13187,12 +13418,12 @@ function setupTown() {
     // word for it (part 340), and a pack that names none gets these
     // exact bytes.
     var line = dir
-      ? playerWord('where_next.reach', { place: place, direction: dir })
-      : playerWord('where_next.here', { place: place });
+      ? playerWord('where_next.reach', { place: shown, direction: dir })
+      : playerWord('where_next.here', { place: shown });
     combatSay(line);
     // The hint is an intention, not a flash: it stays in the menu's
     // Where next? panel until the world points somewhere new.
-    rulesNextRecord(place, line);
+    rulesNextRecord(place, line, shown);
   };
   // show/hide/reveal: the floor is the only surface a thing has in
   // this player - an item can lie where the hero stands (shown) or be
@@ -13369,9 +13600,10 @@ function setupTown() {
   draw();
   updateUse();
 }
-// ---- touch controls: a floating joystick, one smart button, Bag, B and two quick slots ----
+// ---- touch controls: a floating joystick, one smart button, Bag, Whisper, Explore, B and two quick slots ----
 // On a coarse pointer this layer replaces the Acts row. Every action goes through
-// the code the keys already use: move(), doInteract(), useItem(), openBag() and the
+// the code the keys already use: move(), doInteract(), useItem(), openBag(), the
+// Acts row's own Whisper and Explore buttons (Q and O press the same), and the
 // panel closers. The D-pad stays for those who choose it in Display.
 window.__vefrTouch = { log: [] };
 
@@ -13644,6 +13876,27 @@ function touchBagPress() {
   if (window.openBag) window.openBag();
 }
 
+// Whisper and Explore press the Acts row's own buttons, hidden on a phone but still
+// wired, so a tap does exactly what Q and O do (issue #431).
+function touchWhisperPress() {
+  touchStopExplore();
+  touchRecord('action', 'whisper', null);
+  document.getElementById('whisper').click();
+}
+
+function touchExplorePress() {
+  touchRecord('action', 'explore', null);
+  document.getElementById('explore').click();
+}
+
+// Explore's pressed state and Whisper's wait while it listens show on the touch twins.
+function touchSyncTools() {
+  var ex = document.getElementById('explore');
+  var wh = document.getElementById('whisper');
+  document.getElementById('touch-explore').setAttribute('aria-pressed', ex.getAttribute('aria-pressed') === 'true' ? 'true' : 'false');
+  document.getElementById('touch-whisper').disabled = wh.disabled;
+}
+
 function touchClosePress() {
   touchRecord('action', 'b', null);
   if (touchShown('act-end')) closeActEnd();
@@ -13721,10 +13974,15 @@ document.getElementById('touch-smart').addEventListener('click', touchSmartPress
 document.getElementById('touch-bag').addEventListener('click', touchBagPress);
 document.getElementById('touch-b').addEventListener('click', touchClosePress);
 document.getElementById('touch-quick').addEventListener('click', touchQuickPress);
+document.getElementById('touch-whisper').addEventListener('click', touchWhisperPress);
+document.getElementById('touch-explore').addEventListener('click', touchExplorePress);
 
 new MutationObserver(touchSyncSmart).observe(document.getElementById('interact'), {
   subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['class']
 });
+var touchToolWatch = new MutationObserver(touchSyncTools);
+touchToolWatch.observe(document.getElementById('explore'), { attributes: true, attributeFilter: ['aria-pressed'] });
+touchToolWatch.observe(document.getElementById('whisper'), { attributes: true, attributeFilter: ['disabled'] });
 var touchPanelWatch = new MutationObserver(touchSyncModal);
 TOUCH_PANEL_IDS.forEach(function (id) {
   touchPanelWatch.observe(document.getElementById(id), { attributes: true, attributeFilter: ['hidden'] });
@@ -13733,6 +13991,7 @@ TOUCH_PANEL_IDS.forEach(function (id) {
 wireTouchSettings();
 applyTouchPrefs();
 touchSyncSmart();
+touchSyncTools();
 touchSyncModal();
 renderQuickslots();
 // ---- the kitchen (cooking ruleset v0) ----

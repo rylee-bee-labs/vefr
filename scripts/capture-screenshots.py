@@ -134,8 +134,9 @@ def capture_player(browser, shots):
         begin(page)
         page.click("#ts-enter")
         page.wait_for_timeout(400)
-        # A phone gets the touch controls instead of the button row (vefr#428), so there is no Whisper button to
-        # press there: the phone picture shows the touch controls, and only the computer picture shows a whisper.
+        # A phone gets the touch controls instead of the button row (vefr#428). Its Whisper button (vefr#431) works,
+        # but a whisper's speech box hides the controls, so the phone picture shows the controls and only the
+        # computer picture shows a whisper.
         if not touch:
             page.click("#whisper")
         page.wait_for_timeout(800)

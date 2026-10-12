@@ -1419,7 +1419,9 @@ def spells_errors(w: dict) -> list[str]:
     """
     if 'spells' not in w:
         return []
-    errors = [p.sentence
+    records = (w['spells'].get('spells')
+               if isinstance(w['spells'], dict) else None)
+    errors = [_no_school_sentence(p, records) or p.sentence
               for p in shapes.check(shapes.BLOCKS['spells'], w['spells'],
                                     at='spells')]
     schools = spell_schools_of(w)
@@ -1438,6 +1440,33 @@ def spells_errors(w: dict) -> list[str]:
             + (f"; the pack declares {_names_sentence(schools)}"
                if schools else "; the pack declares no schools at all"))
     return errors
+
+
+_NO_SCHOOL = re.compile(r'/spells/spells/(\d+)/school')
+
+
+def _no_school_sentence(problem, records) -> str:
+    """The no-school refusal, naming the spell and the file it is in.
+
+    The shape table's own missing-key sentence says `spell must hold a
+    school` and names neither which spell nor where it is written, which
+    is no help in a pack with twenty of them. The pointer knows which
+    record it is, so the sentence is said again with the record's `id`
+    (or its place in the list, when it has no `id` either) and the file.
+    Every other problem is left as the table said it ('' here).
+    """
+    if problem.code != 'missing-key':
+        return ''
+    found = _NO_SCHOOL.fullmatch(problem.pointer)
+    if not found or not isinstance(records, list):
+        return ''
+    index = int(found.group(1))
+    record = records[index] if index < len(records) else None
+    rid = record.get('id') if isinstance(record, dict) else None
+    label = (f"'{rid}'" if isinstance(rid, str) and rid
+             else f'spells.spells[{index}]')
+    return (f'world.json: spell {label} must hold a school, such as '
+            f'{shapes.SPELL.example}')
 
 
 def item_spell_errors(item_id, spec, spell_ids) -> list[str]:
@@ -2969,6 +2998,61 @@ def _tile_errors(pack: Path, w: dict, region_geo: dict) -> list[str]:
     return errors
 
 
+def _edge_errors(pack: Path | None, w: dict, region_geo: dict) -> list[str]:
+    """Every bad legend `edges` (empty = good, or no legend names any).
+
+    `"edges": "<name>"` asks the player to blend a ground into its
+    neighbours with ONE 4 x 4 picture in the region's own `tiles/`
+    (`cli._edges_for_legend`). The value must be a plain picture name;
+    with the pack on disk it must also be exactly one plain picture there
+    (not variants, not a grid) - the engine set has no edges, so nothing
+    else could be drawn. Each sentence names the region and the symbol.
+    """
+    from .cli import _inside
+    from .world import _discover_tiles, tile_grid
+
+    dirs = _region_dirs(pack, w, region_geo) if pack is not None else {}
+    pack_real = os.path.realpath(pack) if pack is not None else None
+    errors: list[str] = []
+    for rname, geo in region_geo.items():
+        legend = geo.get('legend') if isinstance(geo, dict) else None
+        if not isinstance(legend, dict):
+            continue
+        found = None
+        for ch, spec in legend.items():
+            if not isinstance(spec, dict) or 'edges' not in spec:
+                continue
+            name = spec['edges']
+            if not isinstance(name, str) or not name.strip() or '\0' in name or '/' in name:
+                errors.append(
+                    f"region '{rname}': symbol '{ch}' has edges {json.dumps(name)}, which is not a "
+                    f"picture name; write \"edges\": \"<name>\" for a 4 x 4 sheet <name>.webp in "
+                    f"the region's tiles/")
+                continue
+            if pack is None:
+                continue
+            if found is None:
+                found = {}
+                region_dir = dirs.get(rname)
+                if region_dir is not None:
+                    region_real = os.path.realpath(region_dir)
+                    if region_real == pack_real or region_real.startswith(pack_real + os.sep):
+                        tiles_real = _inside(region_real, 'tiles')
+                        if tiles_real is not None and os.path.isdir(tiles_real):
+                            found = _discover_tiles(Path(tiles_real))
+            pictures = found.get(name, [])
+            if not pictures:
+                errors.append(
+                    f"region '{rname}': symbol '{ch}' names edges '{name}', which is not a "
+                    f"picture in the region's tiles/ (edges come from the pack only: "
+                    f"tiles/{name}.webp, one 4 x 4 sheet)")
+            elif len(pictures) > 1 or tile_grid(Path(pictures[0]).name.rsplit('.', 1)[0]):
+                errors.append(
+                    f"region '{rname}': symbol '{ch}' names edges '{name}', which must be ONE "
+                    f"picture (tiles/{name}.webp, a 4 x 4 sheet), not variants or a grid")
+    return errors
+
+
 def _people_block_errors(w: dict) -> list[str]:
     """`player.people_block`, when present, is true or false (empty = good or absent)."""
     player = w.get('player')
@@ -3644,6 +3728,8 @@ def validate(w: dict, pack_dir: Path | None = None) -> list[str]:
     if pack_dir is not None:
         errors.extend(_tile_errors(Path(pack_dir), w, region_geo))
         errors.extend(_sprite_scale_errors(w, Path(pack_dir)))
+    errors.extend(_edge_errors(Path(pack_dir) if pack_dir is not None else None,
+                               w, region_geo))
     errors.extend(_people_block_errors(w))
 
     def _door_tile_errors(index, field, rname, at):

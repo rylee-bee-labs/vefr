@@ -101,6 +101,12 @@ function spellsKnown() {
 // spent on nothing, so a mis-tap costs nothing and says why. A spell the
 // pack gave no `heal` casts and changes no number, which is the honest
 // answer for a pack that has not written the numbers yet.
+//
+// Every cast - healing or not - also goes in the why-log (`VEFR_WHY`, the
+// Why panel) as `cast-<id>` with the same words the panel said, the way
+// the descent writes a death there, so what a cast did can be read back
+// after the panel's live line has moved on. A refused cast is not a cast
+// and writes nothing.
 function castSpell(id) {
   if (!spellKnown(id)) {
     bagSay('You have not learned that spell.');
@@ -111,18 +117,26 @@ function castSpell(id) {
   var heal = spell && typeof spell.heal === 'number' && spell.heal > 0
     ? spell.heal : 0;
   if (!heal) {
-    bagSay(line);
+    castSay(id, line);
     return true;
   }
   if (HERO_HP >= heroMax()) {
-    bagSay(line + ' You are already whole.');
+    castSay(id, line + ' You are already whole.');
     return true;
   }
   var before = HERO_HP;
   healHeroBy(heal);
-  bagSay(line + ' You recover ' + (HERO_HP - before) + ' health.');
+  castSay(id, line + ' You recover ' + (HERO_HP - before) + ' health.');
   syncCombat();
   return true;
+}
+// One cast's words: the panel's live line, and the same words in the
+// why-log. Guarded because the rules part may not be in a file, and a
+// cast that cannot be logged must still be cast.
+function castSay(id, text) {
+  bagSay(text);
+  if (typeof rulesWhyRecord !== 'function') return;
+  rulesWhyRecord([{ id: 'cast-' + id, why: text }]);
 }
 // The Bag panel's "Spells" section. Nothing at all for a pack that
 // declares no spells: the heading is hidden and the list is empty, so a

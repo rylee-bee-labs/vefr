@@ -286,8 +286,8 @@ different generator. A Section that names no `tiles` draws exactly what it
 drew before, so a pack with no `tiles` anywhere is unchanged.
 
 Of the keys `shapes.SECTION` validates, these reach the play-time descent:
-`id`, `floors`, `size`, `rooms`, `tiles`, `fog`, `families`, `pattern`,
-`specials`, `stamps`, `warden` and `vault`. The rest **are validated but
+`id`, `label`, `floors`, `size`, `rooms`, `tiles`, `fog`, `families`,
+`pattern`, `specials`, `stamps`, `warden` and `vault`. The rest **are validated but
 not read at play**, and the shape says so on each one rather than letting
 them look live:
 
@@ -298,7 +298,7 @@ them look live:
 | `groups` | slice E7, the same way it hands over the elites |
 | `curve` | slice E10 (scales monster stats at play); today only the balance report reads it, and a monster draws at its Blueprint's own numbers |
 | `loot` | slice E10 (caps the loot tier by depth); nothing reads it today, and a monster draws one drop from its own family's `drops` |
-| `pois` | slice E6 (puts a floor's points of interest in front of the player); today the v3 stage names them and the floor plan drops them |
+| `pois` | slice E6 (puts a floor's points of interest in front of the player); today the v3 stage names them and the floor plan drops them, so they draw nothing and announce nothing - what a floor is called on arrival comes from `label` |
 
 `vefr check` also names a Section that asks for a tileset no picture exists
 for - one in the pack's `tiles/` or the engine's - because such a floor
@@ -467,7 +467,7 @@ and refuses every value below at the pointer that names it.
 |---|---|---|
 | `section` | the Section's number in the descent order | unordered |
 | `id` | **required** - the floor key's middle | - |
-| `label` | the name a player sees, 1 to 40 characters; the floor key, region and save keys never read it | the id |
+| `label` | the name a player sees, 1 to 40 characters: arriving on a floor says "the Cellar, floor 2" instead of the stair, and a hint names the floor the same way; the floor key, region and save keys never read it | the id (and the arrival names the stair, as before) |
 | `floors` | how many floors it has | 9 |
 | `size` | `{"w": [lo, hi], "h": [lo, hi]}` - every floor draws its own | w 64, h 48 |
 | `rooms` | the `[lo, hi]` room quota a floor draws | 12 |
@@ -482,7 +482,7 @@ and refuses every value below at the pointer that names it.
 | `curve` | `{"hp": [lo, hi], "atk": [lo, hi]}` - the depth multipliers | flat (1.0) |
 | `loot` | `{"tier": N}` - checked, not yet read (E10) | - |
 | `stamps` | the stamp ids this Section may use | none |
-| `pois` | the point-of-interest names its floors carry | none |
+| `pois` | the point-of-interest names its floors carry - checked, not yet read at play (E6) | none |
 | `warden` | a family id, or `{"family", "id", "carries"}` | no warden |
 | `vault` | the vault stamp's id | no vault |
 | `endless` | `{"omens": [{"id", "label", one of `fog_radius`/`groups_per_floor`/`warden_affixes`}], "picks": N}` - the omens an endless descent offers | no omens |
@@ -569,6 +569,46 @@ region and behaves exactly as before. `maplab.validate` checks every
 door: `from`/`to` name declared regions, and `at`/`to_at` are inside
 their maps and walkable in their legends.
 
+### A ground that blends: a legend's `edges`
+
+Where one ground meets another (grass and a dirt lane, grass and cobbles)
+the edge is a hard square, one tile at a time. A legend entry may ask for
+a blend with `edges`, naming ONE picture in the region's own `tiles/`:
+
+```json
+"legend": {
+  ".": {"tile": "grass"},
+  "p": {"tile": "lane", "edges": "lane-edges"}
+}
+```
+
+`tiles/lane-edges.webp` (or `.png`) is a 4 x 4 sheet of sixteen equal
+pieces. The player draws one piece over every `p` tile, chosen by which of
+its four neighbours are ALSO `p`: north 1, east 2, south 4, west 8, added
+up. Piece `mask` sits at column `mask % 4`, row `mask // 4`, reading left
+to right, top to bottom:
+
+| row | pieces (same-symbol neighbours) |
+|---|---|
+| 0 | 0 none, 1 N, 2 E, 3 N+E |
+| 1 | 4 S, 5 N+S, 6 E+S, 7 N+E+S |
+| 2 | 8 W, 9 N+W, 10 E+W, 11 N+E+W |
+| 3 | 12 S+W, 13 N+S+W, 14 E+S+W, 15 all four |
+
+A piece is transparent except where the neighbouring ground creeps in, on
+the sides whose bit is NOT set (piece 4 is a lane tile with grass on its
+north, east and west). Piece 15 is never drawn, so leave it empty. A
+neighbour past the map's edge counts as the same, so the map's border
+draws no seam. Edges come from the pack only (the engine set has none),
+and a symbol that names no `edges` draws exactly as before.
+
+`vefr check` refuses an `edges` value that is not a plain picture name, a
+name with no picture in the region's `tiles/`, and a name with variants
+or a grid picture, each in a sentence naming the region and the symbol.
+Code: `cli._edges_for_legend` (the bake, `window.VEFR_TILE_EDGES`),
+`edgeMask` in `web/player/parts/440-the-camera.js`, `maplab._edge_errors`;
+tests: `tests/test_tile_edges.py`, `tests/browser/test_tile_edges.py`.
+
 ### One tile, one way out: the descent's entry
 
 A pack's optional `descent` block names the tile the generated floors
@@ -593,6 +633,27 @@ there, and a pack that was woven anyway leads into the dungeon rather
 than past it (`claimTile` in the descent part). Every other door in the
 pack is untouched, and a pack with no collision plays exactly as it did
 before. Tests: `tests/test_descent_entry_collision.py`.
+
+### Landings: the way home from deep floors
+
+Floors generated during play use the same elevator rule as
+`delve --section` (above). A **landing** is a floor whose `pattern` slot
+is `entry` or `landing`. Its up-stair goes straight to the descent's
+entry, which is `descent.entry.region` at `descent.entry.at`. It does not
+go to the floor above. With the default nine-floor pattern, a Section's
+first and fifth floors are landings. This is also true in later cycles,
+so a hero who is many floors down can get to town from the nearest
+landing above them.
+
+The player keeps each landing it reaches in the save as
+`flags.landing`, a sorted list of depths. That list stays the same after
+a reload. Floor 1 still climbs to the entry. If a Section's `pattern`
+has no `entry` or `landing` slot, each of its floors climbs to the floor
+above, as before. The rule has no new key, so `vefr check` and
+`norns validate` read a pack the same way as before. The player's
+`isLanding` is the twin of `sections.is_landing`. Tests:
+`tests/test_descent_landings.py` and
+`tests/browser/test_landing_home.py`.
 
 ### Locked doors
 
@@ -666,6 +727,11 @@ pack's `player.sprites` (the same map the hero and speakers use). No
 `sprite` draws the same body-and-head figure a speaker gets, in a
 hostile colour. `sight` is optional (default 6) and is Manhattan
 distance.
+`sight: 0` stays 0 on an authored region and on a generated floor (a
+Section's family or its warden) alike: the monster never sees the hero,
+so it neither chases nor flees, but it still wakes when the hero comes
+within ten tiles, makes a noise or strikes it, and it hits back whenever
+the hero stands next to it (a warden hunts whatever its `sight`).
 
 **The turn.** Every *successful* move (a step, or a bump attack) is
 followed by one turn for each living enemy of the region. A monster
@@ -870,6 +936,11 @@ this slice, and every bag of a pack that declares no `roll`) or the
 instance a rolled drop left behind: `{"id": …, "rarity": …, "traits":
 […], "identified": false}`. The traits are read and printed nowhere
 until the thing has been read at a reader (see identify, below).
+Hidden means hidden on the page, not in the file: the trait pools ride
+in the woven HTML and a rolled entry sits in the saved bag, because a
+one-file offline game rolls and keeps its loot in the browser. A player
+who reads the source can see them. Rarity names stay the pack's own,
+not a fixed engine set (owner, 2026-10-12, vefr#342; ADR 0017).
 
 **`vefr check` refuses four things,** one plain sentence each: a
 `rarity` outside the item's own table, a trait that is not one plain
@@ -954,7 +1025,10 @@ Two optional fields:
 
 When the bag is full, a floor pickup is refused. The thing stays on the
 floor under the hero, and the player reads one line, for example "Your
-bag is full. You leave a plain ring on the floor." The bag panel counts
+bag is full. You leave a plain ring on the floor." The thing waits there:
+once a place is free, walking onto the tile again picks it up. A shop
+purchase into a full bag is refused too: the Trade panel says "Your bag
+is full.", and no gold is taken. The bag panel counts
 against the cap: "2 of 2 carried." When the pack names no size it reads
 "12 things carried." as before.
 
@@ -966,14 +1040,14 @@ contents, an equip swap, and a take-off.
 block with no whole-number `size` from 1 to 99, and a `carry` that is not
 a whole number from 1 to 99.
 
-Known gaps: a shop purchase into a full bag is refused with no line, a
-`carry` does nothing where the pack names no `bag.size`, and there is no
-weight and no slot beyond the five worn ones.
+Known gaps: a `carry` does nothing where the pack names no `bag.size`,
+and there is no weight and no slot beyond the five worn ones.
 
 Code: `src/vefr/shapes.py` (`BAG`, `ITEM_CARRIES`) + `src/vefr/maplab.py`
 (`bag_errors`) + `src/vefr/cli.py` (`_player_items`) +
 `web/player/parts/180-gold.js` (`bagRoom`, `bagAdd`) and
-`430-loot-on-the-floor.js` (the refusal). Tests:
+`430-loot-on-the-floor.js` (the refusal) and `190-the-trade-panel.js`
+(`buyItem`, the shop's refusal). Tests:
 `tests/test_bag_capacity.py` + `tests/fixtures/bag_capacity_harness.mjs`.
 
 ## reward (first slice: gold, trade, and using a thing)
@@ -1213,18 +1287,25 @@ ever taught this way.
 a `Cast` button. Casting recovers its `heal` and never above the hero's
 max, and keeps the potion's rule: already whole means nothing is gained
 and nothing is spent, and the line says so. A spell with no `heal` casts,
-says so and changes no number.
+says so and changes no number. Every cast also goes in the Why panel as
+`cast <spell id>` with the same line, so it can be read back later; a
+refused cast writes nothing there.
 
 `vefr check` refuses four things, one plain sentence each: a spell
 naming a school the block does not declare, a `level` under 1, a book
 teaching a spell the pack does not declare, and a spell with no school
-at all. What a school does in play, and what a spell does beyond
-healing, are open questions this slice does not answer - see ADR 0018.
+at all (named by its id and the file: "world.json: spell 'ember-bolt'
+must hold a school, such as ..."). A school groups spells for learning
+and loot and means nothing else in play, and a cast costs nothing - no
+mana, cooldown or charge (owner, 2026-10-12, vefr#345; ADR 0018). Spell
+effects beyond `heal` are future slices.
 
 Code: `src/vefr/shapes.py` (the two blocks) + `src/vefr/maplab.py` (the
 sweep) + `src/vefr/cli.py` (the bake) + `web/player/parts/225-spells.js`
 (the player); tests: `tests/test_spells.py` +
-`tests/test_spells_play.py` + `tests/fixtures/make_spell_pack.py`.
+`tests/test_spells_play.py` + `tests/test_spell_table.py` (the shape,
+the bake and the player's reads held to one another) +
+`tests/fixtures/make_spell_pack.py`.
 
 ## equipment (the pack fields and the engine; the wearing is a later slice)
 
@@ -1585,6 +1666,12 @@ Code: `src/vefr/shapes.py` (`PLAYER_WORDS`, the `place-label` kind) +
 `src/vefr/maplab.py` (`player_words_errors`) + `web/player/parts/340-where-next-hints.js`
 (`VEFR_PLAYER_WORDS`, `playerWord`); tests: `tests/test_player_words.py`.
 
-Out of scope for v0: every other string in the player, region display
-names (vefr #363), POI labels in `point-to`, and any pluralization or
+A floor of a Section that declares a `label` fills `{place}` with its
+title, "the Cellar, floor 2", where it used to be the region id
+`cellar-0-2` (vefr #363); the Where next? row is still keyed by the id.
+Every other region, and every floor of a Section with no label, fills it
+with the region id exactly as before.
+
+Out of scope for v0: every other string in the player, display names
+for authored regions, POI labels in `point-to`, and any pluralization or
 translation framework.
