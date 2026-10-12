@@ -17,7 +17,7 @@ KIT = ROOT / "bench" / "design" / "kit-template"
 
 def _run(page: str, out: Path):
     r = _run_raw(page, out)
-    # Same rule as tests/browser/conftest.py: no Chromium skips, unless CI's browser job demands it.
+    # Same rule as tests/browser/fixtures.py: no Chromium skips, unless CI's browser job demands it.
     if "Playwright could not start" in r.stdout + r.stderr and os.environ.get("VEFR_BROWSER_REQUIRED") != "1":
         pytest.skip("Chromium isn't installed; run: uv run playwright install chromium")
     return r

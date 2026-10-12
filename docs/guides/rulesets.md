@@ -727,6 +727,11 @@ pack's `player.sprites` (the same map the hero and speakers use). No
 `sprite` draws the same body-and-head figure a speaker gets, in a
 hostile colour. `sight` is optional (default 6) and is Manhattan
 distance.
+`sight: 0` stays 0 on an authored region and on a generated floor (a
+Section's family or its warden) alike: the monster never sees the hero,
+so it neither chases nor flees, but it still wakes when the hero comes
+within ten tiles, makes a noise or strikes it, and it hits back whenever
+the hero stands next to it (a warden hunts whatever its `sight`).
 
 **The turn.** Every *successful* move (a step, or a bump attack) is
 followed by one turn for each living enemy of the region. A monster

@@ -3,6 +3,15 @@
 Run: uv run playwright install chromium   (once), then  uv run pytest tests/browser
 Without Chromium these skip, unless VEFR_BROWSER_REQUIRED=1 (CI's browser job),
 where a missing browser is a failure, not a quiet skip.
+
+These fixtures are a plugin that `tests/conftest.py` loads through
+`pytest_plugins`, not a `tests/browser/conftest.py`. Pytest 9 ties a conftest's
+fixtures to the one Directory node it collected first, and an argument list
+that names a file in `tests/` between two browser files (for example
+`tests/browser/a.py tests/test_x.py tests/browser/b.py`) makes it collect
+`tests/` again, which gives `tests/browser` a second node without them:
+"fixture 'browser' not found" (issue #425). A plugin's fixtures belong to the
+session, so no collection order can lose them.
 """
 import os
 import socket

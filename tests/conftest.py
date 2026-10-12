@@ -16,6 +16,11 @@ from vefr import world as world_mod
 # pack the env var points at.
 os.environ.setdefault('VEFR_WORLD', 'sample-world')
 
+# The browser tests' fixtures (studio, browser, page, phone) load as a plugin
+# rather than from a tests/browser/conftest.py, so that the order of file
+# arguments cannot hide them; see tests/browser/fixtures.py and issue #425.
+pytest_plugins = ["browser.fixtures"]
+
 
 @pytest.fixture
 def fixture_vefr_home(monkeypatch, tmp_path):

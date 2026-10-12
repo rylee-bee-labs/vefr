@@ -7878,7 +7878,7 @@ window.VEFR_DESCENT = (function () {
         name: (typeof family.name === 'string' && family.name) ? family.name : DEFAULT_FAMILY,
         sprite: (typeof family.sprite === 'string') ? family.sprite : '',
         at: [at[0], at[1]], hp: Math.max(1, hp), atk: Math.max(1, atk),
-        sight: Math.max(1, sight), xp: xpFor(family, depth),
+        sight: Math.max(0, sight), xp: xpFor(family, depth),
         drops: mobDrops(key, 'm' + i, family.drops)
       });
     }
@@ -8038,7 +8038,7 @@ window.VEFR_DESCENT = (function () {
       name: (typeof base.name === 'string' && base.name) ? base.name : DEFAULT_FAMILY,
       sprite: (typeof base.sprite === 'string') ? base.sprite : '',
       at: [at[0], at[1]], hp: Math.max(1, hp), atk: Math.max(1, atk),
-      sight: Math.max(1, sight), xp: xpFor(base, depth),
+      sight: Math.max(0, sight), xp: xpFor(base, depth),
       drops: mobDrops(key, WARDEN_MOB, base.drops), warden: true
     };
     // The two presentation keys ride the monster as well as the record,

@@ -12,7 +12,7 @@ The keys are sent as real browser key events (page.keyboard.press),
 never synthetic DOM events, and the active element is blurred first.
 
 Without `uv run playwright install chromium` these skip - that is the
-expected result on a machine with no browser (conftest's browser
+expected result on a machine with no browser (fixtures.py's browser
 fixture), not a failure.
 """
 
