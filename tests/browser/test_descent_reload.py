@@ -116,21 +116,21 @@ def _path(plan, start, goal, avoid=()):
     return []
 
 
-def descend_to(page, depth):
+def descend_to(page, depth, descent=DESCENT):
     """Walk out of the town and down to `depth`, one stair at a time."""
-    plan = delve.floor_plan(DESCENT, 1)
-    _walk(page, _path(TOWN, TOWN_HERO, DESCENT["entry"]["at"]))
+    plan = delve.floor_plan(descent, 1)
+    _walk(page, _path(TOWN, TOWN_HERO, descent["entry"]["at"]))
     page.locator("#interact").click()
     page.wait_for_function(
         "() => window.VEFR_COMBAT && window.VEFR_COMBAT.region === '%s'" % plan["name"])
     for d in range(1, depth):
-        here = delve.floor_plan(DESCENT, d)
+        here = delve.floor_plan(descent, d)
         _walk(page, _path(here, here["anchors"]["up"], here["anchors"]["down"]))
         page.locator("#interact").click()
         page.wait_for_function(
             "() => window.VEFR_COMBAT && window.VEFR_COMBAT.region === '%s'"
-            % delve.floor_plan(DESCENT, d + 1)["name"])
-    last = delve.floor_plan(DESCENT, depth)
+            % delve.floor_plan(descent, d + 1)["name"])
+    last = delve.floor_plan(descent, depth)
     _walk(page, _path(last, last["anchors"]["up"], last["anchors"]["down"]))
     return last
 

@@ -1110,11 +1110,14 @@ window.VEFR_DESCENT = (function () {
   // does any stair in the town that enters a Section: both are the one
   // mechanism, `requires` through `lockOpen`, and no pack writes either.
   // A Section whose `vault` is the bare stamp id E8b shipped names no
-  // flag, gates nothing, and its stairs carry no `requires` at all.
+  // flag, gates nothing, and its stairs carry no `requires` at all. Inside
+  // an endless cycle (cycle 1 or more) no Section is gated: endless mode
+  // has no town gate, only the story end on the stair past the last Section.
   var GATE_LOCKED = 'The stair is shut. Go up to town first: town knows '
     + 'nothing of the way on until you have read what is kept down here.';
 
   function townGate(sectionId, cycle) {
+    if (cycle >= 1) return null;
     var here = sections().filter(function (s) { return s && s.id === sectionId; })[0];
     return (here && vaultFlag(here)) ? townSeenFlag(sectionId, cycle) : null;
   }
