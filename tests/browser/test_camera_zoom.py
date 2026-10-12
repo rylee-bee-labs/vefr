@@ -1,8 +1,9 @@
 """A dark floor's tile fills its lit circle in a real browser (fitZoom in 440-the-camera.js).
 
-The sample town is 12 columns by 10 rows. With fog on and a sight of 8, a desktop window of 1280x720 draws
-the whole map, so the drawn tile is the drawn map's width over its columns. A phone (390x844) keeps the 32 px
-tile it always had.
+Two maps, both fogged at sight 8. The sample town (12x10) reads whole at 32 px on a desktop, so it keeps the
+old fit into the HUD's band and no HUD piece covers a tile (tests/browser/test_stage_containment.py). The same
+town tiled 6 across and 4 down scrolls, and there the tile fills the lit circle: 1280x720 gives 42 px. A phone
+(390x844) keeps 32 px either way. The tile is read from `VEFR_STAGE.tile`.
 """
 
 import argparse
@@ -44,6 +45,15 @@ def dark(tmp_path_factory):
     rc = cli.cmd_build_web(argparse.Namespace(
         pack=str(pack), out=str(home / "dark.html"), pool=0, with_bundle=False, from_live=None))
     assert rc == 0
+    # the big one: the same town, its map tiled 6 across and 4 down, so it cannot read whole
+    big = home / "bigpack"
+    shutil.copytree(pack, big)
+    town_map = big / "acts" / "act-1" / "town" / "map.md"
+    rows = [row for row in town_map.read_text(encoding="utf-8").splitlines() if row.strip()]
+    town_map.write_text("\n".join([row * 6 for row in rows] * 4) + "\n", encoding="utf-8")
+    rc = cli.cmd_build_web(argparse.Namespace(
+        pack=str(big), out=str(home / "big.html"), pool=0, with_bundle=False, from_live=None))
+    assert rc == 0
     port = _free_port()
     log = open(home / "server.log", "w")
     proc = subprocess.Popen(
@@ -59,7 +69,7 @@ def dark(tmp_path_factory):
     else:
         proc.terminate()
         pytest.fail(f"the woven file never came up; see {home / 'server.log'}")
-    yield url
+    yield url, url.replace("dark.html", "big.html")
     proc.terminate()
     proc.wait(timeout=10)
 
@@ -71,16 +81,23 @@ def drawn_tile(browser, url, width, height):
         page.goto(url)
         page.get_by_role("button", name="Begin").click()
         page.wait_for_function("window.VEFR_COMBAT && window.VEFR_COMBAT.region")
-        return page.evaluate("window.VEFR_STAGE.map.w") / COLS
+        return page.evaluate("window.VEFR_STAGE.tile")
     finally:
         ctx.close()
 
 
-def test_a_dark_floor_tile_grows_past_32_px_on_a_desktop(browser, dark):
-    tile = drawn_tile(browser, dark, 1280, 720)
-    assert 32 < tile <= 48, f"a dark floor's tile should fill the lit circle, got {tile} px"
+def test_a_dark_map_that_reads_whole_keeps_its_fit_on_a_desktop(browser, dark):
+    tile = drawn_tile(browser, dark[0], 1280, 720)
+    assert tile <= 32, f"a whole dark map keeps the old fit, so no HUD piece covers it; got {tile} px"
+
+
+def test_a_scrolling_dark_floor_tile_fills_the_lit_circle_on_a_desktop(browser, dark):
+    tile = drawn_tile(browser, dark[1], 1280, 720)
+    assert 32 < tile <= 48, f"a scrolling dark floor's tile should fill the lit circle, got {tile} px"
+    assert tile == 720 // (2 * SIGHT + 1), f"sight {SIGHT} at 720 px is {720 // (2 * SIGHT + 1)} px, got {tile}"
 
 
 def test_a_dark_floor_tile_stays_at_32_px_on_a_phone(browser, dark):
-    tile = drawn_tile(browser, dark, 390, 844)
-    assert tile <= 32, f"a phone's dark floor tile must not grow past 32 px, got {tile} px"
+    for url in dark:
+        tile = drawn_tile(browser, url, 390, 844)
+        assert tile <= 32, f"a phone's dark floor tile must not grow past 32 px, got {tile} px at {url}"

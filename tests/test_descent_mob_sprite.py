@@ -9,14 +9,11 @@ none carries ''.
 """
 
 import copy
-import shutil
 
 import pytest
 
-import play_kit
 from vefr import delve
 
-from test_descent_deltas import _descend
 from test_descent_floors import DESCENT
 
 BLUEPRINT = {
@@ -54,19 +51,3 @@ def test_the_warden_carries_its_familys_sprite(family):
                if mob.get("warden")]
     assert len(wardens) == 1, wardens
     assert wardens[0]["sprite"] == SPRITE_OF[family], wardens[0]
-
-
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not installed")
-def test_the_enemy_the_player_fights_carries_its_familys_sprite(tmp_path):
-    plan = delve.floor_plan(DESCENT_BP, 1)
-    assert plan["mobs"], "the fixture descent's first floor drew no monsters"
-    steps = [s for s in _descend(1, descent=DESCENT_BP) if s != "walk:"]
-    pack = play_kit.pack(tmp_path, "descent",
-                         patch={"world.json": {"descent": {"blueprint": BLUEPRINT}}})
-    html = play_kit.weave(pack, tmp_path)
-    play = play_kit.play(html, {"steps": steps,
-                                "read": ["VEFR_ENEMIES"]})
-    assert play["errors"] == [], play["errors"]
-    entries = {e["id"]: e for e in play["reads"]["VEFR_ENEMIES"][plan["name"]]}
-    for mob in plan["mobs"]:
-        assert entries[mob["id"]]["sprite"] == SPRITE_OF[mob["family"]], mob

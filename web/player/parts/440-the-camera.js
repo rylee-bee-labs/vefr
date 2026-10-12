@@ -15,20 +15,21 @@
     var fitW = viewW / (cols * town.tile);
     var dock = window.innerWidth <= 600 && window.innerHeight > window.innerWidth;
     if (fogOn) {
-      // A dark map is read up close: a tile is as big as the lit circle lets
-      // fit the play height, 32 to 48 px. A phone keeps 32 px, since its fit
-      // cap would otherwise let a small map's tile grow past that. A map
-      // already small enough to read whole shrinks into the HUD's band (and
-      // letterboxes on the dock); a bigger one still scrolls.
+      // A dark map is read up close. A map small enough to read whole at
+      // 32 px shrinks into the HUD's band (and letterboxes on the dock),
+      // exactly as before, so no HUD piece ever covers one of its tiles. A
+      // bigger map scrolls, and there the tile is as big as the lit circle
+      // lets fit the window's height, 32 to 48 px: the HUD sits in the dark
+      // corners outside the circle. Sight 8 at 720 px is 42 px, where a
+      // fixed 32 left the hero a speck (Cottage walk, 2026-10-12). A phone
+      // keeps 32 px.
       var z = 32 / town.tile;
-      if (!dock) {
-        var lit = 2 * fogRadius + 1;
-        var px = Math.floor(Math.max(viewH - 2 * HUD_BAND, 1) / lit);
-        z = Math.max(32, Math.min(48, px)) / town.tile;
-      }
       var fitH = Math.max(viewH - 2 * HUD_BAND, 1) / (rows * town.tile);
       var whole = cols * town.tile * z <= viewW && rows * town.tile * z <= viewH;
-      return (dock || whole) ? Math.min(z, fitW, fitH) : z;
+      if (dock || whole) return Math.min(z, fitW, fitH);
+      var lit = 2 * fogRadius + 1;
+      var px = Math.floor(Math.max(viewH, 1) / lit);
+      return Math.max(32, Math.min(48, px)) / town.tile;
     }
     var fit = Math.min(fitW, viewH / (rows * town.tile));
     if (fit * town.tile >= MIN_FIT_TILE) return Math.min(fit, 3);  // the whole map reads
@@ -78,7 +79,8 @@
     var w = grow ? window.innerWidth : mw, h = grow ? window.innerHeight : mh;
     window.VEFR_STAGE = {
       x: x, y: y, w: w, h: h,
-      map: { x: mx, y: my, w: mw, h: mh }
+      map: { x: mx, y: my, w: mw, h: mh },
+      tile: T   // the drawn tile, CSS px (read by tests/browser/test_camera_zoom.py)
     };
     var stage = document.getElementById('stage');
     if (stage) {
