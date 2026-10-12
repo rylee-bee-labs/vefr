@@ -282,6 +282,7 @@ function bagPip(carried) {
   return node;
 }
 function renderBagStrip() {
+  renderQuickslots();
   var strip = document.getElementById('bag-strip');
   if (!strip) return;
   strip.textContent = '';
@@ -475,6 +476,13 @@ function takeOffSlot(slot) {
   syncCombat();
 }
 
+function itemUsable(def) {
+  return !!(def.use
+    || (typeof def.heal === 'number' && def.heal > 0)
+    || (def.light && typeof def.light === 'object')
+    || (typeof def.spell === 'string' && def.spell));
+}
+
 // The pause-menu panel: a "You" section of five slots, then one row
 // per carried (not worn) thing, sprite then name. A slotted thing in
 // the bag gets an Equip button; anything with `use`, `heal`, `light` or
@@ -545,10 +553,7 @@ function renderBagPanel() {
     // potion is drunk, bread is eaten, a torch is lit and a book is
     // read. Usable is not the same as consumable: a `keep` thing is used
     // and stays.
-    if (def && (def.use
-        || (typeof def.heal === 'number' && def.heal > 0)
-        || (def.light && typeof def.light === 'object')
-        || (typeof def.spell === 'string' && def.spell))) {
+    if (def && itemUsable(def)) {
       var use = document.createElement('button');
       use.type = 'button';
       use.className = 'cta';

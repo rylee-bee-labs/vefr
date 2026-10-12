@@ -332,5 +332,5 @@ def test_the_packaged_player_holds_both_fixes():
         "the packaged player puts the verb row outside the HUD frame")
     assert "var SEED_PARAM = 'vefr-seed'" in html, (
         "the packaged player does not read ?vefr-seed=")
-    assert "#stage.stage--dock .gbtn--main { width: auto;" in html, (
+    assert "#stage.stage--dock .gbtn--main:not(.touch-smart) { width: auto;" in html, (
         "the packaged player still draws Interact as a square")

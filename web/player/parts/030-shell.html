@@ -40,6 +40,7 @@
             <div class="hud-hp-bar"><div class="hud-hp-fill" id="hud-hp-fill" style="width:100%"></div></div>
             <span class="hud-hp-value" id="hud-hp-value">0/0</span>
           </div>
+          <div class="touch-quick" id="touch-quick" role="group" aria-label="Quick use" hidden></div>
           <div class="hud-level glass" id="hud-level" role="status" aria-live="polite" hidden></div>
           <div class="hud-gold glass" id="hud-gold" role="status" hidden></div>
           <div class="hud-bag glass" id="bag-strip" role="img" aria-label="Nothing carried" hidden></div>
@@ -64,6 +65,13 @@
           <button type="button" data-dir="left" style="grid-area:l" aria-label="Left">&#8592;</button>
           <button type="button" data-dir="down" style="grid-area:d" aria-label="Down">&#8595;</button>
           <button type="button" data-dir="right" style="grid-area:r" aria-label="Right">&#8594;</button>
+        </div>
+        <div class="touch-zone" id="touch-zone" aria-hidden="true"></div>
+        <div class="touch-hint" id="touch-hint" aria-hidden="true"></div>
+        <div class="touch-cluster" id="touch-cluster">
+          <button type="button" id="touch-smart" class="gbtn gbtn--main touch-btn touch-smart" aria-label="Interact"><span class="verb">Interact</span><span class="cap"></span></button>
+          <button type="button" id="touch-bag" class="gbtn touch-btn touch-bag" aria-label="Bag"><span>Bag</span></button>
+          <button type="button" id="touch-b" class="gbtn touch-btn touch-b" aria-label="Close panel (B)"><span>B</span></button>
         </div>
         <div class="acts">
           <button type="button" id="interact" class="gbtn gbtn--main"><span id="interact-label">Interact</span> <kbd>F</kbd></button>
@@ -250,7 +258,7 @@
     <div data-panel-body="help" hidden>
       <h2>How to play</h2>
       <ul>
-        <li>Move with the arrow keys or <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd>, or the pad on a touch screen.</li>
+        <li>Move with the arrow keys or <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd>, or, on a touch screen, drag the joystick (or use the D-pad you chose in Display).</li>
         <li>Use what is near you with <kbd>E</kbd>, <kbd>Space</kbd>, <kbd>Enter</kbd>, <kbd>F</kbd> or the big Interact button. It always says what it will do. The same keys turn the pages of a note and close someone's speech, and <kbd>E</kbd> or <kbd>F</kbd> close a shop.</li>
         <li>Hear a rumor with <kbd>Q</kbd> or the Whisper button.</li>
         <li>Open your bag with <kbd>B</kbd> or the Bag button.</li>
@@ -269,6 +277,17 @@
       <p>The dark shows only the ground you have walked and lit. Turn it off to see the whole map.</p>
       <button type="button" id="fog-toggle" class="cta" aria-pressed="true">Darkness: on</button>
       <p class="status" id="fog-live" role="status" aria-live="polite"></p>
+      <div class="touch-settings" id="touch-settings">
+        <h2 class="menu-sub">Controls</h2>
+        <fieldset class="touch-set">
+          <legend>Moving on a touch screen</legend>
+          <label><input type="radio" name="touch-move" value="joystick"> Floating joystick</label>
+          <label><input type="radio" name="touch-move" value="dpad"> D-pad</label>
+        </fieldset>
+        <p class="touch-range-row"><label for="touch-size">Control size</label> <output id="touch-size-out" for="touch-size">100%</output></p>
+        <input type="range" id="touch-size" min="75" max="150" step="5" value="100">
+        <label class="touch-set-row"><input type="checkbox" id="touch-left"> Left-handed</label>
+      </div>
       <h2 class="menu-sub">Time of day</h2>
       <p>The world's mood. What people say changes with it.</p>
       <div class="phase-rail" id="phase" role="group" aria-label="The world's mood"></div>
@@ -286,3 +305,5 @@
     </div>
   </div>
 </div>
+<div class="touch-base" id="touch-base" aria-hidden="true" hidden></div>
+<div class="touch-knob" id="touch-knob" aria-hidden="true" hidden></div>

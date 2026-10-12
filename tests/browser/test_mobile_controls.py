@@ -1,10 +1,10 @@
 """The mobile controls (390x844, the iPhone-class portrait window).
 
 Three rules, Rylee 2026-10-07:
-  1. The control bar (d-pad + action row) sits in a stable box: its outer
-     position does not reflow when the HUD's text content changes. The
-     HUD grows downward as the world grows lines; the controls stay at
-     the bottom of the stage, at the same rect, every state.
+  1. The touch cluster (the smart button and the Bag button) sits in a
+     stable box: its outer position does not reflow when the HUD's text
+     content changes. The HUD grows downward as the world grows lines; the
+     controls stay at the bottom of the stage, at the same rect, every state.
   2. Nothing covers a control; tap targets are at least 44x44 CSS px;
      safe-area-insets (the OS home indicator at the bottom, the status
      bar at the top, the rounded corners at the sides) are respected.
@@ -112,9 +112,10 @@ def page_at(browser, woven):
         yield page
 
 
-# The six controls whose outer rect we are checking. Each must satisfy
-# both rules at 390x844. The names match the DOM ids of the buttons.
-CONTROLS = ["dpad", "interact", "talk", "whisper", "bagbtn", "explore", "menu-open"]
+# The controls whose outer rect we are checking on a touch screen (joystick
+# mode, the default). Each must satisfy both rules at 390x844. The names
+# match the DOM ids of the buttons.
+CONTROLS = ["touch-smart", "touch-bag", "menu-open"]
 
 # Show the HUD in its widest state so a layout-shift bug that hides
 # under an empty cap will surface.
@@ -141,7 +142,7 @@ READ_INSETS = """() => {
 }"""
 
 RECTS = """() => {
-  const ids = ['dpad', 'interact', 'talk', 'whisper', 'bagbtn', 'explore',
+  const ids = ['touch-cluster', 'touch-smart', 'touch-bag', 'touch-b',
                'menu-open', 'hud-hp', 'hud-level', 'hud-gold', 'bag-strip',
                'light-live', 'toasts-toggle', 'toasts', 'verb-row'];
   const out = {};
@@ -185,23 +186,15 @@ def test_os_insets_reach_the_page_through_env(browser, woven):
 def test_safe_area_inset_bottom_respected_at_390x844(browser, woven):
     """Rylee 2026-10-07: "respect safe-area insets". The OS hands a 34 px home
     indicator at the bottom of the window on a phone with a chin. Every
-    bottom-anchored control (d-pad, action row, verb row) must sit ABOVE
+    bottom-anchored control (the touch cluster, the verb row) must sit ABOVE
     that line - the gap between the control's bottom edge and the
     viewport bottom is at least the inset."""
     with device(browser, woven, PHONE, PHONE_INSETS) as page:
         inset = PHONE_INSETS["bottom"]
         rects = page.evaluate(RECTS)
-        for name in ("dpad", "acts", "verb-row"):
-            # `dpad` and `verb-row` are containers; the rect on a child is the
-            # one with the visible buttons.
-            anchor = name
-            if name == "acts":
-                # The #interact button lives inside the .acts container; use
-                # it as the bottom anchor because the container's own rect
-                # grows to fit any wrapped buttons.
-                anchor = "interact"
-            r = rects.get(anchor)
-            assert r, f"missing control {anchor}"
+        for name in ("touch-cluster", "verb-row"):
+            r = rects.get(name)
+            assert r, f"missing control {name}"
             gap = page.evaluate("innerHeight") - r["b"]
             assert gap >= inset - 1, (
                 f"{name} sits {gap:.0f} px from the viewport bottom, "
@@ -250,26 +243,32 @@ def test_dock_mode_holds_the_controls_in_the_room_below_the_map(browser, woven):
     """The stable-control layout is the dock's, so the test has to be on
     it. At 390x844 the camera sets `.stage--dock` on #stage: the stage is
     the whole window, the map is letterboxed with spare room above and
-    below, and the dock CSS puts the d-pad and the action row side by side
-    in the room below while the messages grow up out of the map. This
-    asserts we are measuring that layout, and that it is laid out."""
+    below, and the touch cluster sits in the room below while the messages
+    grow up out of the map. This asserts we are measuring that layout, and
+    that it is laid out."""
     with device(browser, woven, PHONE, PHONE_INSETS) as page:
         assert "stage--dock" in page.evaluate(
             "document.getElementById('stage').className"), (
             "the 390x844 window is not in dock mode; the rest of this file "
             "would be measuring the desktop layout")
         rects = page.evaluate(RECTS)
-        map_top = page.evaluate("window.VEFR_STAGE.map.y")
-        # Side by side in the room below: the d-pad ends where the action
-        # row begins, neither over the other.
-        assert rects["dpad"]["r"] <= rects["interact"]["l"] + 1, (
-            f"the d-pad ({rects['dpad']['r']:.0f} px) and the action row "
-            f"({rects['interact']['l']:.0f} px) are not side by side")
+        m = page.evaluate("window.VEFR_STAGE.map")
+        # The cluster stays in the room below the drawn map, never on it.
+        assert rects["touch-cluster"]["t"] >= m["y"] + m["h"] - 1, (
+            f"the touch cluster starts {rects['touch-cluster']['t']:.0f} px, "
+            f"the map ends {m['y'] + m['h']:.0f} px: it sits on the map")
+        # The joystick zone is the left side, the cluster the right.
+        zone = page.evaluate(
+            "(() => { const r = document.getElementById('touch-zone').getBoundingClientRect();"
+            " return {l: r.left, r: r.right}; })()")
+        assert zone["r"] <= rects["touch-smart"]["l"] + 1, (
+            f"the joystick zone ({zone['r']:.0f} px) reaches the smart button "
+            f"({rects['touch-smart']['l']:.0f} px)")
         # The messages grow up into the room above the map, never down
         # over it.
-        assert rects["toasts"]["b"] <= map_top + 1, (
+        assert rects["toasts"]["b"] <= m["y"] + 1, (
             f"the messages end {rects['toasts']['b']:.0f} px, the map starts "
-            f"{map_top:.0f} px: they are drawn over the map")
+            f"{m['y']:.0f} px: they are drawn over the map")
 
 
 def test_control_bar_is_stable_when_hud_changes(browser, woven):
@@ -315,12 +314,12 @@ def test_control_bar_is_stable_when_hud_changes(browser, woven):
 def test_tap_targets_meet_the_44px_floor(browser, woven):
     """Rylee 2026-10-07: "tap targets at least 44x44 CSS px". Every
     visible control is at least 44 px wide and 44 px tall in CSS px.
-    The d-pad container is 120+ px tall (3 rows of 44); the test
-    checks the container so a wrapper hit don't accidentally pass."""
+    The Bag button and the smart button are the touch controls; the B
+    button only shows while a panel is open and is measured in
+    test_touch_controls.py."""
     with device(browser, woven, PHONE) as page:
         info = page.evaluate("""() => {
-          const names = ['interact', 'talk', 'whisper', 'bagbtn', 'explore',
-                         'menu-open', 'toasts-toggle', 'dpad'];
+          const names = ['touch-smart', 'touch-bag', 'menu-open', 'toasts-toggle'];
           const out = {};
           for (const name of names) {
             const el = document.getElementById(name);

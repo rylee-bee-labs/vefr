@@ -329,16 +329,10 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # Pixel art keeps main's sprite height name (#427), 2026-10-12; measured twice in separate processes, readings equal:
 #   8bb8656ba52c90b03d24ce2a3d40f70606decb09aa16d91415fcd40babf869c4
 #   8bb8656ba52c90b03d24ce2a3d40f70606decb09aa16d91415fcd40babf869c4
-# The 2026-10-12 sweep fixes (#423, #414, #424); measured twice in separate processes, readings equal:
-#   42d1d5701046edc068bbdc0f8f62822a815ff37c19a06bd3c3b886a920529ae6
-#   42d1d5701046edc068bbdc0f8f62822a815ff37c19a06bd3c3b886a920529ae6
-# The sweep fixes (#423, #414, #430), #424 reverted; measured twice in separate processes, readings equal:
-#   a21ce8aa8e23d65cdabce1259985e9d38b908ed26dc82141dc014f6a19cbc1c9
-#   a21ce8aa8e23d65cdabce1259985e9d38b908ed26dc82141dc014f6a19cbc1c9
-# The sweep fixes with a neutral #430 comment; measured twice in separate processes, readings equal:
-#   45e6fb4c7a535fed64e6937800b9529087c7c2eb450b051bb3ee6eb7f3c05256
-#   45e6fb4c7a535fed64e6937800b9529087c7c2eb450b051bb3ee6eb7f3c05256
-NO_SKIN_WEAVE_SHA256 = "45e6fb4c7a535fed64e6937800b9529087c7c2eb450b051bb3ee6eb7f3c05256"
+# Touch controls (#428) merged with pixel art (#427); measured twice in separate processes, readings equal:
+#   e857bc9ef7ae6cbaafc57ab3e2995a2c0d833dc7fc11a0c791d7b5d9a9db31cf
+#   e857bc9ef7ae6cbaafc57ab3e2995a2c0d833dc7fc11a0c791d7b5d9a9db31cf
+NO_SKIN_WEAVE_SHA256 = "e857bc9ef7ae6cbaafc57ab3e2995a2c0d833dc7fc11a0c791d7b5d9a9db31cf"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():
