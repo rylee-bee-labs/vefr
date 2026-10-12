@@ -6,7 +6,12 @@
   var cols = 0, rows = 0;
   var T = town.tile, viewW = 0, viewH = 0;
   var MIN_FIT_TILE = 16;   // below this, scroll at a readable size instead
-  var HUD_BAND = 72;       // room the HUD frame needs above and below a whole map
+  // The room a whole map leaves above and below itself for the HUD frame,
+  // whose pieces hang off the stage's corners. Its depth is the deepest of
+  // those pieces: the messages column starts 64 px down and its Messages
+  // button is 44 px tall, so 112 px keeps that button, the health row, the
+  // Menu button and the action row off the map's corner tiles (issue #424).
+  var HUD_BAND = 112;
   var MIN_STAGE_W = 420, MIN_STAGE_H = 360;  // enough for the HUD frame's corners
   // The phone camera needs the pack's display.phone_tile; see docs/guides/world-creation.md.
   var PHONE_TILE = (window.VEFR_WORLD.display || {}).phone_tile || 0;
@@ -60,8 +65,11 @@
     }
     // The HUD sits in the stage's corners, so a whole map must leave a band
     // above and below for it; otherwise it reads whole and still reaches
-    // under the buttons.
+    // under the buttons. A map that cannot leave both bands clear at the
+    // fit that fills the canvas therefore gets a smaller tile, until it
+    // does (issue #424).
     var fitW = viewW / (cols * town.tile);
+    var fitH = Math.max(viewH - 2 * HUD_BAND, 1) / (rows * town.tile);
     var dock = window.innerWidth <= 600 && window.innerHeight > window.innerWidth;
     if (fogOn) {
       // A dark map is read up close. A map small enough to read whole at
@@ -72,14 +80,13 @@
       // corners outside the circle. Sight 8 at 720 px is 42 px, where a
       // fixed 32 left the hero a speck (Cottage walk, 2026-10-12).
       var z = 32 / town.tile;
-      var fitH = Math.max(viewH - 2 * HUD_BAND, 1) / (rows * town.tile);
       var whole = cols * town.tile * z <= viewW && rows * town.tile * z <= viewH;
       if (dock || whole) return Math.min(z, fitW, fitH);
       var lit = 2 * fogRadius + 1;
       var px = Math.floor(Math.max(viewH, 1) / lit);
       return Math.max(32, Math.min(48, px)) / town.tile;
     }
-    var fit = Math.min(fitW, viewH / (rows * town.tile));
+    var fit = Math.min(fitW, fitH);
     if (fit * town.tile >= MIN_FIT_TILE) return Math.min(fit, 3);  // the whole map reads
     return 32 / town.tile;   // a big map: scroll at a comfortable tile
   }
@@ -96,10 +103,13 @@
   // CSS places the HUD, d-pad and action row in that spare room. A map
   // smaller than the stage's minimum would leave the HUD frame's corners
   // on map tiles, so the stage grows to the window there too and the map
-  // is centred inside it, clear of every corner; a map big enough for
-  // its frame keeps the map rectangle as the stage. The `--map-*`
-  // properties are the map inside #stage, using the same #stage-relative
-  // convention as the `--stage-*` ones.
+  // is centred inside it, clear of every corner. A map big enough for
+  // its frame keeps the map rectangle as the stage, widened only upward
+  // and downward by the band fitZoom left a whole map: its corners hang
+  // off the stage's, so a stage of exactly the map's height would put
+  // the Menu button and the action row on its corner tiles (issue #424).
+  // The `--map-*` properties are the map inside #stage, using the same
+  // #stage-relative convention as the `--stage-*` ones.
   function publishStage() {
     var mapW = cols * T, mapH = rows * T;
     var rect = canvas.getBoundingClientRect();
@@ -120,11 +130,16 @@
     // A phone held upright: width <= 600 and taller than it is wide. The
     // stage is the window; the map stays the drawn rectangle inside it.
     var dock = window.innerWidth <= 600 && window.innerHeight > window.innerWidth && !onPhone;
+    // The room the whole map left above and below itself, taken back as
+    // stage (a scrolling map leaves none, and keeps the canvas's rectangle).
+    var pad = mapW <= viewW && mapH <= viewH ? HUD_BAND : 0;
+    var sx = mx, sy = Math.max(0, my - pad);
+    var sh = Math.min(rect.bottom, window.innerHeight) - sy;
     // A map too small for the HUD frame's corners gets the window as its
     // stage as well, so those corners fall on the spare room, not the map.
     var grow = dock || mw < MIN_STAGE_W || mh < MIN_STAGE_H;
-    var x = grow ? 0 : mx, y = grow ? 0 : my;
-    var w = grow ? window.innerWidth : mw, h = grow ? window.innerHeight : mh;
+    var x = grow ? 0 : sx, y = grow ? 0 : sy;
+    var w = grow ? window.innerWidth : mw, h = grow ? window.innerHeight : sh;
     window.VEFR_STAGE = {
       x: x, y: y, w: w, h: h,
       map: { x: mx, y: my, w: mw, h: mh },
