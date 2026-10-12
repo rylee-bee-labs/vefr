@@ -599,7 +599,7 @@
       // fires the same `picks-up` a floor drop fires. (A rule's own
       // `give` stays silent: a give is not a picks-up - the
       // no-chains law.)
-      if (bagAdd(id)) {
+      if (bagAdd(id, null, true)) {
         names.push(itemName(id));
         fireRule('picks-up', { what: id });
       }

@@ -92,31 +92,47 @@
   }
   // Walking onto a drop takes every item lying on that tile. One plain
   // line says what was taken - the thing and its rarity, at once, with
-  // nothing to wait for - and the bag panel and the strip redraw.
+  // nothing to wait for - and the bag panel and the strip redraw. A drop
+  // a full bag refuses stays on the floor, and the same line says so; a
+  // drop whose id the catalog lost is dropped as it always was.
   function takeHere() {
     var here = dropsAt(hero[0], hero[1]);
     if (!here.length) return;
     var names = [];
-    // One `picks-up` per item actually bagged - a drop bagAdd refused
-    // (an id the catalog lost) is not picked up and fires nothing.
+    var left = [];
+    // One `picks-up` per item actually bagged.
     here.forEach(function (d) {
       var inst = dropInstance(d);
       if (bagAdd(inst.id, inst)) {
         names.push(carriedName(inst));
         fireRule('picks-up', { what: inst.id });
+      } else if (itemCatalog()[inst.id]) {
+        left.push(d);
       }
     });
     floor = floor.filter(function (d) {
-      return !(d.region === regionName
-        && d.at[0] === hero[0] && d.at[1] === hero[1]);
+      var onTile = d.region === regionName
+        && d.at[0] === hero[0] && d.at[1] === hero[1];
+      return !onTile || left.indexOf(d) !== -1;
     });
     saveFloor();
+    var said = [];
     if (names.length) {
       playOneShot('hero', 'act');
       soundCue('pickup');
-      combatSay('You pick up ' + names.join(', ') + '.');
+      said.push('You pick up ' + names.join(', ') + '.');
     }
+    if (left.length) {
+      said.push('Your bag is full. You leave ' + left.map(function (d) {
+        return itemName(dropInstance(d).id);
+      }).join(', ') + ' on the floor.');
+    }
+    if (said.length) combatSay(said.join(' '));
   }
+  window.VEFR_TAKE_HERE = takeHere;
+  window.VEFR_HERO_SPOT = function () {
+    return { region: regionName, at: [hero[0], hero[1]] };
+  };
 
   // A hero bump: strike the enemy on the tile you tried to walk into.
   function heroAttack(e) {
@@ -163,7 +179,7 @@
       var passed = !!(beaten && window.VEFR_DESCENT
                       && window.VEFR_DESCENT.storyFlags
                       && window.VEFR_DESCENT.storyFlags(beaten.flag));
-      var keyLine = (passed && beaten.carries && bagAdd(beaten.carries))
+      var keyLine = (passed && beaten.carries && bagAdd(beaten.carries, null, true))
         ? ' You take ' + itemName(beaten.carries) + '; it is in your bag.' : '';
       soundCue('defeat');
       placeDrops(e.at, e.drops);

@@ -1702,9 +1702,10 @@ window.VEFR_ALBUM_ENGINE = (function () {
 // buying happen at a shopkeeper's Trade panel (see below). Since ADR
 // 0017 an entry may instead be the instance a rolled drop left behind
 // (rarity and hidden traits); the bag logic and the strip live in the
-// gold part below. No weight, no dropping, no bag size: the town reads
-// what it reads (see `195-the-identify-service.js`), and slice 3 gives
-// the bag its capacity and its upgrades.
+// gold part below. No weight and no dropping. The bag is capped only when
+// the pack names a `bag.size`, and a carried thing's `carry` raises the cap
+// (see `bagRoom` in the gold part); the town reads what it reads (see
+// `195-the-identify-service.js`).
 var BAG_KEY = 'vefr-bag-' + ((window.VEFR_WORLD && window.VEFR_WORLD.name) || 'world');
 
 // ---- what is worn: the equipment state ----
@@ -1861,13 +1862,38 @@ function syncCombat() {
     try { window.refreshCombatSnapshot(); } catch (e) {}
   }
 }
+// What the carried bag holds, not counting a worn thing, as the panel counts.
+function bagHolds() {
+  return bagCarried().filter(function (c) { return !isWorn(c.id); });
+}
+// How many things the bag may hold: the pack's `bag.size` plus the `carry`
+// of each thing carried, in the bag or worn. Null when the pack names no
+// size - the unbounded bag.
+function bagRoom() {
+  var named = window.VEFR_WORLD && window.VEFR_WORLD.bag;
+  if (!named || typeof named.size !== 'number') return null;
+  var cat = itemCatalog();
+  var carried = bagCarried().map(function (c) { return c.id; });
+  EQUIP_SLOTS.forEach(function (slot) {
+    if (typeof EQUIP_STATE[slot] === 'string') carried.push(EQUIP_STATE[slot]);
+  });
+  return carried.reduce(function (room, id) {
+    var def = cat[id];
+    return room + ((def && typeof def.carry === 'number') ? def.carry : 0);
+  }, named.size);
+}
 // Put one thing in the bag. `roll` is the drop's drawn
 // `{rarity, traits}` when it has any: with it, the entry is saved as an
 // instance record so the rarity is there on the next load and is never
 // drawn twice; without it, the entry is the bare id this has always
-// stored, which is what every caller but a floor drop passes.
-function bagAdd(id, roll) {
+// stored, which is what every caller but a floor drop passes. `alwaysFits`
+// is for a thing the hero is given or gets back rather than picks up - a
+// warden's key, a chest's contents, a worn thing coming off - which the
+// full-bag refusal never turns away.
+function bagAdd(id, roll, alwaysFits) {
   if (!itemCatalog()[id]) return false;
+  var room = bagRoom();
+  if (!alwaysFits && room !== null && bagHolds().length >= room) return false;
   var raw = store.getJSON(BAG_KEY, []);
   var cat = itemCatalog();
   // The bag has always dropped an id the catalog no longer has every time
@@ -2192,7 +2218,7 @@ function equipItem(id) {
   EQUIP_STATE = result.state;
   saveEquipped(EQUIP_STATE);
   bagRemoveOne(id);
-  if (result.swapped) bagAdd(result.swapped);
+  if (result.swapped) bagAdd(result.swapped, null, true);
   var line = 'You put on ' + (def.name || id) + '.';
   var ml = modsLine(def);
   if (ml) line += ' ' + ml + '.';
@@ -2220,7 +2246,7 @@ function takeOffSlot(slot) {
   }
   EQUIP_STATE = result.state;
   saveEquipped(EQUIP_STATE);
-  bagAdd(result.removed);
+  bagAdd(result.removed, null, true);
   // If the new max is below current, clamp and save; never below 1.
   var newMax = heroMax();
   if (HERO_HP > newMax) {
@@ -2325,9 +2351,11 @@ function renderBagPanel() {
     }
     list.appendChild(row);
   });
+  var room = bagRoom();
   if (count) {
-    count.textContent = ids.length
-      + (ids.length === 1 ? ' thing carried.' : ' things carried.');
+    count.textContent = room === null
+      ? ids.length + (ids.length === 1 ? ' thing carried.' : ' things carried.')
+      : ids.length + ' of ' + room + ' carried.';
   }
   renderGold();
 }
@@ -3659,13 +3687,13 @@ function performRuleAction(a) {
     var D = window.VEFR_DESCENT;
     if (D && typeof D.challengeSet === 'function') {
       var wardenKey = D.challengeSet(v);
-      if (wardenKey && bagAdd(wardenKey)) {
+      if (wardenKey && bagAdd(wardenKey, null, true)) {
         combatSay('You take ' + itemName(wardenKey) + '; it is in your bag.');
       }
     }
     return;
   }
-  if (key === 'give') { bagAdd(v); return; }
+  if (key === 'give') { bagAdd(v, null, true); return; }
   if (key === 'takes') { bagRemoveOne(v); return; }
   if (key === 'weather') {
     if (window.VEFR_RULES_WEATHER) window.VEFR_RULES_WEATHER(v === 'fog');
@@ -9885,31 +9913,47 @@ function setupTown() {
   }
   // Walking onto a drop takes every item lying on that tile. One plain
   // line says what was taken - the thing and its rarity, at once, with
-  // nothing to wait for - and the bag panel and the strip redraw.
+  // nothing to wait for - and the bag panel and the strip redraw. A drop
+  // a full bag refuses stays on the floor, and the same line says so; a
+  // drop whose id the catalog lost is dropped as it always was.
   function takeHere() {
     var here = dropsAt(hero[0], hero[1]);
     if (!here.length) return;
     var names = [];
-    // One `picks-up` per item actually bagged - a drop bagAdd refused
-    // (an id the catalog lost) is not picked up and fires nothing.
+    var left = [];
+    // One `picks-up` per item actually bagged.
     here.forEach(function (d) {
       var inst = dropInstance(d);
       if (bagAdd(inst.id, inst)) {
         names.push(carriedName(inst));
         fireRule('picks-up', { what: inst.id });
+      } else if (itemCatalog()[inst.id]) {
+        left.push(d);
       }
     });
     floor = floor.filter(function (d) {
-      return !(d.region === regionName
-        && d.at[0] === hero[0] && d.at[1] === hero[1]);
+      var onTile = d.region === regionName
+        && d.at[0] === hero[0] && d.at[1] === hero[1];
+      return !onTile || left.indexOf(d) !== -1;
     });
     saveFloor();
+    var said = [];
     if (names.length) {
       playOneShot('hero', 'act');
       soundCue('pickup');
-      combatSay('You pick up ' + names.join(', ') + '.');
+      said.push('You pick up ' + names.join(', ') + '.');
     }
+    if (left.length) {
+      said.push('Your bag is full. You leave ' + left.map(function (d) {
+        return itemName(dropInstance(d).id);
+      }).join(', ') + ' on the floor.');
+    }
+    if (said.length) combatSay(said.join(' '));
   }
+  window.VEFR_TAKE_HERE = takeHere;
+  window.VEFR_HERO_SPOT = function () {
+    return { region: regionName, at: [hero[0], hero[1]] };
+  };
 
   // A hero bump: strike the enemy on the tile you tried to walk into.
   function heroAttack(e) {
@@ -9956,7 +10000,7 @@ function setupTown() {
       var passed = !!(beaten && window.VEFR_DESCENT
                       && window.VEFR_DESCENT.storyFlags
                       && window.VEFR_DESCENT.storyFlags(beaten.flag));
-      var keyLine = (passed && beaten.carries && bagAdd(beaten.carries))
+      var keyLine = (passed && beaten.carries && bagAdd(beaten.carries, null, true))
         ? ' You take ' + itemName(beaten.carries) + '; it is in your bag.' : '';
       soundCue('defeat');
       placeDrops(e.at, e.drops);
@@ -12200,7 +12244,7 @@ function setupTown() {
       // fires the same `picks-up` a floor drop fires. (A rule's own
       // `give` stays silent: a give is not a picks-up - the
       // no-chains law.)
-      if (bagAdd(id)) {
+      if (bagAdd(id, null, true)) {
         names.push(itemName(id));
         fireRule('picks-up', { what: id });
       }
