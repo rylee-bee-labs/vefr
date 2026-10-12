@@ -347,7 +347,10 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # Whisper and Explore on the touch controls (#431), 2026-10-12; measured twice in separate processes, readings equal:
 #   253b11028d3f6657906310f375cf8cfe9151d681609720078163e76d4d7e89b0
 #   253b11028d3f6657906310f375cf8cfe9151d681609720078163e76d4d7e89b0
-NO_SKIN_WEAVE_SHA256 = "253b11028d3f6657906310f375cf8cfe9151d681609720078163e76d4d7e89b0"
+# A whole lit map leaves the HUD bands clear (#424), 2026-10-12; measured twice in separate processes, readings equal:
+#   ec3f6c7a8ca6cb4c6e9185ec76030f14655a293d690f6b77af5c8095cc365811
+#   ec3f6c7a8ca6cb4c6e9185ec76030f14655a293d690f6b77af5c8095cc365811
+NO_SKIN_WEAVE_SHA256 = "ec3f6c7a8ca6cb4c6e9185ec76030f14655a293d690f6b77af5c8095cc365811"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():
