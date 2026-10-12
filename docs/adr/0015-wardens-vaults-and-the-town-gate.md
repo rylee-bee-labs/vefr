@@ -73,7 +73,7 @@ E0b found that `lockOpen` opens a transition when `requires.item` is in the bag 
 
 - The warden floor's down stair and the town stair's entry for the next Section carry `requires: {"flag": "town-seen:<section>:c<c>"}`.
 - A rule on `enters town`, guarded by the vault's `sets` flag, sets `town-seen`. The Section expansion emits it; packs never hand-write it.
-- **Shortcut:** offered only when `c >= 1`, so a first pass never skips the story (plan challenge 7). Paying debits gold once and sets `town-seen:<s>:c<c>` and `shortcut-paid:<s>:c<c>`; a second press finds the flag set and charges nothing. The price is the Section's `shortcut` integer; its value is UNKNOWN (owner).
+- **Shortcut:** offered only when `c >= 1`, so a first pass never skips the story (plan challenge 7). Paying spends the one-use item the Section's vault drops (not gold) and sets `town-seen:<s>:c<c>` and `shortcut-paid:<s>:c<c>`; a second press finds the flag set and charges nothing.
 
 ### Town states (ADR 0006 rescoped)
 
@@ -131,11 +131,11 @@ These hold for every Section, for seeds `check-0..199`, in cycles 0 and 1:
 ## Owner decisions (2026-10-04) and open questions
 
 1. **Decided: offered from the second cycle on, and paid with a one-use item found in a vault** (not gold). **Every section's vault drops one** (owner, 2026-10-04).
-2. In endless mode, does a town visit still gate each Section when the town no longer changes?
-3. Does "New descent" (a new seed) replay the story, or count as a later cycle?
-4. Do vault notes read again in endless mode, or do those vaults hold only loot?
+2. **Decided: no town gate in endless mode** (owner, ELDEC 2026-10-11/12).
+3. **Decided: New descent counts as a later cycle** (owner, ELDEC 2026-10-11/12).
+4. **Decided: endless vaults hold loot only, no notes** (owner, ELDEC 2026-10-11/12).
 5. **Decided: its own region behind the final boss's door.** *(Per game since Amendment 1: a pack may end its story without a final boss.)*
-6. What are the town lines, residents and shop stock for each state?
+6. **Decided: town lines, residents and shop stock use the pack drafts verbatim** (owner, ELDEC 2026-10-11/12).
 
 ## Amendment 1 (approved by Rylee, 2026-10-08)
 
