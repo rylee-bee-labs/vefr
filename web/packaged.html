@@ -1461,7 +1461,13 @@ if (window.VEFR_SOUND) {
     label.appendChild(document.createTextNode(' Sound'));
     row.appendChild(label);
     // After the fog status line, before "Time of day".
-    panel.insertBefore(row, panel.querySelector('h2.menu-sub'));
+    // The panel's own first sub-heading (a direct child): the touch settings carry a nested one, and
+    // insertBefore with a grandchild as the reference throws.
+    var subhead = null;
+    for (var i = 0; i < panel.children.length; i++) {
+      if (panel.children[i].matches('h2.menu-sub')) { subhead = panel.children[i]; break; }
+    }
+    panel.insertBefore(row, subhead);
   })();
 }
 

@@ -323,7 +323,10 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # Monster parts run without the props part (#420), 2026-10-12; measured twice in separate processes, readings equal:
 #   0a80b00def25f0cfaecd56841753a2285a84daea0a8c74a04dd13833e51a3aca
 #   0a80b00def25f0cfaecd56841753a2285a84daea0a8c74a04dd13833e51a3aca
-NO_SKIN_WEAVE_SHA256 = "0a80b00def25f0cfaecd56841753a2285a84daea0a8c74a04dd13833e51a3aca"
+# Touch controls (#428) merged with #420, and the sound toggle finds its own sub-heading, 2026-10-12; measured twice in separate processes, readings equal:
+#   8731c5e25d9258850fd85f9bdfa0ad70f20ded608008015f5fdf5208e94814ce
+#   8731c5e25d9258850fd85f9bdfa0ad70f20ded608008015f5fdf5208e94814ce
+NO_SKIN_WEAVE_SHA256 = "8731c5e25d9258850fd85f9bdfa0ad70f20ded608008015f5fdf5208e94814ce"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

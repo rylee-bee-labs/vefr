@@ -435,4 +435,8 @@ def test_the_spellbook_lesson_rides_the_use_verb_the_bag_already_had():
     assert 'learnSpellFromBook(def.spell)' in body
     # The button appears for a book that has nothing else usable.
     panel = gold[gold.index('function renderBagPanel('):]
-    assert "typeof def.spell === 'string'" in panel
+    assert 'itemUsable(def)' in panel
+    # The usable test is shared with the touch quick slots.
+    usable = gold[gold.index('function itemUsable('):]
+    usable = usable[:usable.index('\nfunction ')]
+    assert "typeof def.spell === 'string'" in usable
