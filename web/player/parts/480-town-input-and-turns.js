@@ -230,7 +230,7 @@
           ctx.fillStyle = color;
           ctx.fillRect(x * T, y * T, T, T);
         }
-        if (info.solid && !hasTile) {
+        if (info.solid && !hasTile && !hasGrid) {   // the grey inset marks a wall with no picture
           ctx.fillStyle = '#444';
           ctx.fillRect(x * T + 4 * u, y * T + 4 * u, T - 8 * u, T - 8 * u);
         }

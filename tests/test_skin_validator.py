@@ -320,7 +320,10 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # Props on the ground layer (#420), 2026-10-12; measured twice in separate processes, readings equal:
 #   71d1e50c32354356363216fe4f2f00d76afc52222ee1fdca0baae7440f7689b5
 #   71d1e50c32354356363216fe4f2f00d76afc52222ee1fdca0baae7440f7689b5
-NO_SKIN_WEAVE_SHA256 = "71d1e50c32354356363216fe4f2f00d76afc52222ee1fdca0baae7440f7689b5"
+# Solid grid tiles lose the grey inset (#420), 2026-10-12; measured twice in separate processes, readings equal:
+#   68d94ab58ef7e7d8b580f8a8928cd197c29972a9469a7826336f0b3eb3a1e980
+#   68d94ab58ef7e7d8b580f8a8928cd197c29972a9469a7826336f0b3eb3a1e980
+NO_SKIN_WEAVE_SHA256 = "68d94ab58ef7e7d8b580f8a8928cd197c29972a9469a7826336f0b3eb3a1e980"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():
