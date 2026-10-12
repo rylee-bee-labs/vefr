@@ -8,7 +8,7 @@ Status: agreed 2026-10-04. The build plan is [PLAN.md](PLAN.md) (Opus, 2026-10-0
 - A **Section** is a data pack: enemy families, loot tier, tileset, scaling curve. A new Section needs no new code.
 - Each Section ends with a **key warden**: a named boss carrying a key to a **vault** (a small treasure room with a lore note). Reading the note sets the flag that advances the act.
 - **Acts change the town, never the dungeon generator.** After a vault, the hero walks back up; the town has changed (map pieces, residents, stock, lines). The next Section's stairs stay locked until that visit, with a **paid shortcut** to skip it on repeat runs (price to be tuned).
-- The **King** is the end of Act 3 (the Diablo role). After him, "Keep exploring" opens the **endless mode**: Sections keep cycling at higher scaling, key wardens keep dropping.
+- The story end is the per-game flag `descent.story_end`, default `king-slain` (the **King**, the Diablo role, at the end of Act 3), per Amendment 1 (ADR 0015, approved by Rylee 2026-10-08). After the story end, "Keep exploring" opens the **endless mode**: Sections keep cycling at higher scaling, key wardens keep dropping.
 
 ## Floors
 - Every floor holds randoms plus **one or two elites**: a normal family with a modifier (bigger, faster, fire-touched), a name and better drops.
