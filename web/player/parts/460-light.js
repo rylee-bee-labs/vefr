@@ -117,7 +117,7 @@
   // A character with a ready walk sheet shows its down-facing idle frame.
   function drawSprite(key, tx, ty) {
     var im = spriteImgs[key];
-    var h = T * 1.5 * spriteScale(window.VEFR_SPRITE_SCALE, key);
+    var height = T * 1.5 * spriteScale(window.VEFR_SPRITE_SCALE, key);
     var sheet = spriteSheets[key];
     if (sheetUsable(sheet) && spriteSheetReady(key)) {
       var sim = spriteSheetImgs[key];
@@ -126,13 +126,16 @@
       var down = (sheet.directions && sheet.directions.down) || {};
       var idx = (down.idle && down.idle.length) ? down.idle[0] : 0;
       var col = idx % cols, row = Math.floor(idx / cols);
-      var sw = h * (fw / fh || 1);
-      ctx.drawImage(sim, col * fw, row * fh, fw, fh,
-                    tx * T + (T - sw) / 2, ty * T + T - h, sw, h);
+      var box = artSize(fw, fh, height);
+      var across = snapSpan(tx * T + (T - box.w) / 2, box.w);
+      var up = snapSpan(ty * T + T - box.h, box.h);
+      ctx.drawImage(sim, col * fw, row * fh, fw, fh, across[0], up[0], across[1], up[1]);
       return;
     }
-    var w = h * (im.naturalWidth / im.naturalHeight || 1);
-    ctx.drawImage(im, tx * T + (T - w) / 2, ty * T + T - h, w, h);
+    var box = artSize(im.naturalWidth, im.naturalHeight, height);
+    var across = snapSpan(tx * T + (T - box.w) / 2, box.w);
+    var up = snapSpan(ty * T + T - box.h, box.h);
+    ctx.drawImage(im, across[0], up[0], across[1], up[1]);
   }
 
   // An item marker on the floor: the item's sprite when the pack names a
@@ -142,8 +145,11 @@
     var sp = def && def.sprite;
     var size = T * 0.6;
     if (sp && spriteReady(sp)) {
-      ctx.drawImage(spriteImgs[sp], tx * T + (T - size) / 2,
-                    ty * T + (T - size) / 2, size, size);
+      var im = spriteImgs[sp];
+      var box = pixelNative ? artSize(im.naturalWidth, im.naturalHeight, size) : { w: size, h: size };
+      var across = snapSpan(tx * T + (T - box.w) / 2, box.w);
+      var up = snapSpan(ty * T + (T - box.h) / 2, box.h);
+      ctx.drawImage(im, across[0], up[0], across[1], up[1]);
       return;
     }
     ctx.fillStyle = '#CBC6B6';

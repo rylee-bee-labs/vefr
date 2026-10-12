@@ -172,6 +172,7 @@
   .equip-row { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
   .equip-row-art { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; }
   .equip-row-art img { width: 32px; height: 32px; object-fit: contain; image-rendering: pixelated; }
+  body.vefr-pixel img { image-rendering: pixelated; }
   .equip-row-name { flex: 1 1 auto; }
   .equip-row button { min-height: 44px; }
   .equip-empty-svg { width: 32px; height: 32px; stroke: var(--ink-dim); fill: none; stroke-width: 1.5; }
@@ -10158,6 +10159,39 @@ function setupTown() {
   var MIN_FIT_TILE = 16;   // below this, scroll at a readable size instead
   var HUD_BAND = 72;       // room the HUD frame needs above and below a whole map
   var MIN_STAGE_W = 420, MIN_STAGE_H = 360;  // enough for the HUD frame's corners
+  // Pixel art (`display.pixel_art` in world.json): every picture is drawn at a whole-number
+  // scale of the art's native tile, with no smoothing. A pack without it draws exactly as before.
+  var pixelNative = (world.display && world.display.pixel_art
+                     && world.display.pixel_art.native_tile) || 0;
+  var pixelK = 1;   // one art pixel is pixelK / dpr CSS px
+  if (pixelNative) document.body.classList.add('vefr-pixel');
+  function pxRatio() { return window.devicePixelRatio || 1; }
+  function snapPx(v) {
+    if (!pixelNative) return v;
+    var d = pxRatio();
+    return Math.round(v * d) / d;
+  }
+  // The span an art picture covers along one axis, as [start, length] on whole device pixels.
+  function snapSpan(at, size) {
+    if (!pixelNative) return [at, size];
+    var a = snapPx(at);
+    return [a, snapPx(at + size) - a];
+  }
+  // A picture's drawn size in CSS px: its own art pixels at the snapped scale, else heightCss
+  // tall at its own aspect.
+  function artSize(natW, natH, heightCss) {
+    if (pixelNative) return { w: natW * pixelK / pxRatio(), h: natH * pixelK / pxRatio() };
+    return { w: heightCss * (natW / natH || 1), h: heightCss };
+  }
+  // The tile as k whole art pixels of device pixels. A whole map that fits rounds k down so it
+  // still fits; any other map rounds to the nearest.
+  function snapTile(wanted) {
+    var d = pxRatio();
+    var fits = cols * wanted <= viewW && rows * wanted <= viewH;
+    var k = wanted * d / pixelNative;
+    pixelK = Math.max(1, fits ? Math.floor(k) : Math.round(k));
+    return pixelK * pixelNative / d;
+  }
   function fitZoom() {
     // The HUD sits in the stage's corners, so a whole map must leave a band
     // above and below for it; otherwise it reads whole and still reaches
@@ -10232,6 +10266,7 @@ function setupTown() {
       map: { x: mx, y: my, w: mw, h: mh },
       tile: T   // the drawn tile, CSS px (read by tests/browser/test_camera_zoom.py)
     };
+    if (pixelNative) window.VEFR_STAGE.pixel = { native: pixelNative, k: pixelK };
     var stage = document.getElementById('stage');
     if (stage) {
       var box = stage.getBoundingClientRect();
@@ -10294,7 +10329,9 @@ function setupTown() {
     canvas.width = Math.round(viewW * dpr);
     canvas.height = Math.round(viewH * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    if (pixelNative) ctx.imageSmoothingEnabled = false;   // a canvas resize resets this
     T = town.tile * fitZoom();
+    if (pixelNative) T = snapTile(T);
     publishStage();
   }
   window.addEventListener('resize', function () { resize(); draw(); });
@@ -11136,7 +11173,7 @@ function setupTown() {
   // A character with a ready walk sheet shows its down-facing idle frame.
   function drawSprite(key, tx, ty) {
     var im = spriteImgs[key];
-    var h = T * 1.5 * spriteScale(window.VEFR_SPRITE_SCALE, key);
+    var height = T * 1.5 * spriteScale(window.VEFR_SPRITE_SCALE, key);
     var sheet = spriteSheets[key];
     if (sheetUsable(sheet) && spriteSheetReady(key)) {
       var sim = spriteSheetImgs[key];
@@ -11145,13 +11182,16 @@ function setupTown() {
       var down = (sheet.directions && sheet.directions.down) || {};
       var idx = (down.idle && down.idle.length) ? down.idle[0] : 0;
       var col = idx % cols, row = Math.floor(idx / cols);
-      var sw = h * (fw / fh || 1);
-      ctx.drawImage(sim, col * fw, row * fh, fw, fh,
-                    tx * T + (T - sw) / 2, ty * T + T - h, sw, h);
+      var box = artSize(fw, fh, height);
+      var across = snapSpan(tx * T + (T - box.w) / 2, box.w);
+      var up = snapSpan(ty * T + T - box.h, box.h);
+      ctx.drawImage(sim, col * fw, row * fh, fw, fh, across[0], up[0], across[1], up[1]);
       return;
     }
-    var w = h * (im.naturalWidth / im.naturalHeight || 1);
-    ctx.drawImage(im, tx * T + (T - w) / 2, ty * T + T - h, w, h);
+    var box = artSize(im.naturalWidth, im.naturalHeight, height);
+    var across = snapSpan(tx * T + (T - box.w) / 2, box.w);
+    var up = snapSpan(ty * T + T - box.h, box.h);
+    ctx.drawImage(im, across[0], up[0], across[1], up[1]);
   }
 
   // An item marker on the floor: the item's sprite when the pack names a
@@ -11161,8 +11201,11 @@ function setupTown() {
     var sp = def && def.sprite;
     var size = T * 0.6;
     if (sp && spriteReady(sp)) {
-      ctx.drawImage(spriteImgs[sp], tx * T + (T - size) / 2,
-                    ty * T + (T - size) / 2, size, size);
+      var im = spriteImgs[sp];
+      var box = pixelNative ? artSize(im.naturalWidth, im.naturalHeight, size) : { w: size, h: size };
+      var across = snapSpan(tx * T + (T - box.w) / 2, box.w);
+      var up = snapSpan(ty * T + (T - box.h) / 2, box.h);
+      ctx.drawImage(im, across[0], up[0], across[1], up[1]);
       return;
     }
     ctx.fillStyle = '#CBC6B6';
@@ -11302,7 +11345,7 @@ function setupTown() {
     var pose = heroPose();
     var t = pose.tile, off = pose.off;
     ctx.save();
-    ctx.translate(t[0] * T + T / 2, t[1] * T + T);
+    ctx.translate(snapPx(t[0] * T + T / 2), snapPx(t[1] * T + T));
     // The lean is a rotation. A real canvas has rotate(); the minimal
     // stub context used by the test harness may not, and in that case
     // the hero still draws, only without the tilt.
@@ -11318,26 +11361,27 @@ function setupTown() {
       var fw = sheet.frame[0], fh = sheet.frame[1];
       var cols = Math.max(1, Math.floor(sim.naturalWidth / fw));
       var col = heroSheetIdx % cols, row = Math.floor(heroSheetIdx / cols);
-      var sheetH = T * 1.5 * spriteScale(window.VEFR_SPRITE_SCALE, 'hero');
-      var sheetW = sheetH * (fw / fh || 1);
-      var sh = sheetH * (1 - off.squash);
-      var sw = sheetW * (1 + off.squash);
+      var base = artSize(fw, fh, T * 1.5 * spriteScale(window.VEFR_SPRITE_SCALE, 'hero'));
+      var sh = base.h * (1 - off.squash);
+      var sw = base.w * (1 + off.squash);
+      var across = snapSpan(-sw / 2, sw), up = snapSpan(-sh, sh);
       if (heroSheetMirror) {
-        ctx.drawImage(sim, col * fw, row * fh, fw, fh, sw / 2, -sh, -sw, sh);
+        ctx.drawImage(sim, col * fw, row * fh, fw, fh, across[0] + across[1], up[0], -across[1], up[1]);
       } else {
-        ctx.drawImage(sim, col * fw, row * fh, fw, fh, -sw / 2, -sh, sw, sh);
+        ctx.drawImage(sim, col * fw, row * fh, fw, fh, across[0], up[0], across[1], up[1]);
       }
     } else if (spriteReady('hero')) {
       var im = spriteImgs['hero'];
-      var baseH = T * 1.5 * spriteScale(window.VEFR_SPRITE_SCALE, 'hero');
-      var baseW = baseH * (im.naturalWidth / im.naturalHeight || 1);
+      var base = artSize(im.naturalWidth, im.naturalHeight,
+                         T * 1.5 * spriteScale(window.VEFR_SPRITE_SCALE, 'hero'));
       // The squash is drawn as a slightly wider, shorter body - no
       // context scale needed - with the feet still on the tile bottom.
-      var h = baseH * (1 - off.squash);
-      var w = baseW * (1 + off.squash);
+      var h = base.h * (1 - off.squash);
+      var w = base.w * (1 + off.squash);
+      var across = snapSpan(-w / 2, w), up = snapSpan(-h, h);
       // Facing left is the same picture mirrored about the tile centre.
-      if (heroFacing === 'left') ctx.drawImage(im, w / 2, -h, -w, h);
-      else ctx.drawImage(im, -w / 2, -h, w, h);
+      if (heroFacing === 'left') ctx.drawImage(im, across[0] + across[1], up[0], -across[1], up[1]);
+      else ctx.drawImage(im, across[0], up[0], across[1], up[1]);
     } else {
       ctx.fillStyle = town.hero_color || '#e8e5df';
       ctx.beginPath();
@@ -11374,6 +11418,7 @@ function setupTown() {
       : Math.min(Math.max(camHero[0] * T + T / 2 - viewW / 2, 0), mapW - viewW);
     var camY = mapH <= viewH ? (mapH - viewH) / 2
       : Math.min(Math.max(camHero[1] * T + T / 2 - viewH / 2, 0), mapH - viewH);
+    camX = snapPx(camX); camY = snapPx(camY);
 
     ctx.fillStyle = town.bg; ctx.fillRect(0, 0, viewW, viewH);
     // The ground the map does not cover takes the skin's table, when the skin

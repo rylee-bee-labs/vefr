@@ -100,7 +100,7 @@
     var pose = heroPose();
     var t = pose.tile, off = pose.off;
     ctx.save();
-    ctx.translate(t[0] * T + T / 2, t[1] * T + T);
+    ctx.translate(snapPx(t[0] * T + T / 2), snapPx(t[1] * T + T));
     // The lean is a rotation. A real canvas has rotate(); the minimal
     // stub context used by the test harness may not, and in that case
     // the hero still draws, only without the tilt.
@@ -116,26 +116,27 @@
       var fw = sheet.frame[0], fh = sheet.frame[1];
       var cols = Math.max(1, Math.floor(sim.naturalWidth / fw));
       var col = heroSheetIdx % cols, row = Math.floor(heroSheetIdx / cols);
-      var sheetH = T * 1.5 * spriteScale(window.VEFR_SPRITE_SCALE, 'hero');
-      var sheetW = sheetH * (fw / fh || 1);
-      var sh = sheetH * (1 - off.squash);
-      var sw = sheetW * (1 + off.squash);
+      var base = artSize(fw, fh, T * 1.5 * spriteScale(window.VEFR_SPRITE_SCALE, 'hero'));
+      var sh = base.h * (1 - off.squash);
+      var sw = base.w * (1 + off.squash);
+      var across = snapSpan(-sw / 2, sw), up = snapSpan(-sh, sh);
       if (heroSheetMirror) {
-        ctx.drawImage(sim, col * fw, row * fh, fw, fh, sw / 2, -sh, -sw, sh);
+        ctx.drawImage(sim, col * fw, row * fh, fw, fh, across[0] + across[1], up[0], -across[1], up[1]);
       } else {
-        ctx.drawImage(sim, col * fw, row * fh, fw, fh, -sw / 2, -sh, sw, sh);
+        ctx.drawImage(sim, col * fw, row * fh, fw, fh, across[0], up[0], across[1], up[1]);
       }
     } else if (spriteReady('hero')) {
       var im = spriteImgs['hero'];
-      var baseH = T * 1.5 * spriteScale(window.VEFR_SPRITE_SCALE, 'hero');
-      var baseW = baseH * (im.naturalWidth / im.naturalHeight || 1);
+      var base = artSize(im.naturalWidth, im.naturalHeight,
+                         T * 1.5 * spriteScale(window.VEFR_SPRITE_SCALE, 'hero'));
       // The squash is drawn as a slightly wider, shorter body - no
       // context scale needed - with the feet still on the tile bottom.
-      var h = baseH * (1 - off.squash);
-      var w = baseW * (1 + off.squash);
+      var h = base.h * (1 - off.squash);
+      var w = base.w * (1 + off.squash);
+      var across = snapSpan(-w / 2, w), up = snapSpan(-h, h);
       // Facing left is the same picture mirrored about the tile centre.
-      if (heroFacing === 'left') ctx.drawImage(im, w / 2, -h, -w, h);
-      else ctx.drawImage(im, -w / 2, -h, w, h);
+      if (heroFacing === 'left') ctx.drawImage(im, across[0] + across[1], up[0], -across[1], up[1]);
+      else ctx.drawImage(im, across[0], up[0], across[1], up[1]);
     } else {
       ctx.fillStyle = town.hero_color || '#e8e5df';
       ctx.beginPath();
@@ -172,6 +173,7 @@
       : Math.min(Math.max(camHero[0] * T + T / 2 - viewW / 2, 0), mapW - viewW);
     var camY = mapH <= viewH ? (mapH - viewH) / 2
       : Math.min(Math.max(camHero[1] * T + T / 2 - viewH / 2, 0), mapH - viewH);
+    camX = snapPx(camX); camY = snapPx(camY);
 
     ctx.fillStyle = town.bg; ctx.fillRect(0, 0, viewW, viewH);
     // The ground the map does not cover takes the skin's table, when the skin
