@@ -109,7 +109,9 @@ def say_a_line(page, control):
     the sample town's starting tile, the Talk control writes one gentle line
     into #near and the Interact control another, so two calls are two lines
     and not a repeat of one."""
-    page.click(f"#{control}")
+    # Pressed from the page itself: on a phone the touch controls hide the button row (#428), and whether a phone
+    # can reach Talk at all is #431. This test is about the messages panel, not about reaching the button.
+    page.eval_on_selector(f"#{control}", "el => el.click()")
     page.wait_for_function("() => document.getElementById('near').textContent.length > 0")
 
 
