@@ -314,19 +314,13 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # #417 2026-10-12: Talk with no brain says the seeded line (480-town-input-and-turns.js), on top of #416; measured twice in separate processes, readings equal:
 #   aab9d5457b034d7b900bc2ed34ccb99645514acf744739ec559e173b7f9c8d7f
 #   aab9d5457b034d7b900bc2ed34ccb99645514acf744739ec559e173b7f9c8d7f
-# Object layer and moving sprites (P8WORLD) on top of #419, 2026-10-12; measured twice in separate processes, readings equal:
-#   366f592114dd198c3d48655667da049e96327549de297b4d91a152abf3cf88be
-#   366f592114dd198c3d48655667da049e96327549de297b4d91a152abf3cf88be
-# Props on the ground layer (#420), 2026-10-12; measured twice in separate processes, readings equal:
-#   71d1e50c32354356363216fe4f2f00d76afc52222ee1fdca0baae7440f7689b5
-#   71d1e50c32354356363216fe4f2f00d76afc52222ee1fdca0baae7440f7689b5
-# Solid grid tiles lose the grey inset (#420), 2026-10-12; measured twice in separate processes, readings equal:
-#   68d94ab58ef7e7d8b580f8a8928cd197c29972a9469a7826336f0b3eb3a1e980
-#   68d94ab58ef7e7d8b580f8a8928cd197c29972a9469a7826336f0b3eb3a1e980
-# People who block (player.people_block, #420), 2026-10-12; measured twice in separate processes, readings equal:
-#   03793d56c83180252f5cc5b632d3944be6620f43955a82ef8c4a0f0fe706765e
-#   03793d56c83180252f5cc5b632d3944be6620f43955a82ef8c4a0f0fe706765e
-NO_SKIN_WEAVE_SHA256 = "03793d56c83180252f5cc5b632d3944be6620f43955a82ef8c4a0f0fe706765e"
+# #418 phone camera merged with #419 (Talk) on 2026-10-12; measured twice in separate processes, readings equal:
+#   3efab5dcd619fc4e4510f3297cf3e6ea5dcb1a059341f4fcad5c5476b014113d
+#   3efab5dcd619fc4e4510f3297cf3e6ea5dcb1a059341f4fcad5c5476b014113d
+# #420 object layer merged with #418 phone camera, 2026-10-12; measured twice in separate processes, readings equal:
+#   578de6ada011a5a407a4a9d6cd1e53a10c44a6c2e417dfbfe37549f8b4abb509
+#   578de6ada011a5a407a4a9d6cd1e53a10c44a6c2e417dfbfe37549f8b4abb509
+NO_SKIN_WEAVE_SHA256 = "578de6ada011a5a407a4a9d6cd1e53a10c44a6c2e417dfbfe37549f8b4abb509"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

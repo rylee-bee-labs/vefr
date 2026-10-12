@@ -218,6 +218,8 @@ def load_pack(pack_dir: Path) -> dict:
         # loads exactly as before, and the validator sees nothing new.
         if 'sound' in config:
             unified['sound'] = config['sound']
+        if 'display' in config:
+            unified['display'] = config['display']
         # The pack's own words for the action-critical lines the engine
         # speaks (vefr #259), carried through ONLY when the pack declares
         # them: a pack with none loads exactly as before, and the
@@ -1482,6 +1484,18 @@ def sound_errors(w: dict) -> list[str]:
     if 'sound' not in w:
         return []
     return [p.sentence for p in shapes.check(shapes.BLOCKS['sound'], w['sound'])]
+
+
+def display_errors(w: dict) -> list[str]:
+    """Every problem with a pack's optional `display` block (empty = good).
+
+    `phone_tile` is the drawn tile, in CSS pixels, of a touch phone whose map is too big to fit: a whole number from
+    32 to 72. A pack that declares no `display`, or a `display` with no `phone_tile`, gets nothing here and plays as
+    it always has.
+    """
+    if 'display' not in w:
+        return []
+    return [p.sentence for p in shapes.check(shapes.BLOCKS['display'], w['display'])]
 
 
 def player_words_errors(w: dict) -> list[str]:
@@ -3369,6 +3383,7 @@ def validate(w: dict, pack_dir: Path | None = None) -> list[str]:
     # checked beside the other optional catalogs. A pack that declares
     # none gets nothing here.
     errors.extend(sound_errors(w))
+    errors.extend(display_errors(w))
     # The pack's optional player words (vefr #259): the pack's own
     # wording for the action-critical lines the engine speaks. A pack
     # that declares none gets nothing here and says nothing else about

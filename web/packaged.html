@@ -10175,7 +10175,23 @@ function setupTown() {
   var MIN_FIT_TILE = 16;   // below this, scroll at a readable size instead
   var HUD_BAND = 72;       // room the HUD frame needs above and below a whole map
   var MIN_STAGE_W = 420, MIN_STAGE_H = 360;  // enough for the HUD frame's corners
+  // The phone camera needs the pack's display.phone_tile; see docs/guides/world-creation.md.
+  var PHONE_TILE = (window.VEFR_WORLD.display || {}).phone_tile || 0;
+  var PHONE_MIN_FIT = 36, PHONE_MARGIN = 3;
+  var onPhone = false;
+  var cameraAt = { x: 0, y: 0 };
+  function phoneCamera() {
+    if (!PHONE_TILE) return false;
+    var q = window.location.search;
+    if (/[?&]camera=desk\b/.test(q)) return false;
+    if (/[?&]camera=phone\b/.test(q)) return true;
+    return !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+  }
   function fitZoom() {
+    if (onPhone) {
+      var phoneFit = Math.min(viewW / (cols * town.tile), viewH / (rows * town.tile), 3);
+      return phoneFit * town.tile >= PHONE_MIN_FIT ? phoneFit : PHONE_TILE / town.tile;
+    }
     // The HUD sits in the stage's corners, so a whole map must leave a band
     // above and below for it; otherwise it reads whole and still reaches
     // under the buttons.
@@ -10188,8 +10204,7 @@ function setupTown() {
       // bigger map scrolls, and there the tile is as big as the lit circle
       // lets fit the window's height, 32 to 48 px: the HUD sits in the dark
       // corners outside the circle. Sight 8 at 720 px is 42 px, where a
-      // fixed 32 left the hero a speck (Cottage walk, 2026-10-12). A phone
-      // keeps 32 px.
+      // fixed 32 left the hero a speck (Cottage walk, 2026-10-12).
       var z = 32 / town.tile;
       var fitH = Math.max(viewH - 2 * HUD_BAND, 1) / (rows * town.tile);
       var whole = cols * town.tile * z <= viewW && rows * town.tile * z <= viewH;
@@ -10238,7 +10253,7 @@ function setupTown() {
     }
     // A phone held upright: width <= 600 and taller than it is wide. The
     // stage is the window; the map stays the drawn rectangle inside it.
-    var dock = window.innerWidth <= 600 && window.innerHeight > window.innerWidth;
+    var dock = window.innerWidth <= 600 && window.innerHeight > window.innerWidth && !onPhone;
     // A map too small for the HUD frame's corners gets the window as its
     // stage as well, so those corners fall on the spare room, not the map.
     var grow = dock || mw < MIN_STAGE_W || mh < MIN_STAGE_H;
@@ -10302,6 +10317,8 @@ function setupTown() {
   // something new to draw (the skin's backdrop, once its picture has decoded).
   // Precedent: window.refreshCombatSnapshot.
   window.VEFR_REDRAW = function () { draw(); };
+  // The camera's offset as the last draw() placed it, read-only.
+  window.VEFR_CAMERA = function () { return { x: cameraAt.x, y: cameraAt.y }; };
   function resize() {
     cols = town.map[0].length;
     rows = town.map.length;
@@ -10311,6 +10328,7 @@ function setupTown() {
     canvas.width = Math.round(viewW * dpr);
     canvas.height = Math.round(viewH * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    onPhone = phoneCamera();
     T = town.tile * fitZoom();
     publishStage();
   }
@@ -11550,10 +11568,14 @@ function setupTown() {
     // scrolling map glides during the hop instead of snapping a tile and sliding the hero back.
     // At rest the drawn tile is the settled one, so nothing changes when no step is running.
     var camHero = heroPose().tile;
+    // A phone's camera may pass a map's edge by PHONE_MARGIN tiles.
+    var margin = onPhone ? PHONE_MARGIN * T : 0;
     var camX = mapW <= viewW ? (mapW - viewW) / 2
-      : Math.min(Math.max(camHero[0] * T + T / 2 - viewW / 2, 0), mapW - viewW);
+      : Math.min(Math.max(camHero[0] * T + T / 2 - viewW / 2, -margin), mapW - viewW + margin);
     var camY = mapH <= viewH ? (mapH - viewH) / 2
-      : Math.min(Math.max(camHero[1] * T + T / 2 - viewH / 2, 0), mapH - viewH);
+      : Math.min(Math.max(camHero[1] * T + T / 2 - viewH / 2, -margin), mapH - viewH + margin);
+    cameraAt.x = camX;
+    cameraAt.y = camY;
 
     ctx.fillStyle = town.bg; ctx.fillRect(0, 0, viewW, viewH);
     // The ground the map does not cover takes the skin's table, when the skin
