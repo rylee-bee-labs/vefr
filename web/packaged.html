@@ -11372,7 +11372,7 @@ function setupTown() {
   // sheet draws the cell that pose picks, mirrored when its side is missing.
   function drawSprite(key, tx, ty, pose) {
     var im = spriteImgs[key];
-    var height = T * 1.5 * spriteScale(window.VEFR_SPRITE_SCALE, key);
+    var h = T * 1.5 * spriteScale(window.VEFR_SPRITE_SCALE, key);
     var sheet = spriteSheets[key];
     var cell = (sheetUsable(sheet) && spriteSheetReady(key))
       ? sheetCell(key, pose.actor, pose.dir, pose.state, 0) : null;
@@ -11381,7 +11381,7 @@ function setupTown() {
       var fw = sheet.frame[0], fh = sheet.frame[1];
       var cols = Math.max(1, Math.floor(sim.naturalWidth / fw));
       var col = cell.idx % cols, row = Math.floor(cell.idx / cols);
-      var box = artSize(fw, fh, height);
+      var box = artSize(fw, fh, h);
       var across = snapSpan(tx * T + (T - box.w) / 2, box.w);
       var up = snapSpan(ty * T + T - box.h, box.h);
       if (cell.mirror) {
@@ -11391,7 +11391,7 @@ function setupTown() {
       }
       return;
     }
-    var box = artSize(im.naturalWidth, im.naturalHeight, height);
+    var box = artSize(im.naturalWidth, im.naturalHeight, h);
     var across = snapSpan(tx * T + (T - box.w) / 2, box.w);
     var up = snapSpan(ty * T + T - box.h, box.h);
     ctx.drawImage(im, across[0], up[0], across[1], up[1]);
@@ -11574,8 +11574,8 @@ function setupTown() {
       }
     } else if (spriteReady('hero')) {
       var im = spriteImgs['hero'];
-      var base = artSize(im.naturalWidth, im.naturalHeight,
-                         T * 1.5 * spriteScale(window.VEFR_SPRITE_SCALE, 'hero'));
+      var baseH = T * 1.5 * spriteScale(window.VEFR_SPRITE_SCALE, 'hero');
+      var base = artSize(im.naturalWidth, im.naturalHeight, baseH);
       // The squash is drawn as a slightly wider, shorter body - no
       // context scale needed - with the feet still on the tile bottom.
       var h = base.h * (1 - off.squash);

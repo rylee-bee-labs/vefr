@@ -126,8 +126,8 @@
       }
     } else if (spriteReady('hero')) {
       var im = spriteImgs['hero'];
-      var base = artSize(im.naturalWidth, im.naturalHeight,
-                         T * 1.5 * spriteScale(window.VEFR_SPRITE_SCALE, 'hero'));
+      var baseH = T * 1.5 * spriteScale(window.VEFR_SPRITE_SCALE, 'hero');
+      var base = artSize(im.naturalWidth, im.naturalHeight, baseH);
       // The squash is drawn as a slightly wider, shorter body - no
       // context scale needed - with the feet still on the tile bottom.
       var h = base.h * (1 - off.squash);
