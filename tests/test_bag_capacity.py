@@ -3,7 +3,9 @@
 A pack may name `bag.size` in world.json, and a carried thing with a `carry`
 raises the cap by that many places. A pack that names no size keeps the
 unbounded bag. A full bag refuses a floor pickup in one plain line and leaves
-the thing on the floor; a warden's key always fits.
+the thing on the floor, where it can be picked up once there is room; it
+refuses a shop purchase in the same words and takes no gold; a warden's key
+always fits.
 
 The schema and the baked catalog are plain Python and run everywhere. The
 behaviour runs the REAL woven player in a node jsdom harness
@@ -90,12 +92,21 @@ def weave(dest, name, bag=None):
     return out
 
 
-def run(html, name, store=None, adds=None, take=None):
+def run(html, name, store=None, adds=None, take=None, drop=None,
+        retake=False, buy=None, reload=None):
     spec = {"name": name, "store": store or {}}
     if adds is not None:
         spec["adds"] = adds
     if take is not None:
         spec["take"] = {"item": take}
+    if drop is not None:
+        spec["drop"] = drop
+    if retake:
+        spec["retake"] = True
+    if buy is not None:
+        spec["buy"] = {"item": buy}
+    if reload is not None:
+        spec["reload"] = {"adds": reload}
     result = subprocess.run(
         ["node", str(HARNESS), str(html), json.dumps(spec)],
         capture_output=True, text=True, timeout=180,
@@ -104,8 +115,11 @@ def run(html, name, store=None, adds=None, take=None):
     return json.loads(result.stdout)
 
 
-def bag_store(name, entries):
-    return {f"vefr-bag-{name}": json.dumps(entries)}
+def bag_store(name, entries, gold=None):
+    store = {f"vefr-bag-{name}": json.dumps(entries)}
+    if gold is not None:
+        store[f"vefr-gold-{name}"] = str(gold)
+    return store
 
 
 @pytest.fixture(scope="module")
@@ -167,3 +181,58 @@ def test_a_carried_upgrade_raises_the_cap_by_its_carry(capped):
     assert out["adds"] == [True, True, True, False]
     assert len(out["bag"]) == 4
     assert out["count"] == "4 of 4 carried."
+
+
+def test_a_thing_left_by_a_full_bag_is_picked_up_once_there_is_room(capped):
+    """The floor keeps what a full bag refused, across a reload: once a
+    place is free, walking onto the tile again takes it."""
+    out = run(capped, CAPPED,
+              store=bag_store(CAPPED, ["potion-1", "potion-1"]),
+              take="ring-1", drop=["potion-1"], retake=True)
+    assert out["errors"] == [], out["errors"]
+    assert out["combat"] == "Your bag is full. You leave a plain ring on the floor."
+    assert out["recombat"] == "You pick up a plain ring."
+    assert out["bag"] == ["potion-1", "ring-1"]
+    assert out["floor"] == []
+
+
+def test_an_upgrade_picked_up_in_play_raises_the_cap_across_a_reload(capped):
+    """Not a pre-loaded saved bag: the satchel is picked up off the floor in
+    play, the cap moves from 2 to 4 at once, and after a reload the bag, its
+    cap and its count are the same and the cap still holds."""
+    out = run(capped, CAPPED, store=bag_store(CAPPED, ["potion-1"]),
+              take="satchel-1", adds=[{"id": "potion-1"}] * 3,
+              reload=[{"id": "potion-1"}])
+    assert out["errors"] == [], out["errors"]
+    assert out["combat"] == "You pick up a leather satchel."
+    assert out["adds"] == [True, True, False]
+    assert out["count"] == "4 of 4 carried."
+    after = out["reloaded"]
+    assert after["bag"] == ["potion-1", "satchel-1", "potion-1", "potion-1"]
+    assert after["room"] == 4
+    assert after["count"] == "4 of 4 carried."
+    assert after["adds"] == [False]
+    assert len(out["bag"]) == 4
+
+
+def test_a_full_bag_refuses_a_purchase_in_words_and_keeps_the_gold(capped):
+    """A shop purchase into a full bag says the floor pickup's own words,
+    adds nothing, and charges nothing."""
+    out = run(capped, CAPPED,
+              store=bag_store(CAPPED, ["potion-1", "potion-1"], gold=10),
+              buy="ring-1")
+    assert out["errors"] == [], out["errors"]
+    assert out["trade"]["pressed"] is True
+    assert out["trade"]["live"] == "Your bag is full."
+    assert out["trade"]["gold"] == 10
+    assert out["gold"] == "10"
+    assert out["bag"] == ["potion-1", "potion-1"]
+
+
+def test_a_purchase_with_room_is_bought_as_before(capped):
+    out = run(capped, CAPPED, store=bag_store(CAPPED, ["potion-1"], gold=10),
+              buy="ring-1")
+    assert out["errors"] == [], out["errors"]
+    assert out["trade"]["live"] == "You buy a plain ring for 3 gold."
+    assert out["trade"]["gold"] == 7
+    assert out["bag"] == ["potion-1", "ring-1"]

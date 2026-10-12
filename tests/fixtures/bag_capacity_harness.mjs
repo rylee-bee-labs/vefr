@@ -7,14 +7,30 @@
      adds:   optional [{id, alwaysFits}] - each one is bagAdd(id, null, alwaysFits)
      take:   optional {item} - a floor drop of that item is seeded on the hero's
              own tile, and the walk-onto-it path (takeHere) runs once
+     drop:   optional [id] - after the take, one copy of each leaves the bag
+             (bagRemoveOne), making room
+     retake: optional true - after the drop, the page is reloaded from what it
+             saved and the hero walks onto the same tile again (takeHere)
+     adds:   optional [{id, alwaysFits}] - each one is bagAdd(id, null, alwaysFits),
+             run after the take when both are given
+     buy:    optional {item} - the Trade panel is opened and that item's Buy
+             button is pressed
+     reload: optional {adds} - the page is reloaded from what it saved, the
+             Bag panel is read again, then each add is tried
 
    Prints one JSON object:
-     adds:    [bool]              the result of each bagAdd, in order
-     count:   string              the Bag panel's count line after the adds
-     combat:  string              the live line after takeHere
-     bag:     [entry]             the saved bag at the end
-     floor:   [drop] | null       the saved floor at the end
-     errors:  [string]            jsdom errors caught on the way
+     adds:     [bool]             the result of each bagAdd, in order
+     count:    string             the Bag panel's count line after the adds
+     combat:   string             the live line after takeHere
+     recombat: string             the live line after the second takeHere
+     trade:    {pressed, live, gold} whether the Buy button could be pressed,
+                                  the Trade panel's live line and the purse after it
+     reloaded: {bag, room, count, adds} the saved bag, bagRoom(), the count
+                                  line and each add's result after the reload
+     bag:      [entry]            the saved bag at the end
+     floor:    [drop] | null      the saved floor at the end
+     gold:     string | null      the saved purse at the end
+     errors:   [string]           jsdom errors caught on the way
 */
 import fs from 'node:fs';
 import { JSDOM, VirtualConsole } from 'jsdom';
@@ -53,12 +69,26 @@ const floorKey = 'vefr-floor-' + spec.name;
 const base = spec.store || {};
 const result = {};
 
-let page = await open(base);
-if (spec.adds) {
-  result.adds = spec.adds.map((a) => page.w.bagAdd(a.id, null, !!a.alwaysFits));
+// Everything the page saved, so a reload opens on it.
+const saveState = (w) => {
+  const out = {};
+  for (let i = 0; i < w.localStorage.length; i++) {
+    const k = w.localStorage.key(i);
+    out[k] = w.localStorage.getItem(k);
+  }
+  return out;
+};
+const reopen = async (page) => {
+  const state = saveState(page.w);
+  page.w.close();
+  return open(state);
+};
+const countLine = (page) => {
   page.w.renderBagPanel();
-  result.count = (page.d.getElementById('bag-count') || {}).textContent || '';
-}
+  return (page.d.getElementById('bag-count') || {}).textContent || '';
+};
+
+let page = await open(base);
 if (spec.take) {
   const spot = page.w.VEFR_HERO_SPOT();
   page.w.close();
@@ -67,9 +97,41 @@ if (spec.take) {
   page.w.VEFR_TAKE_HERE();
   result.combat = (page.d.getElementById('combat-live') || {}).textContent || '';
 }
+if (spec.drop) {
+  spec.drop.forEach((id) => page.w.bagRemoveOne(id));
+}
+if (spec.retake) {
+  page = await reopen(page);
+  page.w.VEFR_TAKE_HERE();
+  result.recombat = (page.d.getElementById('combat-live') || {}).textContent || '';
+}
+if (spec.adds) {
+  result.adds = spec.adds.map((a) => page.w.bagAdd(a.id, null, !!a.alwaysFits));
+  result.count = countLine(page);
+}
+if (spec.buy) {
+  page.w.openTrade('trader', 'A trader');
+  const button = page.d.querySelector(
+    '#trade-buy [data-action="buy"][data-item="' + spec.buy.item + '"]');
+  result.trade = { pressed: !!(button && !button.disabled) };
+  if (result.trade.pressed) button.click();
+  result.trade.live = (page.d.getElementById('trade-live') || {}).textContent || '';
+  result.trade.gold = page.w.heroGold();
+}
+if (spec.reload) {
+  page = await reopen(page);
+  const before = JSON.parse(page.w.localStorage.getItem(bagKey) || 'null');
+  result.reloaded = {
+    bag: before,
+    room: page.w.bagRoom(),
+    count: countLine(page),
+    adds: (spec.reload.adds || []).map((a) => page.w.bagAdd(a.id, null, !!a.alwaysFits)),
+  };
+}
 const saved = (key) => JSON.parse(page.w.localStorage.getItem(key) || 'null');
 result.bag = saved(bagKey);
 result.floor = saved(floorKey);
+result.gold = page.w.localStorage.getItem('vefr-gold-' + spec.name);
 result.errors = errors;
 
 console.log(JSON.stringify(result));

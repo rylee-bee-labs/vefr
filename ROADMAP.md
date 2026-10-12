@@ -678,9 +678,12 @@ the phone touch controls (#428). Cottage's Game Boy Advance town is a draft on t
       take-off always fit, because refusing them would lose the thing. The
       bag panel reads "2 of 2 carried." when capped. `vefr check` refuses a
       `bag` block with no whole-number `size`, and a `carry` that is not a
-      whole number from 1 to 99. Gaps, deliberately: a shop purchase into a
-      full bag is refused with no line, a `carry` does nothing where the pack
-      names no `bag.size`, and no weight. ADR:
+      whole number from 1 to 99. Since then (#343 leftovers): a shop
+      purchase into a full bag is refused in the Trade panel with "Your bag
+      is full." and charges no gold, a thing a full bag left on the floor is
+      picked up once there is room, and a satchel picked up in play keeps its
+      places across a reload. Gaps, deliberately: a `carry` does nothing
+      where the pack names no `bag.size`, and no weight. ADR:
       `docs/adr/0017-rolled-loot-with-rarity-and-hidden-traits.md`, amendment 1.
       Guide: `docs/guides/rulesets.md` → bag capacity. Tests:
       `tests/test_bag_capacity.py`, `tests/fixtures/bag_capacity_harness.mjs`.

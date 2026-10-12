@@ -954,7 +954,10 @@ Two optional fields:
 
 When the bag is full, a floor pickup is refused. The thing stays on the
 floor under the hero, and the player reads one line, for example "Your
-bag is full. You leave a plain ring on the floor." The bag panel counts
+bag is full. You leave a plain ring on the floor." The thing waits there:
+once a place is free, walking onto the tile again picks it up. A shop
+purchase into a full bag is refused too: the Trade panel says "Your bag
+is full.", and no gold is taken. The bag panel counts
 against the cap: "2 of 2 carried." When the pack names no size it reads
 "12 things carried." as before.
 
@@ -966,14 +969,14 @@ contents, an equip swap, and a take-off.
 block with no whole-number `size` from 1 to 99, and a `carry` that is not
 a whole number from 1 to 99.
 
-Known gaps: a shop purchase into a full bag is refused with no line, a
-`carry` does nothing where the pack names no `bag.size`, and there is no
-weight and no slot beyond the five worn ones.
+Known gaps: a `carry` does nothing where the pack names no `bag.size`,
+and there is no weight and no slot beyond the five worn ones.
 
 Code: `src/vefr/shapes.py` (`BAG`, `ITEM_CARRIES`) + `src/vefr/maplab.py`
 (`bag_errors`) + `src/vefr/cli.py` (`_player_items`) +
 `web/player/parts/180-gold.js` (`bagRoom`, `bagAdd`) and
-`430-loot-on-the-floor.js` (the refusal). Tests:
+`430-loot-on-the-floor.js` (the refusal) and `190-the-trade-panel.js`
+(`buyItem`, the shop's refusal). Tests:
 `tests/test_bag_capacity.py` + `tests/fixtures/bag_capacity_harness.mjs`.
 
 ## reward (first slice: gold, trade, and using a thing)

@@ -344,7 +344,10 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # The town gate on a Section's last stair only (the stair that leaves the Section), 2026-10-12; measured twice in separate processes, readings equal:
 #   7c1c8e962977b479584fc48b1bb106265bb9ae5f34cb7fbcee333c9fd9521b00
 #   7c1c8e962977b479584fc48b1bb106265bb9ae5f34cb7fbcee333c9fd9521b00
-NO_SKIN_WEAVE_SHA256 = "7c1c8e962977b479584fc48b1bb106265bb9ae5f34cb7fbcee333c9fd9521b00"
+# A full bag refuses a shop purchase in words (#343), 2026-10-12; measured twice in separate processes, readings equal:
+#   4d79733b09c9dec30d9c2421d34199f7b456b4f226cba5693dc2a0fa666b583c
+#   4d79733b09c9dec30d9c2421d34199f7b456b4f226cba5693dc2a0fa666b583c
+NO_SKIN_WEAVE_SHA256 = "4d79733b09c9dec30d9c2421d34199f7b456b4f226cba5693dc2a0fa666b583c"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():
