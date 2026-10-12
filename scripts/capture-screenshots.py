@@ -134,11 +134,16 @@ def capture_player(browser, shots):
         begin(page)
         page.click("#ts-enter")
         page.wait_for_timeout(400)
-        page.click("#whisper")
+        # A phone gets the touch controls instead of the button row (vefr#428), so there is no Whisper button to
+        # press there: the phone picture shows the touch controls, and only the computer picture shows a whisper.
+        if not touch:
+            page.click("#whisper")
         page.wait_for_timeout(800)
         page.screenshot(path=str(OUT / f"export-in-game{tag}.jpg"), **SHOT)
+        what = ("the touch controls, health and mood over the map" if touch
+                else "speech box, health, mood and actions over the map")
         where = "on a phone" if touch else "on a computer"
-        shots.append(("The shareable file", f"export-in-game{tag}.jpg", f"In game {where}: speech box, health, mood and actions over the map"))
+        shots.append(("The shareable file", f"export-in-game{tag}.jpg", f"In game {where}: {what}"))
         page.close()
 
 
