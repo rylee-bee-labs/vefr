@@ -2931,6 +2931,14 @@ def _tile_errors(pack: Path, w: dict, region_geo: dict) -> list[str]:
     return errors
 
 
+def _people_block_errors(w: dict) -> list[str]:
+    """`player.people_block`, when present, is true or false (empty = good or absent)."""
+    player = w.get('player')
+    if isinstance(player, dict) and 'people_block' in player and not isinstance(player['people_block'], bool):
+        return ['player.people_block must be true or false']
+    return []
+
+
 def _sprite_scale_errors(w: dict, pack_dir) -> list[str]:
     """Plain problems with `player.sprite_scale` (empty = good or absent). Reads the block load_pack already holds; a key is a
     picture when `player.sprites` lists it or the same resolution finds
@@ -3593,6 +3601,7 @@ def validate(w: dict, pack_dir: Path | None = None) -> list[str]:
     if pack_dir is not None:
         errors.extend(_tile_errors(Path(pack_dir), w, region_geo))
         errors.extend(_sprite_scale_errors(w, Path(pack_dir)))
+    errors.extend(_people_block_errors(w))
 
     def _door_tile_errors(index, field, rname, at):
         geo = region_geo.get(rname, {})

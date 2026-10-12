@@ -323,7 +323,10 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # Solid grid tiles lose the grey inset (#420), 2026-10-12; measured twice in separate processes, readings equal:
 #   68d94ab58ef7e7d8b580f8a8928cd197c29972a9469a7826336f0b3eb3a1e980
 #   68d94ab58ef7e7d8b580f8a8928cd197c29972a9469a7826336f0b3eb3a1e980
-NO_SKIN_WEAVE_SHA256 = "68d94ab58ef7e7d8b580f8a8928cd197c29972a9469a7826336f0b3eb3a1e980"
+# People who block (player.people_block, #420), 2026-10-12; measured twice in separate processes, readings equal:
+#   03793d56c83180252f5cc5b632d3944be6620f43955a82ef8c4a0f0fe706765e
+#   03793d56c83180252f5cc5b632d3944be6620f43955a82ef8c4a0f0fe706765e
+NO_SKIN_WEAVE_SHA256 = "03793d56c83180252f5cc5b632d3944be6620f43955a82ef8c4a0f0fe706765e"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

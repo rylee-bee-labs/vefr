@@ -226,6 +226,14 @@ the map, whose `block` does not match its `size`, or whose footprint covers
 a speaker, the hero's start, a wake point, a door or a map book. Each message
 names the region, the prop's number and its picture.
 
+### People you cannot walk through
+
+In most RPGs a person stands in the way. Set `"people_block": true` in
+the `player` block of `world.json` and the hero cannot walk onto a
+speaker's tile: pressing toward them turns her to face them. Left out,
+the hero can pass through people as before; keep it off if a speaker
+stands in a corridor the hero must get through.
+
 ## Where your world lives
 
 ```text

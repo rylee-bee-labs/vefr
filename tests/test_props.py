@@ -118,3 +118,10 @@ def test_a_props_pack_bakes_its_pictures_and_its_props(tmp_path):
         elif isinstance(node, list):
             stack.extend(node)
     assert entries == [[{"pic": "stone", "at": [8, 8], "frames": 2, "fps": 4}]]
+
+
+def test_people_block_must_be_true_or_false():
+    from vefr.maplab import _people_block_errors
+    assert _people_block_errors({"player": {"people_block": True}}) == []
+    assert _people_block_errors({"player": {}}) == []
+    assert _people_block_errors({"player": {"people_block": "yes"}}) == ["player.people_block must be true or false"]

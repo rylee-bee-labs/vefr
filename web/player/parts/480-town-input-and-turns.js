@@ -1032,6 +1032,16 @@
     return here;
   }
 
+  function peopleBlock() {
+    var pl = (window.VEFR_WORLD || {}).player || {};
+    return pl.people_block === true;
+  }
+  function speakerAt(x, y) {
+    return Object.keys(speakers || {}).some(function (k) {
+      var s = speakers[k];
+      return s && Array.isArray(s.at) && s.at[0] === x && s.at[1] === y;
+    });
+  }
   function move(dx, dy) {
     // The hero faces the way the move is trying to go, even when it is
     // refused: a bump, a wall or the map's edge still turns the hero.
@@ -1064,6 +1074,12 @@
         lightTick();
         enemyTurn();
       }
+      heroSettleSoon();
+      return;
+    }
+    // A pack whose people are solid (player.people_block): pressing toward
+    // one turns the hero to face them, and does not walk through them.
+    if (peopleBlock() && speakerAt(nx, ny)) {
       heroSettleSoon();
       return;
     }
