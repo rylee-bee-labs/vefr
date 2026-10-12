@@ -180,6 +180,10 @@ picks a variant from the cell's own map coordinates, so the same world
 always looks the same and a save and a screenshot agree. One picture
 behaves exactly as before.
 
+To blend one ground into its neighbours (a lane fraying into grass), a
+legend entry may also name `"edges": "lane-edges"`, one 4 x 4 sheet in
+`tiles/`; see `docs/guides/rulesets.md`, "A ground that blends".
+
 Bake at 2x the on-screen tile size (192px for a 96px tile). The engine
 bakes the file as it is and never resizes, so the resizing is your pack's
 own processing step. A tile the region and the engine both lack is a

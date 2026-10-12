@@ -271,6 +271,11 @@ on. A name with only numbered files is legal - there is no required
 unnumbered file. The player picks a variant deterministically, so the
 same pack always looks the same; a pack with no tiles/ resolves tiles
 from the engine set exactly as before.
+A legend entry may also name `"edges": "lane-edges"`: ONE picture in
+`tiles/` cut into a 4 x 4 sheet, whose piece (north 1 + east 2 + south 4
++ west 8 for each neighbour sharing the symbol) is drawn over the tile so
+one ground blends into the next (docs/guides/rulesets.md, "A ground that
+blends"). A legend naming no edges draws exactly as before.
 
 SAVES (rule saves): world.json may carry an optional top-level `saves`
   block choosing how much of a run the rules remember:

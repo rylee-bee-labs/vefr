@@ -1535,6 +1535,45 @@ def _tiles_for_legend(legend: dict, sanctuaries, web_dir: Path,
     return out
 
 
+def _edges_for_legend(legend: dict, sanctuaries, web_dir: Path,
+                      region_dir: Path | None = None,
+                      pack: Path | None = None) -> dict[str, str]:
+    """One legend's `edges` sheets as inlined pictures, keyed by symbol.
+
+    A legend entry may carry `"edges": "<name>"`: ONE picture in the
+    region's own `tiles/` (`<name>.webp` or `.png`), cut by the player into
+    a 4 x 4 block of pieces. Piece `mask` (cell `mask % 4`, row `mask // 4`)
+    is drawn over a tile whose neighbours share its symbol by the bits
+    north 1, east 2, south 4, west 8. Pack art only - the engine set has no
+    edges - and a symbol naming none bakes nothing, so a pack with no
+    `edges` bakes `{}` and draws exactly as before. `sanctuaries` and
+    `web_dir` are unused; the signature is `_tiles_for_legend`'s so
+    `_player_region_tiles` can walk the regions once for both.
+    """
+    out: dict[str, str] = {}
+    if not isinstance(legend, dict):
+        return out
+    for ch, spec in legend.items():
+        name = spec.get('edges') if isinstance(spec, dict) else None
+        if not (isinstance(name, str) and name):
+            continue
+        paths = _pack_tile_paths(pack, region_dir, name)
+        if paths:
+            out[ch] = _tile_data_uri(paths[0])
+    return out
+
+
+def _player_tile_edges(world: dict, web_dir: Path,
+                       pack: Path | None = None) -> dict[str, dict[str, str]]:
+    """Every region's edges sheets, keyed by region name, then symbol.
+
+    Only regions whose legend names `edges` appear, so a pack with none
+    bakes `{}` (`window.VEFR_TILE_EDGES`).
+    """
+    every = _player_region_tiles(world, web_dir, pack, per_legend=_edges_for_legend)
+    return {rname: edges for rname, edges in every.items() if edges}
+
+
 def _first_region_dir(pack: Path | None, world: dict) -> Path | None:
     """The on-disk directory of the first act's first region.
 
@@ -1578,7 +1617,7 @@ def _player_tiles(world: dict, web_dir: Path, pack: Path | None = None,
 
 
 def _player_region_tiles(world: dict, web_dir: Path,
-                         pack: Path | None = None
+                         pack: Path | None = None, per_legend=None
                          ) -> dict[str, dict[str, str | list[str]]]:
     """Every region's tiles, keyed by region name.
 
@@ -1588,7 +1627,10 @@ def _player_region_tiles(world: dict, web_dir: Path,
     each region bring its own tiles/ from its on-disk directory (the
     acts shape's <pack>/acts/<act-dir>/<region>, or the pack root for
     the flat shape); without it resolution is the engine set, unchanged.
+    `per_legend` (default `_tiles_for_legend`) is what one region's legend
+    is read with; `_player_tile_edges` walks the same regions for `edges`.
     """
+    per_legend = per_legend or _tiles_for_legend
     pack_path = Path(pack) if pack is not None else None
     flat = pack_path is not None and not _has_subdir(pack_path, 'acts')
     # A flat pack keeps its geometry in world['town'], not in a region
@@ -1617,12 +1659,12 @@ def _player_region_tiles(world: dict, web_dir: Path,
                 region_dir = Path(region) if region is not None else None
             else:
                 region_dir = None
-            out[rname] = _tiles_for_legend(legend, sanctuaries, web_dir,
-                                           region_dir, pack_path)
+            out[rname] = per_legend(legend, sanctuaries, web_dir,
+                                    region_dir, pack_path)
     if not out:
         town = world.get('town') if isinstance(world.get('town'), dict) else {}
         rname = world.get('_region') or 'town'
-        out[rname] = _tiles_for_legend(
+        out[rname] = per_legend(
             town.get('legend') or {}, town.get('sanctuary_tiles') or [],
             web_dir, pack_path, pack_path)
     return out
@@ -2797,6 +2839,10 @@ def weave_html(pack: Path, *, pool: dict | None = None) -> str:
     out_html = out_html.replace('{{region_tiles_json}}',
                                 _json.dumps(_player_region_tiles(world, template_path.parent,
                                                                  pack),
+                                            ensure_ascii=False))
+    out_html = out_html.replace('{{tile_edges_json}}',
+                                _json.dumps(_player_tile_edges(world, template_path.parent,
+                                                               pack),
                                             ensure_ascii=False))
     out_html = out_html.replace('{{sprites_json}}',
                                 _json.dumps(_player_sprites(pack, world), ensure_ascii=False))
