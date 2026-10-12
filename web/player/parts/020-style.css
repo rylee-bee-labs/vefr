@@ -346,6 +346,58 @@
   #stage.stage--dock .gbtn--main { width: auto; min-width: 44px; max-width: calc(100vw - 176px); height: 44px; border-radius: 999px; padding: 0 10px; font-size: 0.6rem; }
   #stage.stage--dock .gbtn--tool { width: 44px; height: 44px; border-radius: 50%; }
   #stage.stage--dock .acts kbd { display: none; }
+  .touch-zone, .touch-hint, .touch-base, .touch-knob, .touch-cluster, .touch-quick, .touch-b, .touch-settings { display: none; }
+  .touch-btn { min-width: 48px; min-height: 48px; padding: 0; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+  .touch-btn.is-down { transform: scale(0.94); filter: brightness(1.15); }
+  .touch-btn:focus-visible { outline: 3px solid #D8AA4E; outline-offset: 3px; }
+  .touch-smart, .touch-bag, .touch-b, .touch-quick-btn { border-radius: 50%; }
+  .touch-smart { grid-area: smart; width: max(48px, calc(72px * var(--touch-scale))); height: max(48px, calc(72px * var(--touch-scale)));
+    display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 0.7rem; line-height: 1.15; }
+  .touch-smart .verb { font-weight: 700; }
+  .touch-smart .cap { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.62rem; }
+  .touch-bag { grid-area: bag; width: max(48px, calc(56px * var(--touch-scale))); height: max(48px, calc(56px * var(--touch-scale))); }
+  .touch-b { grid-area: b; width: max(48px, calc(56px * var(--touch-scale))); height: max(48px, calc(56px * var(--touch-scale))); }
+  .touch-cluster { position: absolute; right: calc(12px + var(--sai-right)); bottom: calc(16px + var(--sai-bottom)); z-index: 55;
+    grid-template-columns: auto auto; grid-template-areas: ". bag" "b smart"; gap: 10px; align-items: end; justify-items: center; }
+  .touch-zone { position: absolute; left: 0; top: calc(64px + var(--sai-top)); bottom: 0; width: 55%; z-index: 1; touch-action: none; }
+  .touch-hint { position: absolute; left: calc(16px + var(--sai-left)); bottom: calc(16px + var(--sai-bottom));
+    width: calc(96px * var(--touch-scale)); height: calc(96px * var(--touch-scale)); border-radius: 50%;
+    border: 2px solid rgba(242, 236, 221, 0.22); pointer-events: none; }
+  .touch-base { position: fixed; width: calc(120px * var(--touch-scale)); height: calc(120px * var(--touch-scale)); border-radius: 50%;
+    border: 2px solid rgba(242, 236, 221, 0.5); background: rgba(17, 19, 23, 0.25); pointer-events: none; z-index: 56; }
+  .touch-knob { position: fixed; width: calc(52px * var(--touch-scale)); height: calc(52px * var(--touch-scale)); border-radius: 50%;
+    background: rgba(216, 170, 78, 0.9); border: 2px solid #F4EEDD; pointer-events: none; z-index: 57; }
+  .touch-quick { position: relative; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+  .touch-quick-btn { width: max(48px, calc(48px * var(--touch-scale))); height: max(48px, calc(48px * var(--touch-scale)));
+    display: flex; align-items: center; justify-content: center; }
+  .touch-quick-btn img { width: 70%; height: 70%; object-fit: contain; }
+  .touch-range-row { display: flex; justify-content: space-between; align-items: center; margin: 12px 0 0; }
+  .touch-set { border: 0; margin: 10px 0; padding: 0; }
+  .touch-set label, .touch-set-row { display: flex; align-items: center; gap: 10px; min-height: 48px; }
+  #touch-size { width: 100%; min-height: 48px; }
+  @media (pointer: coarse) {
+    .touch-settings { display: block; }
+    body.in-game .touch-zone { display: block; }
+    body.in-game .touch-hint:not([hidden]), body.in-game .touch-base:not([hidden]), body.in-game .touch-knob:not([hidden]) { display: block; }
+    body.in-game .touch-cluster { display: grid; }
+    body.in-game .touch-quick:not([hidden]) { display: flex; }
+    body.in-game .touch-smart, body.in-game .touch-bag { display: flex; }
+    body.in-game #stage .acts, body.in-game #stage .dpad { display: none; }
+    body.in-game.touch-dpad #stage .dpad { display: grid; }
+    body.in-game.touch-dpad .touch-zone, body.in-game.touch-dpad .touch-hint { display: none; }
+    body.in-game #menu-open { min-width: 48px; min-height: 48px; }
+    body.in-game #play { touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+    body.in-game #play .reader-card { touch-action: pan-y; user-select: text; -webkit-user-select: text; }
+    body.in-game.touch-modal .touch-zone, body.in-game.touch-modal .touch-hint, body.in-game.touch-modal .touch-base,
+    body.in-game.touch-modal .touch-knob, body.in-game.touch-modal .touch-smart, body.in-game.touch-modal .touch-bag,
+    body.in-game.touch-modal .touch-quick { display: none; }
+    body.in-game.touch-modal .touch-b { display: flex; }
+    body.in-game.touch-left .touch-zone { left: auto; right: 0; }
+    body.in-game.touch-left .touch-hint { left: auto; right: calc(16px + var(--sai-right)); }
+    body.in-game.touch-left .touch-cluster { right: auto; left: calc(12px + var(--sai-left)); grid-template-areas: "bag ." "smart b"; }
+    body.in-game.touch-left .verb-row { left: calc(12px + var(--sai-left)); right: auto; align-items: flex-start; }
+    body.in-game.touch-left #stage .dpad { left: auto; right: calc(12px + var(--sai-right)); }
+  }
   /* pause menu */
   #menu { position: fixed; inset: 0; z-index: 50; background: rgba(8, 9, 11, 0.72); display: grid;
     grid-template-columns: minmax(200px, 240px) minmax(0, 560px); gap: 16px; align-content: start; justify-content: center;
