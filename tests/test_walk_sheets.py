@@ -92,6 +92,11 @@ def test_idle_loops_and_the_optional_states_validate(tmp_path):
     assert extra_errors(tmp_path, sheet=mod(directions=loops)) == []
 
 
+def test_a_character_that_never_walks_needs_no_walk_frames(tmp_path):
+    still = {"down": {"idle": [0, 1], "talk": [2, 3]}, "right": {"idle": [4]}, "up": {"idle": [5]}}
+    assert extra_errors(tmp_path, sheet=mod(directions=still)) == []
+
+
 def mod(**over):
     s = json.loads(json.dumps(SHEET))
     for k, v in over.items():

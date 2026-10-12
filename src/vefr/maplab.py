@@ -2380,7 +2380,9 @@ def sprite_sheet_errors(pack_dir: Path | None) -> list[str]:
                 else:
                     indices.extend(idle)
                 walk = frames.get('walk')
-                if not _sheet_frames(walk, SHEET_WALK_MIN, SHEET_WALK_MAX):
+                if walk is None:
+                    pass   # a character that never walks (a resident at their post) needs no walk frames
+                elif not _sheet_frames(walk, SHEET_WALK_MIN, SHEET_WALK_MAX):
                     errors.append(f"{label} direction '{dname}' needs a "
                                   f"'walk' list of {SHEET_WALK_MIN} to "
                                   f'{SHEET_WALK_MAX} frames')

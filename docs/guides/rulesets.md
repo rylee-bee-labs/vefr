@@ -1377,7 +1377,9 @@ Each direction may also name more states, each a list of frame indexes:
 
 - `idle` - 1 to 16 frames. A list longer than one loops at the sheet's
   `fps`; a single frame stands still.
-- `walk` - 2 to 16 frames, one per step, as above.
+- `walk` - 2 to 16 frames, one per step, as above. Optional: a character
+  that never walks (a resident at their stall) may leave it out, and
+  stands on its `idle`.
 - `talk` - 1 to 16 frames, looped while the speech box is open and the
   character is beside the hero.
 - `act`, `attack`, `hurt` - 1 to 16 frames each, played once at the
