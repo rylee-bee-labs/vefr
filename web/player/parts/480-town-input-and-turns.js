@@ -248,14 +248,17 @@
     }
     // Doors: every transition that leaves this region is drawn, so the
     // way to another map is visible underfoot.
-    if (doorReady()) {
-      transitions().forEach(function (t) {
-        if (!t || t.from !== regionName || !Array.isArray(t.at)) return;
-        if (hideUnseen(t.at[0], t.at[1])) return;
+    transitions().forEach(function (t) {
+      if (!t || t.from !== regionName || !Array.isArray(t.at)) return;
+      if (hideUnseen(t.at[0], t.at[1])) return;
+      var src = wayPictureSrc(wayKindOf(t));
+      if (src) {
+        if (wayReady(src)) ctx.drawImage(wayImgs[src], t.at[0] * T, t.at[1] * T, T, T);
+      } else if (doorReady()) {
         ctx.drawImage(doorImg, t.at[0] * T + T * 0.08, t.at[1] * T + T * 0.08,
                       T * 0.84, T * 0.84);
-      });
-    }
+      }
+    });
     // Books you have not found yet: a marker where one can still be found
     // (a map book on its tile, a gifted one on the person who gives it).
     (window.VEFR_LIBRARY || []).forEach(function (b) {
@@ -666,6 +669,35 @@
   };
   // -- interact end --
 
+  // One transition on this map as an Interact candidate: a stair or a door.
+  function transitionCandidate(tr) {
+    var key = tr.at[0] + ',' + tr.at[1];
+    var sym = (town.map[tr.at[1]] || '')[tr.at[0]] || '';
+    var stair = /stair/i.test((pois || {})[key] || '')
+      || sym === 'u' || sym === 'd';
+    return { kind: stair ? 'stairs' : 'door', id: key,
+             name: (pois || {})[key] || 'the way through',
+             at: [tr.at[0], tr.at[1]] };
+  }
+
+  // The picture kind of one transition: a stair the label says goes up or
+  // down, a trapdoor when its name or tile says so, else a door.
+  function wayKindOf(tr) {
+    var c = transitionCandidate(tr);
+    if (c.kind === 'stairs') {
+      return labelFor(c) === 'Go up the stairs' ? 'stairs-up' : 'stairs-down';
+    }
+    var sym = (town.map[tr.at[1]] || '')[tr.at[0]] || '';
+    var tile = ((town.legend || {})[sym] || {}).tile || '';
+    return (/trap ?door/i.test(c.name) || /trap ?door/i.test(tile)) ? 'trapdoor' : 'door';
+  }
+
+  // The region's own picture for a kind, else the pack's, else '' (the door).
+  function wayPictureSrc(kind) {
+    var own = (window.VEFR_REGION_WAY_ICONS || {})[regionName] || {};
+    return own[kind] || (window.VEFR_WAY_ICONS || {})[kind] || '';
+  }
+
   // The caller half of the one verb: build the state the pure block
   // above wants from the LIVE game - the hero, the way it faces, and
   // every candidate in this region, gathered in this order:
@@ -731,13 +763,7 @@
     transitions().forEach(function (tr) {
       if (!tr || tr.from !== regionName || !Array.isArray(tr.at)) return;
       if (typeof tr.at[0] !== 'number' || typeof tr.at[1] !== 'number') return;
-      var key = tr.at[0] + ',' + tr.at[1];
-      var sym = (town.map[tr.at[1]] || '')[tr.at[0]] || '';
-      var stair = /stair/i.test((pois || {})[key] || '')
-        || sym === 'u' || sym === 'd';
-      candidates.push({ kind: stair ? 'stairs' : 'door', id: key,
-                        name: (pois || {})[key] || 'the way through',
-                        at: [tr.at[0], tr.at[1]] });
+      candidates.push(transitionCandidate(tr));
     });
     var texts = town.poi_text || {};
     Object.keys(texts).forEach(function (key) {
