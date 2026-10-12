@@ -12237,9 +12237,9 @@ function setupTown() {
   //              book (`chest: yes`, `found: map`) whose region is
   //              this one and which is not already found;
   //   book     - every map book in this region that is not a chest, by
-  //              its title. Unlike a chest it stays a target once it
-  //              is found: a note on the ground can be read again
-  //              where it lies, exactly as the Books panel reopens it;
+  //              its title: an unfound one from a tile away, and a found
+  //              one only while the hero stands where it lay (it is no
+  //              longer drawn, so from anywhere else it is gone);
   //   door     - every transition out of this region, except stairs:
   //              a tile is stairs when the region's `pois` for that
   //              tile mentions a stair (/stair/i on pois[key]) OR the
@@ -12288,6 +12288,10 @@ function setupTown() {
                           at: [b.at[0], b.at[1]] });
         return;
       }
+      // A found note is no longer drawn on the map, so it stays a target
+      // only on the tile where it lay: the hero has just picked it up and
+      // the button says what she holds. From a tile away it is gone.
+      if (bookIsFound(b.id) && !(hero[0] === b.at[0] && hero[1] === b.at[1])) return;
       candidates.push({ kind: 'book', id: b.id, name: b.title || 'the note',
                         at: [b.at[0], b.at[1]] });
     });
