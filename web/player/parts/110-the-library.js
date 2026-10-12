@@ -236,7 +236,7 @@ function renderBooksPanel() {
 
 // How long the panel stays up on the phone camera before it folds itself, in
 // ms. Long enough to read the newest line on a phone, short enough that the
-// panel is not over the hero by the time she has walked on (issue #430).
+// panel is not over the hero by the time the hero has walked on (issue #430).
 var FOLD_MS = 6000;
 // The message stack is a small corner panel that can be folded away; the lines
 // stay in the page (a screen reader still hears them) and the choice is remembered.
