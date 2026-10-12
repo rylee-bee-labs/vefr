@@ -64,8 +64,10 @@ PARTS = ROOT / "web" / "player" / "parts"
 # moved, and this slice adds no baked block of its own. It moved again on
 # 2026-10-12 for #416's two empty way-picture lines, measured twice.
 # It moved again on 2026-10-12 for the props slice's empty `VEFR_PROP_PICS` line.
-SAMPLE_DATA_SHA = 'e3fe5e43aa5390e92c5f5dea36425ee53be3c5f6f79393166c18985f8a321330'
-ROLLED_DATA_SHA = '5ef384d5372e1f39f0ada581ed9f167af7d12cf313288590d14bb2d4b2dc615b'
+# Both moved again on 2026-10-12 for #422's empty `window.VEFR_TILE_EDGES = {};`
+# line (measured twice); with that one line removed both pins are unchanged.
+SAMPLE_DATA_SHA = 'c1884e9aeb9459ed712a5afe321702cf2ef37dee0df33ffb474aefed56999420'
+ROLLED_DATA_SHA = '6bdb7b365995e5be96f96f2efdcf2e6fad78bea53952d4e7f4b426cbd9739793'
 
 
 def _data_blocks(html: str) -> str:
