@@ -219,6 +219,10 @@ def load_pack(pack_dir: Path) -> dict:
         # validator sees nothing new.
         if 'player_words' in config:
             unified['player_words'] = config['player_words']
+        # The optional display block (pixel art), carried through ONLY when
+        # the pack declares it: a pack with none is drawn exactly as before.
+        if 'display' in config:
+            unified['display'] = config['display']
         # Every act, in sorted order, each with its own world.json
         # fields plus `region_geo` (that act's own maps + contracts).
         # The validator checks act 2 and later against their own
@@ -1455,6 +1459,20 @@ def player_words_errors(w: dict) -> list[str]:
     return _shape_sentences(
         'world.json', shapes.check(shapes.BLOCKS['player_words'],
                                    w['player_words']))
+
+
+def display_errors(w: dict) -> list[str]:
+    """Every problem with a pack's optional `display` block (empty = good).
+
+    `pixel_art` names the art's native tile size, a whole number from 8 to
+    64: the engine then draws every picture at a whole-number scale of it,
+    with no smoothing (docs/guides/world-creation.md, "Pixel art"). A pack
+    that declares no `display` gets no output at all.
+    """
+    if 'display' not in w:
+        return []
+    return _shape_sentences(
+        'world.json', shapes.check(shapes.BLOCKS['display'], w['display']))
 
 
 def descent_errors(w: dict, pack_dir=None) -> list[str]:
@@ -3177,6 +3195,9 @@ def validate(w: dict, pack_dir: Path | None = None) -> list[str]:
     # that declares none gets nothing here and says nothing else about
     # it - the engine's own words are its own business.
     errors.extend(player_words_errors(w))
+    # The pack's optional display block (pixel art): a pack that declares
+    # none is drawn exactly as before.
+    errors.extend(display_errors(w))
     # The pack's optional descent block (slice E1): the run seed, the
     # tile the descent starts from and its Sections. A pack that declares
     # none gets nothing here.
