@@ -139,6 +139,23 @@ its buttons, in `world.json`:
 the button text turns dark or light to stay readable on it. `model` is
 optional too; leave it out and the game offers no model at all.
 
+### The phone's zoom
+
+A touch phone draws a map whole only when that keeps its tile at 36 px or
+more; a bigger map scrolls with the hero at a size you choose. Set that
+size in `world.json`:
+
+```json
+"display": {
+  "phone_tile": 52
+}
+```
+
+`phone_tile` is a whole number from 32 to 72, in CSS pixels. Left out,
+a phone plays exactly as it always has. The camera may scroll up to three
+tiles past the map's edge, so the hero is never under the corner buttons;
+the ground past the edge takes the region's backdrop, or the dark.
+
 ### Your own tiles and variants
 
 A region may bring its own ground pictures in a `tiles/` directory beside

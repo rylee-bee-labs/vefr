@@ -314,7 +314,10 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # #417 2026-10-12: Talk with no brain says the seeded line (480-town-input-and-turns.js), on top of #416; measured twice in separate processes, readings equal:
 #   aab9d5457b034d7b900bc2ed34ccb99645514acf744739ec559e173b7f9c8d7f
 #   aab9d5457b034d7b900bc2ed34ccb99645514acf744739ec559e173b7f9c8d7f
-NO_SKIN_WEAVE_SHA256 = "aab9d5457b034d7b900bc2ed34ccb99645514acf744739ec559e173b7f9c8d7f"
+# #418 phone camera merged with #419 (Talk) on 2026-10-12; measured twice in separate processes, readings equal:
+#   3efab5dcd619fc4e4510f3297cf3e6ea5dcb1a059341f4fcad5c5476b014113d
+#   3efab5dcd619fc4e4510f3297cf3e6ea5dcb1a059341f4fcad5c5476b014113d
+NO_SKIN_WEAVE_SHA256 = "3efab5dcd619fc4e4510f3297cf3e6ea5dcb1a059341f4fcad5c5476b014113d"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():
