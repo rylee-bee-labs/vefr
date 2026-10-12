@@ -678,9 +678,12 @@ the phone touch controls (#428). Cottage's Game Boy Advance town is a draft on t
       take-off always fit, because refusing them would lose the thing. The
       bag panel reads "2 of 2 carried." when capped. `vefr check` refuses a
       `bag` block with no whole-number `size`, and a `carry` that is not a
-      whole number from 1 to 99. Gaps, deliberately: a shop purchase into a
-      full bag is refused with no line, a `carry` does nothing where the pack
-      names no `bag.size`, and no weight. ADR:
+      whole number from 1 to 99. Since then (#343 leftovers): a shop
+      purchase into a full bag is refused in the Trade panel with "Your bag
+      is full." and charges no gold, a thing a full bag left on the floor is
+      picked up once there is room, and a satchel picked up in play keeps its
+      places across a reload. Gaps, deliberately: a `carry` does nothing
+      where the pack names no `bag.size`, and no weight. ADR:
       `docs/adr/0017-rolled-loot-with-rarity-and-hidden-traits.md`, amendment 1.
       Guide: `docs/guides/rulesets.md` → bag capacity. Tests:
       `tests/test_bag_capacity.py`, `tests/fixtures/bag_capacity_harness.mjs`.
@@ -709,11 +712,15 @@ the phone touch controls (#428). Cottage's Game Boy Advance town is a draft on t
       school - and each goes red when its own refusal is removed. Gaps,
       deliberately: nothing says what a *school* does in play, `heal` is the
       whole of what a spell does, nothing sets `identified` true so the
-      lesson rides `use`, and no event carries a spell. ADR:
+      lesson rides `use`, and no event carries a spell. Since then (#345
+      leftovers): every cast writes a `cast-<id>` why-log entry in the
+      panel's own words, the no-school refusal names the spell and
+      `world.json`, and `tests/test_spell_table.py` holds the shape, the
+      bake and the player's reads to one another. ADR:
       `docs/adr/0018-spells-schools-and-spellbooks.md` (Proposed).
       Guide: `docs/guides/rulesets.md` → spells. Tests:
       `tests/test_spells.py`, `tests/test_spells_play.py`,
-      `tests/fixtures/make_spell_pack.py`.
+      `tests/test_spell_table.py`, `tests/fixtures/make_spell_pack.py`.
 - [x] **Combat, first slice — bump to fight, and monsters that come for you**
       (2026-09-30): the dungeon had floors, fog, doors, stairs, books and a
       chest - and nothing to fight. A region's `contract.json` may now carry

@@ -994,7 +994,10 @@ Two optional fields:
 
 When the bag is full, a floor pickup is refused. The thing stays on the
 floor under the hero, and the player reads one line, for example "Your
-bag is full. You leave a plain ring on the floor." The bag panel counts
+bag is full. You leave a plain ring on the floor." The thing waits there:
+once a place is free, walking onto the tile again picks it up. A shop
+purchase into a full bag is refused too: the Trade panel says "Your bag
+is full.", and no gold is taken. The bag panel counts
 against the cap: "2 of 2 carried." When the pack names no size it reads
 "12 things carried." as before.
 
@@ -1006,14 +1009,14 @@ contents, an equip swap, and a take-off.
 block with no whole-number `size` from 1 to 99, and a `carry` that is not
 a whole number from 1 to 99.
 
-Known gaps: a shop purchase into a full bag is refused with no line, a
-`carry` does nothing where the pack names no `bag.size`, and there is no
-weight and no slot beyond the five worn ones.
+Known gaps: a `carry` does nothing where the pack names no `bag.size`,
+and there is no weight and no slot beyond the five worn ones.
 
 Code: `src/vefr/shapes.py` (`BAG`, `ITEM_CARRIES`) + `src/vefr/maplab.py`
 (`bag_errors`) + `src/vefr/cli.py` (`_player_items`) +
 `web/player/parts/180-gold.js` (`bagRoom`, `bagAdd`) and
-`430-loot-on-the-floor.js` (the refusal). Tests:
+`430-loot-on-the-floor.js` (the refusal) and `190-the-trade-panel.js`
+(`buyItem`, the shop's refusal). Tests:
 `tests/test_bag_capacity.py` + `tests/fixtures/bag_capacity_harness.mjs`.
 
 ## reward (first slice: gold, trade, and using a thing)
@@ -1253,18 +1256,23 @@ ever taught this way.
 a `Cast` button. Casting recovers its `heal` and never above the hero's
 max, and keeps the potion's rule: already whole means nothing is gained
 and nothing is spent, and the line says so. A spell with no `heal` casts,
-says so and changes no number.
+says so and changes no number. Every cast also goes in the Why panel as
+`cast <spell id>` with the same line, so it can be read back later; a
+refused cast writes nothing there.
 
 `vefr check` refuses four things, one plain sentence each: a spell
 naming a school the block does not declare, a `level` under 1, a book
 teaching a spell the pack does not declare, and a spell with no school
-at all. What a school does in play, and what a spell does beyond
+at all (named by its id and the file: "world.json: spell 'ember-bolt'
+must hold a school, such as ..."). What a school does in play, and what a spell does beyond
 healing, are open questions this slice does not answer - see ADR 0018.
 
 Code: `src/vefr/shapes.py` (the two blocks) + `src/vefr/maplab.py` (the
 sweep) + `src/vefr/cli.py` (the bake) + `web/player/parts/225-spells.js`
 (the player); tests: `tests/test_spells.py` +
-`tests/test_spells_play.py` + `tests/fixtures/make_spell_pack.py`.
+`tests/test_spells_play.py` + `tests/test_spell_table.py` (the shape,
+the bake and the player's reads held to one another) +
+`tests/fixtures/make_spell_pack.py`.
 
 ## equipment (the pack fields and the engine; the wearing is a later slice)
 

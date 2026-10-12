@@ -193,24 +193,30 @@ def test_a_spellbook_granting_a_spell_that_does_not_exist_is_named(tmp_path):
 
 
 def test_a_spell_with_no_school_at_all_is_named():
-    """Refusal four: the table's own missing-key sentence, which says the
-    field rather than saying a spell is wrong."""
+    """Refusal four: the table's missing-key sentence, said again naming the
+    spell and the file it is written in, so a pack with many spells is told
+    which one is missing its school and where to look."""
+    sentence = ('world.json: spell \'ember-bolt\' must hold a school, such as '
+                '{"id": "ember-bolt", "name": "an ember bolt", "school": '
+                '"ember", "level": 1, "heal": 3}')
     assert maplab.spells_errors({"spells": _with(
-        spells=_no_school())}) == [
-            'spell must hold a school, such as {"id": "ember-bolt", '
-            '"name": "an ember bolt", "school": "ember", "level": 1, '
-            '"heal": 3}']
+        spells=_no_school())}) == [sentence]
     # One broken record says one thing: the cross-record check leaves it to
     # the shape table rather than adding a second sentence about it.
     assert maplab.spells_errors({"spells": _with(
         schools=["ember"], spells=_no_school())}) == [
-            'spell must hold a school, such as {"id": "ember-bolt", '
-            '"name": "an ember bolt", "school": "ember", "level": 1, '
-            '"heal": 3}',
+            sentence,
             "spell 'tide-mend' must name a school the pack declares, and "
             "'tide' is not one; the pack declares ember",
             "spell 'deep-call' must name a school the pack declares, and "
             "'tide' is not one; the pack declares ember"]
+    # A record with no id either is named by its place in the list (the
+    # missing id has its own sentence beside it).
+    nameless = [{"name": "a nameless spark", "level": 1}]
+    assert ("world.json: spell spells.spells[0] must hold a school, such as "
+            '{"id": "ember-bolt", "name": "an ember bolt", "school": "ember", '
+            '"level": 1, "heal": 3}') in maplab.spells_errors(
+                {"spells": _with(spells=nameless)})
 
 
 def test_a_refused_spell_teaches_nothing_rather_than_half_a_spell():
