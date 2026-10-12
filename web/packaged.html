@@ -350,7 +350,7 @@
   #stage.stage--dock .dpad button { width: 44px; height: 44px; }
   /* The dock's Interact is a pill the label fits inside, not a 44 px circle that
      cuts it off (issue #353). Same 44 px target, same height, same gold. */
-  #stage.stage--dock .gbtn--main { width: auto; min-width: 44px; max-width: calc(100vw - 176px); height: 44px; border-radius: 999px; padding: 0 10px; font-size: 0.6rem; }
+  #stage.stage--dock .gbtn--main:not(.touch-smart) { width: auto; min-width: 44px; max-width: calc(100vw - 176px); height: 44px; border-radius: 999px; padding: 0 10px; font-size: 0.6rem; }
   #stage.stage--dock .gbtn--tool { width: 44px; height: 44px; border-radius: 50%; }
   #stage.stage--dock .acts kbd { display: none; }
   .touch-zone, .touch-hint, .touch-base, .touch-knob, .touch-cluster, .touch-quick, .touch-b, .touch-settings { display: none; }

@@ -320,7 +320,10 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # Touch controls (P3TOUCH) on top of #418 and #419, 2026-10-12; measured twice in separate processes, readings equal:
 #   b583865d4fab64337b692b5bb27fe0593f44d783665ca0938df3f1071d18cc46
 #   b583865d4fab64337b692b5bb27fe0593f44d783665ca0938df3f1071d18cc46
-NO_SKIN_WEAVE_SHA256 = "b583865d4fab64337b692b5bb27fe0593f44d783665ca0938df3f1071d18cc46"
+# The touch button keeps its size in dock mode (P3TOUCH), 2026-10-12; measured twice in separate processes, readings equal:
+#   3c7ef00d1dbb7a581524fc3f2f4f9c3e2c314d87f91293ca55df98b677831c65
+#   3c7ef00d1dbb7a581524fc3f2f4f9c3e2c314d87f91293ca55df98b677831c65
+NO_SKIN_WEAVE_SHA256 = "3c7ef00d1dbb7a581524fc3f2f4f9c3e2c314d87f91293ca55df98b677831c65"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

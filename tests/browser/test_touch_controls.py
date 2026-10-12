@@ -7,8 +7,6 @@ world with synthetic touch PointerEvents. Movement goes from the joystick
 straight to the game's move(); no key events are synthesised.
 """
 
-import subprocess
-import sys
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -179,6 +177,12 @@ def open_display(page):
     page.click('[data-panel="display"]')
 
 
+def close_menu(page):
+    """Back to play: the controls hide while a panel is open, and Escape from Display only returns to the menu."""
+    page.click("#menu-close")
+    page.wait_for_timeout(150)
+
+
 SHOWN = """id => getComputedStyle(document.getElementById(id)).display !== 'none'"""
 RECT = """id => { const r = document.getElementById(id).getBoundingClientRect();
                   return {l: r.left, t: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height}; }"""
@@ -258,13 +262,15 @@ def test_control_size_scales_the_buttons_with_a_48px_floor(browser, woven_sample
         scale = page.evaluate("parseFloat(document.body.style.getPropertyValue('--touch-scale'))")
         assert scale == pytest.approx(1.5)
         assert page.inner_text("#touch-size-out") == "150%"
+        close_menu(page)
         assert page.evaluate(RECT, "touch-smart")["w"] == pytest.approx(108, abs=1)
+        open_display(page)
         page.fill("#touch-size", "75")
         assert page.inner_text("#touch-size-out") == "75%"
+        close_menu(page)
         smart = page.evaluate(RECT, "touch-smart")
         bag = page.evaluate(RECT, "touch-bag")
         assert smart["w"] >= 48 and bag["w"] >= 48, f"touch buttons below the 48 px floor: smart {smart}, bag {bag}"
-        page.keyboard.press("Escape")
         page.reload()
         enter(page)
         open_display(page)
@@ -279,8 +285,7 @@ def test_left_handed_mirrors_the_joystick_and_the_cluster(browser, woven_sample)
         assert zone["l"] <= 1 and cluster["r"] >= width - 14, "right-handed layout is not the default"
         open_display(page)
         page.check("#touch-left")
-        page.keyboard.press("Escape")
-        page.wait_for_timeout(150)
+        close_menu(page)
         assert page.evaluate("document.body.classList.contains('touch-left')")
         zone = page.evaluate(RECT, "touch-zone")
         cluster = page.evaluate(RECT, "touch-cluster")
