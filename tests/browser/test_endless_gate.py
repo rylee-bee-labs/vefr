@@ -7,6 +7,8 @@ and opens when that flag is set - and no other flag opens it. The flag
 here is not the default, so the test reads what the pack declares.
 """
 
+import json
+import shutil
 import subprocess
 import sys
 import time
@@ -15,7 +17,7 @@ from pathlib import Path
 
 import pytest
 
-from vefr import cli, delve
+from vefr import cli, delve, stamps
 
 from .test_descent_reload import DESCENT as BASE
 from .test_descent_reload import _free_port, descend_to, open_woven
@@ -39,10 +41,13 @@ def _single_floor(section, **extra):
     return {**kept, "floors": 1, **extra}
 
 
-# Cellar holds a vault, so its stairs are gated on a town visit in cycle 0;
-# hollow has none. One floor each: depth 1 cellar, 2 hollow, 3 cellar in cycle 1.
-VAULTED = dict(BASE, story_end=FLAG, sections=[
-    _single_floor(CELLAR, vault={"stamp": "vault-cellar", "sets": "cellar-read"}),
+# The one-floor cellar takes the warden slot, where its vault sits; hollow has none.
+# One floor each: depth 1 cellar, 2 hollow, 3 cellar in cycle 1.
+STAMPS = Path(__file__).resolve().parents[1] / "fixtures" / "stamps"
+RECORDS = json.loads(json.dumps(stamps.load(STAMPS)))
+VAULTED = dict(BASE, story_end=FLAG, stamps=RECORDS, sections=[
+    _single_floor(CELLAR, pattern=["warden"], stamps=["cellar"],
+                  vault={"stamp": "vault-cellar", "sets": "cellar-read"}),
     _single_floor(HOLLOW),
 ])
 
@@ -50,6 +55,8 @@ VAULTED = dict(BASE, story_end=FLAG, sections=[
 def _serve(tmp_path_factory, name, descent):
     home = tmp_path_factory.mktemp(f"{name}-home")
     pack = make_descent_pack.build(home, descent=descent)
+    if "stamps" in descent:
+        shutil.copytree(STAMPS, pack / "stamps")
     out = home / f"{name}.html"
     out.write_text(cli.weave_html(pack), encoding="utf-8")
     port = _free_port()
