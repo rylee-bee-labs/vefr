@@ -172,6 +172,7 @@
   .equip-row { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
   .equip-row-art { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; }
   .equip-row-art img { width: 32px; height: 32px; object-fit: contain; image-rendering: pixelated; }
+  body.vefr-pixel img { image-rendering: pixelated; }
   .equip-row-name { flex: 1 1 auto; }
   .equip-row button { min-height: 44px; }
   .equip-empty-svg { width: 32px; height: 32px; stroke: var(--ink-dim); fill: none; stroke-width: 1.5; }
@@ -763,6 +764,8 @@ window.VEFR_DOOR = {{door_json}};
 // A pack's own way pictures by kind (door, stairs-up, stairs-down, trapdoor), and per region.
 window.VEFR_WAY_ICONS = {{way_icons_json}};
 window.VEFR_REGION_WAY_ICONS = {{region_way_icons_json}};
+// Each region's prop pictures by name ({} for a pack with no props).
+window.VEFR_PROP_PICS = {{prop_pics_json}};
 // Book markers ('map', 'resident'): drawn where a book you have not found
 // can be found, so a book is not invisible.
 window.VEFR_BOOK_ICONS = {{book_icons_json}};
@@ -9166,6 +9169,7 @@ function setupTown() {
       hero_color: r.hero_color || '#e8e5df',
       speaker_color: r.speaker_color || '#8b939c',
       speaker_head: r.speaker_head || '#d8d5df',
+      props: r.props || [],
     };
   }
 
@@ -9305,6 +9309,8 @@ function setupTown() {
   function tileOpenForEnemy(x, y) {
     if (y < 0 || x < 0 || y >= town.map.length || x >= town.map[0].length) return false;
     if ((town.legend[town.map[y][x]] || {}).solid) return false;
+    // The props part may be absent (a harness that loads only the monster parts).
+    if (typeof propBlocked === 'function' && propBlocked(x, y)) return false;
     if (x === hero[0] && y === hero[1]) return false;
     return !enemyAt(x, y);
   }
@@ -9336,7 +9342,9 @@ function setupTown() {
   // a single step may land on is `tileOpenForEnemy`'s business.
   function floorOpen(x, y) {
     if (x < 0 || y < 0 || y >= town.map.length || x >= town.map[0].length) return false;
-    return !((town.legend[town.map[y][x]] || {}).solid);
+    // The props part may be absent (a harness that loads only the monster parts).
+    return !((town.legend[town.map[y][x]] || {}).solid)
+      && !(typeof propBlocked === 'function' && propBlocked(x, y));
   }
   // Steps from (x, y) to every walkable tile. `dist` has the source at
   // 0 and no entry at all for a tile the flood never reached. The flood
@@ -9411,8 +9419,15 @@ function setupTown() {
     if (!best) return false;
     if (best[0] === hero[0] && best[1] === hero[1]) return enemyAttack(e);
     if (!tileOpenForEnemy(best[0], best[1])) return false;
+    e.face = faceOf(e.at, best);
     e.at = best;
     return false;
+  }
+  // The way a step from one tile to a neighbour points: the longer delta wins.
+  function faceOf(from, to) {
+    var dx = to[0] - from[0], dy = to[1] - from[1];
+    if (Math.abs(dx) >= Math.abs(dy)) return dx < 0 ? 'left' : 'right';
+    return dy < 0 ? 'up' : 'down';
   }
   // One step toward the group's home, on the home flood: the neighbour
   // with the LOWER count. A member stops within one tile of home and
@@ -9430,6 +9445,7 @@ function setupTown() {
     }
     if (!best) return false;
     if (!tileOpenForEnemy(best[0], best[1])) return false;
+    e.face = faceOf(e.at, best);
     e.at = best;
     return false;
   }
@@ -9742,6 +9758,7 @@ function setupTown() {
     });
     saveFloor();
     if (names.length) {
+      playOneShot('hero', 'act');
       soundCue('pickup');
       combatSay('You pick up ' + names.join(', ') + '.');
     }
@@ -9760,6 +9777,8 @@ function setupTown() {
     }
     var dmg = heroAtk();
     e.hp = Math.max(0, e.hp - dmg);
+    playOneShot('hero', 'attack');
+    playOneShot('enemy:' + e.id, 'hurt');
     // A blow is the loudest thing on the floor, and it is also the one
     // wake no sight can miss: the monster that was hit is awake from
     // here, and so is every sleeper within earshot of the fight.
@@ -9811,6 +9830,8 @@ function setupTown() {
   // One enemy's attack: the hero loses its `atk`, clamped at zero.
   function enemyAttack(e) {
     HERO_HP = Math.max(0, HERO_HP - e.atk);
+    playOneShot('enemy:' + e.id, 'attack');
+    playOneShot('hero', 'hurt');
     saveHeroHp();
     renderHp();
     combatSay(e.name + ' hits you for ' + e.atk + '.');
@@ -10158,7 +10179,56 @@ function setupTown() {
   var MIN_FIT_TILE = 16;   // below this, scroll at a readable size instead
   var HUD_BAND = 72;       // room the HUD frame needs above and below a whole map
   var MIN_STAGE_W = 420, MIN_STAGE_H = 360;  // enough for the HUD frame's corners
+  // The phone camera needs the pack's display.phone_tile; see docs/guides/world-creation.md.
+  var PHONE_TILE = (window.VEFR_WORLD.display || {}).phone_tile || 0;
+  var PHONE_MIN_FIT = 36, PHONE_MARGIN = 3;
+  var onPhone = false;
+  var cameraAt = { x: 0, y: 0 };
+  function phoneCamera() {
+    if (!PHONE_TILE) return false;
+    var q = window.location.search;
+    if (/[?&]camera=desk\b/.test(q)) return false;
+    if (/[?&]camera=phone\b/.test(q)) return true;
+    return !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+  }
+  // Pixel art (`display.pixel_art` in world.json): every picture is drawn at a whole-number
+  // scale of the art's native tile, with no smoothing. A pack without it draws exactly as before.
+  var pixelNative = (world.display && world.display.pixel_art
+                     && world.display.pixel_art.native_tile) || 0;
+  var pixelK = 1;   // one art pixel is pixelK / dpr CSS px
+  if (pixelNative) document.body.classList.add('vefr-pixel');
+  function pxRatio() { return window.devicePixelRatio || 1; }
+  function snapPx(v) {
+    if (!pixelNative) return v;
+    var d = pxRatio();
+    return Math.round(v * d) / d;
+  }
+  // The span an art picture covers along one axis, as [start, length] on whole device pixels.
+  function snapSpan(at, size) {
+    if (!pixelNative) return [at, size];
+    var a = snapPx(at);
+    return [a, snapPx(at + size) - a];
+  }
+  // A picture's drawn size in CSS px: its own art pixels at the snapped scale, else heightCss
+  // tall at its own aspect.
+  function artSize(natW, natH, heightCss) {
+    if (pixelNative) return { w: natW * pixelK / pxRatio(), h: natH * pixelK / pxRatio() };
+    return { w: heightCss * (natW / natH || 1), h: heightCss };
+  }
+  // The tile as k whole art pixels of device pixels. A whole map that fits rounds k down so it
+  // still fits; any other map rounds to the nearest.
+  function snapTile(wanted) {
+    var d = pxRatio();
+    var fits = cols * wanted <= viewW && rows * wanted <= viewH;
+    var k = wanted * d / pixelNative;
+    pixelK = Math.max(1, fits ? Math.floor(k) : Math.round(k));
+    return pixelK * pixelNative / d;
+  }
   function fitZoom() {
+    if (onPhone) {
+      var phoneFit = Math.min(viewW / (cols * town.tile), viewH / (rows * town.tile), 3);
+      return phoneFit * town.tile >= PHONE_MIN_FIT ? phoneFit : PHONE_TILE / town.tile;
+    }
     // The HUD sits in the stage's corners, so a whole map must leave a band
     // above and below for it; otherwise it reads whole and still reaches
     // under the buttons.
@@ -10171,8 +10241,7 @@ function setupTown() {
       // bigger map scrolls, and there the tile is as big as the lit circle
       // lets fit the window's height, 32 to 48 px: the HUD sits in the dark
       // corners outside the circle. Sight 8 at 720 px is 42 px, where a
-      // fixed 32 left the hero a speck (Cottage walk, 2026-10-12). A phone
-      // keeps 32 px.
+      // fixed 32 left the hero a speck (Cottage walk, 2026-10-12).
       var z = 32 / town.tile;
       var fitH = Math.max(viewH - 2 * HUD_BAND, 1) / (rows * town.tile);
       var whole = cols * town.tile * z <= viewW && rows * town.tile * z <= viewH;
@@ -10221,7 +10290,7 @@ function setupTown() {
     }
     // A phone held upright: width <= 600 and taller than it is wide. The
     // stage is the window; the map stays the drawn rectangle inside it.
-    var dock = window.innerWidth <= 600 && window.innerHeight > window.innerWidth;
+    var dock = window.innerWidth <= 600 && window.innerHeight > window.innerWidth && !onPhone;
     // A map too small for the HUD frame's corners gets the window as its
     // stage as well, so those corners fall on the spare room, not the map.
     var grow = dock || mw < MIN_STAGE_W || mh < MIN_STAGE_H;
@@ -10232,6 +10301,7 @@ function setupTown() {
       map: { x: mx, y: my, w: mw, h: mh },
       tile: T   // the drawn tile, CSS px (read by tests/browser/test_camera_zoom.py)
     };
+    if (pixelNative) window.VEFR_STAGE.pixel = { native: pixelNative, k: pixelK };
     var stage = document.getElementById('stage');
     if (stage) {
       var box = stage.getBoundingClientRect();
@@ -10285,6 +10355,8 @@ function setupTown() {
   // something new to draw (the skin's backdrop, once its picture has decoded).
   // Precedent: window.refreshCombatSnapshot.
   window.VEFR_REDRAW = function () { draw(); };
+  // The camera's offset as the last draw() placed it, read-only.
+  window.VEFR_CAMERA = function () { return { x: cameraAt.x, y: cameraAt.y }; };
   function resize() {
     cols = town.map[0].length;
     rows = town.map.length;
@@ -10294,7 +10366,10 @@ function setupTown() {
     canvas.width = Math.round(viewW * dpr);
     canvas.height = Math.round(viewH * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    onPhone = phoneCamera();
+    if (pixelNative) ctx.imageSmoothingEnabled = false;   // a canvas resize resets this
     T = town.tile * fitZoom();
+    if (pixelNative) T = snapTile(T);
     publishStage();
   }
   window.addEventListener('resize', function () { resize(); draw(); });
@@ -11017,6 +11092,120 @@ function setupTown() {
     return fogOn && !explored[x + ',' + y];
   }
 
+  // ---- things on the map (props) ----
+  // A region may list `props`: a picture on the ground with a footprint
+  // that blocks walking (`block` rows of '#' blocked and '.' open, every
+  // cell blocked when it names none) and a strip of `frames` equal frames
+  // played at `fps`. Props stand in the depth order with the characters.
+  var PROP_FPS = 4;
+  var propsFor = null;     // the town the cache below was read from
+  var propList = [];
+  var propCells = {};      // 'x,y' -> true for every blocked footprint cell
+  function readProps() {
+    if (propsFor === town) return;
+    propsFor = town;
+    propList = [];
+    propCells = {};
+    (Array.isArray(town.props) ? town.props : []).forEach(function (p) {
+      if (!p || typeof p.pic !== 'string' || !Array.isArray(p.at)) return;
+      var size = Array.isArray(p.size) ? p.size : [1, 1];
+      var w = size[0] | 0, h = size[1] | 0;
+      if (w < 1 || h < 1) return;
+      var ax = p.at[0] | 0, ay = p.at[1] | 0;
+      var block = Array.isArray(p.block) ? p.block : null;
+      for (var dy = 0; dy < h; dy++) {
+        for (var dx = 0; dx < w; dx++) {
+          var blocked = block ? (block[dy] || '').charAt(dx) === '#' : true;
+          if (blocked) propCells[(ax + dx) + ',' + (ay + dy)] = true;
+        }
+      }
+      propList.push({ pic: p.pic, at: [ax, ay], w: w, h: h,
+                      frames: (p.frames | 0) || 1, fps: (p.fps | 0) || PROP_FPS,
+                      layer: p.layer === 'ground' ? 'ground' : 'stand' });
+    });
+  }
+  function propBlocked(x, y) {
+    readProps();
+    return !!propCells[x + ',' + y];
+  }
+
+  // The pictures each region's props name, preloaded like the rest.
+  var propPics = window.VEFR_PROP_PICS || {};
+  var propImgs = {};
+  Object.keys(propPics).forEach(function (region) {
+    propImgs[region] = {};
+    Object.keys(propPics[region]).forEach(function (pic) {
+      var im = new Image();
+      im.onload = function () { draw(); };
+      im.src = propPics[region][pic];
+      propImgs[region][pic] = im;
+    });
+  });
+  function propImage(pic) {
+    var im = (propImgs[regionName] || {})[pic];
+    return (im && im.complete && im.naturalWidth > 0) ? im : null;
+  }
+  function propSeen(p) {
+    for (var dy = 0; dy < p.h; dy++) {
+      for (var dx = 0; dx < p.w; dx++) {
+        if (!hideUnseen(p.at[0] + dx, p.at[1] + dy)) return true;
+      }
+    }
+    return false;
+  }
+  function propFrame(p) {
+    if (p.frames <= 1 || reducedMotion()) return 0;
+    return Math.floor(nowMs() / 1000 * p.fps) % p.frames;
+  }
+  // The picture is as wide as the footprint and stands on its bottom edge.
+  function drawProp(p) {
+    var im = propImage(p.pic);
+    if (!im) return;
+    var fw = Math.floor(im.naturalWidth / p.frames), fh = im.naturalHeight;
+    if (!fw) return;
+    if (p.frames > 1 && !reducedMotion()) animWant = true;
+    // Pixel art draws the picture at its own size (artSize); otherwise it is p.w tiles wide.
+    var box = artSize(fw, fh, p.w * T * (fh / fw));
+    var across = snapSpan((p.at[0] + p.w / 2) * T - box.w / 2, box.w);
+    var up = snapSpan((p.at[1] + p.h) * T - box.h, box.h);
+    ctx.drawImage(im, propFrame(p) * fw, 0, fw, fh, across[0], up[0], across[1], up[1]);
+  }
+
+  // One ticker for everything that moves on its own. It redraws at most
+  // twelve times a second, only while something animates and the page is
+  // shown; reduced motion never starts it.
+  var ANIM_STEP_MS = 1000 / 12;
+  var animWant = false, animRaf = 0, animLast = 0;
+  function scheduleAnim() {
+    if (animRaf || !animWant || document.hidden) return;
+    if (typeof requestAnimationFrame !== 'function') return;
+    animRaf = requestAnimationFrame(animTick);
+  }
+  function animTick() {
+    animRaf = 0;
+    if (!animWant || document.hidden) return;
+    var t = nowMs();
+    if (t - animLast >= ANIM_STEP_MS) { animLast = t; draw(); return; }
+    scheduleAnim();
+  }
+  document.addEventListener('visibilitychange', scheduleAnim);
+  // A speech box opened or closed changes who is talking; the talk path itself never redraws.
+  if (window.MutationObserver && document.getElementById('npc-box')) {
+    new MutationObserver(function () { draw(); })
+      .observe(document.getElementById('npc-box'), { attributes: true, attributeFilter: ['hidden'] });
+  }
+
+  // A harness-readable view of this region's props, read-only.
+  window.VEFR_PROPS = function () {
+    readProps();
+    return {
+      props: propList.map(function (p) {
+        return { pic: p.pic, at: p.at.slice(), size: [p.w, p.h],
+                 frames: p.frames, fps: p.fps };
+      }),
+      blocked: Object.keys(propCells).sort()
+    };
+  };
   // ---- light: a torch, or a one-shot reveal ----
   // An item with `light` is used from the Bag. `radius`/`turns` widen the
   // lit area for a while, then it gutters out; `reveal` marks every
@@ -11132,26 +11321,80 @@ function setupTown() {
     return (typeof v === 'number' && isFinite(v) && v >= 0.2 && v <= 2) ? v : 1;
   };
   // -- spriteScale end --
+  // The direction's frames, a missing side or `up` falling back as the
+  // validator allows: a missing left or right is the other mirrored, and
+  // anything else missing is `down`.
+  var oneShots = {};
+  function sheetPick(key, dir) {
+    var dirs = ((spriteSheets[key] || {}).directions) || {};
+    if (dirs[dir]) return { frames: dirs[dir], mirror: false };
+    if (dir === 'left' && dirs.right) return { frames: dirs.right, mirror: true };
+    if (dir === 'right' && dirs.left) return { frames: dirs.left, mirror: true };
+    return { frames: dirs.down, mirror: false };
+  }
+  // The sheet cell a character shows now. A one-shot (act, attack, hurt)
+  // plays its frames once, then the character is idle again; a looping
+  // state (idle, talk) moves on at the sheet's fps, or holds frame 0 under
+  // reduced motion. A walk frame follows the step counter, as it always did.
+  function sheetCell(key, actor, dir, state, walkStep) {
+    var pick = sheetPick(key, dir);
+    if (!pick || !pick.frames) return null;
+    var f = pick.frames, fps = spriteSheets[key].fps;
+    var now = nowMs();
+    var shot = oneShots[actor];
+    if (shot && !reducedMotion()) {
+      var list = f[shot.state] || [];
+      var t = (now - shot.start) / 1000 * fps;
+      if (t < list.length) {
+        animWant = true;
+        return { idx: list[Math.floor(t)], mirror: pick.mirror };
+      }
+    }
+    delete oneShots[actor];
+    if (state === 'walk' && f.walk && f.walk.length) {
+      return { idx: f.walk[(walkStep - 1) % f.walk.length], mirror: pick.mirror };
+    }
+    var loop = (state === 'talk' && f.talk && f.talk.length) ? f.talk : f.idle;
+    if (loop.length > 1 && !reducedMotion()) {
+      animWant = true;
+      return { idx: loop[Math.floor(now / 1000 * fps) % loop.length], mirror: pick.mirror };
+    }
+    return { idx: loop[0], mirror: pick.mirror };
+  }
+  // A one-shot starts now. Reduced motion shows none.
+  function playOneShot(actor, state) {
+    if (reducedMotion()) return;
+    oneShots[actor] = { state: state, start: nowMs() };
+  }
   // A character stands taller than its tile, feet on the tile's bottom.
-  // A character with a ready walk sheet shows its down-facing idle frame.
-  function drawSprite(key, tx, ty) {
+  // `pose` names who it is (`actor`, the key one-shots are kept under), the
+  // way it faces and the state it is in; a character with a ready walk
+  // sheet draws the cell that pose picks, mirrored when its side is missing.
+  function drawSprite(key, tx, ty, pose) {
     var im = spriteImgs[key];
     var h = T * 1.5 * spriteScale(window.VEFR_SPRITE_SCALE, key);
     var sheet = spriteSheets[key];
-    if (sheetUsable(sheet) && spriteSheetReady(key)) {
+    var cell = (sheetUsable(sheet) && spriteSheetReady(key))
+      ? sheetCell(key, pose.actor, pose.dir, pose.state, 0) : null;
+    if (cell) {
       var sim = spriteSheetImgs[key];
       var fw = sheet.frame[0], fh = sheet.frame[1];
       var cols = Math.max(1, Math.floor(sim.naturalWidth / fw));
-      var down = (sheet.directions && sheet.directions.down) || {};
-      var idx = (down.idle && down.idle.length) ? down.idle[0] : 0;
-      var col = idx % cols, row = Math.floor(idx / cols);
-      var sw = h * (fw / fh || 1);
-      ctx.drawImage(sim, col * fw, row * fh, fw, fh,
-                    tx * T + (T - sw) / 2, ty * T + T - h, sw, h);
+      var col = cell.idx % cols, row = Math.floor(cell.idx / cols);
+      var box = artSize(fw, fh, h);
+      var across = snapSpan(tx * T + (T - box.w) / 2, box.w);
+      var up = snapSpan(ty * T + T - box.h, box.h);
+      if (cell.mirror) {
+        ctx.drawImage(sim, col * fw, row * fh, fw, fh, across[0] + across[1], up[0], -across[1], up[1]);
+      } else {
+        ctx.drawImage(sim, col * fw, row * fh, fw, fh, across[0], up[0], across[1], up[1]);
+      }
       return;
     }
-    var w = h * (im.naturalWidth / im.naturalHeight || 1);
-    ctx.drawImage(im, tx * T + (T - w) / 2, ty * T + T - h, w, h);
+    var box = artSize(im.naturalWidth, im.naturalHeight, h);
+    var across = snapSpan(tx * T + (T - box.w) / 2, box.w);
+    var up = snapSpan(ty * T + T - box.h, box.h);
+    ctx.drawImage(im, across[0], up[0], across[1], up[1]);
   }
 
   // An item marker on the floor: the item's sprite when the pack names a
@@ -11161,8 +11404,11 @@ function setupTown() {
     var sp = def && def.sprite;
     var size = T * 0.6;
     if (sp && spriteReady(sp)) {
-      ctx.drawImage(spriteImgs[sp], tx * T + (T - size) / 2,
-                    ty * T + (T - size) / 2, size, size);
+      var im = spriteImgs[sp];
+      var box = pixelNative ? artSize(im.naturalWidth, im.naturalHeight, size) : { w: size, h: size };
+      var across = snapSpan(tx * T + (T - box.w) / 2, box.w);
+      var up = snapSpan(ty * T + (T - box.h) / 2, box.h);
+      ctx.drawImage(im, across[0], up[0], across[1], up[1]);
       return;
     }
     ctx.fillStyle = '#CBC6B6';
@@ -11215,12 +11461,8 @@ function setupTown() {
   // the picture flips: a missing side uses the other side's frames
   // mirrored, a missing up falls back to down.
   function heroSheetFrames() {
-    var dirs = (spriteSheets.hero || {}).directions || {};
-    if (dirs[heroFacing]) return { frames: dirs[heroFacing], mirror: false };
-    if (heroFacing === 'left' && dirs.right) return { frames: dirs.right, mirror: true };
-    if (heroFacing === 'right' && dirs.left) return { frames: dirs.left, mirror: true };
-    if (heroFacing === 'up' && dirs.down) return { frames: dirs.down, mirror: false };
-    return null;
+    var pick = sheetPick('hero', heroFacing);
+    return pick.frames ? pick : null;
   }
   // Advance and publish the hero's pose. Only a hero with a sheet gets
   // window.VEFR_HERO_FRAME; a pack without one never gets the global at
@@ -11302,7 +11544,7 @@ function setupTown() {
     var pose = heroPose();
     var t = pose.tile, off = pose.off;
     ctx.save();
-    ctx.translate(t[0] * T + T / 2, t[1] * T + T);
+    ctx.translate(snapPx(t[0] * T + T / 2), snapPx(t[1] * T + T));
     // The lean is a rotation. A real canvas has rotate(); the minimal
     // stub context used by the test harness may not, and in that case
     // the hero still draws, only without the tilt.
@@ -11310,34 +11552,38 @@ function setupTown() {
       ctx.rotate(off.lean * Math.PI / 180);
     }
     if (heroHasSheet && spriteSheetReady('hero')) {
-      // One frame of the sheet: the cell at (idx mod cols, idx / cols),
-      // drawn 1.5 tiles tall with the same squash and mirror as the
-      // single picture. A missing side's frames are drawn flipped.
+      // One cell of the sheet, drawn 1.5 tiles tall with the same squash
+      // and mirror as the single picture. A missing side's frames are
+      // drawn flipped.
       var sheet = spriteSheets.hero;
       var sim = spriteSheetImgs.hero;
       var fw = sheet.frame[0], fh = sheet.frame[1];
       var cols = Math.max(1, Math.floor(sim.naturalWidth / fw));
-      var col = heroSheetIdx % cols, row = Math.floor(heroSheetIdx / cols);
-      var sheetH = T * 1.5 * spriteScale(window.VEFR_SPRITE_SCALE, 'hero');
-      var sheetW = sheetH * (fw / fh || 1);
-      var sh = sheetH * (1 - off.squash);
-      var sw = sheetW * (1 + off.squash);
-      if (heroSheetMirror) {
-        ctx.drawImage(sim, col * fw, row * fh, fw, fh, sw / 2, -sh, -sw, sh);
+      var cell = sheetCell('hero', 'hero', heroFacing, heroAnim ? 'walk' : 'idle', heroWalkStep)
+        || { idx: heroSheetIdx, mirror: heroSheetMirror };
+      var col = cell.idx % cols, row = Math.floor(cell.idx / cols);
+      if (window.VEFR_HERO_FRAME) window.VEFR_HERO_FRAME.frame = cell.idx;
+      var base = artSize(fw, fh, T * 1.5 * spriteScale(window.VEFR_SPRITE_SCALE, 'hero'));
+      var sh = base.h * (1 - off.squash);
+      var sw = base.w * (1 + off.squash);
+      var across = snapSpan(-sw / 2, sw), up = snapSpan(-sh, sh);
+      if (cell.mirror) {
+        ctx.drawImage(sim, col * fw, row * fh, fw, fh, across[0] + across[1], up[0], -across[1], up[1]);
       } else {
-        ctx.drawImage(sim, col * fw, row * fh, fw, fh, -sw / 2, -sh, sw, sh);
+        ctx.drawImage(sim, col * fw, row * fh, fw, fh, across[0], up[0], across[1], up[1]);
       }
     } else if (spriteReady('hero')) {
       var im = spriteImgs['hero'];
       var baseH = T * 1.5 * spriteScale(window.VEFR_SPRITE_SCALE, 'hero');
-      var baseW = baseH * (im.naturalWidth / im.naturalHeight || 1);
+      var base = artSize(im.naturalWidth, im.naturalHeight, baseH);
       // The squash is drawn as a slightly wider, shorter body - no
       // context scale needed - with the feet still on the tile bottom.
-      var h = baseH * (1 - off.squash);
-      var w = baseW * (1 + off.squash);
+      var h = base.h * (1 - off.squash);
+      var w = base.w * (1 + off.squash);
+      var across = snapSpan(-w / 2, w), up = snapSpan(-h, h);
       // Facing left is the same picture mirrored about the tile centre.
-      if (heroFacing === 'left') ctx.drawImage(im, w / 2, -h, -w, h);
-      else ctx.drawImage(im, -w / 2, -h, w, h);
+      if (heroFacing === 'left') ctx.drawImage(im, across[0] + across[1], up[0], -across[1], up[1]);
+      else ctx.drawImage(im, across[0], up[0], across[1], up[1]);
     } else {
       ctx.fillStyle = town.hero_color || '#e8e5df';
       ctx.beginPath();
@@ -11360,6 +11606,7 @@ function setupTown() {
   window.VEFR_STEP_MOTION = stepMotion;
 
   function draw() {
+    animWant = false;
     var ph = phase();
     var water = (town.water_by_phase || {})[ph];
     var flood = town.flood_tiles || [];
@@ -11370,10 +11617,15 @@ function setupTown() {
     // scrolling map glides during the hop instead of snapping a tile and sliding the hero back.
     // At rest the drawn tile is the settled one, so nothing changes when no step is running.
     var camHero = heroPose().tile;
+    // A phone's camera may pass a map's edge by PHONE_MARGIN tiles.
+    var margin = onPhone ? PHONE_MARGIN * T : 0;
     var camX = mapW <= viewW ? (mapW - viewW) / 2
-      : Math.min(Math.max(camHero[0] * T + T / 2 - viewW / 2, 0), mapW - viewW);
+      : Math.min(Math.max(camHero[0] * T + T / 2 - viewW / 2, -margin), mapW - viewW + margin);
     var camY = mapH <= viewH ? (mapH - viewH) / 2
-      : Math.min(Math.max(camHero[1] * T + T / 2 - viewH / 2, 0), mapH - viewH);
+      : Math.min(Math.max(camHero[1] * T + T / 2 - viewH / 2, -margin), mapH - viewH + margin);
+    camX = snapPx(camX); camY = snapPx(camY);
+    cameraAt.x = camX;
+    cameraAt.y = camY;
 
     ctx.fillStyle = town.bg; ctx.fillRect(0, 0, viewW, viewH);
     // The ground the map does not cover takes the skin's table, when the skin
@@ -11432,7 +11684,7 @@ function setupTown() {
           ctx.fillStyle = color;
           ctx.fillRect(x * T, y * T, T, T);
         }
-        if (info.solid && !hasTile) {
+        if (info.solid && !hasTile && !hasGrid) {   // the grey inset marks a wall with no picture
           ctx.fillStyle = '#444';
           ctx.fillRect(x * T + 4 * u, y * T + 4 * u, T - 8 * u, T - 8 * u);
         }
@@ -11484,22 +11736,51 @@ function setupTown() {
       ctx.drawImage(bookIconImgs[b.found], at[0] * T + T * 0.12, at[1] * T + T * 0.12,
                     T * 0.76, T * 0.76);
     });
+    // Everything that stands on the ground, drawn in one list. A region
+    // with props sorts it by base row (a prop's bottom row, a character's
+    // own row) so what stands further back is covered by what stands in
+    // front; a region without props keeps the order it always had.
+    readProps();
+    var stands = [];
+    var seq = 0;
+    function stand(row, label, paint) {
+      stands.push({ row: row, label: label, seq: seq++, paint: paint });
+    }
+    // A ground prop (a pond, a rug, flowers) lies flat: drawn now, under
+    // everyone, whatever its row.
+    var grounds = [];
+    propList.forEach(function (p) {
+      if (!propSeen(p)) return;
+      if (p.layer === 'ground') { grounds.push('ground:' + p.pic); drawProp(p); return; }
+      stand(p.at[1] + p.h - 1, 'prop:' + p.pic, function () { drawProp(p); });
+    });
     // The people: their own sprite when the pack names one, else the
     // drawn figure (a body and a head), so you can see who is here.
+    var npcBox = document.getElementById('npc-box');
+    var speechOpen = !!npcBox && !npcBox.hidden;
     Object.keys(speakers || {}).forEach(function (key) {
       var s = speakers[key];
       if (!s || !Array.isArray(s.at)) return;
       if (hideUnseen(s.at[0], s.at[1])) return;
-      if (spriteReady(key)) { drawSprite(key, s.at[0], s.at[1]); return; }
-      var px = s.at[0] * T, py = s.at[1] * T;
-      ctx.fillStyle = town.speaker_color || '#8b939c';
-      ctx.beginPath();
-      ctx.arc(px + 16 * u, py + 21 * u, 6 * u, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = town.speaker_head || '#d8d5df';
-      ctx.beginPath();
-      ctx.arc(px + 16 * u, py + 11 * u, 4 * u, 0, Math.PI * 2);
-      ctx.fill();
+      stand(s.at[1], 'speaker:' + key, function () {
+        if (spriteReady(key)) {
+          var beside = Math.abs(s.at[0] - hero[0]) + Math.abs(s.at[1] - hero[1]) === 1;
+          drawSprite(key, s.at[0], s.at[1], {
+            actor: 'speaker:' + key,
+            dir: beside ? faceOf(s.at, hero) : 'down',
+            state: beside && speechOpen ? 'talk' : 'idle' });
+          return;
+        }
+        var px = s.at[0] * T, py = s.at[1] * T;
+        ctx.fillStyle = town.speaker_color || '#8b939c';
+        ctx.beginPath();
+        ctx.arc(px + 16 * u, py + 21 * u, 6 * u, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = town.speaker_head || '#d8d5df';
+        ctx.beginPath();
+        ctx.arc(px + 16 * u, py + 11 * u, 4 * u, 0, Math.PI * 2);
+        ctx.fill();
+      });
     });
 
     // The living hazards: their own sprite when the pack names one,
@@ -11515,21 +11796,24 @@ function setupTown() {
       // remember something that moves, and seeing through the dark
       // would give the floor away.
       if (fogOn && !(litSet && litSet[e.at[0] + ',' + e.at[1]])) return;
-      if (e.sprite && spriteReady(e.sprite)) {
-        if (!e.alive) ctx.globalAlpha = 0.45;
-        drawSprite(e.sprite, e.at[0], e.at[1]);
-        ctx.globalAlpha = 1;
-        return;
-      }
-      var ex = e.at[0] * T, ey = e.at[1] * T;
-      ctx.fillStyle = e.alive ? '#8a3b34' : '#4d4a48';
-      ctx.beginPath();
-      ctx.arc(ex + 16 * u, ey + 21 * u, 6 * u, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = e.alive ? '#d9c3bd' : '#8e8a84';
-      ctx.beginPath();
-      ctx.arc(ex + 16 * u, ey + 11 * u, 4 * u, 0, Math.PI * 2);
-      ctx.fill();
+      stand(e.at[1], 'enemy:' + e.id, function () {
+        if (e.sprite && spriteReady(e.sprite)) {
+          if (!e.alive) ctx.globalAlpha = 0.45;
+          drawSprite(e.sprite, e.at[0], e.at[1], {
+            actor: 'enemy:' + e.id, dir: e.face || 'down', state: 'idle' });
+          ctx.globalAlpha = 1;
+          return;
+        }
+        var ex = e.at[0] * T, ey = e.at[1] * T;
+        ctx.fillStyle = e.alive ? '#8a3b34' : '#4d4a48';
+        ctx.beginPath();
+        ctx.arc(ex + 16 * u, ey + 21 * u, 6 * u, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = e.alive ? '#d9c3bd' : '#8e8a84';
+        ctx.beginPath();
+        ctx.arc(ex + 16 * u, ey + 11 * u, 4 * u, 0, Math.PI * 2);
+        ctx.fill();
+      });
     });
 
     // Loot lying on the floor: a killed enemy's drop, at the tile it
@@ -11537,12 +11821,19 @@ function setupTown() {
     floor.forEach(function (d) {
       if (!d || d.region !== regionName || !Array.isArray(d.at)) return;
       if (fogOn && !(litSet && litSet[d.at[0] + ',' + d.at[1]])) return;
-      drawItemMarker(d.item, d.at[0], d.at[1]);
+      stand(d.at[1], 'loot:' + d.item, function () {
+        drawItemMarker(d.item, d.at[0], d.at[1]);
+      });
     });
 
     // The hero: their own sprite when the pack names one, else the dot.
     // The one character drawn with facing and step motion.
-    drawHero();
+    stand(camHero[1], 'hero', drawHero);
+    if (propList.length) {
+      stands.sort(function (a, b) { return (a.row - b.row) || (a.seq - b.seq); });
+    }
+    window.VEFR_DRAW_ORDER = grounds.concat(stands.map(function (s) { return s.label; }));
+    stands.forEach(function (s) { s.paint(); });
     // Fog of war: explored but not currently lit is dimmed; never-seen
     // tiles were skipped above and stay dark.
     if (fogOn) {
@@ -11557,6 +11848,7 @@ function setupTown() {
     }
     drawTargetRing();
     ctx.restore();
+    if (animWant) scheduleAnim();
   }
 
   // A thin ring on the tile Interact would act on, so the picture and
@@ -11660,7 +11952,7 @@ function setupTown() {
     if (!(y >= 0) || y >= rows.length) return false;
     var row = rows[y] || '';
     if (!(x >= 0) || x >= row.length) return false;
-    return !((town.legend[row.charAt(x)] || {}).solid);
+    return !((town.legend[row.charAt(x)] || {}).solid) && !propBlocked(x, y);
   }
 
   // The floor tile nearest `[x, y]` by Manhattan distance, scanning
@@ -12194,6 +12486,16 @@ function setupTown() {
     return here;
   }
 
+  function peopleBlock() {
+    var pl = (window.VEFR_WORLD || {}).player || {};
+    return pl.people_block === true;
+  }
+  function speakerAt(x, y) {
+    return Object.keys(speakers || {}).some(function (k) {
+      var s = speakers[k];
+      return s && Array.isArray(s.at) && s.at[0] === x && s.at[1] === y;
+    });
+  }
   function move(dx, dy) {
     // The hero faces the way the move is trying to go, even when it is
     // refused: a bump, a wall or the map's edge still turns the hero.
@@ -12229,10 +12531,20 @@ function setupTown() {
       heroSettleSoon();
       return;
     }
+    // A pack whose people are solid (player.people_block): pressing toward
+    // one turns the hero to face them, and does not walk through them.
+    if (peopleBlock() && speakerAt(nx, ny)) {
+      heroSettleSoon();
+      return;
+    }
     if ((town.legend[town.map[ny][nx]] || {}).solid) {
       var shut = (window.VEFR_DESCENT && window.VEFR_DESCENT.shutDoorLine)
         ? window.VEFR_DESCENT.shutDoorLine(regionName, nx, ny) : '';
       if (shut) combatSay(shut);
+      heroSettleSoon();
+      return;
+    }
+    if (propBlocked(nx, ny)) {
       heroSettleSoon();
       return;
     }
@@ -12394,7 +12706,7 @@ function setupTown() {
   // A tile the hero may stand on: inside the map and not solid.
   function exploreOpen(x, y) {
     if (x < 0 || y < 0 || y >= town.map.length || x >= town.map[0].length) return false;
-    return !((town.legend[town.map[y][x]] || {}).solid);
+    return !((town.legend[town.map[y][x]] || {}).solid) && !propBlocked(x, y);
   }
   // Breadth-first over walkable tiles, from the hero. Enemies are walls
   // to the search: the fight belongs to the player, so route around it.

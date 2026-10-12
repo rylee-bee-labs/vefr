@@ -139,6 +139,23 @@ its buttons, in `world.json`:
 the button text turns dark or light to stay readable on it. `model` is
 optional too; leave it out and the game offers no model at all.
 
+### The phone's zoom
+
+A touch phone draws a map whole only when that keeps its tile at 36 px or
+more; a bigger map scrolls with the hero at a size you choose. Set that
+size in `world.json`:
+
+```json
+"display": {
+  "phone_tile": 52
+}
+```
+
+`phone_tile` is a whole number from 32 to 72, in CSS pixels. Left out,
+a phone plays exactly as it always has. The camera may scroll up to three
+tiles past the map's edge, so the hero is never under the corner buttons;
+the ground past the edge takes the region's backdrop, or the dark.
+
 ### Your own tiles and variants
 
 A region may bring its own ground pictures in a `tiles/` directory beside
@@ -185,6 +202,76 @@ trapdoor is one whose point of interest or legend tile says "trapdoor" or
 "trap door". The region's own `tiles/` is tried first, then the pack's
 root `tiles/`; a kind neither names keeps the door picture. A way picture
 is drawn over the whole tile, so bake it at the same size as ground tiles.
+
+### Pixel art
+
+A world drawn in pixel art says so in `world.json`:
+
+```json
+"display": { "pixel_art": { "native_tile": 32 } }
+```
+
+`native_tile` is one tile's size in art pixels: a whole number from 8 to 64. With it set, the
+engine draws the world at a whole-number scale of that size and never smooths a picture, so every
+art pixel is a crisp square. The tile is rounded to a whole number of screen pixels, and the
+engine publishes the scale it chose as `VEFR_STAGE.pixel` (`{ "native": 32, "k": 3 }` means three
+screen pixels per art pixel). A pack without the block is drawn exactly as before.
+
+With `native_tile` set, the rule for the art is:
+
+- Author tiles at `native_tile`: a 32 x 32 tile for `32`. This replaces the "bake at 2x" rule
+  above for a pixel-art pack.
+- Author characters and objects at their own native size. A 48 px tall hero is drawn 1.5 tiles
+  tall, because 48 = 1.5 x 32. Their size comes from the art, not from `sprite_scale`.
+- Never resize pixel art in the pack. The engine scales it.
+
+### Things on the map (props)
+
+A prop is a picture drawn over the ground: a rock, a bush, a well. Its
+footprint can block walking. Declare props in a region's `contract.json`
+under `props`, one object per prop:
+
+```json
+"props": [
+  { "pic": "well", "at": [5, 2], "size": [1, 2], "block": ["#", "#"] },
+  { "pic": "flowers", "at": [7, 6], "block": ["."], "frames": 2, "fps": 4 }
+]
+```
+
+- `pic` - the picture's file name without its extension. It is looked up as
+  `.webp` then `.png` in the region's `props/` folder, then the pack's root
+  `props/` folder. Use a transparent picture.
+- `at` - `[x, y]`, the tile of the picture's top-left corner.
+- `size` - `[width, height]` in tiles; the default is `[1, 1]`. The picture is
+  drawn across the whole footprint, bottom edge on the footprint's last row.
+- `block` - one string per footprint row, each the width of `size`: `#` is a
+  blocked tile, `.` an open one. Leave it out and every tile of the footprint
+  blocks walking.
+- `frames` - how many frames the picture holds, side by side in one strip
+  (1 to 12; the default is 1). The picture's width must divide evenly by it.
+- `fps` - how fast the frames change (1 to 12; the default is 4). Reduced
+  motion shows frame 0.
+- `layer` - `"stand"` (the default) for something that stands up: it is
+  drawn in front of or behind people by its bottom row. `"ground"` for
+  something flat (a pond, a rug, a patch of flowers): it is drawn under
+  everyone, so a person on a dock or a rug is never hidden by it.
+
+A prop is drawn only where the player can see the ground, and it is drawn
+in front of or behind people by its bottom row. A blocked prop stops the
+hero, monsters and autoexplore the way a wall does.
+
+The validator refuses a prop whose picture is missing, whose footprint leaves
+the map, whose `block` does not match its `size`, or whose footprint covers
+a speaker, the hero's start, a wake point, a door or a map book. Each message
+names the region, the prop's number and its picture.
+
+### People you cannot walk through
+
+In most RPGs a person stands in the way. Set `"people_block": true` in
+the `player` block of `world.json` and the hero cannot walk onto a
+speaker's tile: pressing toward them turns her to face them. Left out,
+the hero can pass through people as before; keep it off if a speaker
+stands in a corridor the hero must get through.
 
 ## Where your world lives
 

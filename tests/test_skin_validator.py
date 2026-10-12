@@ -314,7 +314,22 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # #417 2026-10-12: Talk with no brain says the seeded line (480-town-input-and-turns.js), on top of #416; measured twice in separate processes, readings equal:
 #   aab9d5457b034d7b900bc2ed34ccb99645514acf744739ec559e173b7f9c8d7f
 #   aab9d5457b034d7b900bc2ed34ccb99645514acf744739ec559e173b7f9c8d7f
-NO_SKIN_WEAVE_SHA256 = "aab9d5457b034d7b900bc2ed34ccb99645514acf744739ec559e173b7f9c8d7f"
+# #418 phone camera merged with #419 (Talk) on 2026-10-12; measured twice in separate processes, readings equal:
+#   3efab5dcd619fc4e4510f3297cf3e6ea5dcb1a059341f4fcad5c5476b014113d
+#   3efab5dcd619fc4e4510f3297cf3e6ea5dcb1a059341f4fcad5c5476b014113d
+# #420 object layer merged with #418 phone camera, 2026-10-12; measured twice in separate processes, readings equal:
+#   578de6ada011a5a407a4a9d6cd1e53a10c44a6c2e417dfbfe37549f8b4abb509
+#   578de6ada011a5a407a4a9d6cd1e53a10c44a6c2e417dfbfe37549f8b4abb509
+# Monster parts run without the props part (#420), 2026-10-12; measured twice in separate processes, readings equal:
+#   0a80b00def25f0cfaecd56841753a2285a84daea0a8c74a04dd13833e51a3aca
+#   0a80b00def25f0cfaecd56841753a2285a84daea0a8c74a04dd13833e51a3aca
+# Pixel art (#427) merged with the object layer (#420), 2026-10-12; measured twice in separate processes, readings equal:
+#   b260300bef12bb4c6f0dc52cbcea83e078522609cdf3cd87d5005d48960ecbc9
+#   b260300bef12bb4c6f0dc52cbcea83e078522609cdf3cd87d5005d48960ecbc9
+# Pixel art keeps main's sprite height name (#427), 2026-10-12; measured twice in separate processes, readings equal:
+#   8bb8656ba52c90b03d24ce2a3d40f70606decb09aa16d91415fcd40babf869c4
+#   8bb8656ba52c90b03d24ce2a3d40f70606decb09aa16d91415fcd40babf869c4
+NO_SKIN_WEAVE_SHA256 = "8bb8656ba52c90b03d24ce2a3d40f70606decb09aa16d91415fcd40babf869c4"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

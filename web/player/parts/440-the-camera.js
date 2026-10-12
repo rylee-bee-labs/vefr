@@ -8,7 +8,56 @@
   var MIN_FIT_TILE = 16;   // below this, scroll at a readable size instead
   var HUD_BAND = 72;       // room the HUD frame needs above and below a whole map
   var MIN_STAGE_W = 420, MIN_STAGE_H = 360;  // enough for the HUD frame's corners
+  // The phone camera needs the pack's display.phone_tile; see docs/guides/world-creation.md.
+  var PHONE_TILE = (window.VEFR_WORLD.display || {}).phone_tile || 0;
+  var PHONE_MIN_FIT = 36, PHONE_MARGIN = 3;
+  var onPhone = false;
+  var cameraAt = { x: 0, y: 0 };
+  function phoneCamera() {
+    if (!PHONE_TILE) return false;
+    var q = window.location.search;
+    if (/[?&]camera=desk\b/.test(q)) return false;
+    if (/[?&]camera=phone\b/.test(q)) return true;
+    return !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+  }
+  // Pixel art (`display.pixel_art` in world.json): every picture is drawn at a whole-number
+  // scale of the art's native tile, with no smoothing. A pack without it draws exactly as before.
+  var pixelNative = (world.display && world.display.pixel_art
+                     && world.display.pixel_art.native_tile) || 0;
+  var pixelK = 1;   // one art pixel is pixelK / dpr CSS px
+  if (pixelNative) document.body.classList.add('vefr-pixel');
+  function pxRatio() { return window.devicePixelRatio || 1; }
+  function snapPx(v) {
+    if (!pixelNative) return v;
+    var d = pxRatio();
+    return Math.round(v * d) / d;
+  }
+  // The span an art picture covers along one axis, as [start, length] on whole device pixels.
+  function snapSpan(at, size) {
+    if (!pixelNative) return [at, size];
+    var a = snapPx(at);
+    return [a, snapPx(at + size) - a];
+  }
+  // A picture's drawn size in CSS px: its own art pixels at the snapped scale, else heightCss
+  // tall at its own aspect.
+  function artSize(natW, natH, heightCss) {
+    if (pixelNative) return { w: natW * pixelK / pxRatio(), h: natH * pixelK / pxRatio() };
+    return { w: heightCss * (natW / natH || 1), h: heightCss };
+  }
+  // The tile as k whole art pixels of device pixels. A whole map that fits rounds k down so it
+  // still fits; any other map rounds to the nearest.
+  function snapTile(wanted) {
+    var d = pxRatio();
+    var fits = cols * wanted <= viewW && rows * wanted <= viewH;
+    var k = wanted * d / pixelNative;
+    pixelK = Math.max(1, fits ? Math.floor(k) : Math.round(k));
+    return pixelK * pixelNative / d;
+  }
   function fitZoom() {
+    if (onPhone) {
+      var phoneFit = Math.min(viewW / (cols * town.tile), viewH / (rows * town.tile), 3);
+      return phoneFit * town.tile >= PHONE_MIN_FIT ? phoneFit : PHONE_TILE / town.tile;
+    }
     // The HUD sits in the stage's corners, so a whole map must leave a band
     // above and below for it; otherwise it reads whole and still reaches
     // under the buttons.
@@ -21,8 +70,7 @@
       // bigger map scrolls, and there the tile is as big as the lit circle
       // lets fit the window's height, 32 to 48 px: the HUD sits in the dark
       // corners outside the circle. Sight 8 at 720 px is 42 px, where a
-      // fixed 32 left the hero a speck (Cottage walk, 2026-10-12). A phone
-      // keeps 32 px.
+      // fixed 32 left the hero a speck (Cottage walk, 2026-10-12).
       var z = 32 / town.tile;
       var fitH = Math.max(viewH - 2 * HUD_BAND, 1) / (rows * town.tile);
       var whole = cols * town.tile * z <= viewW && rows * town.tile * z <= viewH;
@@ -71,7 +119,7 @@
     }
     // A phone held upright: width <= 600 and taller than it is wide. The
     // stage is the window; the map stays the drawn rectangle inside it.
-    var dock = window.innerWidth <= 600 && window.innerHeight > window.innerWidth;
+    var dock = window.innerWidth <= 600 && window.innerHeight > window.innerWidth && !onPhone;
     // A map too small for the HUD frame's corners gets the window as its
     // stage as well, so those corners fall on the spare room, not the map.
     var grow = dock || mw < MIN_STAGE_W || mh < MIN_STAGE_H;
@@ -82,6 +130,7 @@
       map: { x: mx, y: my, w: mw, h: mh },
       tile: T   // the drawn tile, CSS px (read by tests/browser/test_camera_zoom.py)
     };
+    if (pixelNative) window.VEFR_STAGE.pixel = { native: pixelNative, k: pixelK };
     var stage = document.getElementById('stage');
     if (stage) {
       var box = stage.getBoundingClientRect();
@@ -135,6 +184,8 @@
   // something new to draw (the skin's backdrop, once its picture has decoded).
   // Precedent: window.refreshCombatSnapshot.
   window.VEFR_REDRAW = function () { draw(); };
+  // The camera's offset as the last draw() placed it, read-only.
+  window.VEFR_CAMERA = function () { return { x: cameraAt.x, y: cameraAt.y }; };
   function resize() {
     cols = town.map[0].length;
     rows = town.map.length;
@@ -144,7 +195,10 @@
     canvas.width = Math.round(viewW * dpr);
     canvas.height = Math.round(viewH * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    onPhone = phoneCamera();
+    if (pixelNative) ctx.imageSmoothingEnabled = false;   // a canvas resize resets this
     T = town.tile * fitZoom();
+    if (pixelNative) T = snapTile(T);
     publishStage();
   }
   window.addEventListener('resize', function () { resize(); draw(); });

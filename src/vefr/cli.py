@@ -38,7 +38,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .maplab import (SKIN_PICTURE_KEYS, item_rarity_of, item_roll_of,
-                     item_slot_and_mods, item_traits_of, load_pack, validate)
+                     item_slot_and_mods, item_traits_of, load_pack, prop_blocks,
+                     validate)
 from .paths import world_name
 # The loader's tile convention (ordered variants) is the single source
 # of the try-order the player bakes, so a pack's tiles/ is read the
@@ -2331,6 +2332,80 @@ def _player_region_way_icons(world: dict, pack: Path | None) -> dict[str, dict[s
     return out
 
 
+def _region_folder(act_dir: Path | None, rname) -> Path | None:
+    """An act region's own folder, resolved inside the act directory, or None."""
+    if act_dir is None or not isinstance(rname, str) or not rname or '\0' in rname:
+        return None
+    found = _inside(os.path.realpath(act_dir), rname)
+    return Path(found) if found is not None else None
+
+
+def _prop_picture_path(pack: Path, region_dir: Path | None, pic: str) -> Path | None:
+    """The file a prop names: props/<pic>.webp or .png in the region, else the pack root."""
+    if not isinstance(pic, str) or not pic or '\0' in pic:
+        return None
+    for root in (region_dir, pack):
+        if root is None:
+            continue
+        folder = _inside(os.path.realpath(root), 'props')
+        if folder is None or not os.path.isdir(folder):
+            continue
+        for ext in ('.webp', '.png'):
+            target = _inside(folder, pic + ext)
+            if target is not None and os.path.isfile(target):
+                return Path(target)
+    return None
+
+
+def _prop_pictures(pack: Path, region_dir: Path | None, props: list) -> dict[str, str]:
+    """The pictures a region's props name, inlined by name; a name with no file is absent."""
+    out: dict[str, str] = {}
+    for p in props:
+        pic = p.get('pic') if isinstance(p, dict) else None
+        if not isinstance(pic, str) or pic in out:
+            continue
+        f = _prop_picture_path(pack, region_dir, pic)
+        if f is not None:
+            out[pic] = _tile_data_uri(f)
+    return out
+
+
+def _player_prop_pics(world: dict, pack: Path | None) -> dict[str, dict[str, str]]:
+    """Each region's prop pictures by region name; a region whose props name none is absent.
+
+    Mirrors the weave's regions: the first act's, with the unified town
+    standing in for a first region that has no map of its own, or the
+    town alone when the pack has no acts.
+    """
+    if pack is None:
+        return {}
+    pack_path = Path(pack)
+    flat = not _has_subdir(pack_path, 'acts')
+    acts = world.get('acts') or [{}]
+    first_act = acts[0] if isinstance(acts[0], dict) else {}
+    town = world.get('town') if isinstance(world.get('town'), dict) else {}
+    regions = first_act.get('regions') if isinstance(first_act.get('regions'), dict) else {}
+    act_dir = None if flat else _act_dir_for(pack_path, first_act.get('id'))
+    sources: list[tuple[str, dict, Path | None]] = []
+    for i, (rname, rdata) in enumerate(regions.items()):
+        rdata = rdata if isinstance(rdata, dict) else {}
+        contract = rdata.get('contract') if isinstance(rdata.get('contract'), dict) else {}
+        if i == 0 and not (rdata.get('map_text') or '').strip() and town.get('map'):
+            contract = town
+        region_dir = pack_path if flat else _region_folder(act_dir, rname)
+        sources.append((rname, contract, region_dir))
+    if not sources:
+        sources.append((world.get('_region') or 'town', town, pack_path))
+    out: dict[str, dict[str, str]] = {}
+    for rname, contract, region_dir in sources:
+        props = contract.get('props')
+        if isinstance(props, list) and props:
+            pics = _prop_pictures(pack_path, region_dir, props)
+            if pics:
+                out[rname] = pics
+    return out
+
+
 def _player_book_icons(web_dir: Path) -> dict[str, str]:
     """The 'found on the map' and 'given by someone' icons, inlined.
 
@@ -2526,7 +2601,7 @@ def weave_html(pack: Path, *, pool: dict | None = None) -> str:
         first_act = {}
 
     def _region_entry(contract: dict, map_text: str) -> dict:
-        return {
+        entry = {
             'map': [ln for ln in (map_text or '').splitlines() if ln.strip()],
             'legend': contract.get('legend', {}),
             'pois': contract.get('pois', {}),
@@ -2543,6 +2618,9 @@ def weave_html(pack: Path, *, pool: dict | None = None) -> str:
             'speaker_color': contract.get('speaker_color', '#8b939c'),
             'speaker_head': contract.get('speaker_head', '#d8d5df'),
         }
+        if contract.get('props'):
+            entry['props'] = contract['props']
+        return entry
 
     regions: dict = {}
     act_regions = first_act.get('regions')
@@ -2634,7 +2712,8 @@ def weave_html(pack: Path, *, pool: dict | None = None) -> str:
         if (isinstance(at, list) and len(at) == 2
                 and all(isinstance(v, int) for v in at)
                 and _tile_walkable(region.get('map', []), region.get('legend', {}),
-                                   at[0], at[1])):
+                                   at[0], at[1])
+                and not prop_blocks(region.get('props'), at[0], at[1])):
             wake_at = [at[0], at[1]]
         else:
             wake_at = list(region.get('hero_start') or [1, 1])
@@ -2728,6 +2807,9 @@ def weave_html(pack: Path, *, pool: dict | None = None) -> str:
                                 _json.dumps(_player_way_icons(pack), ensure_ascii=False))
     out_html = out_html.replace('{{region_way_icons_json}}',
                                 _json.dumps(_player_region_way_icons(world, pack),
+                                            ensure_ascii=False))
+    out_html = out_html.replace('{{prop_pics_json}}',
+                                _json.dumps(_player_prop_pics(world, pack),
                                             ensure_ascii=False))
     out_html = out_html.replace('{{chest_json}}',
                                 _json.dumps(_player_chest(template_path.parent)))

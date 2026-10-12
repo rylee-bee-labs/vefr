@@ -25,7 +25,7 @@
   // A tile the hero may stand on: inside the map and not solid.
   function exploreOpen(x, y) {
     if (x < 0 || y < 0 || y >= town.map.length || x >= town.map[0].length) return false;
-    return !((town.legend[town.map[y][x]] || {}).solid);
+    return !((town.legend[town.map[y][x]] || {}).solid) && !propBlocked(x, y);
   }
   // Breadth-first over walkable tiles, from the hero. Enemies are walls
   // to the search: the fight belongs to the player, so route around it.
