@@ -362,7 +362,16 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # A family's `sight: 0` kept on a generated floor (#437, 397-the-descent.js), 2026-10-12; measured twice in separate processes, readings equal:
 #   e8cf6223969fede34b9133ae5afc07ef6b010f79e2ecce01a18f9367a816dbc4
 #   e8cf6223969fede34b9133ae5afc07ef6b010f79e2ecce01a18f9367a816dbc4
-NO_SKIN_WEAVE_SHA256 = "e8cf6223969fede34b9133ae5afc07ef6b010f79e2ecce01a18f9367a816dbc4"
+# Whisper and Explore on the touch controls (#431), 2026-10-12; measured twice in separate processes, readings equal:
+#   253b11028d3f6657906310f375cf8cfe9151d681609720078163e76d4d7e89b0
+#   253b11028d3f6657906310f375cf8cfe9151d681609720078163e76d4d7e89b0
+# A whole lit map leaves the HUD bands clear (#424), 2026-10-12; measured twice in separate processes, readings equal:
+#   ec3f6c7a8ca6cb4c6e9185ec76030f14655a293d690f6b77af5c8095cc365811
+#   ec3f6c7a8ca6cb4c6e9185ec76030f14655a293d690f6b77af5c8095cc365811
+# All of the 2026-10-12 issue sweep merged together (#362 #363 #366 #422 #424 #425 #431 #437, #343/#345 parts); measured twice in separate processes, readings equal:
+#   68ced1bfc4e74836419c4adc4d54cb4928c375b31318c12cdb12b4969657d09a
+#   68ced1bfc4e74836419c4adc4d54cb4928c375b31318c12cdb12b4969657d09a
+NO_SKIN_WEAVE_SHA256 = "68ced1bfc4e74836419c4adc4d54cb4928c375b31318c12cdb12b4969657d09a"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

@@ -295,3 +295,48 @@ def test_left_handed_mirrors_the_joystick_and_the_cluster(browser, woven_sample)
         enter(page)
         assert page.evaluate("document.body.classList.contains('touch-left')"), \
             "left-handed did not survive a reload"
+
+
+def test_a_phone_can_whisper_and_explore_by_tapping(browser, woven_sample):
+    """Issue #431: the touch layer hides the Acts row, so Whisper (Q) and Explore (O) need their own taps."""
+    with touch_phone(browser, woven_sample) as page:
+        errors = []
+        page.on("pageerror", lambda exc: errors.append(str(exc)))
+        width = page.evaluate("innerWidth")
+        for id_ in ("touch-whisper", "touch-explore"):
+            assert page.evaluate(SHOWN, id_), f"#{id_} is not shown on a phone"
+            r = page.evaluate(RECT, id_)
+            assert r["w"] >= 48 and r["h"] >= 48, f"#{id_} is below the 48 px floor: {r}"
+            assert r["l"] >= 0 and r["r"] <= width, f"#{id_} leaves the screen: {r}"
+        assert page.inner_text("#touch-whisper").strip() == "Whisper"
+        assert page.inner_text("#touch-explore").strip() == "Explore"
+
+        page.tap("#touch-explore")
+        page.wait_for_timeout(150)
+        assert page.get_attribute("#touch-explore", "aria-pressed") == "true"
+        assert page.get_attribute("#explore", "aria-pressed") == "true"
+        assert page.inner_text("#explore-status") == "Exploring..."
+        page.tap("#touch-explore")
+        page.wait_for_timeout(150)
+        assert page.get_attribute("#touch-explore", "aria-pressed") == "false", "a second tap did not stop the walk"
+        assert page.inner_text("#explore-status") == "Stopped."
+
+        page.tap("#touch-whisper")
+        page.wait_for_function("!document.getElementById('npc-box').hidden", timeout=5000)
+        assert page.inner_text("#npc-line").strip(), "the whisper opened an empty speech box"
+        assert not page.evaluate(SHOWN, "touch-whisper") and not page.evaluate(SHOWN, "touch-explore"), \
+            "Whisper and Explore stay up over an open speech box"
+        assert page.evaluate(SHOWN, "touch-b")
+        page.tap("#touch-b")
+        page.wait_for_timeout(150)
+        assert page.evaluate("document.getElementById('npc-box').hidden")
+        assert page.evaluate(SHOWN, "touch-whisper") and page.evaluate(SHOWN, "touch-explore")
+        assert not errors, errors[:5]
+
+
+def test_the_first_run_hint_names_what_a_phone_shows(browser, woven_sample):
+    """Issue #431: a phone has no Talk button; the hint names the round smart button, which says Talk near someone."""
+    with touch_phone(browser, woven_sample) as page:
+        hint = page.inner_text("#status")
+        assert hint == "Move on the left. Near someone, tap the round button.", hint
+        assert page.evaluate(SHOWN, "touch-smart"), "the hint names a button the phone does not show"
