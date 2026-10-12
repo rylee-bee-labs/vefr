@@ -7595,6 +7595,7 @@ window.VEFR_DESCENT = (function () {
       mobs.push({
         id: 'm' + i, family: family.family,
         name: (typeof family.name === 'string' && family.name) ? family.name : DEFAULT_FAMILY,
+        sprite: (typeof family.sprite === 'string') ? family.sprite : '',
         at: [at[0], at[1]], hp: Math.max(1, hp), atk: Math.max(1, atk),
         sight: Math.max(1, sight), xp: xpFor(family, depth),
         drops: mobDrops(key, 'm' + i, family.drops)
@@ -7722,6 +7723,7 @@ window.VEFR_DESCENT = (function () {
     var mob = {
       id: WARDEN_MOB, family: family,
       name: (typeof base.name === 'string' && base.name) ? base.name : DEFAULT_FAMILY,
+      sprite: (typeof base.sprite === 'string') ? base.sprite : '',
       at: [at[0], at[1]], hp: Math.max(1, hp), atk: Math.max(1, atk),
       sight: Math.max(1, sight), xp: xpFor(base, depth),
       drops: mobDrops(key, WARDEN_MOB, base.drops), warden: true
@@ -8206,7 +8208,7 @@ window.VEFR_DESCENT = (function () {
   // roster already yielded and, by `loadEnemies`'s `alive`, unattackable
   // from the first turn, so its challenge could never be completed.
   function enemyEntry(mob) {
-    var entry = { id: mob.id, name: mob.name, sprite: '', at: mob.at.slice(),
+    var entry = { id: mob.id, name: mob.name, sprite: mob.sprite || '', at: mob.at.slice(),
                   hp: mob.hp, atk: mob.atk, sight: mob.sight, xp: mob.xp,
                   drops: mob.drops.slice(), warden: mob.warden === true };
     if (mob.fightable === false) entry.fightable = false;
