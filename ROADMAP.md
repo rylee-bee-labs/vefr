@@ -44,6 +44,21 @@ gameplay features over new core machinery.
 - [authoring] `vefr look`, `vefr probe`, `vefr publish`, `vefr features`; the Library chapters on locks and endings and on gear, albums, sound and walking (31 chapters on the shelf).
 - [Cottage] Six floors, three Keybearers and the Cellar King, the King's room and an ending, eight unique monsters, eight wearable items, 25 stickers, a keyboard-only playthrough bot (desktop and phone) and an accessibility pass. All story text is agent draft until Rylee approves it.
 
+### LANDED 2026-10-12 (Cottage Section 1 and the mobile UI rounds)
+- [player] Descent creatures show their own art, the bag stacks by kind (id and rarity, up to eight then "+N"), and the
+  camera comes closer on dark floors (#412). A way out is drawn as what it is: door, stairs up, stairs down,
+  trapdoor, from the pack's own pictures when it has them (#416).
+- [player] A game can choose a phone zoom (`display.phone_tile`), and on a phone the camera follows the hero up to
+  three tiles past a map's edge, so she is never under the controls (#418).
+- [player] Talk with no conversation brain says the resident's own seeded line for the time of day, and a resident
+  with nothing to say is not offered Talk (#419).
+- [authoring] The Storybook design system and its art bible (Cottage's look, kept as a worked example; every game
+  chooses its own), and the guide to making a VEFR game look and feel good (#415).
+
+In review: an object layer (props with footprints, depth, a ground layer, animation; every character's idle, talk,
+act, attack and hurt; people who stand in the way; #420), pixel art drawn crisply (`display.pixel_art`, #427), and
+the phone touch controls (#428). Cottage's Game Boy Advance town is a draft on them (cottage-of-the-breeze#146).
+
 ### IN PROGRESS (decided by Rylee on 2026-10-04; tracked by epics; refreshed 2026-10-05 after the morning's merges)
 - **The endless dungeon** (epic [#273](https://github.com/rylee-bee-labs/vefr/issues/273); design `docs/plans/endless-dungeon/DESIGN.md`, build plan `docs/plans/endless-dungeon/PLAN.md`, research `docs/research/big-generated-maps.md`): floors generated while you play from `seed + depth`, cut into sections of 8 to 11 floors; each ends in a key warden whose key opens a vault with a lore note; acts change the town only; elites, linked groups, hand-painted stamps and much bigger maps (up to 128x96, kept cheap for phones); an endless mode after the story.
   - **Merged:** E0a measurements (#278), F1 fog as a bitset (#287), E0d sleeping monsters and a radius-bounded flood (#288), E2 the v3 Python floor generator with property sweeps (#289).
