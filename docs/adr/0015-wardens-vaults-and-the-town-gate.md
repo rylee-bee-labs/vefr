@@ -33,7 +33,7 @@ Rylee's calls:
 - the vault note advances the act;
 - acts change only the town;
 - the next Section waits for a visit to town, and a paid shortcut can skip that visit;
-- the King ends Act 3, and endless mode comes after him.
+- the story end is the per-game flag `descent.story_end` (default `king-slain`), per Amendment 1 (ADR 0015, approved by Rylee 2026-10-08); endless mode comes after it.
 
 ## Context
 
