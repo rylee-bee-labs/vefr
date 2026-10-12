@@ -9,6 +9,9 @@ there because you were in the room for it.
 Along the way you also pick up how small models are taught: through templates, approved examples,
 command-line tools and searchable records. [Making art](making-art.md) shows that part in the open.
 
+New to making games? Start with [Make your first game](make-your-first-game.md): one page, six steps, no
+code and no AI needed.
+
 **For a new maker:** the [proposed beginner-first Studio experience](../plans/studio-creative-learning-vision.md) adds a companion-led visual workshop to help discover an idea, compare creative options and make a tiny playable slice. The longer-term storybook/canvas/playable-world connection is proposed, **not a claim that these experiences are already shipped**. This Journey and its existing rooms remain the foundation; lessons and Studio exploration never gate a room or a finished game.
 
 This page is the map. It is a suggested path, not a rule: the engine never makes
@@ -84,7 +87,8 @@ your orientation. The rules that keep it fun and safe:
 - **Write it down.** One feature means a guide section for a stranger and a line in
   the lessons log above.
 
-Where to go next: [GETTING_STARTED.md](../../GETTING_STARTED.md) to run it,
+Where to go next: [Make your first game](make-your-first-game.md) for the shortest path,
+[GETTING_STARTED.md](../../GETTING_STARTED.md) to run it,
 [world-creation.md](world-creation.md) for the full walkthrough of making a world,
 [rulesets.md](rulesets.md) for what each act can play, and
 [making-art.md](making-art.md) for how pictures get made, and
