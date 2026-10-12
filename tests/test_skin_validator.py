@@ -295,7 +295,12 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # processes, readings equal; the pack's data lines are unchanged:
 #   bd38a6085259b6ec3fc987037c78d1d35fcecddb6105f69c99070c4cc6eaa8ff
 #   bd38a6085259b6ec3fc987037c78d1d35fcecddb6105f69c99070c4cc6eaa8ff
-NO_SKIN_WEAVE_SHA256 = "bd38a6085259b6ec3fc987037c78d1d35fcecddb6105f69c99070c4cc6eaa8ff"
+# Descent polish 2026-10-12 (vefr#412): generated monsters carry their family's sprite, the bag strip
+# stacks by kind, a scrolling dark floor sizes its tile to the lit circle; all three move the woven
+# player. Measured twice in separate processes, readings equal; the pack's data lines are unchanged:
+#   258470fd8a0d9c8925f39b9d1dff597ab443bc6807f24fd34e47f9119cdede20
+#   258470fd8a0d9c8925f39b9d1dff597ab443bc6807f24fd34e47f9119cdede20
+NO_SKIN_WEAVE_SHA256 = "258470fd8a0d9c8925f39b9d1dff597ab443bc6807f24fd34e47f9119cdede20"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():
