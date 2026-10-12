@@ -950,6 +950,18 @@
           if (books[i] && books[i].id === t.id) { book = books[i]; break; }
         }
         if (!book) throw new Error('chest gone');
+        // A vault chest taken once stays taken (ADR 0015): its permanent
+        // flag `vault-chest:<id>:c<cycle>` is consulted here, so a chest
+        // whose flag is set opens empty even on a floor whose taken-chests
+        // delta - or the library's found-list - is gone. A vault that names
+        // no id keeps the found-list alone, exactly as E8b played.
+        var D = window.VEFR_DESCENT;
+        var vaultChest = book.place === 'vault-chest' && !!D;
+        if (vaultChest && D.vaultChestTaken()) {
+          makeNoise('chest');
+          combatSay('The chest is empty.');
+          return;
+        }
         // One `opens` per opening, through the one interaction path
         // the player has. The chest's own identity is its book id;
         // its contents follow with their own `picks-up`.
@@ -960,6 +972,7 @@
         makeNoise('chest');
         foundBook(book, 'map');
         giveChestDrops(book);
+        if (vaultChest) D.markVaultChestTaken();
         combatSnapshot();
       } else if (t.kind === 'book') {
         var lib = libraryBooks(), note = null;
