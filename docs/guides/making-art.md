@@ -100,3 +100,21 @@ still proposed.
 - **Keep the engine neutral.** Art lives in the pack. A game's names, places and looks never go in `src/`.
 
 Next: [the journey](journey.md) puts this inside the whole path from an empty table to a game you can share.
+
+## Kits, layers and an art bible (what Cottage taught us, 2026-10-12)
+
+A small studio keeps a whole game looking like one game with three habits, and VEFR games should too:
+
+- **An art bible before the art**: palette, light direction, outline rule, detail level by layer, and one scale for
+  everything. Cottage's (the Storybook look) is
+  [docs/design/storybook/ART-BIBLE.md](../design/storybook/ART-BIBLE.md); each game writes its own, the same
+  shape, and may start from that one.
+- **Layers that stack**: seamless ground, walls with their edges, transparent objects (doors, stairs, props),
+  characters, then the game's light and fog. Match the detail across layers.
+- **Kits, not single pictures**: draw a place's set in ONE bundled image call (a grid on flat #00FF00, an approved
+  in-game picture as the style reference), cut it with `tools/art/slice_bundle.py`, make ground seamless with
+  `tools/art/seamless_tile.py`, fade a filled object into the floor with `tools/art/way_tile.py`, then look at the
+  kit in the game at phone zoom.
+
+The whole story, with the phone UI and how to test like a player, is
+[making-a-game-look-and-feel-good.md](making-a-game-look-and-feel-good.md).

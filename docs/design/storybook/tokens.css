@@ -1,0 +1,58 @@
+/* VEFR Storybook: tokens. Dark is the default look (Rylee 2026-10-12); Parchment is the alternative.
+   Draft for review. Values come from the OpenDesign mockup board (vefr-mobile-ui-mockups, rounds 3-5) and the
+   type-scale page; contrast was measured there. */
+:root {
+  --bg: #14110f;
+  --surface: #1f1a16;
+  --surface-2: #2a231d;
+  --fg: #efe6d6;
+  --fg-2: #d8c9b0;
+  --muted: #b9ab95;
+  --border: rgba(216, 170, 78, 0.28);
+  --border-soft: rgba(239, 230, 214, 0.12);
+  --accent: #d8aa4e;
+  --accent-on: #1b1206;
+  --accent-hover: #e2bc6e;
+  --accent-active: #c2913a;
+  --danger: #c8644a;
+  --health: #d0704f;
+  --font-display: Georgia, 'Times New Roman', serif;
+  --font-body: Georgia, 'Times New Roman', serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --text-badge: 13px;
+  --text-toast: 16px;
+  --text-tab: 15px;
+  --text-body: 17px;
+  --text-name: 18px;
+  --text-dialogue: 19px;
+  --text-verb: 18px;
+  --leading-body: 1.45;
+  --radius-card: 14px;
+  --radius-pill: 999px;
+  --tap-min: 48px;
+  --tap-secondary: 56px;
+  --tap-smart: 72px;
+  --joy-idle: 96px;
+  --joy-base: 120px;
+  --joy-knob: 52px;
+  --phone-tile: 52px;
+  --motion-in: 240ms;
+  --motion-ease: cubic-bezier(0.22, 0.8, 0.3, 1);
+}
+:root[data-look="parchment"] {
+  --bg: #2b2118;
+  --surface: #f4ecd8;
+  --surface-2: #ebca93;
+  --fg: #2b2118;
+  --fg-2: #4a3a2a;
+  --muted: #6e5a44;
+  --border: rgba(138, 90, 43, 0.45);
+  --border-soft: rgba(43, 33, 24, 0.14);
+  --accent: #8a5a2b;
+  --accent-on: #f6efe0;
+  --accent-hover: #9c6a37;
+  --accent-active: #74481f;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root { --motion-in: 0ms; }
+}
