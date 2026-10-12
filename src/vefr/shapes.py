@@ -1264,7 +1264,8 @@ SECTION = Block(
                 '`cellar-0-3` is the third floor of the cellar, first cycle.'),
         Key('label', 'str', lo=1, hi=40,
             doc='the name a player sees for this Section, when it is not the '
-                'id. It names nothing the game keeps: the floor key, the '
+                'id: a hint names one of its floors "<label>, floor <k>" '
+                'rather than the region id. It names nothing the game keeps: the floor key, the '
                 'region and every save key are built from the id alone.',
             say={'wrong-type': '{path} must be a string, the name a player '
                                'sees for this Section'}),

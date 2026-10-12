@@ -54,6 +54,8 @@ gameplay features over new core machinery.
   three tiles past a map's edge, so she is never under the controls (#418).
 - [player] Talk with no conversation brain says the resident's own seeded line for the time of day, and a resident
   with nothing to say is not offered Talk (#419).
+- [player] A Section's `label` reaches play: a hint names a floor of it "the Cellar, floor 2" instead of the region id
+  `cellar-0-2`, whose id, floor key and save keys are unchanged; a Section with no label reads as before (#363).
 - [authoring] The Storybook design system and its art bible (Cottage's look, kept as a worked example; every game
   chooses its own), and the guide to making a VEFR game look and feel good (#415).
 

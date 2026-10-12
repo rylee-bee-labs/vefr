@@ -52,15 +52,21 @@ function rulesNextLoad() {
     return e && typeof e.place === 'string' && typeof e.line === 'string';
   }) : [];
 }
-function rulesNextRecord(place, line) {
+// `shown` is the words the player reads for the place when they are not
+// its id (a labelled Section's floor, vefr#363); the row is still keyed by
+// the id, and a place shown by its own id stores exactly what it always did.
+function rulesNextRecord(place, line, shown) {
   if (typeof place !== 'string' || !place) return;
   rulesNextLoad();
+  var name = (typeof shown === 'string' && shown) ? shown : place;
   // one row per place: the newest word wins
   window.VEFR_NEXT = window.VEFR_NEXT.filter(function (e) { return e.place !== place; });
-  window.VEFR_NEXT.push({
+  var row = {
     place: place,
-    line: line || playerWord('where_next.goal', { place: place })
-  });
+    line: line || playerWord('where_next.goal', { place: name })
+  };
+  if (name !== place) row.name = name;
+  window.VEFR_NEXT.push(row);
   store.setJSON(rulesNextKey(), window.VEFR_NEXT);
 }
 
@@ -78,7 +84,7 @@ function renderNextPanel() {
     var p = document.createElement('p');
     p.className = 'status';
     var b = document.createElement('b');
-    b.textContent = e.place + ' - ';
+    b.textContent = (typeof e.name === 'string' && e.name ? e.name : e.place) + ' - ';
     p.appendChild(b);
     p.appendChild(document.createTextNode(e.line));
     list.appendChild(p);

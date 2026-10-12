@@ -35,10 +35,16 @@
       }
     }
     var at = fromHere || entrance;
+    // The words the player reads for the place (vefr#363): a floor of a
+    // labelled Section is its title ("the Cellar, floor 1"), anything
+    // else the region id exactly as before. The id stays the record's
+    // key, so the rules and the save never see the label.
+    var D = window.VEFR_DESCENT;
+    var shown = (D && typeof D.placeName === 'function') ? D.placeName(place) : place;
     if (!at) {
-      var lost = playerWord('where_next.no_way', { place: place });
+      var lost = playerWord('where_next.no_way', { place: shown });
       combatSay(lost);
-      rulesNextRecord(place, lost);
+      rulesNextRecord(place, lost, shown);
       return;
     }
     var dx = at[0] - hero[0], dy = at[1] - hero[1];
@@ -50,12 +56,12 @@
     // word for it (part 340), and a pack that names none gets these
     // exact bytes.
     var line = dir
-      ? playerWord('where_next.reach', { place: place, direction: dir })
-      : playerWord('where_next.here', { place: place });
+      ? playerWord('where_next.reach', { place: shown, direction: dir })
+      : playerWord('where_next.here', { place: shown });
     combatSay(line);
     // The hint is an intention, not a flash: it stays in the menu's
     // Where next? panel until the world points somewhere new.
-    rulesNextRecord(place, line);
+    rulesNextRecord(place, line, shown);
   };
   // show/hide/reveal: the floor is the only surface a thing has in
   // this player - an item can lie where the hero stands (shown) or be

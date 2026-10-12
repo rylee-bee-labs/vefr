@@ -286,8 +286,8 @@ different generator. A Section that names no `tiles` draws exactly what it
 drew before, so a pack with no `tiles` anywhere is unchanged.
 
 Of the keys `shapes.SECTION` validates, these reach the play-time descent:
-`id`, `floors`, `size`, `rooms`, `tiles`, `fog`, `families`, `pattern`,
-`specials`, `stamps`, `warden` and `vault`. The rest **are validated but
+`id`, `label`, `floors`, `size`, `rooms`, `tiles`, `fog`, `families`,
+`pattern`, `specials`, `stamps`, `warden` and `vault`. The rest **are validated but
 not read at play**, and the shape says so on each one rather than letting
 them look live:
 
@@ -467,7 +467,7 @@ and refuses every value below at the pointer that names it.
 |---|---|---|
 | `section` | the Section's number in the descent order | unordered |
 | `id` | **required** - the floor key's middle | - |
-| `label` | the name a player sees, 1 to 40 characters; the floor key, region and save keys never read it | the id |
+| `label` | the name a player sees, 1 to 40 characters: a hint names one of its floors "the Cellar, floor 2" instead of the region id; the floor key, region and save keys never read it | the id |
 | `floors` | how many floors it has | 9 |
 | `size` | `{"w": [lo, hi], "h": [lo, hi]}` - every floor draws its own | w 64, h 48 |
 | `rooms` | the `[lo, hi]` room quota a floor draws | 12 |
@@ -1585,6 +1585,12 @@ Code: `src/vefr/shapes.py` (`PLAYER_WORDS`, the `place-label` kind) +
 `src/vefr/maplab.py` (`player_words_errors`) + `web/player/parts/340-where-next-hints.js`
 (`VEFR_PLAYER_WORDS`, `playerWord`); tests: `tests/test_player_words.py`.
 
-Out of scope for v0: every other string in the player, region display
-names (vefr #363), POI labels in `point-to`, and any pluralization or
+A floor of a Section that declares a `label` fills `{place}` with its
+title, "the Cellar, floor 2", where it used to be the region id
+`cellar-0-2` (vefr #363); the Where next? row is still keyed by the id.
+Every other region, and every floor of a Section with no label, fills it
+with the region id exactly as before.
+
+Out of scope for v0: every other string in the player, display names
+for authored regions, POI labels in `point-to`, and any pluralization or
 translation framework.

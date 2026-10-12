@@ -253,6 +253,26 @@ window.VEFR_DESCENT = (function () {
 
   function isGenerated(name) { return parseName(name) !== null; }
 
+  // ---- what a player is told a floor is (vefr#362, #363) --------------
+  // The twin of `sections.floor_title`: a Section that declares its own
+  // `label` names its floors "<label>, floor <k>"; one that declares none
+  // answers '' and every caller keeps the words it had (the region id,
+  // the stair). The region id itself is never touched - it is the save's
+  // key and the rules' id - only what the player reads changes.
+  function floorTitle(name) {
+    var at = parseName(name);
+    if (!at) return '';
+    var label = at.section.label;
+    if (typeof label !== 'string' || !label) return '';
+    return label + ', floor ' + at.k;
+  }
+
+  // The words for a place a hint names: a labelled floor's title, else the
+  // name exactly as given.
+  function placeName(name) {
+    return floorTitle(name) || String(name === undefined ? '' : name);
+  }
+
   // ---- a floor, drawn (the twin of `floor_plan`) ----------------------
   function seedFor(run) { return runSeed(baseSeed(), run); }
 
@@ -1518,7 +1538,7 @@ window.VEFR_DESCENT = (function () {
     var depth = depthOfName(name);
     var plan = depth ? floorPlan(depth) : null;
     if (!plan) return null;
-    whySay('descent-death', 'You fell on ' + name + ' and woke at its up '
+    whySay('descent-death', 'You fell on ' + placeName(name) + ' and woke at its up '
       + 'stair; the descent is unbroken.');
     return { region: name, at: plan.anchors.up.slice() };
   }
@@ -1991,6 +2011,7 @@ window.VEFR_DESCENT = (function () {
     runSeed: runSeed, sectionHash: sectionHash, parseName: parseName,
     baseSeed: baseSeed, seedParam: seedParam, seedFor: seedFor,
     isGenerated: isGenerated, depthOfName: depthOfName, floorPlan: floorPlan,
+    floorTitle: floorTitle, placeName: placeName,
     floorSize: floorSize, floorKindOf: floorKindOf, mobsAt: mobsAt, mobDrops: mobDrops, placeBooks: placeBooks,
     xpFor: xpFor,
     ensureRegion: ensureRegion, onEnter: onEnter, entryHere: entryHere,
