@@ -936,6 +936,11 @@ this slice, and every bag of a pack that declares no `roll`) or the
 instance a rolled drop left behind: `{"id": …, "rarity": …, "traits":
 […], "identified": false}`. The traits are read and printed nowhere
 until the thing has been read at a reader (see identify, below).
+Hidden means hidden on the page, not in the file: the trait pools ride
+in the woven HTML and a rolled entry sits in the saved bag, because a
+one-file offline game rolls and keeps its loot in the browser. A player
+who reads the source can see them. Rarity names stay the pack's own,
+not a fixed engine set (owner, 2026-10-12, vefr#342; ADR 0017).
 
 **`vefr check` refuses four things,** one plain sentence each: a
 `rarity` outside the item's own table, a trait that is not one plain
@@ -1290,8 +1295,10 @@ refused cast writes nothing there.
 naming a school the block does not declare, a `level` under 1, a book
 teaching a spell the pack does not declare, and a spell with no school
 at all (named by its id and the file: "world.json: spell 'ember-bolt'
-must hold a school, such as ..."). What a school does in play, and what a spell does beyond
-healing, are open questions this slice does not answer - see ADR 0018.
+must hold a school, such as ..."). A school groups spells for learning
+and loot and means nothing else in play, and a cast costs nothing - no
+mana, cooldown or charge (owner, 2026-10-12, vefr#345; ADR 0018). Spell
+effects beyond `heal` are future slices.
 
 Code: `src/vefr/shapes.py` (the two blocks) + `src/vefr/maplab.py` (the
 sweep) + `src/vefr/cli.py` (the bake) + `web/player/parts/225-spells.js`

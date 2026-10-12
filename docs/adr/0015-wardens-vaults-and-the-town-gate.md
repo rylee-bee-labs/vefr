@@ -73,7 +73,7 @@ E0b found that `lockOpen` opens a transition when `requires.item` is in the bag 
 
 - The warden floor's down stair and the town stair's entry for the next Section carry `requires: {"flag": "town-seen:<section>:c<c>"}`.
 - A rule on `enters town`, guarded by the vault's `sets` flag, sets `town-seen`. The Section expansion emits it; packs never hand-write it.
-- **Shortcut:** offered only when `c >= 1`, so a first pass never skips the story (plan challenge 7). Paying spends the one-use item the Section's vault drops (not gold) and sets `town-seen:<s>:c<c>` and `shortcut-paid:<s>:c<c>`; a second press finds the flag set and charges nothing.
+- **Shortcut (dropped, owner 2026-10-12, vefr#438):** decision 2 below leaves no town gate in endless mode, so from cycle 1 there is nothing for a shortcut to skip, and it is not built. What it would have been: offered only when `c >= 1`, so a first pass never skips the story (plan challenge 7). Paying spends the one-use item the Section's vault drops (not gold) and sets `town-seen:<s>:c<c>` and `shortcut-paid:<s>:c<c>`; a second press finds the flag set and charges nothing.
 
 ### Town states (ADR 0006 rescoped)
 
@@ -125,12 +125,12 @@ These hold for every Section, for seeds `check-0..199`, in cycles 0 and 1:
 - `tests/test_progress_walk.py`: check 5, plus a fixture with a missing setter that fails with a sentence.
 - `tests/test_town_states.py`: the last true state wins, no true flags gives the base region, and an item moves off a new wall.
 - `tests/browser/test_vault_to_town.py`: the warden dies and the key is in the bag; the door opens; the note is read; the home stair leads to a changed town; the next stair is open.
-- `tests/browser/test_shortcut.py`: there is no shortcut in cycle 0; in cycle 1 it charges once, and pressing again is free.
+- ~~`tests/browser/test_shortcut.py`~~: not written; the shortcut is dropped (vefr#438). `tests/browser/test_endless_gate.py` pins that cycle 1 has no gate.
 - `tests/test_story_flags_survive.py`: after a town return, an identity mismatch and an eviction, the warden stays dead and the chest stays empty.
 
 ## Owner decisions (2026-10-04) and open questions
 
-1. **Decided: offered from the second cycle on, and paid with a one-use item found in a vault** (not gold). **Every section's vault drops one** (owner, 2026-10-04).
+1. **Decided: offered from the second cycle on, and paid with a one-use item found in a vault** (not gold). **Every section's vault drops one** (owner, 2026-10-04). *Superseded 2026-10-12 (owner, vefr#438): with no town gate in endless mode (decision 2) the shortcut has nothing to skip, so it is dropped.*
 2. **Decided: no town gate in endless mode** (owner, ELDEC 2026-10-11/12).
 3. **Decided: New descent counts as a later cycle** (owner, ELDEC 2026-10-11/12).
 4. **Decided: endless vaults hold loot only, no notes** (owner, ELDEC 2026-10-11/12).

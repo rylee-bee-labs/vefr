@@ -223,3 +223,10 @@ Slice 3 is written. The owner's decisions in force: the bag is opt-in and unboun
 Not in this amendment: a bag weight, slots beyond the five worn ones, a sixth worn slot, and any change to what "full slot" means in the equipment tests. The pack field names are `bag.size` and `carry`; the wording the player shows says "bag size" and "carry space" and never "slot", because a worn slot is a different thing.
 
 Open, for the owner: a pack that names a `carry` item but no `bag.size` gets no cap, so the upgrade does nothing there. Whether that should be refused at validation or stay silent is not decided here.
+## Owner decision (Rylee, 2026-10-12, closing vefr#342)
+
+Rarity names stay pack-defined, as above, rather than a fixed engine set.
+Unidentified traits are hidden in the rendered page only: a one-file
+offline game rolls and saves its loot in the browser, so the trait pools
+and a rolled bag entry are readable by anyone who opens the source, and
+that is accepted.

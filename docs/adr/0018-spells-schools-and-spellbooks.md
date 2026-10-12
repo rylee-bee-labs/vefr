@@ -270,3 +270,14 @@ its own test failed with nothing else failing.
 slice should make on its own: what a school *means* in play (question 1);
 what a cast *costs* - mana, a cooldown, a charge, or nothing; and what a
 spell does beyond `heal` (question 3).
+
+**Owner decisions (Rylee, 2026-10-12, closing vefr#345).**
+
+- **A school groups spells for learning and for loot, and means nothing
+  else in play.** It is the pack's label, the panel prints it, and a book
+  or a level teaches by it. Question 1 is answered: only ever a label.
+- **A cast costs nothing.** No mana, no cooldown, no charge: a cozy game
+  with no reflexes wants no bar to watch. A pack that later needs a cost
+  asks for it as a new ADR.
+- **Effects beyond `heal`** are new spell keys, each its own slice when a
+  game asks for one. None is promised here.
