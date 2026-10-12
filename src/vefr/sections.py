@@ -155,6 +155,12 @@ def section_id(section: dict) -> str:
     return value if isinstance(value, str) else ''
 
 
+def section_label(section: dict) -> str:
+    """The name a Section is shown by: its label when it has one, else its id."""
+    label = section.get('label') if isinstance(section, dict) else None
+    return label if isinstance(label, str) and label else section_id(section)
+
+
 def load(pack_dir) -> list[dict]:
     """Every Section pack in `pack_dir/sections`, sorted by id.
 

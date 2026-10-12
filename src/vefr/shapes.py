@@ -1223,6 +1223,12 @@ SECTION = Block(
         Key('id', 'str', lo=1, hi=40, required=True,
             doc='the middle of the floor key and of the region name: '
                 '`cellar-0-3` is the third floor of the cellar, first cycle.'),
+        Key('label', 'str', lo=1, hi=40,
+            doc='the name a player sees for this Section, when it is not the '
+                'id. It names nothing the game keeps: the floor key, the '
+                'region and every save key are built from the id alone.',
+            say={'wrong-type': '{path} must be a string, the name a player '
+                               'sees for this Section'}),
         Key('floors', 'int', lo=1, hi=11,
             doc='how many floors this Section has. `locate` walks them in '
                 'order, and the descent begins again in cycle 1 past the last '

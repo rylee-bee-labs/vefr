@@ -467,6 +467,7 @@ and refuses every value below at the pointer that names it.
 |---|---|---|
 | `section` | the Section's number in the descent order | unordered |
 | `id` | **required** - the floor key's middle | - |
+| `label` | the name a player sees, 1 to 40 characters; the floor key, region and save keys never read it | the id |
 | `floors` | how many floors it has | 9 |
 | `size` | `{"w": [lo, hi], "h": [lo, hi]}` - every floor draws its own | w 64, h 48 |
 | `rooms` | the `[lo, hi]` room quota a floor draws | 12 |
