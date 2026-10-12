@@ -22,7 +22,9 @@
   // a single step may land on is `tileOpenForEnemy`'s business.
   function floorOpen(x, y) {
     if (x < 0 || y < 0 || y >= town.map.length || x >= town.map[0].length) return false;
-    return !((town.legend[town.map[y][x]] || {}).solid);
+    // The props part may be absent (a harness that loads only the monster parts).
+    return !((town.legend[town.map[y][x]] || {}).solid)
+      && !(typeof propBlocked === 'function' && propBlocked(x, y));
   }
   // Steps from (x, y) to every walkable tile. `dist` has the source at
   // 0 and no entry at all for a tile the flood never reached. The flood
@@ -97,8 +99,15 @@
     if (!best) return false;
     if (best[0] === hero[0] && best[1] === hero[1]) return enemyAttack(e);
     if (!tileOpenForEnemy(best[0], best[1])) return false;
+    e.face = faceOf(e.at, best);
     e.at = best;
     return false;
+  }
+  // The way a step from one tile to a neighbour points: the longer delta wins.
+  function faceOf(from, to) {
+    var dx = to[0] - from[0], dy = to[1] - from[1];
+    if (Math.abs(dx) >= Math.abs(dy)) return dx < 0 ? 'left' : 'right';
+    return dy < 0 ? 'up' : 'down';
   }
   // One step toward the group's home, on the home flood: the neighbour
   // with the LOWER count. A member stops within one tile of home and
@@ -116,6 +125,7 @@
     }
     if (!best) return false;
     if (!tileOpenForEnemy(best[0], best[1])) return false;
+    e.face = faceOf(e.at, best);
     e.at = best;
     return false;
   }

@@ -317,10 +317,16 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # #418 phone camera merged with #419 (Talk) on 2026-10-12; measured twice in separate processes, readings equal:
 #   3efab5dcd619fc4e4510f3297cf3e6ea5dcb1a059341f4fcad5c5476b014113d
 #   3efab5dcd619fc4e4510f3297cf3e6ea5dcb1a059341f4fcad5c5476b014113d
-# Pixel art merged with #418 phone camera, 2026-10-12; measured twice in separate processes, readings equal:
-#   1cfa642263601dd2b7ad321bc74a5fe019bb05966c7d53c6b3238cbc2412f4a1
-#   1cfa642263601dd2b7ad321bc74a5fe019bb05966c7d53c6b3238cbc2412f4a1
-NO_SKIN_WEAVE_SHA256 = "1cfa642263601dd2b7ad321bc74a5fe019bb05966c7d53c6b3238cbc2412f4a1"
+# #420 object layer merged with #418 phone camera, 2026-10-12; measured twice in separate processes, readings equal:
+#   578de6ada011a5a407a4a9d6cd1e53a10c44a6c2e417dfbfe37549f8b4abb509
+#   578de6ada011a5a407a4a9d6cd1e53a10c44a6c2e417dfbfe37549f8b4abb509
+# Monster parts run without the props part (#420), 2026-10-12; measured twice in separate processes, readings equal:
+#   0a80b00def25f0cfaecd56841753a2285a84daea0a8c74a04dd13833e51a3aca
+#   0a80b00def25f0cfaecd56841753a2285a84daea0a8c74a04dd13833e51a3aca
+# Pixel art (#427) merged with the object layer (#420), 2026-10-12; measured twice in separate processes, readings equal:
+#   b260300bef12bb4c6f0dc52cbcea83e078522609cdf3cd87d5005d48960ecbc9
+#   b260300bef12bb4c6f0dc52cbcea83e078522609cdf3cd87d5005d48960ecbc9
+NO_SKIN_WEAVE_SHA256 = "b260300bef12bb4c6f0dc52cbcea83e078522609cdf3cd87d5005d48960ecbc9"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

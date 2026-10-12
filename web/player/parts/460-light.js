@@ -113,23 +113,74 @@
     return (typeof v === 'number' && isFinite(v) && v >= 0.2 && v <= 2) ? v : 1;
   };
   // -- spriteScale end --
+  // The direction's frames, a missing side or `up` falling back as the
+  // validator allows: a missing left or right is the other mirrored, and
+  // anything else missing is `down`.
+  var oneShots = {};
+  function sheetPick(key, dir) {
+    var dirs = ((spriteSheets[key] || {}).directions) || {};
+    if (dirs[dir]) return { frames: dirs[dir], mirror: false };
+    if (dir === 'left' && dirs.right) return { frames: dirs.right, mirror: true };
+    if (dir === 'right' && dirs.left) return { frames: dirs.left, mirror: true };
+    return { frames: dirs.down, mirror: false };
+  }
+  // The sheet cell a character shows now. A one-shot (act, attack, hurt)
+  // plays its frames once, then the character is idle again; a looping
+  // state (idle, talk) moves on at the sheet's fps, or holds frame 0 under
+  // reduced motion. A walk frame follows the step counter, as it always did.
+  function sheetCell(key, actor, dir, state, walkStep) {
+    var pick = sheetPick(key, dir);
+    if (!pick || !pick.frames) return null;
+    var f = pick.frames, fps = spriteSheets[key].fps;
+    var now = nowMs();
+    var shot = oneShots[actor];
+    if (shot && !reducedMotion()) {
+      var list = f[shot.state] || [];
+      var t = (now - shot.start) / 1000 * fps;
+      if (t < list.length) {
+        animWant = true;
+        return { idx: list[Math.floor(t)], mirror: pick.mirror };
+      }
+    }
+    delete oneShots[actor];
+    if (state === 'walk' && f.walk && f.walk.length) {
+      return { idx: f.walk[(walkStep - 1) % f.walk.length], mirror: pick.mirror };
+    }
+    var loop = (state === 'talk' && f.talk && f.talk.length) ? f.talk : f.idle;
+    if (loop.length > 1 && !reducedMotion()) {
+      animWant = true;
+      return { idx: loop[Math.floor(now / 1000 * fps) % loop.length], mirror: pick.mirror };
+    }
+    return { idx: loop[0], mirror: pick.mirror };
+  }
+  // A one-shot starts now. Reduced motion shows none.
+  function playOneShot(actor, state) {
+    if (reducedMotion()) return;
+    oneShots[actor] = { state: state, start: nowMs() };
+  }
   // A character stands taller than its tile, feet on the tile's bottom.
-  // A character with a ready walk sheet shows its down-facing idle frame.
-  function drawSprite(key, tx, ty) {
+  // `pose` names who it is (`actor`, the key one-shots are kept under), the
+  // way it faces and the state it is in; a character with a ready walk
+  // sheet draws the cell that pose picks, mirrored when its side is missing.
+  function drawSprite(key, tx, ty, pose) {
     var im = spriteImgs[key];
     var height = T * 1.5 * spriteScale(window.VEFR_SPRITE_SCALE, key);
     var sheet = spriteSheets[key];
-    if (sheetUsable(sheet) && spriteSheetReady(key)) {
+    var cell = (sheetUsable(sheet) && spriteSheetReady(key))
+      ? sheetCell(key, pose.actor, pose.dir, pose.state, 0) : null;
+    if (cell) {
       var sim = spriteSheetImgs[key];
       var fw = sheet.frame[0], fh = sheet.frame[1];
       var cols = Math.max(1, Math.floor(sim.naturalWidth / fw));
-      var down = (sheet.directions && sheet.directions.down) || {};
-      var idx = (down.idle && down.idle.length) ? down.idle[0] : 0;
-      var col = idx % cols, row = Math.floor(idx / cols);
+      var col = cell.idx % cols, row = Math.floor(cell.idx / cols);
       var box = artSize(fw, fh, height);
       var across = snapSpan(tx * T + (T - box.w) / 2, box.w);
       var up = snapSpan(ty * T + T - box.h, box.h);
-      ctx.drawImage(sim, col * fw, row * fh, fw, fh, across[0], up[0], across[1], up[1]);
+      if (cell.mirror) {
+        ctx.drawImage(sim, col * fw, row * fh, fw, fh, across[0] + across[1], up[0], -across[1], up[1]);
+      } else {
+        ctx.drawImage(sim, col * fw, row * fh, fw, fh, across[0], up[0], across[1], up[1]);
+      }
       return;
     }
     var box = artSize(im.naturalWidth, im.naturalHeight, height);

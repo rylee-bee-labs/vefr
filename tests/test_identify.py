@@ -50,6 +50,8 @@ PARTS = ROOT / "web" / "player" / "parts"
 # 2026-10-12, when #416 (way pictures) added `VEFR_WAY_ICONS` and
 # `VEFR_REGION_WAY_ICONS` to every weave: two lines, `{}` for a pack with
 # no way pictures, which the sample world is.
+# It moved again on 2026-10-12 for the props slice's `window.VEFR_PROP_PICS = {};`
+# line (measured twice); with that one line removed both pins are unchanged.
 #
 # ROLLED_DATA_SHA is over the rolled-loot fixture pack - a pack this slice
 # ADDS, so no `main` ever wove it and "what pristine main prints" is not a
@@ -61,8 +63,9 @@ PARTS = ROOT / "web" / "player" / "parts"
 # is merged engine behaviour, not this slice: it is the ONLY byte that
 # moved, and this slice adds no baked block of its own. It moved again on
 # 2026-10-12 for #416's two empty way-picture lines, measured twice.
-SAMPLE_DATA_SHA = 'b02fcf8890f57da43074f1cd0daced0e758c811f401dd9c64e24ed04979fb7d8'
-ROLLED_DATA_SHA = '8a6f988cc09cf3d27247eb432ac6e1402c53a04542415516493dd13ee06c7670'
+# It moved again on 2026-10-12 for the props slice's empty `VEFR_PROP_PICS` line.
+SAMPLE_DATA_SHA = 'e3fe5e43aa5390e92c5f5dea36425ee53be3c5f6f79393166c18985f8a321330'
+ROLLED_DATA_SHA = '5ef384d5372e1f39f0ada581ed9f167af7d12cf313288590d14bb2d4b2dc615b'
 
 
 def _data_blocks(html: str) -> str:

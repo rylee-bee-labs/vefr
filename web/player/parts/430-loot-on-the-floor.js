@@ -112,6 +112,7 @@
     });
     saveFloor();
     if (names.length) {
+      playOneShot('hero', 'act');
       soundCue('pickup');
       combatSay('You pick up ' + names.join(', ') + '.');
     }
@@ -130,6 +131,8 @@
     }
     var dmg = heroAtk();
     e.hp = Math.max(0, e.hp - dmg);
+    playOneShot('hero', 'attack');
+    playOneShot('enemy:' + e.id, 'hurt');
     // A blow is the loudest thing on the floor, and it is also the one
     // wake no sight can miss: the monster that was hit is awake from
     // here, and so is every sleeper within earshot of the fight.
@@ -181,6 +184,8 @@
   // One enemy's attack: the hero loses its `atk`, clamped at zero.
   function enemyAttack(e) {
     HERO_HP = Math.max(0, HERO_HP - e.atk);
+    playOneShot('enemy:' + e.id, 'attack');
+    playOneShot('hero', 'hurt');
     saveHeroHp();
     renderHp();
     combatSay(e.name + ' hits you for ' + e.atk + '.');
