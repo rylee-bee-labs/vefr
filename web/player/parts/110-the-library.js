@@ -234,6 +234,10 @@ function renderBooksPanel() {
   }
 }
 
+// How long the panel stays up on the phone camera before it folds itself, in
+// ms. Long enough to read the newest line on a phone, short enough that the
+// panel is not over the hero by the time she has walked on (issue #430).
+var FOLD_MS = 6000;
 // The message stack is a small corner panel that can be folded away; the lines
 // stay in the page (a screen reader still hears them) and the choice is remembered.
 function bindMessagePanel() {
@@ -241,13 +245,66 @@ function bindMessagePanel() {
   var toggle = document.getElementById('toasts-toggle');
   if (!panel || !toggle) return;
   var key = 'vefr-ui-messages-' + ((window.VEFR_WORLD && window.VEFR_WORLD.name) || 'world');
+  // A browser test cannot watch six real seconds, so the wait is read from the
+  // page when there is one; without it the panel waits exactly as long as it
+  // always does.
+  function foldMs() {
+    var asked = Number(window.VEFR_MESSAGES_FOLD_MS);
+    return asked > 0 ? asked : FOLD_MS;
+  }
+  var byHand = store.get(key) === '1';   // a fold by hand is the player's own, and is kept
+  var foldTimer = null;
+  // The fold the camera does is the same one the toggle does - the lines stay
+  // in the page - but only a fold by hand is remembered.
   function setCollapsed(c) {
     panel.classList.toggle('is-collapsed', c);
     toggle.setAttribute('aria-expanded', c ? 'false' : 'true');
-    store.set(key, c ? '1' : '0');
   }
-  toggle.addEventListener('click', function () { setCollapsed(!panel.classList.contains('is-collapsed')); });
-  if (store.get(key) === '1') setCollapsed(true);
+  function onPhoneCamera() { return !!(window.VEFR_STAGE && window.VEFR_STAGE.phone); }
+  function foldSoon() {
+    if (!onPhoneCamera() || byHand) return;
+    if (foldTimer) clearTimeout(foldTimer);
+    foldTimer = setTimeout(function () {
+      foldTimer = null;
+      // Asked again at the fold itself: a window turned sideways, or a line
+      // that arrived before the camera published, must not fold a panel the
+      // phone camera is no longer drawing under.
+      if (!byHand && onPhoneCamera()) setCollapsed(true);
+    }, foldMs());
+  }
+  toggle.addEventListener('click', function () {
+    var folded = !panel.classList.contains('is-collapsed');   // folded after this tap
+    byHand = folded;
+    if (folded && foldTimer) { clearTimeout(foldTimer); foldTimer = null; }
+    setCollapsed(folded);
+    store.set(key, folded ? '1' : '0');
+    foldSoon();   // opened by hand, it folds itself again after the wait
+  });
+  if (byHand) setCollapsed(true);
+  // A new line is a line saying something NEW, not a line being written: a
+  // step rewrites the same place name into #poi and the same hint into
+  // #use-hint every turn, and a line going quiet clears itself, and neither
+  // is a line shown. A line nobody can see (`.sr-only`, `hidden`) is not a
+  // line shown either.
+  var said = lineTexts();
+  function lineTexts() {
+    return Array.prototype.map.call(panel.querySelectorAll('p'), function (p) {
+      if (p.classList.contains('sr-only') || p.hidden || p.closest('[hidden]')) return '';
+      return p.textContent || '';
+    });
+  }
+  if (window.MutationObserver) {
+    new MutationObserver(function () {
+      var now = lineTexts();
+      var fresh = false;
+      for (var i = 0; i < now.length; i++) if (now[i] && now[i] !== said[i]) fresh = true;
+      said = now;
+      if (!fresh || byHand || !onPhoneCamera()) return;
+      setCollapsed(false);
+      foldSoon();
+    }).observe(panel, { childList: true, characterData: true, subtree: true,
+                        attributes: true, attributeFilter: ['hidden'] });
+  }
 }
 
 function bindLibrary() {
