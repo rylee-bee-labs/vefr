@@ -289,11 +289,25 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # after - only the player around them changed:
 #   4f88895a4fe23ea81dda35e30c887d09540a29fac4ded1821ee29a5975a550c7
 #   4f88895a4fe23ea81dda35e30c887d09540a29fac4ded1821ee29a5975a550c7
+# ELSLICEFIX 2026-10-11, the endless gate (the stair past the last Section waits
+# for `story_end`) cherry-picked onto post-#405 main: its hunk in the descent
+# part moves the woven player, so this weave moves. Measured twice in separate
+# processes, readings equal; the pack's data lines are unchanged:
+#   bd38a6085259b6ec3fc987037c78d1d35fcecddb6105f69c99070c4cc6eaa8ff
+#   bd38a6085259b6ec3fc987037c78d1d35fcecddb6105f69c99070c4cc6eaa8ff
+# Descent polish 2026-10-12 (vefr#412): generated monsters carry their family's sprite, the bag strip
+# stacks by kind, a scrolling dark floor sizes its tile to the lit circle; all three move the woven
+# player. Measured twice in separate processes, readings equal; the pack's data lines are unchanged:
+#   258470fd8a0d9c8925f39b9d1dff597ab443bc6807f24fd34e47f9119cdede20
+#   258470fd8a0d9c8925f39b9d1dff597ab443bc6807f24fd34e47f9119cdede20
 # ELDECFIX4 2026-10-12, PR 410 edits web/player/parts/397-the-descent.js, which
 # is woven into every pack, so this weave moved from the ELSLICEFIX digest
 # (bd38a6085259b6ec3fc987037c78d1d35fcecddb6105f69c99070c4cc6eaa8ff) to:
 #   f02974fad1de235eb0a6b0123cc692c0362c6405a45470315d995b57249f9eb6
-NO_SKIN_WEAVE_SHA256 = "f02974fad1de235eb0a6b0123cc692c0362c6405a45470315d995b57249f9eb6"
+# Merged with #412 on 2026-10-12: both moved the woven player; measured twice in separate processes:
+#   c9ec6b7110edeb6fb3d3d3d8d0eba4d3a3475888339280a88042e866ab4b162e
+#   c9ec6b7110edeb6fb3d3d3d8d0eba4d3a3475888339280a88042e866ab4b162e
+NO_SKIN_WEAVE_SHA256 = "c9ec6b7110edeb6fb3d3d3d8d0eba4d3a3475888339280a88042e866ab4b162e"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

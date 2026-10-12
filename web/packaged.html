@@ -157,6 +157,9 @@
   .hud [hidden] + .hud-mark { display: none; }
   .bag-pip { width: 22px; height: 22px; object-fit: contain; image-rendering: pixelated; }
   .bag-pip--dot { display: inline-block; border-radius: 50%; background: #CBC6B6; }
+  .bag-cell { position: relative; display: inline-flex; }
+  .bag-pip-count { position: absolute; right: -6px; bottom: -6px; min-width: 16px; padding: 0 3px; border: 1px solid var(--glass-edge); border-radius: 8px; background: var(--glass); color: var(--glass-ink); font: 700 0.7rem/14px var(--read); text-align: center; pointer-events: none; }
+  .bag-pip--more { width: auto; min-width: 22px; padding: 0 4px; font: 700 0.8rem/22px var(--read); color: var(--glass-ink); text-align: center; }
   .bag-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
   .bag-row-art { width: 32px; height: 32px; object-fit: contain; image-rendering: pixelated; }
   .bag-row-art--dot { display: inline-block; border-radius: 50%; background: #8B7A4E; }
@@ -1860,40 +1863,77 @@ function addGold(n) {
   return g;
 }
 
-// The top-of-screen strip: a small sprite per carried thing, beside the
-// health bar. A thing with no ready sprite is a neutral dot. A worn
-// thing is not in the bag list and is not shown here - it sits in its
-// slot in the Bag panel instead.
+// The top-of-screen strip: one picture per kind of thing carried, beside
+// the health bar, with a count when there is more than one. Past
+// BAG_STRIP_KINDS kinds the rest are a `+N` pip. A thing with no ready
+// sprite is a neutral dot. A worn thing is not in the bag list and is not
+// shown here - it sits in its slot in the Bag panel instead.
+var BAG_STRIP_KINDS = 8;
+function bagKinds(carried) {
+  var kinds = [];
+  carried.forEach(function (c) {
+    var kind = null;
+    for (var i = 0; i < kinds.length; i++) {
+      // one pip per id AND rarity: a rare potion is never hidden behind two common ones
+      if (kinds[i].first.id === c.id && (kinds[i].first.rarity || '') === (c.rarity || '')) { kind = kinds[i]; break; }
+    }
+    if (!kind) { kind = { first: c, count: 0 }; kinds.push(kind); }
+    kind.count++;
+  });
+  return kinds;
+}
+function bagPip(carried) {
+  var src = itemSpriteSrc(carried.id);
+  var node;
+  if (src) {
+    node = document.createElement('img');
+    node.src = src;
+    node.alt = '';
+    node.className = 'bag-pip';
+  } else {
+    node = document.createElement('span');
+    node.className = 'bag-pip bag-pip--dot';
+    node.setAttribute('aria-hidden', 'true');
+  }
+  return node;
+}
 function renderBagStrip() {
   var strip = document.getElementById('bag-strip');
   if (!strip) return;
   strip.textContent = '';
-  var carried = bagCarried().filter(function (c) { return !isWorn(c.id); });
-  if (!carried.length) {
+  var kinds = bagKinds(bagCarried().filter(function (c) { return !isWorn(c.id); }));
+  if (!kinds.length) {
     strip.hidden = true;
     strip.setAttribute('aria-label', 'Nothing carried');
     return;
   }
   strip.hidden = false;
-  carried.forEach(function (c) {
-    var src = itemSpriteSrc(c.id);
-    var node;
-    if (src) {
-      node = document.createElement('img');
-      node.src = src;
-      node.alt = '';
-      node.className = 'bag-pip';
-    } else {
-      node = document.createElement('span');
-      node.className = 'bag-pip bag-pip--dot';
-      node.setAttribute('aria-hidden', 'true');
-    }
-    strip.appendChild(node);
+  kinds.slice(0, BAG_STRIP_KINDS).forEach(function (kind) {
+    var pip = bagPip(kind.first);
+    if (kind.count === 1) { strip.appendChild(pip); return; }
+    var cell = document.createElement('span');
+    cell.className = 'bag-cell';
+    var badge = document.createElement('span');
+    badge.className = 'bag-pip-count';
+    badge.setAttribute('aria-hidden', 'true');
+    badge.textContent = String(kind.count);
+    cell.appendChild(pip);
+    cell.appendChild(badge);
+    strip.appendChild(cell);
   });
-  // The strip's own words carry the rarity too, so a screen reader hears
-  // what the eye sees and neither has to wait for anything.
-  strip.setAttribute('aria-label',
-    'Carrying: ' + carried.map(carriedName).join(', ') + '.');
+  if (kinds.length > BAG_STRIP_KINDS) {
+    var more = document.createElement('span');
+    more.className = 'bag-pip bag-pip--more';
+    more.setAttribute('aria-hidden', 'true');
+    more.textContent = '+' + (kinds.length - BAG_STRIP_KINDS);
+    strip.appendChild(more);
+  }
+  // The strip's own words carry the rarity and every kind's count, so a
+  // screen reader hears what the eye sees and neither has to wait for anything.
+  strip.setAttribute('aria-label', 'Carrying: ' + kinds.map(function (kind) {
+    var words = carriedName(kind.first);
+    return kind.count > 1 ? words + ' (' + kind.count + ')' : words;
+  }).join(', ') + '.');
 }
 
 // The Bag panel's "You" section: five slots in a fixed order, each
@@ -7555,6 +7595,7 @@ window.VEFR_DESCENT = (function () {
       mobs.push({
         id: 'm' + i, family: family.family,
         name: (typeof family.name === 'string' && family.name) ? family.name : DEFAULT_FAMILY,
+        sprite: (typeof family.sprite === 'string') ? family.sprite : '',
         at: [at[0], at[1]], hp: Math.max(1, hp), atk: Math.max(1, atk),
         sight: Math.max(1, sight), xp: xpFor(family, depth),
         drops: mobDrops(key, 'm' + i, family.drops)
@@ -7682,6 +7723,7 @@ window.VEFR_DESCENT = (function () {
     var mob = {
       id: WARDEN_MOB, family: family,
       name: (typeof base.name === 'string' && base.name) ? base.name : DEFAULT_FAMILY,
+      sprite: (typeof base.sprite === 'string') ? base.sprite : '',
       at: [at[0], at[1]], hp: Math.max(1, hp), atk: Math.max(1, atk),
       sight: Math.max(1, sight), xp: xpFor(base, depth),
       drops: mobDrops(key, WARDEN_MOB, base.drops), warden: true
@@ -8166,7 +8208,7 @@ window.VEFR_DESCENT = (function () {
   // roster already yielded and, by `loadEnemies`'s `alive`, unattackable
   // from the first turn, so its challenge could never be completed.
   function enemyEntry(mob) {
-    var entry = { id: mob.id, name: mob.name, sprite: '', at: mob.at.slice(),
+    var entry = { id: mob.id, name: mob.name, sprite: mob.sprite || '', at: mob.at.slice(),
                   hp: mob.hp, atk: mob.atk, sight: mob.sight, xp: mob.xp,
                   drops: mob.drops.slice(), warden: mob.warden === true };
     if (mob.fightable === false) entry.fightable = false;
@@ -10120,13 +10162,21 @@ function setupTown() {
     var fitW = viewW / (cols * town.tile);
     var dock = window.innerWidth <= 600 && window.innerHeight > window.innerWidth;
     if (fogOn) {
-      // A dark map is read up close at one tile. A map already small enough
-      // to read whole shrinks into the HUD's band (and letterboxes on the
-      // dock); a bigger one still scrolls, exactly as it did.
+      // A dark map is read up close. A map small enough to read whole at
+      // 32 px shrinks into the HUD's band (and letterboxes on the dock),
+      // exactly as before, so no HUD piece ever covers one of its tiles. A
+      // bigger map scrolls, and there the tile is as big as the lit circle
+      // lets fit the window's height, 32 to 48 px: the HUD sits in the dark
+      // corners outside the circle. Sight 8 at 720 px is 42 px, where a
+      // fixed 32 left the hero a speck (Cottage walk, 2026-10-12). A phone
+      // keeps 32 px.
       var z = 32 / town.tile;
       var fitH = Math.max(viewH - 2 * HUD_BAND, 1) / (rows * town.tile);
       var whole = cols * town.tile * z <= viewW && rows * town.tile * z <= viewH;
-      return (dock || whole) ? Math.min(z, fitW, fitH) : z;
+      if (dock || whole) return Math.min(z, fitW, fitH);
+      var lit = 2 * fogRadius + 1;
+      var px = Math.floor(Math.max(viewH, 1) / lit);
+      return Math.max(32, Math.min(48, px)) / town.tile;
     }
     var fit = Math.min(fitW, viewH / (rows * town.tile));
     if (fit * town.tile >= MIN_FIT_TILE) return Math.min(fit, 3);  // the whole map reads
@@ -10176,7 +10226,8 @@ function setupTown() {
     var w = grow ? window.innerWidth : mw, h = grow ? window.innerHeight : mh;
     window.VEFR_STAGE = {
       x: x, y: y, w: w, h: h,
-      map: { x: mx, y: my, w: mw, h: mh }
+      map: { x: mx, y: my, w: mw, h: mh },
+      tile: T   // the drawn tile, CSS px (read by tests/browser/test_camera_zoom.py)
     };
     var stage = document.getElementById('stage');
     if (stage) {

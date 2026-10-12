@@ -973,6 +973,12 @@ def _hp_range(family: dict) -> tuple[int, int]:
     return _range_of(family, 'hp', (1, 1))
 
 
+def _sprite_of(family: dict) -> str:
+    """A family's sprite name, or '' when it names none."""
+    value = family.get('sprite')
+    return value if isinstance(value, str) else ''
+
+
 def _mob_budget(rows: list[str], section: dict | None = None,
                 k: int = 1) -> int:
     """How many randoms this floor carries.
@@ -1073,6 +1079,7 @@ def mobs_at(key: str, section: dict, rows: list[str], up: tuple[int, int],
         mobs.append({
             'id': f'm{i}', 'family': family['family'],
             'name': family.get('name') or DEFAULT_FAMILY,
+            'sprite': _sprite_of(family),
             'at': [at[0], at[1]], 'hp': max(1, hp), 'atk': max(1, atk),
             'sight': max(1, sight),
             'xp': sections.xp_for(family, depth),
@@ -1379,6 +1386,7 @@ def _with_warden(mobs: list, key: str, section: dict, k: int, at, source,
     mob = {
         'id': WARDEN_MOB, 'family': family,
         'name': base.get('name') or DEFAULT_FAMILY,
+        'sprite': _sprite_of(base),
         'at': tile, 'hp': max(1, hp), 'atk': max(1, atk), 'sight': max(1, sight),
         'xp': sections.xp_for(base, depth),
         'drops': mob_drops(key, WARDEN_MOB, base.get('drops'), catalog),
