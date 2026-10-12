@@ -17,6 +17,7 @@
      bagNames:     [string]     // each bag row's visible text, in DOM order
      bagAria:      [string]     // each row's aria-label, where it has one
      strip:        string       // the HUD strip's aria-label
+     stripKids:    [{cls, text}] // the HUD strip's own children, in order
      panelText:    string       // every word visible in the Bag panel
      bag:          <parsed>     // the bag as it stands in localStorage
    */
@@ -68,6 +69,7 @@ const snap = () => {
     bagNames: rows.map((r) => (r.querySelector('.bag-row-name') || {}).textContent || ''),
     bagAria: rows.map((r) => r.getAttribute('aria-label') || ''),
     strip: strip ? (strip.getAttribute('aria-label') || '') : '',
+    stripKids: strip ? [...strip.children].map((el) => ({ cls: el.className, text: el.textContent || '' })) : [],
     panelText: panel ? (panel.textContent || '') : '',
     bag,
   };

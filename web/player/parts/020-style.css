@@ -150,6 +150,9 @@
   .hud [hidden] + .hud-mark { display: none; }
   .bag-pip { width: 22px; height: 22px; object-fit: contain; image-rendering: pixelated; }
   .bag-pip--dot { display: inline-block; border-radius: 50%; background: #CBC6B6; }
+  .bag-cell { position: relative; display: inline-flex; }
+  .bag-pip-count { position: absolute; right: -6px; bottom: -6px; min-width: 16px; padding: 0 3px; border: 1px solid var(--glass-edge); border-radius: 8px; background: var(--glass); color: var(--glass-ink); font: 700 0.7rem/14px var(--read); text-align: center; pointer-events: none; }
+  .bag-pip--more { width: auto; min-width: 22px; padding: 0 4px; font: 700 0.8rem/22px var(--read); color: var(--glass-ink); text-align: center; }
   .bag-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
   .bag-row-art { width: 32px; height: 32px; object-fit: contain; image-rendering: pixelated; }
   .bag-row-art--dot { display: inline-block; border-radius: 50%; background: #8B7A4E; }
