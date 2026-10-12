@@ -27,7 +27,7 @@ suite already pins. The hero's start and the rat one tile to its right
 are the same pinned coordinates in both, so the fight verbs are up in
 every run: no walk is needed.
 
-Without `uv run playwright install chromium` these skip - conftest's
+Without `uv run playwright install chromium` these skip - fixtures.py's
 browser fixture, not a failure.
 """
 

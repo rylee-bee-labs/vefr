@@ -16,7 +16,7 @@ focused button belongs to the button, not to the player's keydown
 handler.
 
 Without `uv run playwright install chromium` these skip - that is the
-expected result on a machine with no browser (conftest's browser
+expected result on a machine with no browser (fixtures.py's browser
 fixture), not a failure.
 """
 

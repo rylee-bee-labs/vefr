@@ -43,9 +43,9 @@ sys.path.insert(0, str(ROOT / "tests" / "fixtures"))
 def browser():
     """A headless Chromium for this module, or a skip.
 
-    `tests/` has no browser fixture of its own (that lives in
-    `tests/browser/conftest.py`), and this file's browser tests are the
-    `vefr look` half of issue #344, so they belong here.
+    It overrides the shared `browser` of `tests/browser/fixtures.py`, which
+    keeps a live Chromium open; this file's browser tests are the `vefr look`
+    half of issue #344, so they belong here.
     """
     try:
         from playwright.sync_api import sync_playwright
