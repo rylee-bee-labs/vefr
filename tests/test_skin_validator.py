@@ -332,7 +332,10 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # Touch controls (#428) merged with pixel art (#427); measured twice in separate processes, readings equal:
 #   e857bc9ef7ae6cbaafc57ab3e2995a2c0d833dc7fc11a0c791d7b5d9a9db31cf
 #   e857bc9ef7ae6cbaafc57ab3e2995a2c0d833dc7fc11a0c791d7b5d9a9db31cf
-NO_SKIN_WEAVE_SHA256 = "e857bc9ef7ae6cbaafc57ab3e2995a2c0d833dc7fc11a0c791d7b5d9a9db31cf"
+# The sweep fixes on top of touch controls (#428); measured twice in separate processes, readings equal:
+#   36865f9d011c3b59cb11d9cb235a9a02d92e1691ec233bff8375474eaaa8b1cd
+#   36865f9d011c3b59cb11d9cb235a9a02d92e1691ec233bff8375474eaaa8b1cd
+NO_SKIN_WEAVE_SHA256 = "36865f9d011c3b59cb11d9cb235a9a02d92e1691ec233bff8375474eaaa8b1cd"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():
