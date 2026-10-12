@@ -1,10 +1,17 @@
 # VEFR Storybook
 
 > Category: Game UI
-> Surface: mobile-first web game (VEFR player); Cottage of the Breeze is its first theme
+> Surface: mobile-first web game (VEFR player); the look Cottage of the Breeze chose
 
-**Status: draft for Rylee's review (2026-10-12).** The cozy, storybook interface for VEFR games: the world fills the
-screen, and everything else is one thumb away. Art direction lives in [ART-BIBLE.md](ART-BIBLE.md). Tokens live in
+**Status: draft for Rylee's review (2026-10-12).** Cottage's cozy, storybook interface: the world fills the
+screen, and everything else is one thumb away.
+
+**Whose look this is.** VEFR Storybook is **Cottage of the Breeze's** look, kept in VEFR as a worked example a
+game may start from. VEFR does not impose it: every game chooses or writes its own design system and art bible
+("two games never share one", [making-art.md](../../guides/making-art.md)), and nothing here takes a choice away
+from a player. Look (Dark or Parchment), text size, reduced motion and how to move are the **player's**
+settings; "Dark by default" is only where Cottage starts.
+ Art direction lives in [ART-BIBLE.md](ART-BIBLE.md). Tokens live in
 [tokens.css](tokens.css).
 
 ## North star

@@ -106,8 +106,9 @@ Next: [the journey](journey.md) puts this inside the whole path from an empty ta
 A small studio keeps a whole game looking like one game with three habits, and VEFR games should too:
 
 - **An art bible before the art**: palette, light direction, outline rule, detail level by layer, and one scale for
-  everything. The Storybook one is [docs/design/storybook/ART-BIBLE.md](../design/storybook/ART-BIBLE.md); a game
-  can adopt it or write its own the same shape.
+  everything. Cottage's (the Storybook look) is
+  [docs/design/storybook/ART-BIBLE.md](../design/storybook/ART-BIBLE.md); each game writes its own, the same
+  shape, and may start from that one.
 - **Layers that stack**: seamless ground, walls with their edges, transparent objects (doors, stairs, props),
   characters, then the game's light and fog. Match the detail across layers.
 - **Kits, not single pictures**: draw a place's set in ONE bundled image call (a grid on flat #00FF00, an approved

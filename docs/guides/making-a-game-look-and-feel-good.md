@@ -8,6 +8,8 @@ The design system this produced is [`docs/design/storybook/`](../design/storyboo
 [art bible](../design/storybook/ART-BIBLE.md) and [tokens](../design/storybook/tokens.css)).
 
 ## 1. Start from a design system, not from screens
+Each game has its own: Storybook is Cottage's, not VEFR's house style, and a design system decides how the
+game is made, never what a player may choose (look, text size, motion, movement stay player settings).
 A design system is a short written look: colours, type sizes, control sizes, motion, how panels behave, and for a
 game an **art bible**. Rylee's first interface was made screen by screen without one; the second was made against
 one, and she said: "This new direction is much better than my first attempts without a design system." Write it

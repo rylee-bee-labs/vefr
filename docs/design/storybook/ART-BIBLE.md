@@ -1,4 +1,10 @@
-# VEFR Storybook: art bible
+# VEFR Storybook: art bible (Cottage of the Breeze)
+
+**Whose look this is.** VEFR Storybook is **Cottage of the Breeze's** look, kept in VEFR as a worked example a
+game may start from. VEFR does not impose it: every game chooses or writes its own design system and art bible
+("two games never share one", [making-art.md](../../guides/making-art.md)), and nothing here takes a choice away
+from a player. Look (Dark or Parchment), text size, reduced motion and how to move are the **player's**
+settings; "Dark by default" is only where Cottage starts.
 
 **Status: draft for Rylee's review (2026-10-12).** Written from the art she liked in the Cottage of the Breeze
 Section 1 beta: the round-20 cellar flagstones and walls, the redrawn residents, and the isolated doors and stairs.
