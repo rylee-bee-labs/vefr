@@ -158,6 +158,7 @@
   window.VEFR_STEP_MOTION = stepMotion;
 
   function draw() {
+    animWant = false;
     var ph = phase();
     var water = (town.water_by_phase || {})[ph];
     var flood = town.flood_tiles || [];
@@ -282,22 +283,38 @@
       ctx.drawImage(bookIconImgs[b.found], at[0] * T + T * 0.12, at[1] * T + T * 0.12,
                     T * 0.76, T * 0.76);
     });
+    // Everything that stands on the ground, drawn in one list. A region
+    // with props sorts it by base row (a prop's bottom row, a character's
+    // own row) so what stands further back is covered by what stands in
+    // front; a region without props keeps the order it always had.
+    readProps();
+    var stands = [];
+    var seq = 0;
+    function stand(row, label, paint) {
+      stands.push({ row: row, label: label, seq: seq++, paint: paint });
+    }
+    propList.forEach(function (p) {
+      if (!propSeen(p)) return;
+      stand(p.at[1] + p.h - 1, 'prop:' + p.pic, function () { drawProp(p); });
+    });
     // The people: their own sprite when the pack names one, else the
     // drawn figure (a body and a head), so you can see who is here.
     Object.keys(speakers || {}).forEach(function (key) {
       var s = speakers[key];
       if (!s || !Array.isArray(s.at)) return;
       if (hideUnseen(s.at[0], s.at[1])) return;
-      if (spriteReady(key)) { drawSprite(key, s.at[0], s.at[1]); return; }
-      var px = s.at[0] * T, py = s.at[1] * T;
-      ctx.fillStyle = town.speaker_color || '#8b939c';
-      ctx.beginPath();
-      ctx.arc(px + 16 * u, py + 21 * u, 6 * u, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = town.speaker_head || '#d8d5df';
-      ctx.beginPath();
-      ctx.arc(px + 16 * u, py + 11 * u, 4 * u, 0, Math.PI * 2);
-      ctx.fill();
+      stand(s.at[1], 'speaker:' + key, function () {
+        if (spriteReady(key)) { drawSprite(key, s.at[0], s.at[1]); return; }
+        var px = s.at[0] * T, py = s.at[1] * T;
+        ctx.fillStyle = town.speaker_color || '#8b939c';
+        ctx.beginPath();
+        ctx.arc(px + 16 * u, py + 21 * u, 6 * u, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = town.speaker_head || '#d8d5df';
+        ctx.beginPath();
+        ctx.arc(px + 16 * u, py + 11 * u, 4 * u, 0, Math.PI * 2);
+        ctx.fill();
+      });
     });
 
     // The living hazards: their own sprite when the pack names one,
@@ -313,21 +330,23 @@
       // remember something that moves, and seeing through the dark
       // would give the floor away.
       if (fogOn && !(litSet && litSet[e.at[0] + ',' + e.at[1]])) return;
-      if (e.sprite && spriteReady(e.sprite)) {
-        if (!e.alive) ctx.globalAlpha = 0.45;
-        drawSprite(e.sprite, e.at[0], e.at[1]);
-        ctx.globalAlpha = 1;
-        return;
-      }
-      var ex = e.at[0] * T, ey = e.at[1] * T;
-      ctx.fillStyle = e.alive ? '#8a3b34' : '#4d4a48';
-      ctx.beginPath();
-      ctx.arc(ex + 16 * u, ey + 21 * u, 6 * u, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = e.alive ? '#d9c3bd' : '#8e8a84';
-      ctx.beginPath();
-      ctx.arc(ex + 16 * u, ey + 11 * u, 4 * u, 0, Math.PI * 2);
-      ctx.fill();
+      stand(e.at[1], 'enemy:' + e.id, function () {
+        if (e.sprite && spriteReady(e.sprite)) {
+          if (!e.alive) ctx.globalAlpha = 0.45;
+          drawSprite(e.sprite, e.at[0], e.at[1]);
+          ctx.globalAlpha = 1;
+          return;
+        }
+        var ex = e.at[0] * T, ey = e.at[1] * T;
+        ctx.fillStyle = e.alive ? '#8a3b34' : '#4d4a48';
+        ctx.beginPath();
+        ctx.arc(ex + 16 * u, ey + 21 * u, 6 * u, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = e.alive ? '#d9c3bd' : '#8e8a84';
+        ctx.beginPath();
+        ctx.arc(ex + 16 * u, ey + 11 * u, 4 * u, 0, Math.PI * 2);
+        ctx.fill();
+      });
     });
 
     // Loot lying on the floor: a killed enemy's drop, at the tile it
@@ -335,12 +354,19 @@
     floor.forEach(function (d) {
       if (!d || d.region !== regionName || !Array.isArray(d.at)) return;
       if (fogOn && !(litSet && litSet[d.at[0] + ',' + d.at[1]])) return;
-      drawItemMarker(d.item, d.at[0], d.at[1]);
+      stand(d.at[1], 'loot:' + d.item, function () {
+        drawItemMarker(d.item, d.at[0], d.at[1]);
+      });
     });
 
     // The hero: their own sprite when the pack names one, else the dot.
     // The one character drawn with facing and step motion.
-    drawHero();
+    stand(camHero[1], 'hero', drawHero);
+    if (propList.length) {
+      stands.sort(function (a, b) { return (a.row - b.row) || (a.seq - b.seq); });
+    }
+    window.VEFR_DRAW_ORDER = stands.map(function (s) { return s.label; });
+    stands.forEach(function (s) { s.paint(); });
     // Fog of war: explored but not currently lit is dimmed; never-seen
     // tiles were skipped above and stay dark.
     if (fogOn) {
@@ -355,6 +381,7 @@
     }
     drawTargetRing();
     ctx.restore();
+    if (animWant) scheduleAnim();
   }
 
   // A thin ring on the tile Interact would act on, so the picture and
@@ -458,7 +485,7 @@
     if (!(y >= 0) || y >= rows.length) return false;
     var row = rows[y] || '';
     if (!(x >= 0) || x >= row.length) return false;
-    return !((town.legend[row.charAt(x)] || {}).solid);
+    return !((town.legend[row.charAt(x)] || {}).solid) && !propBlocked(x, y);
   }
 
   // The floor tile nearest `[x, y]` by Manhattan distance, scanning
@@ -1031,6 +1058,10 @@
       var shut = (window.VEFR_DESCENT && window.VEFR_DESCENT.shutDoorLine)
         ? window.VEFR_DESCENT.shutDoorLine(regionName, nx, ny) : '';
       if (shut) combatSay(shut);
+      heroSettleSoon();
+      return;
+    }
+    if (propBlocked(nx, ny)) {
       heroSettleSoon();
       return;
     }

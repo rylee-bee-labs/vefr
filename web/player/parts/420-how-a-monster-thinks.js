@@ -22,7 +22,7 @@
   // a single step may land on is `tileOpenForEnemy`'s business.
   function floorOpen(x, y) {
     if (x < 0 || y < 0 || y >= town.map.length || x >= town.map[0].length) return false;
-    return !((town.legend[town.map[y][x]] || {}).solid);
+    return !((town.legend[town.map[y][x]] || {}).solid) && !propBlocked(x, y);
   }
   // Steps from (x, y) to every walkable tile. `dist` has the source at
   // 0 and no entry at all for a tile the flood never reached. The flood

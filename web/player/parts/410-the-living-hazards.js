@@ -110,6 +110,7 @@
   function tileOpenForEnemy(x, y) {
     if (y < 0 || x < 0 || y >= town.map.length || x >= town.map[0].length) return false;
     if ((town.legend[town.map[y][x]] || {}).solid) return false;
+    if (propBlocked(x, y)) return false;
     if (x === hero[0] && y === hero[1]) return false;
     return !enemyAt(x, y);
   }

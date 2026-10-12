@@ -186,6 +186,42 @@ trapdoor is one whose point of interest or legend tile says "trapdoor" or
 root `tiles/`; a kind neither names keeps the door picture. A way picture
 is drawn over the whole tile, so bake it at the same size as ground tiles.
 
+### Things on the map (props)
+
+A prop is a picture drawn over the ground: a rock, a bush, a well. Its
+footprint can block walking. Declare props in a region's `contract.json`
+under `props`, one object per prop:
+
+```json
+"props": [
+  { "pic": "well", "at": [5, 2], "size": [1, 2], "block": ["#", "#"] },
+  { "pic": "flowers", "at": [7, 6], "block": ["."], "frames": 2, "fps": 4 }
+]
+```
+
+- `pic` - the picture's file name without its extension. It is looked up as
+  `.webp` then `.png` in the region's `props/` folder, then the pack's root
+  `props/` folder. Use a transparent picture.
+- `at` - `[x, y]`, the tile of the picture's top-left corner.
+- `size` - `[width, height]` in tiles; the default is `[1, 1]`. The picture is
+  drawn across the whole footprint, bottom edge on the footprint's last row.
+- `block` - one string per footprint row, each the width of `size`: `#` is a
+  blocked tile, `.` an open one. Leave it out and every tile of the footprint
+  blocks walking.
+- `frames` - how many frames the picture holds, side by side in one strip
+  (1 to 12; the default is 1). The picture's width must divide evenly by it.
+- `fps` - how fast the frames change (1 to 12; the default is 4). Reduced
+  motion shows frame 0.
+
+A prop is drawn only where the player can see the ground, and it is drawn
+in front of or behind people by its bottom row. A blocked prop stops the
+hero, monsters and autoexplore the way a wall does.
+
+The validator refuses a prop whose picture is missing, whose footprint leaves
+the map, whose `block` does not match its `size`, or whose footprint covers
+a speaker, the hero's start, a wake point, a door or a map book. Each message
+names the region, the prop's number and its picture.
+
 ## Where your world lives
 
 ```text
