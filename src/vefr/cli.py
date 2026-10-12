@@ -2284,6 +2284,53 @@ def _player_door(web_dir: Path) -> str:
     return 'data:image/webp;base64,' + base64.b64encode(f.read_bytes()).decode('ascii')
 
 
+_WAY_PICTURE_NAMES = {'door': 'way-door', 'stairs-up': 'way-stairs-up',
+                      'stairs-down': 'way-stairs-down', 'trapdoor': 'way-trapdoor'}
+
+
+def _way_pictures(pack: Path, region_dir: Path | None) -> dict[str, str]:
+    """A region's own way pictures by kind, inlined; a kind it does not name is absent."""
+    out: dict[str, str] = {}
+    for kind, name in _WAY_PICTURE_NAMES.items():
+        paths = _pack_tile_paths(pack, region_dir, name)
+        if paths:
+            out[kind] = _tile_data_uri(paths[0])
+    return out
+
+
+def _player_way_icons(pack: Path | None) -> dict[str, str]:
+    """The pack-wide way pictures, from its root tiles/, inlined by kind."""
+    if pack is None:
+        return {}
+    return _way_pictures(Path(pack), Path(pack))
+
+
+def _player_region_way_icons(world: dict, pack: Path | None) -> dict[str, dict[str, str]]:
+    """Each region's own way pictures, keyed by region name; only regions that bring one."""
+    if pack is None:
+        return {}
+    pack_path = Path(pack)
+    flat = not _has_subdir(pack_path, 'acts')
+    out: dict[str, dict[str, str]] = {}
+    for act in (world.get('acts') or []):
+        act = act if isinstance(act, dict) else {}
+        act_dir = None if flat else _act_dir_for(pack_path, act.get('id'))
+        for rname in (act.get('regions') or {}):
+            if flat:
+                region_dir = pack_path
+            elif act_dir is not None:
+                region = _inside(os.path.realpath(act_dir), rname) if isinstance(rname, str) and rname else None
+                region_dir = Path(region) if region is not None else None
+            else:
+                region_dir = None
+            if region_dir is None or os.path.realpath(region_dir) == os.path.realpath(pack_path):
+                continue
+            pictures = _way_pictures(pack_path, region_dir)
+            if pictures:
+                out[rname] = pictures
+    return out
+
+
 def _player_book_icons(web_dir: Path) -> dict[str, str]:
     """The 'found on the map' and 'given by someone' icons, inlined.
 
@@ -2677,6 +2724,11 @@ def weave_html(pack: Path, *, pool: dict | None = None) -> str:
                                 _json.dumps(items, ensure_ascii=False))
     out_html = out_html.replace('{{door_json}}',
                                 _json.dumps(_player_door(template_path.parent)))
+    out_html = out_html.replace('{{way_icons_json}}',
+                                _json.dumps(_player_way_icons(pack), ensure_ascii=False))
+    out_html = out_html.replace('{{region_way_icons_json}}',
+                                _json.dumps(_player_region_way_icons(world, pack),
+                                            ensure_ascii=False))
     out_html = out_html.replace('{{chest_json}}',
                                 _json.dumps(_player_chest(template_path.parent)))
     out_html = out_html.replace('{{book_icons_json}}',

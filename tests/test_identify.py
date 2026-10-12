@@ -46,7 +46,10 @@ PARTS = ROOT / "web" / "player" / "parts"
 # SAMPLE_DATA_SHA is the one a pristine `main` prints, and it still is: the
 # sample world declares no descent, so nothing ADR 0017 slice 2 or the
 # Section-tiles work baked into it, and it is the half of this test that
-# says a pack naming no reader is untouched by the slice.
+# says a pack naming no reader is untouched by the slice. It last moved on
+# 2026-10-12, when #416 (way pictures) added `VEFR_WAY_ICONS` and
+# `VEFR_REGION_WAY_ICONS` to every weave: two lines, `{}` for a pack with
+# no way pictures, which the sample world is.
 #
 # ROLLED_DATA_SHA is over the rolled-loot fixture pack - a pack this slice
 # ADDS, so no `main` ever wove it and "what pristine main prints" is not a
@@ -56,9 +59,10 @@ PARTS = ROOT / "web" / "player" / "parts"
 # block at src/vefr/cli.py:2627 - a key that lands in `VEFR_DESCENT_DEF`
 # for every pack with a descent, which the sample world has none of. That
 # is merged engine behaviour, not this slice: it is the ONLY byte that
-# moved, and this slice adds no baked block of its own.
-SAMPLE_DATA_SHA = '62a08f1ac2b5739cef21abfefa672df09af94bd369cf1ed68c7cc81e58bd40da'
-ROLLED_DATA_SHA = '82001ea6c10a94576969a7eb9cdaf795d976259eee5e1a6a55adf5eccbe4f8d9'
+# moved, and this slice adds no baked block of its own. It moved again on
+# 2026-10-12 for #416's two empty way-picture lines, measured twice.
+SAMPLE_DATA_SHA = 'b02fcf8890f57da43074f1cd0daced0e758c811f401dd9c64e24ed04979fb7d8'
+ROLLED_DATA_SHA = '8a6f988cc09cf3d27247eb432ac6e1402c53a04542415516493dd13ee06c7670'
 
 
 def _data_blocks(html: str) -> str:
