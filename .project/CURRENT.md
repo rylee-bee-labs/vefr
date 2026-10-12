@@ -32,8 +32,8 @@ Run `lab enter` or `now-block --print .`, then:
 ```sh
 git fetch origin
 git status --short
-gh pr list --repo Rylee-Bee/vefr --state open
-gh issue list --repo Rylee-Bee/vefr --state open
+gh pr list --repo rylee-bee-labs/vefr --state open
+gh issue list --repo rylee-bee-labs/vefr --state open
 ```
 
 Read only the plan/ADR for the issue you are actually changing.
