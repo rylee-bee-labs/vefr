@@ -7625,6 +7625,10 @@ window.VEFR_DESCENT = (function () {
   var DEFAULT_PATTERN = ['entry', 'n', 'n', 'special', 'landing', 'n',
                          'special', 'n', 'warden'];
   var PATTERN_SLOTS = ['entry', 'n', 'special', 'landing', 'warden'];
+  // The two slots that are a landing (twin of `sections.LANDING_SLOTS`):
+  // `entry` is the floor a hero comes down to, and `landing` the one the
+  // pattern puts deeper in the Section.
+  var LANDING_SLOTS = ['entry', 'landing'];
   var DEFAULT_SPECIALS = ['treasure', 'infested', 'hub'];
 
   function wholePair(value, fallback) {
@@ -7646,6 +7650,14 @@ window.VEFR_DESCENT = (function () {
       : DEFAULT_PATTERN.slice();
     while (slots.length < sectionFloors(section)) slots.push('n');
     return slots;
+  }
+  // Whether floor `k` of a Section is one of its landings: the twin of
+  // `sections.is_landing`, which the bake (`vefr delve --section`) reads to
+  // wire a landing's up-stair to the descent's entry.
+  function isLanding(section, k) {
+    var slots = sectionPattern(section);
+    var slot = (isWhole(k) && k >= 1 && k <= slots.length) ? slots[k - 1] : 'n';
+    return LANDING_SLOTS.indexOf(slot) >= 0;
   }
   function sectionSpecials(section) {
     var raw = section ? section.specials : null;
@@ -8517,7 +8529,12 @@ window.VEFR_DESCENT = (function () {
   }
 
   // The stairs of a generated floor: down to the next depth, up to the
-  // floor above - and the first floor's stair up is the way home.
+  // floor above - and the first floor's stair up is the way home. So is a
+  // landing's (vefr#366, the elevator rule of PLAN.md section 4): a floor
+  // whose pattern slot is `entry` or `landing` climbs straight to the
+  // descent's entry, exactly as the bake wires it, and the depth is kept
+  // in the save's `flags.landing` so the reached landings outlive the run.
+  // A Section whose pattern names neither slot keeps every stair as it was.
   function wireFloor(name, plan) {
     if (wired[name]) return;
     wired[name] = true;
@@ -8547,7 +8564,10 @@ window.VEFR_DESCENT = (function () {
       }
     }
     var up = locate(plan.depth - 1);
-    if (up) {
+    var here = parseName(name);
+    var landing = !!(here && isLanding(here.section, plan.k));
+    if (landing) recordLanding(plan.depth);
+    if (up && !landing) {
       var above = floorPlan(plan.depth - 1);
       if (above) {
         pushTransition(list, { from: name, at: plan.anchors.up.slice(),
@@ -8996,7 +9016,11 @@ window.VEFR_DESCENT = (function () {
     var kept = [];
     for (var j = 0; j < list.length; j++) {
       var t = list[j];
-      if (t && isGenerated(t.from) && isGenerated(t.to)) continue;
+      // Every stair OUT of a generated floor is wired by `wireFloor`, and
+      // a new run redraws the floor it stands on: the ones that climb to
+      // town (floor one's, a landing's, a vault's home) go too, or the old
+      // run's tile would stay a hidden stair home on the new floor.
+      if (t && isGenerated(t.from)) continue;
       kept.push(t);
     }
     window.VEFR_TRANSITIONS = kept;
@@ -9338,7 +9362,7 @@ window.VEFR_DESCENT = (function () {
     loadSecrets: loadSecrets, saveSecrets: saveSecrets,
     loadFog: loadFog, saveFog: saveFog,
     flags: flags, setFlag: setFlag, landings: landings,
-    recordLanding: recordLanding,
+    recordLanding: recordLanding, isLanding: isLanding,
     // E8c: the story end, the town gate and the act, all derived reads.
     // `storyFlags` is how the ONE gate mechanism (`lockOpen`) sees a
     // story flag, which lives in the descent's own save beside the floors.

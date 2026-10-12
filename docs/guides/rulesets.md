@@ -634,6 +634,27 @@ than past it (`claimTile` in the descent part). Every other door in the
 pack is untouched, and a pack with no collision plays exactly as it did
 before. Tests: `tests/test_descent_entry_collision.py`.
 
+### Landings: the way home from deep floors
+
+Floors generated during play use the same elevator rule as
+`delve --section` (above). A **landing** is a floor whose `pattern` slot
+is `entry` or `landing`. Its up-stair goes straight to the descent's
+entry, which is `descent.entry.region` at `descent.entry.at`. It does not
+go to the floor above. With the default nine-floor pattern, a Section's
+first and fifth floors are landings. This is also true in later cycles,
+so a hero who is many floors down can get to town from the nearest
+landing above them.
+
+The player keeps each landing it reaches in the save as
+`flags.landing`, a sorted list of depths. That list stays the same after
+a reload. Floor 1 still climbs to the entry. If a Section's `pattern`
+has no `entry` or `landing` slot, each of its floors climbs to the floor
+above, as before. The rule has no new key, so `vefr check` and
+`norns validate` read a pack the same way as before. The player's
+`isLanding` is the twin of `sections.is_landing`. Tests:
+`tests/test_descent_landings.py` and
+`tests/browser/test_landing_home.py`.
+
 ### Locked doors
 
 A door or stair may be locked behind a key. A transition may carry an

@@ -350,7 +350,10 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # A cast writes the why-log (#345), 2026-10-12; measured twice in separate processes, readings equal:
 #   bad7095e61c85cd26166562090bf77e0e3b2cacdf9b6288b8bf6d4d1d5abcc32
 #   bad7095e61c85cd26166562090bf77e0e3b2cacdf9b6288b8bf6d4d1d5abcc32
-NO_SKIN_WEAVE_SHA256 = "bad7095e61c85cd26166562090bf77e0e3b2cacdf9b6288b8bf6d4d1d5abcc32"
+# A deep landing's up-stair climbs to the entry (vefr#366), 2026-10-12; measured twice in separate processes, readings equal:
+#   6c5b2fd0008ad2ed6c6dd262b414c444f3a879f58c881e6cc638268ebda01218
+#   6c5b2fd0008ad2ed6c6dd262b414c444f3a879f58c881e6cc638268ebda01218
+NO_SKIN_WEAVE_SHA256 = "6c5b2fd0008ad2ed6c6dd262b414c444f3a879f58c881e6cc638268ebda01218"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():
