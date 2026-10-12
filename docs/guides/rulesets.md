@@ -816,7 +816,8 @@ Known gaps (this slice): no weight, no using, no dropping, no selling,
 and no identifying - a carried thing is only a name and a picture for
 now. `maplab.validate` does not yet pin the `items` shape; the bake drops
 an unknown id instead, and a `drops` line that resolves to nothing is
-refused rather than dropped quietly (above). The bag has no size limit.
+refused rather than dropped quietly (above). The bag has no size limit
+unless a pack names one (see bag capacity, below).
 
 ## rolled loot (first slice: rarity at once, traits hidden)
 
@@ -885,9 +886,9 @@ determinism, compatibility) + `tests/test_rolled_loot_play.py` (the bag
 in the real player) + `tests/test_descent_parity.py` (the same floor in
 both languages) + `tests/fixtures/make_rolled_pack.py`.
 
-Known gaps of this slice, since narrowed by identify (below): no
-identifying (nothing set `identified` true), no reveal moment beyond the
-rarity simply being there, no idea yet what a trait *does*, no bag size,
+Known gaps of this slice, since narrowed by identify and bag capacity
+(below): no identifying (nothing set `identified` true), no reveal moment
+beyond the rarity simply being there, no idea yet what a trait *does*,
 and no rolled drops anywhere but a generated floor's monsters.
 
 ## identify (second slice: the town reads a thing)
@@ -929,8 +930,51 @@ Code: `src/vefr/maplab.py` (`identifies`, `identify_errors`) +
 `tests/test_identify.py` + `tests/test_identify_play.py` +
 `tests/fixtures/make_identify_pack.py`.
 
-Known gaps: no bag capacity, no bag upgrades, no cost for a read, and
-still no answer to what a trait *does*.
+Known gaps of this slice, since narrowed by bag capacity (below): no cost
+for a read, and still no answer to what a trait *does*.
+
+## bag capacity (third slice: a bag with a size)
+
+ADR 0017, amendment 1. The bag is unbounded unless a pack names a size.
+Two optional fields:
+
+```json
+"bag": {"size": 6},
+"items": {
+  "satchel-1": {"name": "a leather satchel", "sprite": "cloak", "carry": 2}
+}
+```
+
+- `bag.size` is a whole number from 1 to 99 in `world.json`. A pack
+  with no `bag` block keeps the unbounded bag it always had.
+- `carry` is a whole number from 1 to 99 on an item. Each carried thing
+  with a `carry` raises the cap by that much. "Carried" means in the bag
+  or worn, so wearing a satchel keeps its places. A `carry` of 0, or no
+  `carry`, adds nothing.
+
+When the bag is full, a floor pickup is refused. The thing stays on the
+floor under the hero, and the player reads one line, for example "Your
+bag is full. You leave a plain ring on the floor." The bag panel counts
+against the cap: "2 of 2 carried." When the pack names no size it reads
+"12 things carried." as before.
+
+Some things always fit, because refusing them would lose them rather than
+leave them on the floor: a warden's key, an item a rule gives, a chest's
+contents, an equip swap, and a take-off.
+
+**`vefr check` refuses two things,** one plain sentence each: a `bag`
+block with no whole-number `size` from 1 to 99, and a `carry` that is not
+a whole number from 1 to 99.
+
+Known gaps: a shop purchase into a full bag is refused with no line, a
+`carry` does nothing where the pack names no `bag.size`, and there is no
+weight and no slot beyond the five worn ones.
+
+Code: `src/vefr/shapes.py` (`BAG`, `ITEM_CARRIES`) + `src/vefr/maplab.py`
+(`bag_errors`) + `src/vefr/cli.py` (`_player_items`) +
+`web/player/parts/180-gold.js` (`bagRoom`, `bagAdd`) and
+`430-loot-on-the-floor.js` (the refusal). Tests:
+`tests/test_bag_capacity.py` + `tests/fixtures/bag_capacity_harness.mjs`.
 
 ## reward (first slice: gold, trade, and using a thing)
 

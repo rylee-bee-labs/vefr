@@ -6,7 +6,7 @@ Date: 2026-10-10
 
 **Proposed.** Three slices for phase 3. Becomes Accepted when all three land: rolled loot (slice 1), identify-as-a-town-service (slice 2), bag capacity (slice 3).
 
-Slices 1 and 2 are landed and proven (see Acceptance). Slice 3 is deliberately **not** in this ADR's scope and nothing here pretends to it: there is no bag size, no bag capacity and no bag upgrade. What a thing's traits *do* is still undefined, and that stays an open question rather than a guess.
+Slices 1 and 2 are landed and proven (see Acceptance). Slice 3, bag capacity, is written in the amendment at the end of this ADR (2026-10-12). What a thing's traits *do* is still undefined, and that stays an open question rather than a guess.
 
 This section states slice 2; the rest of the ADR is slice 1 and still reads as written.
 
@@ -54,9 +54,9 @@ Refusal two is the standing rule (models never run on deterministic surfaces) ma
 
 ### What is still missing
 
-- **Bag capacity and bag upgrades - slice 3.** Still unwritten. The bag is still an unbounded list with no weight, no slots beyond the five worn ones, and no upgrade.
+- **Bag capacity and bag upgrades - slice 3.** Written 2026-10-12, see the amendment below. The bag is unbounded unless a pack names a size, and it still has no weight and no slots beyond the five worn ones.
 - **What a trait DOES.** Unchanged by this slice and still the open question below. The reveal makes the words visible; nothing in the engine reads them.
-- **A cost for reading.** A pack cannot charge gold or time for it yet. That is a bag-economy question and belongs with slice 3.
+- **A cost for reading.** A pack cannot charge gold or time for it yet. That is a bag-economy question and belongs with a later slice, not with the capacity amendment.
 
 ### Acceptance for slice 2
 
@@ -209,3 +209,17 @@ Slice 1's own record, kept as it was written. Two of these have since landed and
 2. Does a fixed `rarity` on an unrolled item make it a "rare" thing for any future shop, sell or bag-capacity rule, or is it only ever a word in the bag?
 3. Should the bag's save format grow a version marker when slice 2 starts writing `identified: true`?
 4. Is a drop's rarity rolled from its own table every time, or can a Section bias it (an elite's drop being rarer than a rat's)?
+
+## Amendment 1 (2026-10-12): bag capacity
+
+Slice 3 is written. The owner's decisions in force: the bag is opt-in and unbounded unless a pack names a size (2026-10-12); capacity is "slots plus bag upgrades" (2026-10-08/09); the schema change is additive only, and any incompatible change goes to the owner as an ask (2026-10-11).
+
+- **`bag.size`** - an optional block in `world.json`: `"bag": {"size": 6}`. A whole number of at least 1 and at most 99. A pack that names no `bag` keeps the unbounded bag it always had.
+- **`carry`** - an optional whole number of at least 1 and at most 99 on an item. Carrying that item, in the bag or worn, raises the cap by its `carry`. An item with no `carry`, or a `carry` of 0, adds nothing. The carry is read from the baked catalog, so the player and the validator agree.
+- **The refusal.** When the bag holds as many things as its cap, a floor pickup is refused and the thing stays on the floor, on the hero's tile. The player sees one line: "Your bag is full. You leave <names> on the floor."
+- **Exemptions.** A warden's key always fits (ADR 0015, line 47: "so it cannot be lost"). The same goes for the other paths that move an item into the bag without a floor pickup: an equip swap, a take-off, a `give` from a rule, and a chest. Those call the bag with `alwaysFits`, because a refusal on those paths would lose the item rather than leave it on the floor.
+- **The count line.** With a cap, the bag panel reads "2 of 2 carried."; without one it reads "12 things carried." as before.
+
+Not in this amendment: a bag weight, slots beyond the five worn ones, a sixth worn slot, and any change to what "full slot" means in the equipment tests. The pack field names are `bag.size` and `carry`; the wording the player shows says "bag size" and "carry space" and never "slot", because a worn slot is a different thing.
+
+Open, for the owner: a pack that names a `carry` item but no `bag.size` gets no cap, so the upgrade does nothing there. Whether that should be refused at validation or stay silent is not decided here.
