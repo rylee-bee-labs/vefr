@@ -53,8 +53,10 @@ house drawn this week and a barrel drawn next month share their colours.
 
 ## Layers (how the world stacks)
 1. **Ground**: seamless repeating floors (flagstone, wood, grass, cobbles). Even light, no outline, no props.
-2. **Walls and edges**: wall tiles, plus (next) the pieces where a wall meets a floor, corners and borders, so the
-   engine can fit them automatically (autotiling). Today's walls are one repeating square.
+2. **Walls and edges**: wall tiles, plus the pieces where one ground meets another. A legend entry's `edges` names
+   one 4 x 4 sheet of transparent pieces (in the region's `tiles/`); the engine lays the piece that matches which
+   of the four neighbours share the symbol (`docs/guides/rulesets.md`, "A ground that blends"). Walls meeting a
+   floor, and corners, are still one repeating square.
 3. **Objects and decals**: houses, trees, the well, barrels, doors, stairs, as **transparent** pictures on the
    object layer (`props` in a region's contract), sorted by depth with the people (Rylee: "a transparent layer or
    something so we can blend it in"). Flat things (a pond, a rug, flowers) go on the ground layer

@@ -210,6 +210,7 @@
     var litSet = fogOn ? litNow() : null;   // what is lit right now
 
     var u = T / 32;   // the pack's mark sizes are authored for a 32px tile
+    edgesDrawn = 0;
     var x0 = Math.max(0, Math.floor(camX / T));
     var x1 = Math.min(cols - 1, Math.ceil((camX + viewW) / T));
     var y0 = Math.max(0, Math.floor(camY / T));
@@ -235,6 +236,17 @@
         } else {
           ctx.fillStyle = color;
           ctx.fillRect(x * T, y * T, T, T);
+        }
+        // A ground that blends: the piece of its edges sheet that matches which neighbours share
+        // this symbol, laid over the tile. All four the same (15) draws nothing.
+        var edgeImg = edgeImgs[ch];
+        if (edgeImg && edgeImg.complete && edgeImg.naturalWidth > 0) {
+          var mask = edgeMask(town.map, x, y);
+          if (mask !== 15) {
+            var ew = edgeImg.naturalWidth / 4, eh = edgeImg.naturalHeight / 4;
+            ctx.drawImage(edgeImg, (mask % 4) * ew, Math.floor(mask / 4) * eh, ew, eh, x * T, y * T, T, T);
+            edgesDrawn++;
+          }
         }
         if (info.solid && !hasTile && !hasGrid) {   // the grey inset marks a wall with no picture
           ctx.fillStyle = '#444';

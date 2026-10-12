@@ -776,6 +776,9 @@ window.VEFR_ITEMS = {{items_json}};
 // Ground tiles per region: two regions can share a symbol for different
 // ground (a town's '.' is grass, a dungeon's '.' is stone floor).
 window.VEFR_REGION_TILES = {{region_tiles_json}};
+// Edges sheets per region, keyed by map symbol: a legend entry's `edges` (one 4 x 4 picture, the piece
+// drawn over a tile chosen by which neighbours share its symbol). Empty when no legend names edges.
+window.VEFR_TILE_EDGES = {{tile_edges_json}};
 window.VEFR_LOGBOK = {{logbok_json}};
 window.VEFR_LEDGER = {{ledger_json}};
 window.VEFR_VOICES = {{voices_json}};
@@ -10575,6 +10578,9 @@ function setupTown() {
     return out;
   };
   var backdropBands = [], backdropDrawn = 0;
+  // How many edge pieces the last draw() laid (a legend's `edges`); 0 for a pack that names none.
+  var edgesDrawn = 0;
+  window.VEFR_EDGES_DRAWN = function () { return edgesDrawn; };
   // The skin's picture, or nothing. A pack with no skin never paints a table:
   // the picture only ever arrives through applySkin, and only for a skin that
   // named one.
@@ -10633,6 +10639,22 @@ function setupTown() {
     return [((x % cols) + cols) % cols, ((y % rows) + rows) % rows];
   };
   // -- pickCell end --
+  // -- edgeMask start --
+  // A ground that blends (a legend entry's `edges`): which of the tile's four neighbours carry the SAME
+  // symbol, as a 4-bit mask - north 1, east 2, south 4, west 8. A neighbour past the map's edge counts
+  // as the same, so the border of the map never draws a seam. The piece drawn over the tile is cell
+  // (mask % 4, floor(mask / 4)) of the 4 x 4 edges sheet; mask 15 (all four the same) draws nothing.
+  window.edgeMask = function (map, x, y) {
+    var ch = (map[y] || '')[x];
+    function same(nx, ny) {
+      var row = map[ny];
+      if (row === undefined || nx < 0 || nx >= row.length) return true;
+      return row[nx] === ch;
+    }
+    return (same(x, y - 1) ? 1 : 0) | (same(x + 1, y) ? 2 : 0)
+      | (same(x, y + 1) ? 4 : 0) | (same(x - 1, y) ? 8 : 0);
+  };
+  // -- edgeMask end --
   // -- rules start --
   // The rules engine: one event in, the actions to perform out. Pure
   // logic only - no DOM, no clock, no randomness, no fetch, no network
@@ -11053,10 +11075,23 @@ function setupTown() {
   // a list of preloaded Images; the draw loop then asks for one image.
   var tileImgs = {};
   var tileGrids = {};   // symbol -> { img, cols, rows } for a grid picture
+  // symbol -> the 4 x 4 edges sheet a legend entry's `edges` names, per region. Empty for a pack that
+  // names none, so the ground draws exactly as it did before edges existed.
+  var regionEdges = window.VEFR_TILE_EDGES || {};
+  var edgeImgs = {};
   function loadTiles() {
     var set = regionTiles[regionName] || window.VEFR_TILES || {};
     tileImgs = {};
     tileGrids = {};
+    edgeImgs = {};
+    var edges = regionEdges[regionName] || {};
+    Object.keys(edges).forEach(function (ch) {
+      if (typeof edges[ch] !== 'string') return;
+      var eim = new Image();
+      eim.onload = function () { draw(); };
+      eim.src = edges[ch];
+      edgeImgs[ch] = eim;
+    });
     Object.keys(set).forEach(function (ch) {
       var srcs = set[ch];
       if (srcs && typeof srcs === 'object' && !Array.isArray(srcs)) {
@@ -11893,6 +11928,7 @@ function setupTown() {
     var litSet = fogOn ? litNow() : null;   // what is lit right now
 
     var u = T / 32;   // the pack's mark sizes are authored for a 32px tile
+    edgesDrawn = 0;
     var x0 = Math.max(0, Math.floor(camX / T));
     var x1 = Math.min(cols - 1, Math.ceil((camX + viewW) / T));
     var y0 = Math.max(0, Math.floor(camY / T));
@@ -11918,6 +11954,17 @@ function setupTown() {
         } else {
           ctx.fillStyle = color;
           ctx.fillRect(x * T, y * T, T, T);
+        }
+        // A ground that blends: the piece of its edges sheet that matches which neighbours share
+        // this symbol, laid over the tile. All four the same (15) draws nothing.
+        var edgeImg = edgeImgs[ch];
+        if (edgeImg && edgeImg.complete && edgeImg.naturalWidth > 0) {
+          var mask = edgeMask(town.map, x, y);
+          if (mask !== 15) {
+            var ew = edgeImg.naturalWidth / 4, eh = edgeImg.naturalHeight / 4;
+            ctx.drawImage(edgeImg, (mask % 4) * ew, Math.floor(mask / 4) * eh, ew, eh, x * T, y * T, T, T);
+            edgesDrawn++;
+          }
         }
         if (info.solid && !hasTile && !hasGrid) {   // the grey inset marks a wall with no picture
           ctx.fillStyle = '#444';

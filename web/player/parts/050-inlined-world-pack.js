@@ -22,6 +22,9 @@ window.VEFR_ITEMS = {{items_json}};
 // Ground tiles per region: two regions can share a symbol for different
 // ground (a town's '.' is grass, a dungeon's '.' is stone floor).
 window.VEFR_REGION_TILES = {{region_tiles_json}};
+// Edges sheets per region, keyed by map symbol: a legend entry's `edges` (one 4 x 4 picture, the piece
+// drawn over a tile chosen by which neighbours share its symbol). Empty when no legend names edges.
+window.VEFR_TILE_EDGES = {{tile_edges_json}};
 window.VEFR_LOGBOK = {{logbok_json}};
 window.VEFR_LEDGER = {{ledger_json}};
 window.VEFR_VOICES = {{voices_json}};

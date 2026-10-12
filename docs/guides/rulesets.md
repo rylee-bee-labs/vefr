@@ -569,6 +569,46 @@ region and behaves exactly as before. `maplab.validate` checks every
 door: `from`/`to` name declared regions, and `at`/`to_at` are inside
 their maps and walkable in their legends.
 
+### A ground that blends: a legend's `edges`
+
+Where one ground meets another (grass and a dirt lane, grass and cobbles)
+the edge is a hard square, one tile at a time. A legend entry may ask for
+a blend with `edges`, naming ONE picture in the region's own `tiles/`:
+
+```json
+"legend": {
+  ".": {"tile": "grass"},
+  "p": {"tile": "lane", "edges": "lane-edges"}
+}
+```
+
+`tiles/lane-edges.webp` (or `.png`) is a 4 x 4 sheet of sixteen equal
+pieces. The player draws one piece over every `p` tile, chosen by which of
+its four neighbours are ALSO `p`: north 1, east 2, south 4, west 8, added
+up. Piece `mask` sits at column `mask % 4`, row `mask // 4`, reading left
+to right, top to bottom:
+
+| row | pieces (same-symbol neighbours) |
+|---|---|
+| 0 | 0 none, 1 N, 2 E, 3 N+E |
+| 1 | 4 S, 5 N+S, 6 E+S, 7 N+E+S |
+| 2 | 8 W, 9 N+W, 10 E+W, 11 N+E+W |
+| 3 | 12 S+W, 13 N+S+W, 14 E+S+W, 15 all four |
+
+A piece is transparent except where the neighbouring ground creeps in, on
+the sides whose bit is NOT set (piece 4 is a lane tile with grass on its
+north, east and west). Piece 15 is never drawn, so leave it empty. A
+neighbour past the map's edge counts as the same, so the map's border
+draws no seam. Edges come from the pack only (the engine set has none),
+and a symbol that names no `edges` draws exactly as before.
+
+`vefr check` refuses an `edges` value that is not a plain picture name, a
+name with no picture in the region's `tiles/`, and a name with variants
+or a grid picture, each in a sentence naming the region and the symbol.
+Code: `cli._edges_for_legend` (the bake, `window.VEFR_TILE_EDGES`),
+`edgeMask` in `web/player/parts/440-the-camera.js`, `maplab._edge_errors`;
+tests: `tests/test_tile_edges.py`, `tests/browser/test_tile_edges.py`.
+
 ### One tile, one way out: the descent's entry
 
 A pack's optional `descent` block names the tile the generated floors

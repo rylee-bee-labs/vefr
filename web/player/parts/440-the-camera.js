@@ -172,6 +172,9 @@
     return out;
   };
   var backdropBands = [], backdropDrawn = 0;
+  // How many edge pieces the last draw() laid (a legend's `edges`); 0 for a pack that names none.
+  var edgesDrawn = 0;
+  window.VEFR_EDGES_DRAWN = function () { return edgesDrawn; };
   // The skin's picture, or nothing. A pack with no skin never paints a table:
   // the picture only ever arrives through applySkin, and only for a skin that
   // named one.
@@ -230,3 +233,19 @@
     return [((x % cols) + cols) % cols, ((y % rows) + rows) % rows];
   };
   // -- pickCell end --
+  // -- edgeMask start --
+  // A ground that blends (a legend entry's `edges`): which of the tile's four neighbours carry the SAME
+  // symbol, as a 4-bit mask - north 1, east 2, south 4, west 8. A neighbour past the map's edge counts
+  // as the same, so the border of the map never draws a seam. The piece drawn over the tile is cell
+  // (mask % 4, floor(mask / 4)) of the 4 x 4 edges sheet; mask 15 (all four the same) draws nothing.
+  window.edgeMask = function (map, x, y) {
+    var ch = (map[y] || '')[x];
+    function same(nx, ny) {
+      var row = map[ny];
+      if (row === undefined || nx < 0 || nx >= row.length) return true;
+      return row[nx] === ch;
+    }
+    return (same(x, y - 1) ? 1 : 0) | (same(x + 1, y) ? 2 : 0)
+      | (same(x, y + 1) ? 4 : 0) | (same(x - 1, y) ? 8 : 0);
+  };
+  // -- edgeMask end --
