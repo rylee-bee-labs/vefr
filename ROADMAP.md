@@ -5,7 +5,7 @@
 > ladder from a tool built for one story, playable - to a tool
 > anyone can point at their own.
 
-## Where VEFR stands (2026-10-05)
+## Where VEFR stands (2026-10-12)
 
 > **Principle:** Cottage of the Breeze is how VEFR is built. Every lesson from it lands in the engine so the next game is easier to make.
 
@@ -62,11 +62,19 @@ gameplay features over new core machinery.
 - [authoring] The Storybook design system and its art bible (Cottage's look, kept as a worked example; every game
   chooses its own), and the guide to making a VEFR game look and feel good (#415).
 
-In review: an object layer (props with footprints, depth, a ground layer, animation; every character's idle, talk,
-act, attack and hurt; people who stand in the way; #420), pixel art drawn crisply (`display.pixel_art`, #427), and
-the phone touch controls (#428). Cottage's Game Boy Advance town is a draft on them (cottage-of-the-breeze#146).
+- [player] An object layer: props with footprints, depth, a ground layer and animation; every character's idle,
+  talk, act, attack and hurt; people who stand in the way (`player.people_block`) (#420). Pixel art drawn crisply
+  (`display.pixel_art`, #427). Phone touch controls: a floating joystick, one smart button, Bag, size and a
+  left-handed layout (#428; Whisper and Explore on a phone are #431). Cottage's Game Boy Advance town is built on
+  all three (cottage-of-the-breeze#146).
+- [player] Sweep fixes: the note's label, the wake line, and the phone Messages panel folds (#433).
+- [engine] Bag capacity: an opt-in `bag.size` that leaves an item on the floor past the cap, with a warden's key
+  always fitting (#434; follow-ups in #343). A vault's chest is keyed by the vault's own id and stays taken across a
+  town return (#435).
+- [authoring] "Make your first game", one page for a beginner (#429), and the Studio creative-learning vision
+  (#421, proposed).
 
-### IN PROGRESS (decided by Rylee on 2026-10-04; tracked by epics; refreshed 2026-10-05 after the morning's merges)
+### IN PROGRESS (decided by Rylee on 2026-10-04; refreshed 2026-10-12)
 - **The endless dungeon** (epic [#273](https://github.com/rylee-bee-labs/vefr/issues/273); design `docs/plans/endless-dungeon/DESIGN.md`, build plan `docs/plans/endless-dungeon/PLAN.md`, research `docs/research/big-generated-maps.md`): floors generated while you play from `seed + depth`, cut into sections of 8 to 11 floors; each ends in a key warden whose key opens a vault with a lore note; acts change the town only; elites, linked groups, hand-painted stamps and much bigger maps (up to 128x96, kept cheap for phones); an endless mode after the story.
   - **Merged:** E0a measurements (#278), F1 fog as a bitset (#287), E0d sleeping monsters and a radius-bounded flood (#288), E2 the v3 Python floor generator with property sweeps (#289).
   - **Decided (ADRs, #293; 0015 Accepted 2026-10-10 with E8d):** [0013 stamps](docs/adr/0013-stamp-format.md), [0014 elites and groups](docs/adr/0014-elites-and-groups.md), [0015 wardens, vaults and the town gate](docs/adr/0015-wardens-vaults-and-the-town-gate.md), with Rylee's answers recorded in each: sight plus noise wakes sleepers (fighting 12 tiles, doors and chests 6, stairs and breaking 8); the warden is awake and hunts once you enter its hall; reload resets sleepers; cozy affix names; six starting stamps (a 21x21 throne room, a random elite room, a room of 3 to 6 chests where one is likely a monster, a shrine, a treasure nook, a sleeping den); only decorative stamps rotate; required stamps always place; the paid town-skip shortcut is a one-use item, one per section vault, offered from the second cycle; the final boss has its own region.
@@ -80,6 +88,7 @@ the phone touch controls (#428). Cottage's Game Boy Advance town is a draft on t
     - **Landed 2026-10-11:** the stair past the last Section into endless cycle 1 is shut until the pack's `story_end` flag is set, with a sentence that names the flag (ADR 0015 Amendment 1 §1); the stair carries that flag instead of the town gate, since a stair carries one flag. Browser test: `tests/browser/test_endless_gate.py`, not yet run on the host.
     - **E8c's ground, vefr#359:** a monster the play-time descent spawns carries an `xp`, so a kill on a generated floor pays and shows the `level` cue exactly as an authored region's does. A Section's family row may declare its own `xp` (optional, additive); a family that declares none takes the engine's documented default, which rises with the floor's depth so the deepest Section pays most. Python (`vefr.sections.xp_for`) and the JavaScript twin answer identically, proved over 200 seeds.
   - **Merged 2026-10-09 (#350):** Cozy death on a generated floor wakes the hero on that floor at its up-stair, whole, with the descent intact and the why-log naming the floor - it no longer throws the run away to the pack's baked wake point; and a new run rewires the stair into the deep, so entering the descent lands on that run's floor-one up-stair instead of the tile the previous run drew.
+  - **E8 is complete** (#369 to #373, #384, #404, #408, #435; vefr#341 closed 2026-10-12). Open follow-ups: the landings are recorded by the bake but not wired at play time, so there is no deep-floor way home but the vault's stair (#366); a Section's `label` is validated but not shown in play (#363); arrival announces the return stair, not the new floor (#362); generated floors turn a family's `sight: 0` into 1 (#437). The paid town-skip shortcut moves to E10 (#438).
   - **Known gap:** the 128x96 monster-turn numbers after E0d were not re-measured (the bench needs rework for sleeping monsters).
 - **The in-world interface** (epic [#268](https://github.com/rylee-bee-labs/vefr/issues/268); `docs/plans/interface/PLAN.md`): the stage and the phone dock merged (#275), and backdrop/type skin slices merged (#300). The remaining soft-wood skin/HUD slice merged as #302 (speech box, slots, tabs, tooltip, divider, banner, HUD icons and the speech portrait).
 - **Tighten the shapes** (epic [#267](https://github.com/rylee-bee-labs/vefr/issues/267); `docs/plans/tighten-shapes/PLAN.md`, ADR 0010): **merged** K1 shared test kit (#272), K2 one `store()` helper with a ban-lint (#276), B0 sprites by name (#277), S1 schema table core (#281), A1 art ledger and `vefr art` (#283), A3 skin kit manifest (#290), B2 places in Blueprint format 3 (#292), B1 things in Blueprint format 2 (#297, including its review-fix round), and S2 the one event table (#269: the eleven events and each event's payload now live once in `shapes.EVENTS`, read by both the rule and sticker validators; the JS twin follows in S3). **Next:** B4 packs and the Cottage trial, A4 `vefr art draw`, A5 `vefr art picker`, S3 the generated JS `EVENTS`.
@@ -94,10 +103,10 @@ the phone touch controls (#428). Cottage's Game Boy Advance town is a draft on t
 3. [QA] **Stage containment and panel accessibility**: every control inside the stage at many sizes, and every menu panel walked with axe. (finding 3, new; the containment and no-overlap tests are written and drive the interface slices; the panel walk is still to do)
    - **Sizing and seeding landed (2026-10-09):** `vefr look --sizes WxH[,WxH]` photographs a pack at each size, one file per size, and repeats its containment report at every one — so "the check measured the viewport, not the stage" stops being possible; `--at REGION X,Y` starts a run off the world's start region and `--seed` asks the descent for a run seed through the player's own `?vefr-seed=`. The fight verb row now stands inside the painted play panel rather than the page, and `#interact` keeps its whole label at phone widths (#353, #344).
 4. [QA] **Obtainability**: widen the lock check to gear, books, stickers and creatures. (finding 4, deepened)
-5. [authoring] Region display names for hints (#259).
+5. [authoring] Region display names for hints (#259). A Section's optional `label` landed (#407) and is validated; showing it in the hints and the floor announcement is #363.
 
 ### NEXT (what Act 2 and the next games need)
-- [engine] **Town states** (ADR 0006 rescoped by [ADR 0015](docs/adr/0015-wardens-vaults-and-the-town-gate.md): acts change the town, not the dungeon; built in slice E8) and **status effects** (fire first; `design/elemental-and-status-effects.md`, a campaign with an ADR amendment).
+- [engine] ~~**Town states**~~ landed in E8c (#384; [ADR 0015](docs/adr/0015-wardens-vaults-and-the-town-gate.md)); **status effects** (fire first; `design/elemental-and-status-effects.md`, a campaign with an ADR amendment).
 - [engine] ~~Random floors phase 2 (#215)~~ now slice E1 of the endless dungeon; **guardians** as pack data (placement sentences from ADR 0010 are the first step).
 - [authoring] Honest feature detection and engine requirements per pack (finding 5); a route through a pack and one stable play-state API (finding 7); the overlay lane for hand edits on generated floors is superseded by Blueprint `places` (ADR 0010).
 - [QA] A route through a pack plus one stable play-state API (7, new); a balance report from pack data (8, new).
