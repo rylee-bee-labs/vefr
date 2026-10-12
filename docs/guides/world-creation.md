@@ -212,6 +212,10 @@ under `props`, one object per prop:
   (1 to 12; the default is 1). The picture's width must divide evenly by it.
 - `fps` - how fast the frames change (1 to 12; the default is 4). Reduced
   motion shows frame 0.
+- `layer` - `"stand"` (the default) for something that stands up: it is
+  drawn in front of or behind people by its bottom row. `"ground"` for
+  something flat (a pond, a rug, a patch of flowers): it is drawn under
+  everyone, so a person on a dock or a rug is never hidden by it.
 
 A prop is drawn only where the player can see the ground, and it is drawn
 in front of or behind people by its bottom row. A blocked prop stops the

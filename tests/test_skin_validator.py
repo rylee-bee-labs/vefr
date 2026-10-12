@@ -317,7 +317,10 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # Object layer and moving sprites (P8WORLD) on top of #419, 2026-10-12; measured twice in separate processes, readings equal:
 #   366f592114dd198c3d48655667da049e96327549de297b4d91a152abf3cf88be
 #   366f592114dd198c3d48655667da049e96327549de297b4d91a152abf3cf88be
-NO_SKIN_WEAVE_SHA256 = "366f592114dd198c3d48655667da049e96327549de297b4d91a152abf3cf88be"
+# Props on the ground layer (#420), 2026-10-12; measured twice in separate processes, readings equal:
+#   71d1e50c32354356363216fe4f2f00d76afc52222ee1fdca0baae7440f7689b5
+#   71d1e50c32354356363216fe4f2f00d76afc52222ee1fdca0baae7440f7689b5
+NO_SKIN_WEAVE_SHA256 = "71d1e50c32354356363216fe4f2f00d76afc52222ee1fdca0baae7440f7689b5"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

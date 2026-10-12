@@ -292,8 +292,12 @@
     function stand(row, label, paint) {
       stands.push({ row: row, label: label, seq: seq++, paint: paint });
     }
+    // A ground prop (a pond, a rug, flowers) lies flat: drawn now, under
+    // everyone, whatever its row.
+    var grounds = [];
     propList.forEach(function (p) {
       if (!propSeen(p)) return;
+      if (p.layer === 'ground') { grounds.push('ground:' + p.pic); drawProp(p); return; }
       stand(p.at[1] + p.h - 1, 'prop:' + p.pic, function () { drawProp(p); });
     });
     // The people: their own sprite when the pack names one, else the
@@ -374,7 +378,7 @@
     if (propList.length) {
       stands.sort(function (a, b) { return (a.row - b.row) || (a.seq - b.seq); });
     }
-    window.VEFR_DRAW_ORDER = stands.map(function (s) { return s.label; });
+    window.VEFR_DRAW_ORDER = grounds.concat(stands.map(function (s) { return s.label; }));
     stands.forEach(function (s) { s.paint(); });
     // Fog of war: explored but not currently lit is dimmed; never-seen
     // tiles were skipped above and stay dark.

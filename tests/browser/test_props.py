@@ -26,6 +26,10 @@ import make_props_pack as mk  # noqa: E402
 
 BLOCKING = [{"pic": "stone", "at": [4, 4]}]
 OPEN = [{"pic": "stone", "at": [4, 4], "block": ["."]}]
+# flat, under the hero, on the tile beside her start
+GROUND = [{"pic": "stone", "at": [4, 4], "block": ["."], "layer": "ground"}]
+# a tall open prop one row below the hero's start: it stands in front of her
+TALL = [{"pic": "stone", "at": [3, 5], "block": ["."]}]
 
 
 def _free_port() -> int:
@@ -72,6 +76,16 @@ def open_stone(tmp_path_factory):
     yield from _serve_woven(tmp_path_factory, "props-open", OPEN)
 
 
+@pytest.fixture(scope="module")
+def ground_stone(tmp_path_factory):
+    yield from _serve_woven(tmp_path_factory, "props-ground", GROUND)
+
+
+@pytest.fixture(scope="module")
+def tall_stone(tmp_path_factory):
+    yield from _serve_woven(tmp_path_factory, "props-tall", TALL)
+
+
 def open_woven(page, url):
     page.goto(url)
     page.get_by_role("button", name="Begin").click()
@@ -115,3 +129,24 @@ def test_the_draw_order_names_the_stone_and_the_hero(page, blocked):
     order = page.evaluate("window.VEFR_DRAW_ORDER")
     assert "prop:stone" in order
     assert "hero" in order
+
+
+def test_a_ground_prop_is_drawn_under_the_hero_standing_on_it(page, ground_stone):
+    open_woven(page, ground_stone)
+    step(page, "ArrowRight")
+    assert hero_at(page) == [4, 4]
+    order = page.evaluate("window.VEFR_DRAW_ORDER")
+    assert order.index("ground:stone") < order.index("hero"), order
+    assert "prop:stone" not in order
+
+
+def test_a_standing_prop_is_in_front_of_the_hero_north_of_it_and_behind_her_south_of_it(page, tall_stone):
+    open_woven(page, tall_stone)
+    assert hero_at(page) == [3, 4]                      # north of the prop's row: it covers her
+    order = page.evaluate("window.VEFR_DRAW_ORDER")
+    assert order.index("hero") < order.index("prop:stone"), order
+    step(page, "ArrowDown")
+    step(page, "ArrowDown")
+    assert hero_at(page) == [3, 6]                      # south of it: she is in front
+    order = page.evaluate("window.VEFR_DRAW_ORDER")
+    assert order.index("prop:stone") < order.index("hero"), order

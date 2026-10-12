@@ -3100,6 +3100,8 @@ def _region_prop_errors(w: dict, rname: str, geo: dict, pack_dir: Path,
             errors.append(f'{tag}: frames must be a whole number from '
                           f'{PROP_FRAMES_MIN} to {PROP_FRAMES_MAX}')
             frames = 1
+        if p.get('layer', 'stand') not in ('stand', 'ground'):
+            errors.append(f'{tag}: layer must be "stand" (the default) or "ground"')
         fps = p.get('fps', PROP_FPS_DEFAULT)
         if not (_is_whole(fps) and PROP_FPS_MIN <= fps <= PROP_FPS_MAX):
             errors.append(f'{tag}: fps must be a whole number from '

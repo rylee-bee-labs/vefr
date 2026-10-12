@@ -40,6 +40,8 @@ def test_a_sound_prop_validates(tmp_path):
      ["region 'town' prop 0 'stone'", "size must be [width, height] whole numbers of at least 1"]),
     ([prop(frames=13)], None,
      ["region 'town' prop 0 'stone'", "frames must be a whole number from 1 to 12"]),
+    ([prop(layer="floor")], None,
+     ["region 'town' prop 0 'stone'", 'layer must be "stand" (the default) or "ground"']),
     ([prop(fps=0)], None,
      ["region 'town' prop 0 'stone'", "fps must be a whole number from 1 to 12"]),
     ([prop(at=[11, 9], size=[2, 1])], None,

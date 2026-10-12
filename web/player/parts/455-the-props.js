@@ -26,7 +26,8 @@
         }
       }
       propList.push({ pic: p.pic, at: [ax, ay], w: w, h: h,
-                      frames: (p.frames | 0) || 1, fps: (p.fps | 0) || PROP_FPS });
+                      frames: (p.frames | 0) || 1, fps: (p.fps | 0) || PROP_FPS,
+                      layer: p.layer === 'ground' ? 'ground' : 'stand' });
     });
   }
   function propBlocked(x, y) {
