@@ -12,9 +12,11 @@ The same pack at a desk window has the old camera and the old panel: nothing
 folds itself. A fold by hand is remembered, and a new line never opens it.
 
 The pack is the sample town with `display.phone_tile` added, served over http so
-localStorage is the real thing (a file:// page has none). The wait is shortened
-through `window.VEFR_MESSAGES_FOLD_MS`, the test-only hook the player reads at
-each fold; without it the panel waits 6 s.
+localStorage is the real thing (a file:// page has none). The phone camera is
+asked for by name (`?camera=phone`, as tests/browser/test_phone_camera.py does),
+so the camera under test never depends on how a headless Chromium answers
+`(pointer: coarse)`. The wait is shortened through `window.VEFR_MESSAGES_FOLD_MS`,
+the test-only hook the player reads at each fold; without it the panel waits 6 s.
 
 Run with: uv run pytest tests/browser/test_message_panel_fold.py
 """
@@ -86,14 +88,14 @@ def served(tmp_path_factory):
     proc.wait(timeout=10)
 
 
-def open_game(browser, url, w, h, touch, fold_ms=FOLD_WAIT_MS):
+def open_game(browser, url, w, h, touch, fold_ms=FOLD_WAIT_MS, query=""):
     """The player on the map, with the test-only fold wait already in place."""
     ctx = browser.new_context(viewport={"width": w, "height": h},
                               has_touch=touch, is_mobile=touch)
     page = ctx.new_page()
     # Set before the player runs, so even the first line folds on this wait.
     page.add_init_script(f"window.VEFR_MESSAGES_FOLD_MS = {fold_ms}")
-    page.goto(url)
+    page.goto(url + query)
     page.click("#ts-enter")
     if page.is_visible("#config"):
         page.click("#cfg-save")
@@ -139,7 +141,7 @@ def wait_shown(page):
 
 
 def test_the_panel_folds_itself_on_a_phone_and_the_button_opens_it_again(browser, served):
-    ctx, page = open_game(browser, served, PHONE_W, PHONE_H, touch=True)
+    ctx, page = open_game(browser, served, PHONE_W, PHONE_H, touch=True, query="?camera=phone")
     try:
         assert page.evaluate("window.VEFR_STAGE.phone") is True, \
             "this pack on a touch phone is not on the phone camera"
@@ -166,7 +168,8 @@ def test_the_panel_folds_itself_on_a_phone_and_the_button_opens_it_again(browser
 def test_a_fold_by_hand_is_remembered_and_a_new_line_does_not_open_it(browser, served):
     # The engine's own fold is pushed out of the way here, so the tap below is
     # the player's own fold and never a race with one.
-    ctx, page = open_game(browser, served, PHONE_W, PHONE_H, touch=True, fold_ms=30000)
+    ctx, page = open_game(browser, served, PHONE_W, PHONE_H, touch=True, fold_ms=30000,
+               query="?camera=phone")
     try:
         say_a_line(page, "talk")
         wait_shown(page)
