@@ -715,10 +715,27 @@ SOUND = Block(
 
 # The drawn tile, in CSS pixels, of a touch phone whose map is too big to fit (docs/guides/world-creation.md).
 PHONE_TILE_LO, PHONE_TILE_HI = 32, 72
+# `display.pixel_art`: how the engine draws the pack's art. A pack
+# that declares `pixel_art` has its art drawn at whole-number scales with no
+# smoothing; a pack that declares none is drawn exactly as before.
+PIXEL_ART = Block(
+    name='pixel_art',
+    example='{"native_tile": 32}',
+    keys=(
+        Key('native_tile', 'int', lo=8, hi=64, required=True, say={
+            'wrong-type': '{path} must be a whole number of art pixels, such as 32',
+            'out-of-range': '{path} must be a whole number from 8 to 64',
+            'missing-key': 'display.pixel_art must hold a {key}, such as {example}'}),
+    ),
+)
+
 DISPLAY = Block(
     name='display',
-    example='{"phone_tile": 52}',
-    keys=(Key('phone_tile', 'int', lo=PHONE_TILE_LO, hi=PHONE_TILE_HI),),
+    example='{"phone_tile": 52, "pixel_art": {"native_tile": 32}}',
+    keys=(
+        Key('phone_tile', 'int', lo=PHONE_TILE_LO, hi=PHONE_TILE_HI),
+        Key('pixel_art', 'obj', sub=PIXEL_ART),
+    ),
 )
 
 # An affix is one record in the pack's `affixes.json`, shared by every
@@ -1448,6 +1465,7 @@ PLAYER_WORDS = Block(
     ),
 )
 
+
 # Spells (ADR 0018). One block of the pack's own `spells`: the schools it
 # teaches and the spells themselves, each of which belongs to one of those
 # schools and says the level at which the hero has learned it. A `spell`
@@ -1510,6 +1528,7 @@ BLOCKS = {
     'scenario start': SCENARIO_START,
     'item': ITEM,
     'player_words': PLAYER_WORDS,
+    'pixel_art': PIXEL_ART,
     'spells': SPELLS,
     'spell': SPELL,
 }

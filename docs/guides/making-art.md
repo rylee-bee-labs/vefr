@@ -118,3 +118,32 @@ A small studio keeps a whole game looking like one game with three habits, and V
 
 The whole story, with the phone UI and how to test like a player, is
 [making-a-game-look-and-feel-good.md](making-a-game-look-and-feel-good.md).
+
+## Pixel art, the Game Boy Advance way (what Cottage taught us, 2026-10-12)
+
+Cottage of the Breeze chose true pixel art after a style test: the same six subjects painted two ways, then laid
+out at the game's real phone size. Look at a style test where it will be played, never only on a sheet.
+
+- **Tell the engine.** `"display": {"pixel_art": {"native_tile": 32}}` in `world.json` draws every picture at a
+  whole-number scale with no smoothing, and characters, sheets and props at their own art size
+  (`world-creation.md`, "Pixel art").
+- **Pick the native size from the faces.** At 21 x 32 px a shrunk image-model figure loses its eyes; at 32 x 48 it
+  keeps them. Cottage uses 32 px tiles and 48 px people.
+- **One pixel density.** Shrink every subject to its planned native size, so a house's pixels are the size of the
+  hero's.
+- **Real pixels from painted ones.** An image model's "pixel art" is blocks that wander off a grid. Find the block
+  size, take the middle of each block, key the backdrop, remove lone specks, and lock every picture to one master
+  palette (the pixel-art tools: vefr#426).
+- **Front-on, not isometric.** Say "the front wall facing straight down the screen, NOT isometric", or buildings
+  come out at an angle and will not sit on the grid.
+- **Back views squash** unless a back view is the reference. Draw the front first, then use a good back view from an
+  action strip as the reference for the back walk.
+- **A character's poses come from one strip.** Six frames in one row on one ground line (idle, idle breathing, four
+  walk steps; or pick up, hold, three swing frames, flinch). Cut the frames apart by shape, not evenly, or a swung
+  stick that crosses into the next slot gets sliced.
+- **Cut a grid sheet by cell.** Twelve props in a 4 x 3 grid merge into nine when found by shape.
+- **Motion by recolouring.** Lamps and lit windows flicker, coals glow, water highlights slide a pixel: every frame
+  is the same picture with a few colours changed, so nothing drifts. Keep the change to the light itself; a rust
+  roof is close enough in colour to a lamp to shimmer with it.
+- **Check what it added.** The image model put a cross on a village temple. Check every building for symbols nobody
+  asked for.

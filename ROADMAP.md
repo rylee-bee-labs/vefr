@@ -9,6 +9,8 @@
 
 > **Principle:** Cottage of the Breeze is how VEFR is built. Every lesson from it lands in the engine so the next game is easier to make.
 
+> **Studio product vision (2026-10-12, proposed):** VEFR is also a game about **learning to make games**, designed first for people with imagination and no technical background. A resident-led visual workshop should guide a creator from their own idea through visible experiments to a tiny playable, explainable, shareable slice. The [twelve owner decisions, one-round research, built-vs-proposed inventory, and phased Studio plan](docs/plans/studio-creative-learning-vision.md) are a **product-direction proposal**, not permission to interrupt Cottage, current epics, or the evidence-led game -> gameplay feature -> core rule.
+
 Cottage of the Breeze **Release 1** (a complete, polished Act 1, built through VEFR over one night) turned this roadmap from "make a game possible" into "make the next game easier". Acts 2 and 3 are part of the larger three-act direction and were left for later by Rylee's decision; that is a scoping choice, not an engine limit. This board is built from what the run proved and from the ranked discovery record, [`docs/research/cottage-release-1-learnings.md`](docs/research/cottage-release-1-learnings.md) (ten findings, each with evidence). The long list below stays as the history. Tags: **[engine]** capability, **[authoring]** developer experience, **[QA]** validation and checks, **[player]** what the player sees, **[Cottage]** content that lives in the game's repo.
 
 ### HOW VEFR GROWS
@@ -43,6 +45,21 @@ gameplay features over new core machinery.
 - [authoring] The player is built from parts: 56 files in `web/player/parts/` joined byte for byte into the committed `web/packaged.html` by `scripts/build_player.py` (#264); `scripts/weave_digest.py` proves a refactor changed nothing.
 - [authoring] `vefr look`, `vefr probe`, `vefr publish`, `vefr features`; the Library chapters on locks and endings and on gear, albums, sound and walking (31 chapters on the shelf).
 - [Cottage] Six floors, three Keybearers and the Cellar King, the King's room and an ending, eight unique monsters, eight wearable items, 25 stickers, a keyboard-only playthrough bot (desktop and phone) and an accessibility pass. All story text is agent draft until Rylee approves it.
+
+### LANDED 2026-10-12 (Cottage Section 1 and the mobile UI rounds)
+- [player] Descent creatures show their own art, the bag stacks by kind (id and rarity, up to eight then "+N"), and the
+  camera comes closer on dark floors (#412). A way out is drawn as what it is: door, stairs up, stairs down,
+  trapdoor, from the pack's own pictures when it has them (#416).
+- [player] A game can choose a phone zoom (`display.phone_tile`), and on a phone the camera follows the hero up to
+  three tiles past a map's edge, so she is never under the controls (#418).
+- [player] Talk with no conversation brain says the resident's own seeded line for the time of day, and a resident
+  with nothing to say is not offered Talk (#419).
+- [authoring] The Storybook design system and its art bible (Cottage's look, kept as a worked example; every game
+  chooses its own), and the guide to making a VEFR game look and feel good (#415).
+
+In review: an object layer (props with footprints, depth, a ground layer, animation; every character's idle, talk,
+act, attack and hurt; people who stand in the way; #420), pixel art drawn crisply (`display.pixel_art`, #427), and
+the phone touch controls (#428). Cottage's Game Boy Advance town is a draft on them (cottage-of-the-breeze#146).
 
 ### IN PROGRESS (decided by Rylee on 2026-10-04; tracked by epics; refreshed 2026-10-05 after the morning's merges)
 - **The endless dungeon** (epic [#273](https://github.com/rylee-bee-labs/vefr/issues/273); design `docs/plans/endless-dungeon/DESIGN.md`, build plan `docs/plans/endless-dungeon/PLAN.md`, research `docs/research/big-generated-maps.md`): floors generated while you play from `seed + depth`, cut into sections of 8 to 11 floors; each ends in a key warden whose key opens a vault with a lore note; acts change the town only; elites, linked groups, hand-painted stamps and much bigger maps (up to 128x96, kept cheap for phones); an endless mode after the story.

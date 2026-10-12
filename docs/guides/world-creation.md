@@ -203,6 +203,28 @@ trapdoor is one whose point of interest or legend tile says "trapdoor" or
 root `tiles/`; a kind neither names keeps the door picture. A way picture
 is drawn over the whole tile, so bake it at the same size as ground tiles.
 
+### Pixel art
+
+A world drawn in pixel art says so in `world.json`:
+
+```json
+"display": { "pixel_art": { "native_tile": 32 } }
+```
+
+`native_tile` is one tile's size in art pixels: a whole number from 8 to 64. With it set, the
+engine draws the world at a whole-number scale of that size and never smooths a picture, so every
+art pixel is a crisp square. The tile is rounded to a whole number of screen pixels, and the
+engine publishes the scale it chose as `VEFR_STAGE.pixel` (`{ "native": 32, "k": 3 }` means three
+screen pixels per art pixel). A pack without the block is drawn exactly as before.
+
+With `native_tile` set, the rule for the art is:
+
+- Author tiles at `native_tile`: a 32 x 32 tile for `32`. This replaces the "bake at 2x" rule
+  above for a pixel-art pack.
+- Author characters and objects at their own native size. A 48 px tall hero is drawn 1.5 tiles
+  tall, because 48 = 1.5 x 32. Their size comes from the art, not from `sprite_scale`.
+- Never resize pixel art in the pack. The engine scales it.
+
 ### Things on the map (props)
 
 A prop is a picture drawn over the ground: a rock, a bush, a well. Its

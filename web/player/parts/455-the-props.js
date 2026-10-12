@@ -70,9 +70,11 @@
     var fw = Math.floor(im.naturalWidth / p.frames), fh = im.naturalHeight;
     if (!fw) return;
     if (p.frames > 1 && !reducedMotion()) animWant = true;
-    var w = p.w * T, h = w * (fh / fw);
-    ctx.drawImage(im, propFrame(p) * fw, 0, fw, fh,
-                  p.at[0] * T, (p.at[1] + p.h) * T - h, w, h);
+    // Pixel art draws the picture at its own size (artSize); otherwise it is p.w tiles wide.
+    var box = artSize(fw, fh, p.w * T * (fh / fw));
+    var across = snapSpan((p.at[0] + p.w / 2) * T - box.w / 2, box.w);
+    var up = snapSpan((p.at[1] + p.h) * T - box.h, box.h);
+    ctx.drawImage(im, propFrame(p) * fw, 0, fw, fh, across[0], up[0], across[1], up[1]);
   }
 
   // One ticker for everything that moves on its own. It redraws at most

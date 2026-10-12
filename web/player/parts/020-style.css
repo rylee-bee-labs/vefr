@@ -165,6 +165,7 @@
   .equip-row { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
   .equip-row-art { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; }
   .equip-row-art img { width: 32px; height: 32px; object-fit: contain; image-rendering: pixelated; }
+  body.vefr-pixel img { image-rendering: pixelated; }
   .equip-row-name { flex: 1 1 auto; }
   .equip-row button { min-height: 44px; }
   .equip-empty-svg { width: 32px; height: 32px; stroke: var(--ink-dim); fill: none; stroke-width: 1.5; }
