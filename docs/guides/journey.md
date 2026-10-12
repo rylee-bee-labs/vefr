@@ -12,6 +12,8 @@ command-line tools and searchable records. [Making art](making-art.md) shows tha
 New to making games? Start with [Make your first game](make-your-first-game.md): one page, six steps, no
 code and no AI needed.
 
+**For a new maker:** the [proposed beginner-first Studio experience](../plans/studio-creative-learning-vision.md) adds a companion-led visual workshop to help discover an idea, compare creative options and make a tiny playable slice. The longer-term storybook/canvas/playable-world connection is proposed, **not a claim that these experiences are already shipped**. This Journey and its existing rooms remain the foundation; lessons and Studio exploration never gate a room or a finished game.
+
 This page is the map. It is a suggested path, not a rule: the engine never makes
 you finish one room before you open the next, and a world can start from any of
 them. Every stop ends the same way, with something alive you can look at: a map

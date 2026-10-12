@@ -20,6 +20,39 @@
     if (/[?&]camera=phone\b/.test(q)) return true;
     return !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
   }
+  // Pixel art (`display.pixel_art` in world.json): every picture is drawn at a whole-number
+  // scale of the art's native tile, with no smoothing. A pack without it draws exactly as before.
+  var pixelNative = (world.display && world.display.pixel_art
+                     && world.display.pixel_art.native_tile) || 0;
+  var pixelK = 1;   // one art pixel is pixelK / dpr CSS px
+  if (pixelNative) document.body.classList.add('vefr-pixel');
+  function pxRatio() { return window.devicePixelRatio || 1; }
+  function snapPx(v) {
+    if (!pixelNative) return v;
+    var d = pxRatio();
+    return Math.round(v * d) / d;
+  }
+  // The span an art picture covers along one axis, as [start, length] on whole device pixels.
+  function snapSpan(at, size) {
+    if (!pixelNative) return [at, size];
+    var a = snapPx(at);
+    return [a, snapPx(at + size) - a];
+  }
+  // A picture's drawn size in CSS px: its own art pixels at the snapped scale, else heightCss
+  // tall at its own aspect.
+  function artSize(natW, natH, heightCss) {
+    if (pixelNative) return { w: natW * pixelK / pxRatio(), h: natH * pixelK / pxRatio() };
+    return { w: heightCss * (natW / natH || 1), h: heightCss };
+  }
+  // The tile as k whole art pixels of device pixels. A whole map that fits rounds k down so it
+  // still fits; any other map rounds to the nearest.
+  function snapTile(wanted) {
+    var d = pxRatio();
+    var fits = cols * wanted <= viewW && rows * wanted <= viewH;
+    var k = wanted * d / pixelNative;
+    pixelK = Math.max(1, fits ? Math.floor(k) : Math.round(k));
+    return pixelK * pixelNative / d;
+  }
   function fitZoom() {
     if (onPhone) {
       var phoneFit = Math.min(viewW / (cols * town.tile), viewH / (rows * town.tile), 3);
@@ -97,6 +130,7 @@
       map: { x: mx, y: my, w: mw, h: mh },
       tile: T   // the drawn tile, CSS px (read by tests/browser/test_camera_zoom.py)
     };
+    if (pixelNative) window.VEFR_STAGE.pixel = { native: pixelNative, k: pixelK };
     var stage = document.getElementById('stage');
     if (stage) {
       var box = stage.getBoundingClientRect();
@@ -162,7 +196,9 @@
     canvas.height = Math.round(viewH * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     onPhone = phoneCamera();
+    if (pixelNative) ctx.imageSmoothingEnabled = false;   // a canvas resize resets this
     T = town.tile * fitZoom();
+    if (pixelNative) T = snapTile(T);
     publishStage();
   }
   window.addEventListener('resize', function () { resize(); draw(); });

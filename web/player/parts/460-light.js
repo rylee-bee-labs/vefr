@@ -173,17 +173,20 @@
       var fw = sheet.frame[0], fh = sheet.frame[1];
       var cols = Math.max(1, Math.floor(sim.naturalWidth / fw));
       var col = cell.idx % cols, row = Math.floor(cell.idx / cols);
-      var sw = h * (fw / fh || 1);
-      var dx = tx * T + (T - sw) / 2, dy = ty * T + T - h;
+      var box = artSize(fw, fh, h);
+      var across = snapSpan(tx * T + (T - box.w) / 2, box.w);
+      var up = snapSpan(ty * T + T - box.h, box.h);
       if (cell.mirror) {
-        ctx.drawImage(sim, col * fw, row * fh, fw, fh, dx + sw, dy, -sw, h);
+        ctx.drawImage(sim, col * fw, row * fh, fw, fh, across[0] + across[1], up[0], -across[1], up[1]);
       } else {
-        ctx.drawImage(sim, col * fw, row * fh, fw, fh, dx, dy, sw, h);
+        ctx.drawImage(sim, col * fw, row * fh, fw, fh, across[0], up[0], across[1], up[1]);
       }
       return;
     }
-    var w = h * (im.naturalWidth / im.naturalHeight || 1);
-    ctx.drawImage(im, tx * T + (T - w) / 2, ty * T + T - h, w, h);
+    var box = artSize(im.naturalWidth, im.naturalHeight, h);
+    var across = snapSpan(tx * T + (T - box.w) / 2, box.w);
+    var up = snapSpan(ty * T + T - box.h, box.h);
+    ctx.drawImage(im, across[0], up[0], across[1], up[1]);
   }
 
   // An item marker on the floor: the item's sprite when the pack names a
@@ -193,8 +196,11 @@
     var sp = def && def.sprite;
     var size = T * 0.6;
     if (sp && spriteReady(sp)) {
-      ctx.drawImage(spriteImgs[sp], tx * T + (T - size) / 2,
-                    ty * T + (T - size) / 2, size, size);
+      var im = spriteImgs[sp];
+      var box = pixelNative ? artSize(im.naturalWidth, im.naturalHeight, size) : { w: size, h: size };
+      var across = snapSpan(tx * T + (T - box.w) / 2, box.w);
+      var up = snapSpan(ty * T + (T - box.h) / 2, box.h);
+      ctx.drawImage(im, across[0], up[0], across[1], up[1]);
       return;
     }
     ctx.fillStyle = '#CBC6B6';
