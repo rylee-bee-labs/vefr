@@ -28,12 +28,29 @@ ENDED = dict(BASE, story_end=FLAG)
 LAST = sum(section["floors"] for section in make_descent_pack.SECTIONS)
 SHUT = f"The stair is shut until the story ends: {FLAG} must be set."
 
+CELLAR, HOLLOW = make_descent_pack.SECTIONS
+GATE_LOCKED = ("The stair is shut. Go up to town first: town knows nothing of the way "
+               "on until you have read what is kept down here.")
+CELLAR_TOWN_SEEN = "town-seen:cellar:c0"
 
-@pytest.fixture(scope="module")
-def woven(tmp_path_factory):
-    home = tmp_path_factory.mktemp("endless-gate-home")
-    pack = make_descent_pack.build(home, descent=ENDED)
-    out = home / "endless.html"
+
+def _single_floor(section, **extra):
+    kept = {key: value for key, value in section.items() if key != "pattern"}
+    return {**kept, "floors": 1, **extra}
+
+
+# Cellar holds a vault, so its stairs are gated on a town visit in cycle 0;
+# hollow has none. One floor each: depth 1 cellar, 2 hollow, 3 cellar in cycle 1.
+VAULTED = dict(BASE, story_end=FLAG, sections=[
+    _single_floor(CELLAR, vault={"stamp": "vault-cellar", "sets": "cellar-read"}),
+    _single_floor(HOLLOW),
+])
+
+
+def _serve(tmp_path_factory, name, descent):
+    home = tmp_path_factory.mktemp(f"{name}-home")
+    pack = make_descent_pack.build(home, descent=descent)
+    out = home / f"{name}.html"
     out.write_text(cli.weave_html(pack), encoding="utf-8")
     port = _free_port()
     log = open(home / "server.log", "w")
@@ -41,7 +58,7 @@ def woven(tmp_path_factory):
         [sys.executable, "-m", "http.server", str(port),
          "--bind", "127.0.0.1", "--directory", str(home)],
         stdout=log, stderr=subprocess.STDOUT)
-    url = f"http://127.0.0.1:{port}/endless.html"
+    url = f"http://127.0.0.1:{port}/{name}.html"
     for _ in range(120):
         try:
             urllib.request.urlopen(url, timeout=2)
@@ -54,6 +71,16 @@ def woven(tmp_path_factory):
     yield url
     proc.terminate()
     proc.wait(timeout=10)
+
+
+@pytest.fixture(scope="module")
+def woven(tmp_path_factory):
+    yield from _serve(tmp_path_factory, "endless", ENDED)
+
+
+@pytest.fixture(scope="module")
+def vaulted(tmp_path_factory):
+    yield from _serve(tmp_path_factory, "vaulted", VAULTED)
 
 
 def _interact(page):
@@ -88,3 +115,23 @@ def test_another_flag_does_not_open_the_stair(page, woven):
     _interact(page)
     assert page.locator("#combat-live").text_content() == SHUT
     assert page.evaluate("() => window.VEFR_COMBAT.region") == last["name"]
+
+
+def test_a_vaulted_section_still_shuts_its_stair_in_cycle_zero(page, vaulted):
+    open_woven(page, vaulted)
+    first = descend_to(page, 1, descent=VAULTED)
+    _interact(page)
+    assert page.locator("#combat-live").text_content() == GATE_LOCKED
+    assert page.evaluate("() => window.VEFR_COMBAT.region") == first["name"]
+
+
+def test_an_endless_section_with_a_vault_opens_its_stair_without_a_town_visit(page, vaulted):
+    open_woven(page, vaulted)
+    # The cycle-0 visit is set by its flag; no flag is set for cycle 1.
+    page.evaluate(f"() => window.VEFR_DESCENT.setFlag('{CELLAR_TOWN_SEEN}', true)")
+    page.evaluate(f"() => window.VEFR_DESCENT.setFlag('{FLAG}', true)")
+    descend_to(page, 3, descent=VAULTED)
+    _interact(page)
+    there = delve.floor_plan(VAULTED, 4)
+    page.wait_for_function(
+        "() => window.VEFR_COMBAT && window.VEFR_COMBAT.region === '%s'" % there["name"])
