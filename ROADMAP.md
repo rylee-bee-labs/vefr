@@ -9,6 +9,8 @@
 
 > **Principle:** Cottage of the Breeze is how VEFR is built. Every lesson from it lands in the engine so the next game is easier to make.
 
+> **Studio product vision (2026-10-12, proposed):** VEFR is also a game about **learning to make games**, designed first for people with imagination and no technical background. A resident-led visual workshop should guide a creator from their own idea through visible experiments to a tiny playable, explainable, shareable slice. The [twelve owner decisions, one-round research, built-vs-proposed inventory, and phased Studio plan](docs/plans/studio-creative-learning-vision.md) are a **product-direction proposal**, not permission to interrupt Cottage, current epics, or the evidence-led game -> gameplay feature -> core rule.
+
 Cottage of the Breeze **Release 1** (a complete, polished Act 1, built through VEFR over one night) turned this roadmap from "make a game possible" into "make the next game easier". Acts 2 and 3 are part of the larger three-act direction and were left for later by Rylee's decision; that is a scoping choice, not an engine limit. This board is built from what the run proved and from the ranked discovery record, [`docs/research/cottage-release-1-learnings.md`](docs/research/cottage-release-1-learnings.md) (ten findings, each with evidence). The long list below stays as the history. Tags: **[engine]** capability, **[authoring]** developer experience, **[QA]** validation and checks, **[player]** what the player sees, **[Cottage]** content that lives in the game's repo.
 
 ### HOW VEFR GROWS
