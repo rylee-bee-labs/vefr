@@ -161,7 +161,8 @@ def test_a_pack_without_pixel_art_keeps_its_tile_smoothing_and_sprite_scale(brow
     try:
         assert page.evaluate("window.VEFR_STAGE.pixel") is None
         tile = page.evaluate("window.VEFR_STAGE.tile")
-        assert tile == pytest.approx(72.0, abs=1e-6)
+        # what main draws for the sample world at 1280x720, measured 2026-10-12: no snapping without pixel_art
+        assert tile == pytest.approx(32.0, abs=1e-6)
         smoothing = "document.getElementById('town-canvas').getContext('2d').imageSmoothingEnabled"
         assert page.evaluate(smoothing) is True
         drawn = page.evaluate("window.__heroDraws[window.__heroDraws.length - 1]")
