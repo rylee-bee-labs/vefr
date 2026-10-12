@@ -344,7 +344,10 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # The town gate on a Section's last stair only (the stair that leaves the Section), 2026-10-12; measured twice in separate processes, readings equal:
 #   7c1c8e962977b479584fc48b1bb106265bb9ae5f34cb7fbcee333c9fd9521b00
 #   7c1c8e962977b479584fc48b1bb106265bb9ae5f34cb7fbcee333c9fd9521b00
-NO_SKIN_WEAVE_SHA256 = "7c1c8e962977b479584fc48b1bb106265bb9ae5f34cb7fbcee333c9fd9521b00"
+# A family's `sight: 0` kept on a generated floor (#437, 397-the-descent.js), 2026-10-12; measured twice in separate processes, readings equal:
+#   e8cf6223969fede34b9133ae5afc07ef6b010f79e2ecce01a18f9367a816dbc4
+#   e8cf6223969fede34b9133ae5afc07ef6b010f79e2ecce01a18f9367a816dbc4
+NO_SKIN_WEAVE_SHA256 = "e8cf6223969fede34b9133ae5afc07ef6b010f79e2ecce01a18f9367a816dbc4"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():
