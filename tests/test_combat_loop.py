@@ -27,6 +27,11 @@ HARNESS = ROOT / "tests" / "fixtures" / "combat_harness.mjs"
 MAKE = ROOT / "tests" / "fixtures" / "make_combat_pack.py"
 
 DEATH_LINE = "You wake in the temple. You lost nothing that mattered."
+# The other Cozy wake line (vefr#414), for a floor of the descent, where
+# the hero wakes at the foot of the floor's own up-stair. Nothing about
+# this pack is a descent, so it must never be the one said here.
+STAIR_LINE = ("You wake at the foot of the stair, whole again. "
+              "You lost nothing that mattered.")
 
 
 @pytest.fixture(scope="module")
@@ -119,6 +124,9 @@ def test_death_is_cozy_and_the_hero_wakes_whole(fight):
     assert after["hero"] == {"hp": 3, "max": 3, "atk": 2, "at": [1, 1]}
     assert log["hp-line-death"] == "3/3"
     assert log["said-death"] == DEATH_LINE
+    # In town the pack's own wake point answers, so the line is still the
+    # temple's: the stair line belongs to a descent floor alone (#414).
+    assert log["said-death"] != STAIR_LINE
     # The fallen rat is still remembered; the other one is whole again.
     assert _by_id(after)["cellar-rat"]["alive"] is False
     assert _by_id(after)["pale-thing"] == {

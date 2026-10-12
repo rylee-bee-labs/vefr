@@ -709,6 +709,11 @@ stairs are the ones they left. The why-log names the floor they resumed
 on. Every other region, the town and a baked one included, wakes at
 `wake` exactly as before.
 
+The line names the place too, so it says the stair on a descent floor
+("You wake at the foot of the stair, whole again. You lost nothing that
+mattered.") and the temple everywhere else. Both lines are the player's
+own; a pack can word either.
+
 The HUD's health line shows the hero's real `hp/max`; a small
 `aria-live` line speaks each hit. Baked per region (`VEFR_ENEMIES`)
 and once for the hero (`VEFR_HERO`).

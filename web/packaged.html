@@ -2612,7 +2612,13 @@ function bindMenu() {
 // (`vefr-hp-<world>`), and the bar shows it honestly. Deterministic:
 // fixed numbers, no randomness, no clock. A drop to zero is Cozy
 // (see setupTown).
+// Both Cozy death lines, worded side by side so a pack can change
+// either: the temple line says the pack's wake place, the stair line
+// says the foot of the up-stair of a descent floor, where the descent
+// wakes the hero instead (see `deathResume`).
 var DEATH_LINE = 'You wake in the temple. You lost nothing that mattered.';
+var STAIR_DEATH_LINE = 'You wake at the foot of the stair, whole again. '
+  + 'You lost nothing that mattered.';
 
 // ---- growth (levels / practice) ----
 // The growth engine is pure; this is the only place it meets storage
@@ -10082,19 +10088,22 @@ function setupTown() {
   // hero fell on, whole, with the run intact), and every other region -
   // the town, a baked one - wakes exactly where the pack says it does.
   // The descent therefore asks first, and `wakes` carries the region it
-  // answered with, so an event sees the wake and not the fall.
+  // answered with, so an event sees the wake and not the fall. The line
+  // follows that answer: it names the foot of the stair where the
+  // descent wakes the hero, and the pack's own wake place everywhere
+  // else.
   function cozyDeath(killer) {
-    combatSay(DEATH_LINE);
+    var wake = (window.VEFR_HERO && window.VEFR_HERO.wake) || {};
+    var D = window.VEFR_DESCENT;
+    var back = (D && typeof D.deathResume === 'function')
+      ? D.deathResume(regionName) : null;
+    combatSay(back ? STAIR_DEATH_LINE : DEATH_LINE);
     fireRule('falls', { what: (killer && killer.id) || '',
                         where: regionName });
     HERO_HP = heroMax();
     saveHeroHp();
     renderHp();
-    var wake = (window.VEFR_HERO && window.VEFR_HERO.wake) || {};
     var woke = regionName;
-    var D = window.VEFR_DESCENT;
-    var back = (D && typeof D.deathResume === 'function')
-      ? D.deathResume(regionName) : null;
     if (back) {
       enterRegion(back.region, back.at);
       woke = back.region;
@@ -12828,7 +12837,8 @@ function setupTown() {
     var live = document.getElementById('combat-live');
     var said = live ? live.textContent : '';
     if (HERO_HP < hpBefore || regionName !== regionBefore
-        || said === DEATH_LINE || said.indexOf(' hits you ') !== -1) {
+        || said === DEATH_LINE || said === STAIR_DEATH_LINE
+        || said.indexOf(' hits you ') !== -1) {
       exploreStop('Stopped.');
       return;
     }
