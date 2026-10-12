@@ -9308,7 +9308,8 @@ function setupTown() {
   function tileOpenForEnemy(x, y) {
     if (y < 0 || x < 0 || y >= town.map.length || x >= town.map[0].length) return false;
     if ((town.legend[town.map[y][x]] || {}).solid) return false;
-    if (propBlocked(x, y)) return false;
+    // The props part may be absent (a harness that loads only the monster parts).
+    if (typeof propBlocked === 'function' && propBlocked(x, y)) return false;
     if (x === hero[0] && y === hero[1]) return false;
     return !enemyAt(x, y);
   }
@@ -9340,7 +9341,9 @@ function setupTown() {
   // a single step may land on is `tileOpenForEnemy`'s business.
   function floorOpen(x, y) {
     if (x < 0 || y < 0 || y >= town.map.length || x >= town.map[0].length) return false;
-    return !((town.legend[town.map[y][x]] || {}).solid) && !propBlocked(x, y);
+    // The props part may be absent (a harness that loads only the monster parts).
+    return !((town.legend[town.map[y][x]] || {}).solid)
+      && !(typeof propBlocked === 'function' && propBlocked(x, y));
   }
   // Steps from (x, y) to every walkable tile. `dist` has the source at
   // 0 and no entry at all for a tile the flood never reached. The flood
