@@ -220,6 +220,10 @@ def load_pack(pack_dir: Path) -> dict:
             unified['sound'] = config['sound']
         if 'display' in config:
             unified['display'] = config['display']
+        # The optional bag block (bag capacity): carried through ONLY when
+        # the pack names one, so a pack with no bag keeps the unbounded bag.
+        if 'bag' in config:
+            unified['bag'] = config['bag']
         # The pack's own words for the action-critical lines the engine
         # speaks (vefr #259), carried through ONLY when the pack declares
         # them: a pack with none loads exactly as before, and the
@@ -1488,6 +1492,18 @@ def sound_errors(w: dict) -> list[str]:
     if 'sound' not in w:
         return []
     return [p.sentence for p in shapes.check(shapes.BLOCKS['sound'], w['sound'])]
+
+
+def bag_errors(w: dict) -> list[str]:
+    """Every problem with a pack's optional `bag` block (empty = good).
+
+    A pack that names no `bag` keeps the unbounded bag and gets nothing
+    here. A pack that names one holds exactly `size`, a whole number of
+    places from 1 to 99. See `shapes.BAG` and `docs/guides/rulesets.md`.
+    """
+    if 'bag' not in w:
+        return []
+    return _shape_sentences('world.json', shapes.check(shapes.BLOCKS['bag'], w['bag']))
 
 
 def player_words_errors(w: dict) -> list[str]:
@@ -3392,6 +3408,7 @@ def validate(w: dict, pack_dir: Path | None = None) -> list[str]:
     # none gets nothing here.
     errors.extend(sound_errors(w))
     errors.extend(display_errors(w))
+    errors.extend(bag_errors(w))
     # The pack's optional player words (vefr #259): the pack's own
     # wording for the action-critical lines the engine speaks. A pack
     # that declares none gets nothing here and says nothing else about

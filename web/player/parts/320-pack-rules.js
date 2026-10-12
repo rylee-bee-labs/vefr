@@ -78,13 +78,13 @@ function performRuleAction(a) {
     var D = window.VEFR_DESCENT;
     if (D && typeof D.challengeSet === 'function') {
       var wardenKey = D.challengeSet(v);
-      if (wardenKey && bagAdd(wardenKey)) {
+      if (wardenKey && bagAdd(wardenKey, null, true)) {
         combatSay('You take ' + itemName(wardenKey) + '; it is in your bag.');
       }
     }
     return;
   }
-  if (key === 'give') { bagAdd(v); return; }
+  if (key === 'give') { bagAdd(v, null, true); return; }
   if (key === 'takes') { bagRemoveOne(v); return; }
   if (key === 'weather') {
     if (window.VEFR_RULES_WEATHER) window.VEFR_RULES_WEATHER(v === 'fog');

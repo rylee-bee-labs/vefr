@@ -335,7 +335,10 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # The sweep fixes on top of touch controls (#428); measured twice in separate processes, readings equal:
 #   36865f9d011c3b59cb11d9cb235a9a02d92e1691ec233bff8375474eaaa8b1cd
 #   36865f9d011c3b59cb11d9cb235a9a02d92e1691ec233bff8375474eaaa8b1cd
-NO_SKIN_WEAVE_SHA256 = "36865f9d011c3b59cb11d9cb235a9a02d92e1691ec233bff8375474eaaa8b1cd"
+# Bag capacity (#434) merged with the sweep fixes, 2026-10-12; measured twice in separate processes, readings equal:
+#   031824c0d4c54435c88f0de5b4d4678ca3d448d9fad9a6c1c1dc5979bb4bcfa9
+#   031824c0d4c54435c88f0de5b4d4678ca3d448d9fad9a6c1c1dc5979bb4bcfa9
+NO_SKIN_WEAVE_SHA256 = "031824c0d4c54435c88f0de5b4d4678ca3d448d9fad9a6c1c1dc5979bb4bcfa9"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

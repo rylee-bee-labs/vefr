@@ -672,8 +672,8 @@ def check(block, value, known=None, at='') -> list[Problem]:
 
 def check_item(value, at: str = '') -> list[Problem]:
     """Every problem with an item's added fields: ADR 0017's `rarity`,
-    `traits` and `roll`, and the spell slice's `spell`. An item with none
-    of them has no problems at all.
+    `traits` and `roll`, the spell slice's `spell`, and the bag's `carry`.
+    An item with none of them has no problems at all.
 
     Only the added keys are read, and the pack's own words for the rest are
     left exactly as they were: see `ITEM` for why the first nine keys are
@@ -683,7 +683,7 @@ def check_item(value, at: str = '') -> list[Problem]:
     if not isinstance(value, dict):
         return []
     added = {key: value[key]
-             for key in ITEM_ADDED + ITEM_TAUGHT if key in value}
+             for key in ITEM_ADDED + ITEM_TAUGHT + ITEM_CARRIES if key in value}
     return check(ITEM, added, at=at)
 
 
@@ -1058,12 +1058,17 @@ ITEM = Block(
         # with the pack's own spell ids.
         Key('spell', 'str', lo=1, hi=40, say={
             'wrong-type': 'spell must be a spell id, such as "ember-bolt"'}),
+        # How many places a carried thing adds to the bag (see BAG).
+        Key('carry', 'int', lo=1, hi=99, say={
+            'wrong-type': '{path} must be a whole number, such as 2',
+            'out-of-range': '{path} must be a whole number of at least 1'}),
     ),
 )
 
 # The keys ADR 0017 added to an item, in table order: what `check_item`
 # reads, and what it refuses.
 ITEM_ADDED = ('rarity', 'traits', 'roll')
+ITEM_CARRIES = ('carry',)
 
 # A warden's own endless record (ADR 0015, "In cycles `c >= 1` it draws
 # `endless.affixes` affixes"). `affixes` is how many extra affixes an
@@ -1432,6 +1437,19 @@ SCENARIO = Block(
     ),
 )
 
+# A pack's bag (world.json's `bag`): `size` is how many things the carried
+# bag holds. A pack that names no `bag` keeps the unbounded bag, and a
+# carried item's `carry` (see ITEM) raises the size by that many places.
+BAG = Block(
+    name='bag',
+    example='{"size": 6}',
+    keys=(
+        Key('size', 'int', lo=1, hi=99, required=True, say={
+            'wrong-type': '{path} must be a whole number, such as 6',
+            'out-of-range': '{path} must be a whole number of at least 1'}),
+    ),
+)
+
 # ------------------------------------------------ the player's own words
 #
 # v0 of the player-words contract: one row per action-critical line a
@@ -1527,6 +1545,7 @@ BLOCKS = {
     'scenario': SCENARIO,
     'scenario start': SCENARIO_START,
     'item': ITEM,
+    'bag': BAG,
     'player_words': PLAYER_WORDS,
     'pixel_art': PIXEL_ART,
     'spells': SPELLS,

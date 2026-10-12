@@ -631,8 +631,8 @@ the phone touch controls (#428). Cottage's Game Boy Advance town is a draft on t
       a `roll` that asks for traits and names no pool. Gaps, deliberately:
       no identifying (nothing sets `identified` true), no reveal moment
       beyond the rarity being there, no answer yet to what a trait does,
-      no bag size, and no rolled drops outside a generated floor's
-      monsters. ADR: `docs/adr/0017-rolled-loot-with-rarity-and-hidden-traits.md`.
+      no bag size (since landed: see bag capacity below), and no rolled
+      drops outside a generated floor's monsters. ADR: `docs/adr/0017-rolled-loot-with-rarity-and-hidden-traits.md`.
       Guide: `docs/guides/rulesets.md` → rolled loot. Tests:
       `tests/test_rolled_loot.py`, `tests/test_rolled_loot_play.py`,
       `tests/test_descent_parity.py`, `tests/fixtures/make_rolled_pack.py`.
@@ -661,12 +661,29 @@ the phone touch controls (#428). Cottage's Game Boy Advance town is a draft on t
       each: an `identify` naming some other service, an `identify` that is
       not the word true (an object could carry a chance, a roll or a
       model), and a speaker that offers identify in a region the pack does
-      not have. Gaps, deliberately: no bag capacity, no bag upgrades, no
-      cost for a read, and still no answer to what a trait *does*. ADR:
+      not have. Gaps, deliberately: no cost for a read (bag capacity has
+      since landed, see below), and still no answer to what a trait *does*. ADR:
       `docs/adr/0017-rolled-loot-with-rarity-and-hidden-traits.md`. Tests:
       `tests/test_identify.py`, `tests/test_identify_play.py`,
       `tests/test_interact.py`, `tests/fixtures/make_identify_pack.py`,
       `tests/fixtures/identify_harness.mjs`.
+- [x] **Bag capacity, third slice — a bag with a size, and carry**
+      (2026-10-12): the bag was an unbounded list. A pack may now name
+      `"bag": {"size": N}` in `world.json` (a whole number, 1 to 99); a pack
+      that names no `bag` keeps the unbounded bag. An item may carry a
+      `carry` (a whole number, 1 to 99), and each carried thing with one -
+      in the bag or worn - raises the cap by that much. A full bag refuses a
+      floor pickup in one plain line and leaves the thing on the floor. A
+      warden's key, a `give`, a chest's contents, an equip swap and a
+      take-off always fit, because refusing them would lose the thing. The
+      bag panel reads "2 of 2 carried." when capped. `vefr check` refuses a
+      `bag` block with no whole-number `size`, and a `carry` that is not a
+      whole number from 1 to 99. Gaps, deliberately: a shop purchase into a
+      full bag is refused with no line, a `carry` does nothing where the pack
+      names no `bag.size`, and no weight. ADR:
+      `docs/adr/0017-rolled-loot-with-rarity-and-hidden-traits.md`, amendment 1.
+      Guide: `docs/guides/rulesets.md` → bag capacity. Tests:
+      `tests/test_bag_capacity.py`, `tests/fixtures/bag_capacity_harness.mjs`.
 - [x] **Spells, first slice — schools, levels, and the books found on the floor**
       (2026-10-10): the engine had levels and rolled loot and nothing to
       do with either. `world.json` may now carry an optional `spells` block

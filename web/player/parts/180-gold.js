@@ -103,13 +103,38 @@ function syncCombat() {
     try { window.refreshCombatSnapshot(); } catch (e) {}
   }
 }
+// What the carried bag holds, not counting a worn thing, as the panel counts.
+function bagHolds() {
+  return bagCarried().filter(function (c) { return !isWorn(c.id); });
+}
+// How many things the bag may hold: the pack's `bag.size` plus the `carry`
+// of each thing carried, in the bag or worn. Null when the pack names no
+// size - the unbounded bag.
+function bagRoom() {
+  var named = window.VEFR_WORLD && window.VEFR_WORLD.bag;
+  if (!named || typeof named.size !== 'number') return null;
+  var cat = itemCatalog();
+  var carried = bagCarried().map(function (c) { return c.id; });
+  EQUIP_SLOTS.forEach(function (slot) {
+    if (typeof EQUIP_STATE[slot] === 'string') carried.push(EQUIP_STATE[slot]);
+  });
+  return carried.reduce(function (room, id) {
+    var def = cat[id];
+    return room + ((def && typeof def.carry === 'number') ? def.carry : 0);
+  }, named.size);
+}
 // Put one thing in the bag. `roll` is the drop's drawn
 // `{rarity, traits}` when it has any: with it, the entry is saved as an
 // instance record so the rarity is there on the next load and is never
 // drawn twice; without it, the entry is the bare id this has always
-// stored, which is what every caller but a floor drop passes.
-function bagAdd(id, roll) {
+// stored, which is what every caller but a floor drop passes. `alwaysFits`
+// is for a thing the hero is given or gets back rather than picks up - a
+// warden's key, a chest's contents, a worn thing coming off - which the
+// full-bag refusal never turns away.
+function bagAdd(id, roll, alwaysFits) {
   if (!itemCatalog()[id]) return false;
+  var room = bagRoom();
+  if (!alwaysFits && room !== null && bagHolds().length >= room) return false;
   var raw = store.getJSON(BAG_KEY, []);
   var cat = itemCatalog();
   // The bag has always dropped an id the catalog no longer has every time
@@ -434,7 +459,7 @@ function equipItem(id) {
   EQUIP_STATE = result.state;
   saveEquipped(EQUIP_STATE);
   bagRemoveOne(id);
-  if (result.swapped) bagAdd(result.swapped);
+  if (result.swapped) bagAdd(result.swapped, null, true);
   var line = 'You put on ' + (def.name || id) + '.';
   var ml = modsLine(def);
   if (ml) line += ' ' + ml + '.';
@@ -462,7 +487,7 @@ function takeOffSlot(slot) {
   }
   EQUIP_STATE = result.state;
   saveEquipped(EQUIP_STATE);
-  bagAdd(result.removed);
+  bagAdd(result.removed, null, true);
   // If the new max is below current, clamp and save; never below 1.
   var newMax = heroMax();
   if (HERO_HP > newMax) {
@@ -567,9 +592,11 @@ function renderBagPanel() {
     }
     list.appendChild(row);
   });
+  var room = bagRoom();
   if (count) {
-    count.textContent = ids.length
-      + (ids.length === 1 ? ' thing carried.' : ' things carried.');
+    count.textContent = room === null
+      ? ids.length + (ids.length === 1 ? ' thing carried.' : ' things carried.')
+      : ids.length + ' of ' + room + ' carried.';
   }
   renderGold();
 }

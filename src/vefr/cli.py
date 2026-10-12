@@ -1898,6 +1898,11 @@ def _player_items(world: dict) -> dict[str, dict]:
         # never asked bakes exactly what it always baked.
         if spec.get('keep') is True:
             entry['keep'] = True
+        # `carry`: how many places a carried thing adds to the bag. Only a
+        # positive whole number rides along, as `heal` does.
+        carry = spec.get('carry')
+        if isinstance(carry, int) and not isinstance(carry, bool) and carry > 0:
+            entry['carry'] = carry
         # `light`: a torch's radius/turns or a one-shot reveal. Only a
         # valid, usable form is baked, so a broken one is a silent no-op
         # rather than a thing the player cannot use. maplab names it.
