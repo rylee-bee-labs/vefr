@@ -524,6 +524,17 @@ window.VEFR_DESCENT = (function () {
         typeof raw.sets === 'string' && raw.sets) return raw.sets;
     return null;
   }
+  // The vault's own id (ADR 0015), the twin of `delve.vault_id`: the middle
+  // of every `vault-chest:<id>:c<cycle>` flag. None for the bare stamp id E8b
+  // shipped and for a record that names no `id`, so their chests keep the
+  // library's found-list and write nothing here.
+  function vaultId(section) {
+    var raw = section ? section.vault : null;
+    if (raw && typeof raw === 'object' && !Array.isArray(raw) &&
+        typeof raw.id === 'string' && raw.id) return raw.id;
+    return null;
+  }
+  function vaultChestFlag(vault, cycle) { return 'vault-chest:' + vault + ':c' + cycle; }
   function townSeenFlag(sectionId, cycle) { return 'town-seen:' + sectionId + ':c' + cycle; }
   function storyEnd() {
     var d = def();
@@ -556,8 +567,10 @@ window.VEFR_DESCENT = (function () {
   // the placed vault stamp's door - the socket its corridor came in by -
   // its note, chest and home, the warden flag that opens the door, and
   // `sets`: the flag the vault's NOTE records, the guard the town gate is
-  // behind (E8c). A Section whose `vault` is the bare stamp id E8b
-  // shipped names no flag and gets `sets: null`, exactly as Python does.
+  // behind (E8c); and `id`: the vault's own name, what its taken chest is
+  // keyed by (ADR 0015, "vault-chest:<id>:c<c>"). A Section whose `vault` is
+  // the bare stamp id E8b shipped names no flag and no id and gets
+  // `sets: null, id: null`, exactly as Python does.
   function vaultRecord(floor, section, k, cycle) {
     var slots = sectionPattern(section);
     var slot = (isWhole(k) && k >= 1 && k <= slots.length) ? slots[k - 1] : 'n';
@@ -570,11 +583,30 @@ window.VEFR_DESCENT = (function () {
              note: tileOrNull(anchors.note), chest: tileOrNull(anchors.chest),
              home: tileOrNull(anchors.home),
              flag: warden ? wardenFlag(warden.id, cycle) : null,
-             sets: vaultFlag(section) };
+             sets: vaultFlag(section), id: vaultId(section) };
   }
   function doorShut(plan) {
     return !!(plan && plan.vault && plan.vault.door && plan.vault.flag &&
               flags()[plan.vault.flag] !== true);
+  }
+  // A vault chest taken once stays taken (ADR 0015): its permanent flag is
+  // `vault-chest:<id>:c<cycle>`, set when the chest is taken and consulted
+  // when it is opened, so a return to town cannot refill it. A vault that
+  // names no id of its own writes no flag, and its chest keeps the
+  // library's own found-list, exactly as E8b played.
+  function vaultChestVault() {
+    var plan = floor();
+    return plan && plan.vault ? plan.vault.id : null;
+  }
+  function vaultChestTaken() {
+    var vault = vaultChestVault(), plan = floor();
+    return !!vault && flags()[vaultChestFlag(vault, plan.cycle)] === true;
+  }
+  function markVaultChestTaken() {
+    var vault = vaultChestVault(), plan = floor();
+    if (!vault) return false;
+    setFlag(vaultChestFlag(vault, plan.cycle));
+    return true;
   }
   function withChar(row, x, ch) { return row.slice(0, x) + ch + row.slice(x + 1); }
 
@@ -1163,11 +1195,14 @@ window.VEFR_DESCENT = (function () {
         var stair = { from: name, at: plan.anchors.down.slice(),
                       to: below.name, to_at: below.anchors.up.slice() };
         // The warden floor is the last floor of its Section, so its down
-        // stair is the gate into the next one. The stair that leads past
+        // stair is the gate into the next one. Only a stair that leaves the
+        // Section carries the town gate: the floors above the warden stay
+        // open, whatever the vault names. The stair that leads past
         // the last Section into endless opens on the story end instead
         // (ADR 0015 Amendment 1 section 1): one stair carries one flag.
         var endless = down.cycle > plan.cycle;
-        var gate = endless ? storyEnd() : townGate(plan.section, plan.cycle);
+        var leaves = down.section !== plan.section;
+        var gate = endless ? storyEnd() : (leaves ? townGate(plan.section, plan.cycle) : null);
         if (gate) {
           stair.requires = { flag: gate };
           stair.locked_text = endless
@@ -1974,6 +2009,9 @@ window.VEFR_DESCENT = (function () {
     // `storyFlags` is how the ONE gate mechanism (`lockOpen`) sees a
     // story flag, which lives in the descent's own save beside the floors.
     storyEnd: storyEnd, townSeenFlag: townSeenFlag, vaultFlag: vaultFlag,
+    // The vault's own id and its chest's permanent flag (ADR 0015).
+    vaultId: vaultId, vaultChestFlag: vaultChestFlag,
+    vaultChestTaken: vaultChestTaken, markVaultChestTaken: markVaultChestTaken,
     townGate: townGate, markTownSeen: markTownSeen, actNumber: actNumber,
     storyFlags: function (flag) { return !!flag && flags()[flag] === true; },
     needsCard: needsCard, cardShown: cardShown, offerCard: offerCard,

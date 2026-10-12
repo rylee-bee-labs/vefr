@@ -1278,6 +1278,31 @@ def vault_flag(section: dict) -> str | None:
     return vault['sets'] if vault else None
 
 
+def vault_id(section: dict) -> str | None:
+    """The vault's own id, or None: the middle of every `vault-chest:<id>:c<c>`.
+
+    ADR 0015 names the vault chest's permanent flag `vault-chest:<vault id>:c<c>`,
+    so the vault record's `id` is what a taken chest is keyed by rather than the
+    stamp - a vault that moves or is renamed keeps its flag. It is additive and
+    optional: the bare stamp id E8b shipped and a record that names no `id` both
+    answer None, which is the same "the pack wrote nothing" answer every other
+    optional key gives, and their chests keep the library's own found-list."""
+    raw = section.get('vault') if isinstance(section, dict) else None
+    if isinstance(raw, dict):
+        vid = raw.get('id')
+        if isinstance(vid, str) and vid:
+            return vid
+    return None
+
+
+def vault_chest_flag(vault: str, cycle: int) -> str:
+    """The permanent flag a taken vault chest sets: `vault-chest:<id>:c<cycle>`.
+
+    The one place the shape is written on the Python side, beside `warden_flag`,
+    so nothing spells the flag out by hand."""
+    return 'vault-chest:{vault}:c{cycle}'.format(vault=vault, cycle=cycle)
+
+
 def town_seen_flag(section_id: str, cycle: int) -> str:
     """The gate flag a town visit sets: `town-seen:<section>:c<cycle>` (ADR 0015)."""
     return TOWN_SEEN.format(section=section_id, cycle=cycle)
@@ -1410,7 +1435,8 @@ def _vault_record(floor: dict, section: dict, k: int, cycle: int) -> dict | None
     The door is shut until the Section's warden is beaten (`flag`); a Section with no warden has an open
     vault (`flag` None). `sets` is the flag the vault's NOTE records - the guard ADR 0015 puts on the town
     gate, and None for the bare stamp id E8b shipped. Only the warden floor's vault is the vault; a vault
-    stamp elsewhere is a room."""
+    stamp elsewhere is a room. `id` is the vault's own name (`vault_id`), the middle of the permanent
+    chest flag `vault-chest:<id>:c<c>`, and None when the record names none."""
     from . import sections  # here, not at the top: sections imports this module
 
     if sections.slot(section, k) != 'warden':
@@ -1424,7 +1450,7 @@ def _vault_record(floor: dict, section: dict, k: int, cycle: int) -> dict | None
             'note': _tile_or_none(anchors.get('note')), 'chest': _tile_or_none(anchors.get('chest')),
             'home': _tile_or_none(anchors.get('home')),
             'flag': warden_flag(warden['id'], cycle) if warden else None,
-            'sets': vault_flag(section)}
+            'sets': vault_flag(section), 'id': vault_id(section)}
 
 
 def _tile_or_none(value):

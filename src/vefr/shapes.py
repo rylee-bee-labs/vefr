@@ -1135,15 +1135,24 @@ WARDEN = Block(
 # the vault's note records, which is what tells the engine a Section has
 # been seen. A Section that names no `sets` gets no town gate at all,
 # which is the same "the pack wrote nothing" answer every other optional
-# key here gives. ADR 0015's record also carries `note`, `chest`,
-# `needs` and `home`; those are the vault's own contents, E8b's slice,
-# and they stay out until the slices that read them land.
+# key here gives. The record's `id` is the vault's own name (ADR 0015,
+# "vault-chest:<id>:c<c>"): it is optional, and a vault that names none
+# writes no chest flag and keeps the library's found-list exactly as E8b
+# played. ADR 0015's record also carries `note`, `chest`, `needs` and
+# `home`; those are the vault's own contents, E8b's slice, and they stay
+# out until the slices that read them land.
 VAULT = Block(
     name='vault',
     example='{"stamp": "vault-cellar", "sets": "vault-1-read"}',
     keys=(
         Key('stamp', 'str', lo=1, hi=40, required=True),
         Key('sets', 'str', lo=1, hi=64, required=True),
+        # Additive (ADR 0015, "the vault gets its own id"): the vault's own
+        # name, the middle of every `vault-chest:<id>:c<c>` flag. It is not
+        # the stamp id - a moved or renamed vault keeps its flag - and it
+        # stays optional so every record that names only `stamp` and `sets`
+        # weaves the same bytes it always did.
+        Key('id', 'str', lo=1, hi=40),
     ),
     say={'missing-key': '{name} must hold its {key}, such as {example}'},
 )

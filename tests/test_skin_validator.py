@@ -338,7 +338,13 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # Bag capacity (#434) merged with the sweep fixes, 2026-10-12; measured twice in separate processes, readings equal:
 #   031824c0d4c54435c88f0de5b4d4678ca3d448d9fad9a6c1c1dc5979bb4bcfa9
 #   031824c0d4c54435c88f0de5b4d4678ca3d448d9fad9a6c1c1dc5979bb4bcfa9
-NO_SKIN_WEAVE_SHA256 = "031824c0d4c54435c88f0de5b4d4678ca3d448d9fad9a6c1c1dc5979bb4bcfa9"
+# The vault chest's own permanent flag (ADR 0015), 2026-10-12; measured twice in separate processes, readings equal:
+#   07177f55a79e308bb2894b0858e3ead070dea3d74ff940d599f1ec36871c4455
+#   07177f55a79e308bb2894b0858e3ead070dea3d74ff940d599f1ec36871c4455
+# The town gate on a Section's last stair only (the stair that leaves the Section), 2026-10-12; measured twice in separate processes, readings equal:
+#   7c1c8e962977b479584fc48b1bb106265bb9ae5f34cb7fbcee333c9fd9521b00
+#   7c1c8e962977b479584fc48b1bb106265bb9ae5f34cb7fbcee333c9fd9521b00
+NO_SKIN_WEAVE_SHA256 = "7c1c8e962977b479584fc48b1bb106265bb9ae5f34cb7fbcee333c9fd9521b00"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():
