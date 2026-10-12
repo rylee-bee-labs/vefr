@@ -141,7 +141,7 @@ class CheckerboardTest(unittest.TestCase):
     def test_a_drawn_checkerboard_background_is_cleared(self):
         out = ps.process_one(self._checker_sheet(), 64, 28)
         a = out.getchannel("A")
-        opaque = sum(1 for v in a.getdata() if v > 0)
+        opaque = sum(1 for v in a.tobytes() if v > 0)
         total = 64 * 64
         # only the subject remains: well under half the canvas, and the corners are clear
         self.assertLess(opaque, total * 0.5)
