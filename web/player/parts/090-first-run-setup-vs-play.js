@@ -74,7 +74,7 @@ function bootstrap() {
   var statusEl0 = document.getElementById('status');
   if (!tutorialDone()) {
     statusEl0.textContent = touch
-      ? 'Use the pad to move. Tap Talk when someone is near.'
+      ? 'Move on the left. Near someone, tap the round button.'
       : 'Move with the arrow keys or WASD. Press E to talk.';
     statusEl0.setAttribute('data-tutorial', '1');
   }

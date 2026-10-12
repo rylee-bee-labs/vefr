@@ -131,7 +131,7 @@ def test_on_a_phone_the_controls_sit_beside_the_map_not_on_it(browser, woven, w,
         m = st["map"]
         for e in info["els"]:
             if e["id"] in ("dpad", "acts", "interact", "talk", "whisper", "bagbtn", "explore",
-                           "touch-smart", "touch-bag", "touch-b") or "gbtn" in str(e["id"]):
+                           "touch-smart", "touch-bag", "touch-b", "touch-whisper", "touch-explore") or "gbtn" in str(e["id"]):
                 inter_x = min(e["r"], m["x"] + m["w"]) - max(e["l"], m["x"])
                 inter_y = min(e["b"], m["y"] + m["h"]) - max(e["t"], m["y"])
                 assert not (inter_x > 4 and inter_y > 4 and e["id"] not in ("menu-open",)), \

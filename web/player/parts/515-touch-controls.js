@@ -1,6 +1,7 @@
-// ---- touch controls: a floating joystick, one smart button, Bag, B and two quick slots ----
+// ---- touch controls: a floating joystick, one smart button, Bag, Whisper, Explore, B and two quick slots ----
 // On a coarse pointer this layer replaces the Acts row. Every action goes through
-// the code the keys already use: move(), doInteract(), useItem(), openBag() and the
+// the code the keys already use: move(), doInteract(), useItem(), openBag(), the
+// Acts row's own Whisper and Explore buttons (Q and O press the same), and the
 // panel closers. The D-pad stays for those who choose it in Display.
 window.__vefrTouch = { log: [] };
 
@@ -273,6 +274,27 @@ function touchBagPress() {
   if (window.openBag) window.openBag();
 }
 
+// Whisper and Explore press the Acts row's own buttons, hidden on a phone but still
+// wired, so a tap does exactly what Q and O do (issue #431).
+function touchWhisperPress() {
+  touchStopExplore();
+  touchRecord('action', 'whisper', null);
+  document.getElementById('whisper').click();
+}
+
+function touchExplorePress() {
+  touchRecord('action', 'explore', null);
+  document.getElementById('explore').click();
+}
+
+// Explore's pressed state and Whisper's wait while it listens show on the touch twins.
+function touchSyncTools() {
+  var ex = document.getElementById('explore');
+  var wh = document.getElementById('whisper');
+  document.getElementById('touch-explore').setAttribute('aria-pressed', ex.getAttribute('aria-pressed') === 'true' ? 'true' : 'false');
+  document.getElementById('touch-whisper').disabled = wh.disabled;
+}
+
 function touchClosePress() {
   touchRecord('action', 'b', null);
   if (touchShown('act-end')) closeActEnd();
@@ -350,10 +372,15 @@ document.getElementById('touch-smart').addEventListener('click', touchSmartPress
 document.getElementById('touch-bag').addEventListener('click', touchBagPress);
 document.getElementById('touch-b').addEventListener('click', touchClosePress);
 document.getElementById('touch-quick').addEventListener('click', touchQuickPress);
+document.getElementById('touch-whisper').addEventListener('click', touchWhisperPress);
+document.getElementById('touch-explore').addEventListener('click', touchExplorePress);
 
 new MutationObserver(touchSyncSmart).observe(document.getElementById('interact'), {
   subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['class']
 });
+var touchToolWatch = new MutationObserver(touchSyncTools);
+touchToolWatch.observe(document.getElementById('explore'), { attributes: true, attributeFilter: ['aria-pressed'] });
+touchToolWatch.observe(document.getElementById('whisper'), { attributes: true, attributeFilter: ['disabled'] });
 var touchPanelWatch = new MutationObserver(touchSyncModal);
 TOUCH_PANEL_IDS.forEach(function (id) {
   touchPanelWatch.observe(document.getElementById(id), { attributes: true, attributeFilter: ['hidden'] });
@@ -362,5 +389,6 @@ TOUCH_PANEL_IDS.forEach(function (id) {
 wireTouchSettings();
 applyTouchPrefs();
 touchSyncSmart();
+touchSyncTools();
 touchSyncModal();
 renderQuickslots();

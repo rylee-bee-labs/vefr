@@ -143,7 +143,7 @@
   // A click anywhere else also stops the walk.
   document.addEventListener('click', function (e) {
     if (!exploring()) return;
-    if (e.target && e.target.closest && e.target.closest('#explore')) return;
+    if (e.target && e.target.closest && e.target.closest('#explore, #touch-explore')) return;
     exploreStop('Stopped.');
   });
 
