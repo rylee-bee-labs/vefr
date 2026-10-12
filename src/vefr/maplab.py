@@ -1419,7 +1419,9 @@ def spells_errors(w: dict) -> list[str]:
     """
     if 'spells' not in w:
         return []
-    errors = [p.sentence
+    records = (w['spells'].get('spells')
+               if isinstance(w['spells'], dict) else None)
+    errors = [_no_school_sentence(p, records) or p.sentence
               for p in shapes.check(shapes.BLOCKS['spells'], w['spells'],
                                     at='spells')]
     schools = spell_schools_of(w)
@@ -1438,6 +1440,33 @@ def spells_errors(w: dict) -> list[str]:
             + (f"; the pack declares {_names_sentence(schools)}"
                if schools else "; the pack declares no schools at all"))
     return errors
+
+
+_NO_SCHOOL = re.compile(r'/spells/spells/(\d+)/school')
+
+
+def _no_school_sentence(problem, records) -> str:
+    """The no-school refusal, naming the spell and the file it is in.
+
+    The shape table's own missing-key sentence says `spell must hold a
+    school` and names neither which spell nor where it is written, which
+    is no help in a pack with twenty of them. The pointer knows which
+    record it is, so the sentence is said again with the record's `id`
+    (or its place in the list, when it has no `id` either) and the file.
+    Every other problem is left as the table said it ('' here).
+    """
+    if problem.code != 'missing-key':
+        return ''
+    found = _NO_SCHOOL.fullmatch(problem.pointer)
+    if not found or not isinstance(records, list):
+        return ''
+    index = int(found.group(1))
+    record = records[index] if index < len(records) else None
+    rid = record.get('id') if isinstance(record, dict) else None
+    label = (f"'{rid}'" if isinstance(rid, str) and rid
+             else f'spells.spells[{index}]')
+    return (f'world.json: spell {label} must hold a school, such as '
+            f'{shapes.SPELL.example}')
 
 
 def item_spell_errors(item_id, spec, spell_ids) -> list[str]:

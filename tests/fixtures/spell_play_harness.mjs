@@ -13,6 +13,8 @@
      { "do": "openBag" }              // opens the Bag panel
      { "do": "hurt", "by": 4 }        // the hero loses that much health
      { "do": "cast", "spell": "id" }  // presses that spell's Cast button
+     { "do": "castUnlisted", "spell": "id" } // castSpell(id) with no button,
+                                      // the way a stale or forged press would
      { "do": "read", "item": "id" }   // presses that item's Use button
      { "do": "grow" }                 // awards 3 xp - one level
      { "do": "snap", "tag": "" }      // captures a named snapshot
@@ -29,6 +31,8 @@
      books:      [string]  // the learned-by-book list, as stored
      heading:    string    // the Spells heading's words
      hidden:     boolean   // whether the Spells section is off the page
+     why:        [{id, why}] // the why-log (`VEFR_WHY`), oldest first
+     whyText:    string    // every word the Why panel shows, newest first
 */
 import fs from 'node:fs';
 import { JSDOM, VirtualConsole } from 'jsdom';
@@ -78,6 +82,11 @@ const spellRow = (id) => [...d.querySelectorAll('#spell-list .bag-row')]
 const bagButton = (id) => [...d.querySelectorAll('#bag-list button')]
   .find((b) => b.dataset.item === id);
 
+const whyText = () => {
+  if (typeof w.renderWhyPanel === 'function') w.renderWhyPanel();
+  return (d.getElementById('why-list') || {}).textContent || '';
+};
+
 const snap = () => {
   const rows = [...d.querySelectorAll('#spell-list .bag-row')];
   const head = d.getElementById('spells-heading');
@@ -98,6 +107,8 @@ const snap = () => {
     books,
     heading: head ? (head.textContent || '') : '',
     hidden: list ? !!list.hidden : null,
+    why: (w.VEFR_WHY || []).slice(),
+    whyText: whyText(),
   };
 };
 
@@ -116,6 +127,8 @@ for (const step of (spec.steps || [])) {
     const row = spellRow(step.spell);
     if (!row) note(false, 'no Cast row for ' + step.spell);
     else { row.querySelector('button').click(); note(true, 'cast ' + step.spell); }
+  } else if (step.do === 'castUnlisted') {
+    note(w.castSpell(step.spell), 'cast ' + step.spell);
   } else if (step.do === 'read') {
     const button = bagButton(step.item);
     if (!button) note(false, 'no Use button for ' + step.item);

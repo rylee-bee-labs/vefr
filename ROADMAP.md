@@ -712,11 +712,15 @@ the phone touch controls (#428). Cottage's Game Boy Advance town is a draft on t
       school - and each goes red when its own refusal is removed. Gaps,
       deliberately: nothing says what a *school* does in play, `heal` is the
       whole of what a spell does, nothing sets `identified` true so the
-      lesson rides `use`, and no event carries a spell. ADR:
+      lesson rides `use`, and no event carries a spell. Since then (#345
+      leftovers): every cast writes a `cast-<id>` why-log entry in the
+      panel's own words, the no-school refusal names the spell and
+      `world.json`, and `tests/test_spell_table.py` holds the shape, the
+      bake and the player's reads to one another. ADR:
       `docs/adr/0018-spells-schools-and-spellbooks.md` (Proposed).
       Guide: `docs/guides/rulesets.md` → spells. Tests:
       `tests/test_spells.py`, `tests/test_spells_play.py`,
-      `tests/fixtures/make_spell_pack.py`.
+      `tests/test_spell_table.py`, `tests/fixtures/make_spell_pack.py`.
 - [x] **Combat, first slice — bump to fight, and monsters that come for you**
       (2026-09-30): the dungeon had floors, fog, doors, stairs, books and a
       chest - and nothing to fight. A region's `contract.json` may now carry

@@ -1216,18 +1216,23 @@ ever taught this way.
 a `Cast` button. Casting recovers its `heal` and never above the hero's
 max, and keeps the potion's rule: already whole means nothing is gained
 and nothing is spent, and the line says so. A spell with no `heal` casts,
-says so and changes no number.
+says so and changes no number. Every cast also goes in the Why panel as
+`cast <spell id>` with the same line, so it can be read back later; a
+refused cast writes nothing there.
 
 `vefr check` refuses four things, one plain sentence each: a spell
 naming a school the block does not declare, a `level` under 1, a book
 teaching a spell the pack does not declare, and a spell with no school
-at all. What a school does in play, and what a spell does beyond
+at all (named by its id and the file: "world.json: spell 'ember-bolt'
+must hold a school, such as ..."). What a school does in play, and what a spell does beyond
 healing, are open questions this slice does not answer - see ADR 0018.
 
 Code: `src/vefr/shapes.py` (the two blocks) + `src/vefr/maplab.py` (the
 sweep) + `src/vefr/cli.py` (the bake) + `web/player/parts/225-spells.js`
 (the player); tests: `tests/test_spells.py` +
-`tests/test_spells_play.py` + `tests/fixtures/make_spell_pack.py`.
+`tests/test_spells_play.py` + `tests/test_spell_table.py` (the shape,
+the bake and the player's reads held to one another) +
+`tests/fixtures/make_spell_pack.py`.
 
 ## equipment (the pack fields and the engine; the wearing is a later slice)
 
