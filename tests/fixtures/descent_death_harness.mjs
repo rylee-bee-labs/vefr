@@ -11,8 +11,8 @@
    case = {"floor": "cellar-0-3", "wake": [x, y],
            "walk": [["dir", "up"], ["click", "#interact"], ["wait", 150]],
            "fight": {"dir": "left", "presses": 60}}
-   prints {"reads": {...}, "died": bool, "presses": N, "store": {...},
-           "errors": [...]} */
+   prints {"reads": {...}, "died": bool, "presses": N, "said": str,
+           "store": {...}, "errors": [...]} */
 import fs from 'node:fs';
 import { JSDOM, VirtualConsole } from 'jsdom';
 
@@ -70,12 +70,21 @@ async function main() {
   // the wrong floor. A wake it is.
   let died = false;
   let presses = 0;
+  let said = '';
   let hp = (window.VEFR_COMBAT.hero || {}).hp;
+  // The line the hero woke on, read once: what the wake itself said, with
+  // no press after it to say anything else.
+  const saidLine = () => {
+    const el = document.getElementById('combat-live');
+    return el ? el.textContent : '';
+  };
   const woke = () => {
     const hero = (window.VEFR_COMBAT || {}).hero || {};
     const rose = typeof hero.hp === 'number' && typeof hp === 'number' && hero.hp > hp;
     hp = hero.hp;
-    return rose && same(hero.at, plan.wake) && hero.hp === hero.max;
+    if (!(rose && same(hero.at, plan.wake) && hero.hp === hero.max)) return false;
+    if (!said) said = saidLine();
+    return true;
   };
 
   // The staging walk stops on the wake too, for the reason the fight
@@ -139,6 +148,7 @@ async function main() {
   return {
     died,
     presses,
+    said,
     reads: {
       combat: window.VEFR_COMBAT,
       why: window.VEFR_WHY,
@@ -154,7 +164,7 @@ let out;
 try {
   out = await main();
 } catch (err) {
-  out = { died: false, presses: 0, reads: {}, store: {}, errors: errors.concat([String(err)]) };
+  out = { died: false, presses: 0, said: '', reads: {}, store: {}, errors: errors.concat([String(err)]) };
 }
 process.stdout.write(JSON.stringify(out) + '\n');
 window.close();

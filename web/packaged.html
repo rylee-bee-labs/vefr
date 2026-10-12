@@ -1309,6 +1309,10 @@ function renderBooksPanel() {
   }
 }
 
+// How long the panel stays up on the phone camera before it folds itself, in
+// ms. Long enough to read the newest line on a phone, short enough that the
+// panel is not over the hero by the time the hero has walked on (issue #430).
+var FOLD_MS = 6000;
 // The message stack is a small corner panel that can be folded away; the lines
 // stay in the page (a screen reader still hears them) and the choice is remembered.
 function bindMessagePanel() {
@@ -1316,13 +1320,66 @@ function bindMessagePanel() {
   var toggle = document.getElementById('toasts-toggle');
   if (!panel || !toggle) return;
   var key = 'vefr-ui-messages-' + ((window.VEFR_WORLD && window.VEFR_WORLD.name) || 'world');
+  // A browser test cannot watch six real seconds, so the wait is read from the
+  // page when there is one; without it the panel waits exactly as long as it
+  // always does.
+  function foldMs() {
+    var asked = Number(window.VEFR_MESSAGES_FOLD_MS);
+    return asked > 0 ? asked : FOLD_MS;
+  }
+  var byHand = store.get(key) === '1';   // a fold by hand is the player's own, and is kept
+  var foldTimer = null;
+  // The fold the camera does is the same one the toggle does - the lines stay
+  // in the page - but only a fold by hand is remembered.
   function setCollapsed(c) {
     panel.classList.toggle('is-collapsed', c);
     toggle.setAttribute('aria-expanded', c ? 'false' : 'true');
-    store.set(key, c ? '1' : '0');
   }
-  toggle.addEventListener('click', function () { setCollapsed(!panel.classList.contains('is-collapsed')); });
-  if (store.get(key) === '1') setCollapsed(true);
+  function onPhoneCamera() { return !!(window.VEFR_STAGE && window.VEFR_STAGE.phone); }
+  function foldSoon() {
+    if (!onPhoneCamera() || byHand) return;
+    if (foldTimer) clearTimeout(foldTimer);
+    foldTimer = setTimeout(function () {
+      foldTimer = null;
+      // Asked again at the fold itself: a window turned sideways, or a line
+      // that arrived before the camera published, must not fold a panel the
+      // phone camera is no longer drawing under.
+      if (!byHand && onPhoneCamera()) setCollapsed(true);
+    }, foldMs());
+  }
+  toggle.addEventListener('click', function () {
+    var folded = !panel.classList.contains('is-collapsed');   // folded after this tap
+    byHand = folded;
+    if (folded && foldTimer) { clearTimeout(foldTimer); foldTimer = null; }
+    setCollapsed(folded);
+    store.set(key, folded ? '1' : '0');
+    foldSoon();   // opened by hand, it folds itself again after the wait
+  });
+  if (byHand) setCollapsed(true);
+  // A new line is a line saying something NEW, not a line being written: a
+  // step rewrites the same place name into #poi and the same hint into
+  // #use-hint every turn, and a line going quiet clears itself, and neither
+  // is a line shown. A line nobody can see (`.sr-only`, `hidden`) is not a
+  // line shown either.
+  var said = lineTexts();
+  function lineTexts() {
+    return Array.prototype.map.call(panel.querySelectorAll('p'), function (p) {
+      if (p.classList.contains('sr-only') || p.hidden || p.closest('[hidden]')) return '';
+      return p.textContent || '';
+    });
+  }
+  if (window.MutationObserver) {
+    new MutationObserver(function () {
+      var now = lineTexts();
+      var fresh = false;
+      for (var i = 0; i < now.length; i++) if (now[i] && now[i] !== said[i]) fresh = true;
+      said = now;
+      if (!fresh || byHand || !onPhoneCamera()) return;
+      setCollapsed(false);
+      foldSoon();
+    }).observe(panel, { childList: true, characterData: true, subtree: true,
+                        attributes: true, attributeFilter: ['hidden'] });
+  }
 }
 
 function bindLibrary() {
@@ -2696,7 +2753,13 @@ function bindMenu() {
 // (`vefr-hp-<world>`), and the bar shows it honestly. Deterministic:
 // fixed numbers, no randomness, no clock. A drop to zero is Cozy
 // (see setupTown).
+// Both Cozy death lines, worded side by side so a pack can change
+// either: the temple line says the pack's wake place, the stair line
+// says the foot of the up-stair of a descent floor, where the descent
+// wakes the hero instead (see `deathResume`).
 var DEATH_LINE = 'You wake in the temple. You lost nothing that mattered.';
+var STAIR_DEATH_LINE = 'You wake at the foot of the stair, whole again. '
+  + 'You lost nothing that mattered.';
 
 // ---- growth (levels / practice) ----
 // The growth engine is pure; this is the only place it meets storage
@@ -10166,19 +10229,22 @@ function setupTown() {
   // hero fell on, whole, with the run intact), and every other region -
   // the town, a baked one - wakes exactly where the pack says it does.
   // The descent therefore asks first, and `wakes` carries the region it
-  // answered with, so an event sees the wake and not the fall.
+  // answered with, so an event sees the wake and not the fall. The line
+  // follows that answer: it names the foot of the stair where the
+  // descent wakes the hero, and the pack's own wake place everywhere
+  // else.
   function cozyDeath(killer) {
-    combatSay(DEATH_LINE);
+    var wake = (window.VEFR_HERO && window.VEFR_HERO.wake) || {};
+    var D = window.VEFR_DESCENT;
+    var back = (D && typeof D.deathResume === 'function')
+      ? D.deathResume(regionName) : null;
+    combatSay(back ? STAIR_DEATH_LINE : DEATH_LINE);
     fireRule('falls', { what: (killer && killer.id) || '',
                         where: regionName });
     HERO_HP = heroMax();
     saveHeroHp();
     renderHp();
-    var wake = (window.VEFR_HERO && window.VEFR_HERO.wake) || {};
     var woke = regionName;
-    var D = window.VEFR_DESCENT;
-    var back = (D && typeof D.deathResume === 'function')
-      ? D.deathResume(regionName) : null;
     if (back) {
       enterRegion(back.region, back.at);
       woke = back.region;
@@ -10383,7 +10449,10 @@ function setupTown() {
     window.VEFR_STAGE = {
       x: x, y: y, w: w, h: h,
       map: { x: mx, y: my, w: mw, h: mh },
-      tile: T   // the drawn tile, CSS px (read by tests/browser/test_camera_zoom.py)
+      tile: T,   // the drawn tile, CSS px (read by tests/browser/test_camera_zoom.py)
+      phone: onPhone   // the phone camera is on: the map fills the window, so a
+                       // HUD corner panel has no room outside it (issue #430).
+                       // Read by the messages panel, which folds itself here.
     };
     if (pixelNative) window.VEFR_STAGE.pixel = { native: pixelNative, k: pixelK };
     var stage = document.getElementById('stage');
@@ -12151,21 +12220,21 @@ function setupTown() {
   //     candidates: [ { kind, id, name, at: [x, y] } ]
   //   }
   //
-  // `kind` is one of exactly: resident, trader, identifier, chest,
+  // `kind` is one of exactly: resident, trader, identifier, chest, book,
   // door, stairs, place, enemy. `id` is the caller's key (speaker key,
   // book id, transition id, enemy id, poi key); `name` is the display
   // name. A malformed candidate - missing or unknown kind, missing,
   // short or non-numeric `at` - is skipped, never an error.
   //
   // Reach is Manhattan from `state.hero`: one tile for the things you
-  // touch (chest, door, stairs, place, enemy), two for people (the
+  // touch (chest, book, door, stairs, place, enemy), two for people (the
   // talk reach today). `interactTargets` returns every candidate in
   // reach, in the caller's own order, each a fresh { kind, id, name,
   // at, dist, label } with `label` set from `labelFor`. `pickTarget`
   // returns one of them: a candidate on the tile the hero faces,
   // else one on the hero's own tile, else the nearest in reach.
   // Ties break by kind - door and stairs share the top rank and
-  // candidate order decides between them, then chest, trader,
+  // candidate order decides between them, then chest, book, trader,
   // identifier, resident, place, enemy - and finally by candidate
   // order. The two service kinds sit where the trade panel's did, so a
   // shopkeeper or a reader opens their panel rather than their talk.
@@ -12175,6 +12244,8 @@ function setupTown() {
     if (!target) return null;
     var name = target.name;
     if (target.kind === 'chest') return 'Open the chest';
+    // A note lying on the ground is read, not opened.
+    if (target.kind === 'book') return 'Read ' + name;
     if (target.kind === 'resident') return 'Talk to ' + name;
     if (target.kind === 'trader') return 'Trade with ' + name;
     if (target.kind === 'identifier') return 'Ask ' + name + ' to read things';
@@ -12196,7 +12267,7 @@ function setupTown() {
     if (!Array.isArray(hero) || hero.length < 2) return out;
     if (typeof hero[0] !== 'number' || !isFinite(hero[0])) return out;
     if (typeof hero[1] !== 'number' || !isFinite(hero[1])) return out;
-    var reach = { resident: 2, trader: 2, identifier: 2, chest: 1,
+    var reach = { resident: 2, trader: 2, identifier: 2, chest: 1, book: 1,
                   door: 1, stairs: 1, place: 1, enemy: 1 };
     var list = Array.isArray(state.candidates) ? state.candidates : [];
     for (var i = 0; i < list.length; i++) {
@@ -12226,8 +12297,8 @@ function setupTown() {
     var face = step[state.facing];
     var fx = null, fy = null;
     if (face) { fx = hero[0] + face[0]; fy = hero[1] + face[1]; }
-    var rank = { door: 0, stairs: 0, chest: 1, trader: 2,
-                 identifier: 3, resident: 4, place: 5, enemy: 6 };
+    var rank = { door: 0, stairs: 0, chest: 1, book: 2, trader: 3,
+                 identifier: 4, resident: 5, place: 6, enemy: 7 };
     var best = null, bestTier = -1, bestDist = -1, bestRank = -1;
     for (var i = 0; i < all.length; i++) {
       var t = all[i];
@@ -12294,6 +12365,10 @@ function setupTown() {
   //   chest    - every unfound chest book in this region: a chest
   //              book (`chest: yes`, `found: map`) whose region is
   //              this one and which is not already found;
+  //   book     - every map book in this region that is not a chest, by
+  //              its title: an unfound one from a tile away, and a found
+  //              one only while the hero stands where it lay (it is no
+  //              longer drawn, so from anywhere else it is gone);
   //   door     - every transition out of this region, except stairs:
   //              a tile is stairs when the region's `pois` for that
   //              tile mentions a stair (/stair/i on pois[key]) OR the
@@ -12334,10 +12409,19 @@ function setupTown() {
                         at: [reader.at[0], reader.at[1]] });
     }
     libraryBooks().forEach(function (b) {
-      if (!b || !b.chest || b.found !== 'map' || !Array.isArray(b.at)) return;
+      if (!b || b.found !== 'map' || !Array.isArray(b.at)) return;
       if ((b.region || 'town') !== regionName) return;
-      if (bookIsFound(b.id)) return;
-      candidates.push({ kind: 'chest', id: b.id, name: b.title || 'the chest',
+      if (b.chest) {
+        if (bookIsFound(b.id)) return;
+        candidates.push({ kind: 'chest', id: b.id, name: b.title || 'the chest',
+                          at: [b.at[0], b.at[1]] });
+        return;
+      }
+      // A found note is no longer drawn on the map, so it stays a target
+      // only on the tile where it lay: the hero has just picked it up and
+      // the button says what the hero holds. From a tile away it is gone.
+      if (bookIsFound(b.id) && !(hero[0] === b.at[0] && hero[1] === b.at[1])) return;
+      candidates.push({ kind: 'book', id: b.id, name: b.title || 'the note',
                         at: [b.at[0], b.at[1]] });
     });
     transitions().forEach(function (tr) {
@@ -12478,6 +12562,18 @@ function setupTown() {
         foundBook(book, 'map');
         giveChestDrops(book);
         combatSnapshot();
+      } else if (t.kind === 'book') {
+        var lib = libraryBooks(), note = null;
+        for (var n = 0; n < lib.length; n++) {
+          if (lib[n] && lib[n].id === t.id) { note = lib[n]; break; }
+        }
+        if (!note) throw new Error('book gone');
+        // An unfound note is found the way it is on any other map, and
+        // that opens the reader. One already found - the hero stood on
+        // it to get here - opens straight back up, with no second
+        // "you found a book" toast. Reading is quiet: no noise.
+        if (bookIsFound(note.id)) openReader(note);
+        else foundBook(note, 'map');
       } else if (t.kind === 'trader') {
         openTrade(t.id, t.name, document.getElementById('interact'));
       } else if (t.kind === 'identifier') {
@@ -12889,7 +12985,8 @@ function setupTown() {
     var live = document.getElementById('combat-live');
     var said = live ? live.textContent : '';
     if (HERO_HP < hpBefore || regionName !== regionBefore
-        || said === DEATH_LINE || said.indexOf(' hits you ') !== -1) {
+        || said === DEATH_LINE || said === STAIR_DEATH_LINE
+        || said.indexOf(' hits you ') !== -1) {
       exploreStop('Stopped.');
       return;
     }

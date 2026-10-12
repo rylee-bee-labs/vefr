@@ -37,10 +37,11 @@ It picks one thing, in this order:
 3. the nearest thing in reach.
 
 People and the trader are in reach from two tiles away.
-Doors, stairs, chests, places and monsters are in reach from one tile.
+Doors, stairs, chests, notes on the ground, places and monsters are in
+reach from one tile.
 
-When two things tie, a door or stairs wins, then a chest, then a trader,
-then a person, then a place, then a monster.
+When two things tie, a door or stairs wins, then a chest, then a note
+on the ground, then a trader, then a person, then a place, then a monster.
 
 ## The button says what the press will do
 
@@ -48,6 +49,7 @@ The Interact button always sits on the screen. It never hides and it is never sw
 Its own words say what the next press will do:
 
 - "Open the chest"
+- "Read <title>" for a note lying on the ground
 - "Talk to <name>"
 - "Trade with <name>"
 - "Go through the door", "Go down the stairs" or "Go up the stairs"

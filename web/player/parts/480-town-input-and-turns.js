@@ -619,21 +619,21 @@
   //     candidates: [ { kind, id, name, at: [x, y] } ]
   //   }
   //
-  // `kind` is one of exactly: resident, trader, identifier, chest,
+  // `kind` is one of exactly: resident, trader, identifier, chest, book,
   // door, stairs, place, enemy. `id` is the caller's key (speaker key,
   // book id, transition id, enemy id, poi key); `name` is the display
   // name. A malformed candidate - missing or unknown kind, missing,
   // short or non-numeric `at` - is skipped, never an error.
   //
   // Reach is Manhattan from `state.hero`: one tile for the things you
-  // touch (chest, door, stairs, place, enemy), two for people (the
+  // touch (chest, book, door, stairs, place, enemy), two for people (the
   // talk reach today). `interactTargets` returns every candidate in
   // reach, in the caller's own order, each a fresh { kind, id, name,
   // at, dist, label } with `label` set from `labelFor`. `pickTarget`
   // returns one of them: a candidate on the tile the hero faces,
   // else one on the hero's own tile, else the nearest in reach.
   // Ties break by kind - door and stairs share the top rank and
-  // candidate order decides between them, then chest, trader,
+  // candidate order decides between them, then chest, book, trader,
   // identifier, resident, place, enemy - and finally by candidate
   // order. The two service kinds sit where the trade panel's did, so a
   // shopkeeper or a reader opens their panel rather than their talk.
@@ -643,6 +643,8 @@
     if (!target) return null;
     var name = target.name;
     if (target.kind === 'chest') return 'Open the chest';
+    // A note lying on the ground is read, not opened.
+    if (target.kind === 'book') return 'Read ' + name;
     if (target.kind === 'resident') return 'Talk to ' + name;
     if (target.kind === 'trader') return 'Trade with ' + name;
     if (target.kind === 'identifier') return 'Ask ' + name + ' to read things';
@@ -664,7 +666,7 @@
     if (!Array.isArray(hero) || hero.length < 2) return out;
     if (typeof hero[0] !== 'number' || !isFinite(hero[0])) return out;
     if (typeof hero[1] !== 'number' || !isFinite(hero[1])) return out;
-    var reach = { resident: 2, trader: 2, identifier: 2, chest: 1,
+    var reach = { resident: 2, trader: 2, identifier: 2, chest: 1, book: 1,
                   door: 1, stairs: 1, place: 1, enemy: 1 };
     var list = Array.isArray(state.candidates) ? state.candidates : [];
     for (var i = 0; i < list.length; i++) {
@@ -694,8 +696,8 @@
     var face = step[state.facing];
     var fx = null, fy = null;
     if (face) { fx = hero[0] + face[0]; fy = hero[1] + face[1]; }
-    var rank = { door: 0, stairs: 0, chest: 1, trader: 2,
-                 identifier: 3, resident: 4, place: 5, enemy: 6 };
+    var rank = { door: 0, stairs: 0, chest: 1, book: 2, trader: 3,
+                 identifier: 4, resident: 5, place: 6, enemy: 7 };
     var best = null, bestTier = -1, bestDist = -1, bestRank = -1;
     for (var i = 0; i < all.length; i++) {
       var t = all[i];
@@ -762,6 +764,10 @@
   //   chest    - every unfound chest book in this region: a chest
   //              book (`chest: yes`, `found: map`) whose region is
   //              this one and which is not already found;
+  //   book     - every map book in this region that is not a chest, by
+  //              its title: an unfound one from a tile away, and a found
+  //              one only while the hero stands where it lay (it is no
+  //              longer drawn, so from anywhere else it is gone);
   //   door     - every transition out of this region, except stairs:
   //              a tile is stairs when the region's `pois` for that
   //              tile mentions a stair (/stair/i on pois[key]) OR the
@@ -802,10 +808,19 @@
                         at: [reader.at[0], reader.at[1]] });
     }
     libraryBooks().forEach(function (b) {
-      if (!b || !b.chest || b.found !== 'map' || !Array.isArray(b.at)) return;
+      if (!b || b.found !== 'map' || !Array.isArray(b.at)) return;
       if ((b.region || 'town') !== regionName) return;
-      if (bookIsFound(b.id)) return;
-      candidates.push({ kind: 'chest', id: b.id, name: b.title || 'the chest',
+      if (b.chest) {
+        if (bookIsFound(b.id)) return;
+        candidates.push({ kind: 'chest', id: b.id, name: b.title || 'the chest',
+                          at: [b.at[0], b.at[1]] });
+        return;
+      }
+      // A found note is no longer drawn on the map, so it stays a target
+      // only on the tile where it lay: the hero has just picked it up and
+      // the button says what the hero holds. From a tile away it is gone.
+      if (bookIsFound(b.id) && !(hero[0] === b.at[0] && hero[1] === b.at[1])) return;
+      candidates.push({ kind: 'book', id: b.id, name: b.title || 'the note',
                         at: [b.at[0], b.at[1]] });
     });
     transitions().forEach(function (tr) {
@@ -946,6 +961,18 @@
         foundBook(book, 'map');
         giveChestDrops(book);
         combatSnapshot();
+      } else if (t.kind === 'book') {
+        var lib = libraryBooks(), note = null;
+        for (var n = 0; n < lib.length; n++) {
+          if (lib[n] && lib[n].id === t.id) { note = lib[n]; break; }
+        }
+        if (!note) throw new Error('book gone');
+        // An unfound note is found the way it is on any other map, and
+        // that opens the reader. One already found - the hero stood on
+        // it to get here - opens straight back up, with no second
+        // "you found a book" toast. Reading is quiet: no noise.
+        if (bookIsFound(note.id)) openReader(note);
+        else foundBook(note, 'map');
       } else if (t.kind === 'trader') {
         openTrade(t.id, t.name, document.getElementById('interact'));
       } else if (t.kind === 'identifier') {

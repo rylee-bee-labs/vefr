@@ -106,6 +106,14 @@ FIGHT["sections"][1]["families"] = [BRUTE, VERMIN]
 
 PATCH = {"world.json": {"player": {"hp": HERO_HP}, "descent": FIGHT}}
 
+# The two Cozy wake lines (vefr#414). A floor of the descent wakes the
+# hero at its own up-stair, so the line says the stair; the pack's own
+# wake place - the temple line - is the one for the town and a baked
+# region, which `tests/test_combat_loop.py` pins for the town.
+STAIR_LINE = ("You wake at the foot of the stair, whole again. "
+              "You lost nothing that mattered.")
+TEMPLE_LINE = "You wake in the temple. You lost nothing that mattered."
+
 
 def _play(tmp_path, case, pack="descent", patch=None):
     """One session of the real woven player, played by the death harness."""
@@ -240,6 +248,17 @@ def test_a_death_on_a_generated_floor_wakes_the_hero_on_that_floor(fall):
     assert combat["hero"]["at"] == up, \
         f"the hero woke at {combat['hero']['at']}, not the floor's up stair {up}"
     assert combat["hero"]["hp"] == combat["hero"]["max"], "a wake is a whole hero"
+
+
+def test_the_wake_line_names_the_stair_the_hero_woke_on(fall):
+    """vefr#414: the line says where the hero wakes, not always the temple."""
+    result, _plan, _vermin, _brute = fall
+    assert result["died"], f"the hero never fell on {FLOOR}"
+    assert result["said"] == STAIR_LINE, \
+        f"a fall on {FLOOR} said {result['said']!r}, and the hero wakes at " \
+        "that floor's up-stair"
+    assert result["said"] != TEMPLE_LINE, \
+        "the temple is not where a descent floor's hero wakes"
 
 
 def test_the_death_costs_the_floor_nothing(fall):

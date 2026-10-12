@@ -128,7 +128,10 @@
     window.VEFR_STAGE = {
       x: x, y: y, w: w, h: h,
       map: { x: mx, y: my, w: mw, h: mh },
-      tile: T   // the drawn tile, CSS px (read by tests/browser/test_camera_zoom.py)
+      tile: T,   // the drawn tile, CSS px (read by tests/browser/test_camera_zoom.py)
+      phone: onPhone   // the phone camera is on: the map fills the window, so a
+                       // HUD corner panel has no room outside it (issue #430).
+                       // Read by the messages panel, which folds itself here.
     };
     if (pixelNative) window.VEFR_STAGE.pixel = { native: pixelNative, k: pixelK };
     var stage = document.getElementById('stage');

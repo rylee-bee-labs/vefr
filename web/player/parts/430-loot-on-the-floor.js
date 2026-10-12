@@ -436,19 +436,22 @@
   // hero fell on, whole, with the run intact), and every other region -
   // the town, a baked one - wakes exactly where the pack says it does.
   // The descent therefore asks first, and `wakes` carries the region it
-  // answered with, so an event sees the wake and not the fall.
+  // answered with, so an event sees the wake and not the fall. The line
+  // follows that answer: it names the foot of the stair where the
+  // descent wakes the hero, and the pack's own wake place everywhere
+  // else.
   function cozyDeath(killer) {
-    combatSay(DEATH_LINE);
+    var wake = (window.VEFR_HERO && window.VEFR_HERO.wake) || {};
+    var D = window.VEFR_DESCENT;
+    var back = (D && typeof D.deathResume === 'function')
+      ? D.deathResume(regionName) : null;
+    combatSay(back ? STAIR_DEATH_LINE : DEATH_LINE);
     fireRule('falls', { what: (killer && killer.id) || '',
                         where: regionName });
     HERO_HP = heroMax();
     saveHeroHp();
     renderHp();
-    var wake = (window.VEFR_HERO && window.VEFR_HERO.wake) || {};
     var woke = regionName;
-    var D = window.VEFR_DESCENT;
-    var back = (D && typeof D.deathResume === 'function')
-      ? D.deathResume(regionName) : null;
     if (back) {
       enterRegion(back.region, back.at);
       woke = back.region;
