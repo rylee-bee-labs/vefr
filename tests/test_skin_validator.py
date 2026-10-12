@@ -329,7 +329,10 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # Pixel art keeps main's sprite height name (#427), 2026-10-12; measured twice in separate processes, readings equal:
 #   8bb8656ba52c90b03d24ce2a3d40f70606decb09aa16d91415fcd40babf869c4
 #   8bb8656ba52c90b03d24ce2a3d40f70606decb09aa16d91415fcd40babf869c4
-NO_SKIN_WEAVE_SHA256 = "8bb8656ba52c90b03d24ce2a3d40f70606decb09aa16d91415fcd40babf869c4"
+# Touch controls (#428) merged with pixel art (#427); measured twice in separate processes, readings equal:
+#   e857bc9ef7ae6cbaafc57ab3e2995a2c0d833dc7fc11a0c791d7b5d9a9db31cf
+#   e857bc9ef7ae6cbaafc57ab3e2995a2c0d833dc7fc11a0c791d7b5d9a9db31cf
+NO_SKIN_WEAVE_SHA256 = "e857bc9ef7ae6cbaafc57ab3e2995a2c0d833dc7fc11a0c791d7b5d9a9db31cf"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

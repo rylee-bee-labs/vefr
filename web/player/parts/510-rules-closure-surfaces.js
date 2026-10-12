@@ -122,6 +122,7 @@
     if (d === 'up') move(0, -1); else if (d === 'down') move(0, 1);
     else if (d === 'left') move(-1, 0); else if (d === 'right') move(1, 0);
   });
+  setupTouchControls({ move: move, act: doInteract, exploring: exploring, exploreStop: exploreStop });
   document.addEventListener('keydown', function (e) {
     if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
     // Any key but the toggle itself halts an autoexplore walk.

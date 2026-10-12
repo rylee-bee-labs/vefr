@@ -13,7 +13,7 @@ The contract:
   - Nothing sideways-scrolls the page.
   - Narrow portrait windows (width <= 600 and taller than wide): the map is letterboxed with spare room above and
     below it, so the stage grows to the whole window and `VEFR_STAGE.map` = {x, y, w, h} is the drawn map inside it. The
-    controls (the d-pad and the action row) sit in the spare room, NOT on the map; no piece covers the map. On every other
+    controls (the touch cluster, or the d-pad and the action row) sit in the spare room, NOT on the map; no piece covers the map. On every other
     window `VEFR_STAGE` is the map rectangle as above and `VEFR_STAGE.map` equals it.
 Uses the interact fixture (an 11x7 map: small on purpose, so it is letterboxed on any window).
 """
@@ -130,7 +130,8 @@ def test_on_a_phone_the_controls_sit_beside_the_map_not_on_it(browser, woven, w,
         assert st["h"] >= 0.9 * h and st["w"] >= 0.95 * w, f"the stage should grow to the window on a phone: {st}"
         m = st["map"]
         for e in info["els"]:
-            if e["id"] in ("dpad", "acts", "interact", "talk", "whisper", "bagbtn", "explore") or "gbtn" in str(e["id"]):
+            if e["id"] in ("dpad", "acts", "interact", "talk", "whisper", "bagbtn", "explore",
+                           "touch-smart", "touch-bag", "touch-b") or "gbtn" in str(e["id"]):
                 inter_x = min(e["r"], m["x"] + m["w"]) - max(e["l"], m["x"])
                 inter_y = min(e["b"], m["y"] + m["h"]) - max(e["t"], m["y"])
                 assert not (inter_x > 4 and inter_y > 4 and e["id"] not in ("menu-open",)), \
