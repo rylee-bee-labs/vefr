@@ -114,6 +114,8 @@ def load_pack(pack_dir: Path) -> dict:
                 'legend': rcontract.get('legend', {}),
                 'enemies': rcontract.get('enemies', []),
             }
+            if 'props' in rcontract:
+                regions_geo[rname]['props'] = rcontract['props']
         # The town's metadata can live in three places, in priority
         # order: the region's contract.json (new, convention-driven),
         # the act's _town_legacy (transitional), or the act's
@@ -129,6 +131,8 @@ def load_pack(pack_dir: Path) -> dict:
         # Every speaker is carried: a book's giver may live in any region.
         # The geometry check below looks only at the first region's own.
         all_speakers = act.get('speakers', {})
+        # Props are carried only when the contract has them, so a pack without props loads as before.
+        town_props = {'props': merged['props']} if 'props' in merged else {}
         unified = {
             'name': pack.name,
             'title': config.get('title', act.get('title', pack.name)),
@@ -154,6 +158,7 @@ def load_pack(pack_dir: Path) -> dict:
                 'hero_color': merged.get('hero_color', '#e8e5df'),
                 'speaker_color': merged.get('speaker_color', '#8b939c'),
                 'speaker_head': merged.get('speaker_head', '#d8d5df'),
+                **town_props,
             },
             '_act_id': first_act_dir.name,
             '_region': region_name,
@@ -264,10 +269,54 @@ def walkable(w: dict, x: int, y: int, flooded: set | None = None) -> bool:
         return False
     if flooded and f'{x},{y}' in flooded:
         return False
+    if prop_blocks(w['town'].get('props'), x, y):
+        return False
     e = w['town']['legend'].get(m[y][x], {})
     if isinstance(e.get('solid'), bool):
         return e['solid'] is False
     return m[y][x] not in BLOCKED_FALLBACK
+
+
+PROP_FRAMES_MIN, PROP_FRAMES_MAX = 1, 12
+PROP_FPS_MIN, PROP_FPS_MAX = 1, 12
+PROP_FPS_DEFAULT = 4
+
+
+def _whole_pair(v, lo: int = 0) -> bool:
+    return isinstance(v, list) and len(v) == 2 and all(_is_whole(n) and n >= lo for n in v)
+
+
+def prop_blocks(props, x: int, y: int) -> bool:
+    """True when a prop's blocking cells cover tile (x, y).
+
+    A prop blocks every cell of its footprint unless `block` names it
+    open: a row of '#' is blocked, '.' is open. A malformed entry blocks
+    nothing here; the validator names it.
+    """
+    for p in props or []:
+        if not isinstance(p, dict) or not _whole_pair(p.get('at')):
+            continue
+        ax, ay = p['at']
+        size = p.get('size', [1, 1])
+        if not _whole_pair(size, 1):
+            continue
+        if not (ax <= x < ax + size[0] and ay <= y < ay + size[1]):
+            continue
+        block = p.get('block')
+        if not isinstance(block, list):
+            return True
+        row = block[y - ay] if y - ay < len(block) else ''
+        if isinstance(row, str) and row[x - ax:x - ax + 1] == '#':
+            return True
+    return False
+
+
+def prop_at(props, x: int, y: int) -> int | None:
+    """The index of the first prop whose blocking cells cover (x, y), or None."""
+    for i, p in enumerate(props or []):
+        if prop_blocks([p], x, y):
+            return i
+    return None
 
 
 def region_geometry(w: dict) -> dict:
@@ -288,7 +337,8 @@ def region_geometry(w: dict) -> dict:
                     if ln.strip()]
             region_geo[rname] = {'map': rows,
                                  'legend': contract.get('legend', {}),
-                                 'enemies': contract.get('enemies', [])}
+                                 'enemies': contract.get('enemies', []),
+                                 'props': contract.get('props', [])}
     if not isinstance(region_geo, dict):
         region_geo = {}
     if not region_geo and isinstance(w.get('town'), dict):
@@ -296,6 +346,7 @@ def region_geometry(w: dict) -> dict:
             'map': w['town'].get('map', []),
             'legend': w['town'].get('legend', {}),
             'enemies': w['town'].get('enemies', []),
+            'props': w['town'].get('props', []),
         }}
     return region_geo
 
@@ -2204,11 +2255,19 @@ def skin_errors(w: dict, pack_dir: Path | None = None) -> list[str]:
 
 
 # Walk sheets (design/pack-art-proposal.md, phase B): the directions a
-# sheet may name, the frame size and fps bounds, and the walk length.
+# sheet may name, the frame size and fps bounds, and the frame lists.
 SHEET_DIRECTIONS = ('down', 'up', 'left', 'right')
 SHEET_FRAME_MIN, SHEET_FRAME_MAX = 8, 512
 SHEET_FPS_MIN, SHEET_FPS_MAX = 1, 30
 SHEET_WALK_MIN, SHEET_WALK_MAX = 2, 16
+SHEET_IDLE_MIN, SHEET_IDLE_MAX = 1, 16
+SHEET_STATES = ('act', 'attack', 'hurt', 'talk')
+SHEET_STATE_MIN, SHEET_STATE_MAX = 1, 16
+
+
+def _sheet_frames(v, lo: int, hi: int) -> bool:
+    return (isinstance(v, list) and lo <= len(v) <= hi
+            and all(_is_whole(i) for i in v))
 
 
 def _sprite_sheet_files(pack_dir: Path) -> list[tuple[Path, Path]]:
@@ -2255,8 +2314,9 @@ def sprite_sheet_errors(pack_dir: Path | None) -> list[str]:
     check is shape-only: the JSON must be an object; `image` must name
     a real picture beside the sheet and inside the pack; `frame` two
     whole numbers from 8 to 512; `fps` a whole number from 1 to 30;
-    every direction an object with an `idle` of exactly one frame and a
-    `walk` of 2 to 16; and every frame inside the sheet's grid. `down`
+    every direction an object with an `idle` of 1 to 16 frames, a `walk`
+    of 2 to 16, and optional `act`, `attack`, `hurt` and `talk` lists of
+    1 to 16; and every frame inside the sheet's grid. `down`
     is required. Each message names the sheet file, plainly. A pack
     that ships no sheet gets nothing here at all.
     """
@@ -2327,21 +2387,30 @@ def sprite_sheet_errors(pack_dir: Path | None) -> list[str]:
                                   'object with idle and walk lists')
                     continue
                 idle = frames.get('idle')
-                if (not isinstance(idle, list) or len(idle) != 1
-                        or not _is_whole(idle[0])):
+                if not _sheet_frames(idle, SHEET_IDLE_MIN, SHEET_IDLE_MAX):
                     errors.append(f"{label} direction '{dname}' needs an "
-                                  "'idle' list of exactly one frame")
+                                  f"'idle' list of {SHEET_IDLE_MIN} to "
+                                  f'{SHEET_IDLE_MAX} frames')
                 else:
-                    indices.append(idle[0])
+                    indices.extend(idle)
                 walk = frames.get('walk')
-                if (not isinstance(walk, list)
-                        or not SHEET_WALK_MIN <= len(walk) <= SHEET_WALK_MAX
-                        or not all(_is_whole(v) for v in walk)):
+                if walk is None:
+                    pass   # a character that never walks (a resident at their post) needs no walk frames
+                elif not _sheet_frames(walk, SHEET_WALK_MIN, SHEET_WALK_MAX):
                     errors.append(f"{label} direction '{dname}' needs a "
                                   f"'walk' list of {SHEET_WALK_MIN} to "
                                   f'{SHEET_WALK_MAX} frames')
                 else:
                     indices.extend(walk)
+                for state in SHEET_STATES:
+                    if state not in frames:
+                        continue
+                    if not _sheet_frames(frames[state], SHEET_STATE_MIN, SHEET_STATE_MAX):
+                        errors.append(f"{label} direction '{dname}' has an "
+                                      f"'{state}' that is not a list of "
+                                      f'{SHEET_STATE_MIN} to {SHEET_STATE_MAX} frames')
+                    else:
+                        indices.extend(frames[state])
 
         # The grid: image size / frame size, read from the picture's own
         # header. An unreadable header (None) skips only this check.
@@ -2876,6 +2945,14 @@ def _tile_errors(pack: Path, w: dict, region_geo: dict) -> list[str]:
     return errors
 
 
+def _people_block_errors(w: dict) -> list[str]:
+    """`player.people_block`, when present, is true or false (empty = good or absent)."""
+    player = w.get('player')
+    if isinstance(player, dict) and 'people_block' in player and not isinstance(player['people_block'], bool):
+        return ['player.people_block must be true or false']
+    return []
+
+
 def _sprite_scale_errors(w: dict, pack_dir) -> list[str]:
     """Plain problems with `player.sprite_scale` (empty = good or absent). Reads the block load_pack already holds; a key is a
     picture when `player.sprites` lists it or the same resolution finds
@@ -2993,6 +3070,126 @@ def _enemy_drop_errors(where: str, drops, declared) -> list[str]:
     which is a legitimate monster.
     """
     return library._drop_payout_errors(where, "the kill", drops, declared)
+
+
+def _speaker_specs(w: dict) -> dict:
+    """The speakers the weave places: the first act's, else the pack's."""
+    acts = w.get('acts')
+    first = acts[0] if isinstance(acts, list) and acts and isinstance(acts[0], dict) else {}
+    specs = first.get('speakers') if isinstance(first.get('speakers'), dict) else w.get('speakers')
+    return specs if isinstance(specs, dict) else {}
+
+
+def _region_prop_errors(w: dict, rname: str, geo: dict, pack_dir: Path,
+                        region_dir: Path | None, transitions: list,
+                        first_region: str | None) -> list[str]:
+    """Each prop of one region: a real picture, a footprint on the map, a
+    well-formed block, a frame count the picture divides into, and no
+    speaker, start, wake point or door standing on a blocked cell."""
+    from .cli import _prop_picture_path
+
+    props = geo.get('props', [])
+    if not isinstance(props, list):
+        return [f"region '{rname}' props must be a list"]
+    errors: list[str] = []
+    rows = geo.get('map') or []
+    height, width = len(rows), (len(rows[0]) if rows else 0)
+    for i, p in enumerate(props):
+        if not isinstance(p, dict):
+            errors.append(f"region '{rname}' prop {i} must be an object with pic and at")
+            continue
+        pic = p.get('pic')
+        tag = f"region '{rname}' prop {i} '{pic}'"
+        pic_path = None
+        if not isinstance(pic, str) or not pic or pic in ('.', '..') \
+                or any(c in pic for c in '/\\\0'):
+            errors.append(f"{tag}: pic must be a picture's file name with no folder")
+        else:
+            pic_path = _prop_picture_path(pack_dir, region_dir, pic)
+            if pic_path is None:
+                errors.append(f"{tag}: no picture '{pic}.webp' or '{pic}.png' "
+                              f"in props/ here or at the pack root")
+        at = p.get('at')
+        if not _whole_pair(at):
+            errors.append(f'{tag}: at must be [x, y] whole numbers')
+            at = None
+        size = p.get('size', [1, 1])
+        if not _whole_pair(size, 1):
+            errors.append(f'{tag}: size must be [width, height] whole numbers of at least 1')
+            size = None
+        frames = p.get('frames', 1)
+        if not (_is_whole(frames) and PROP_FRAMES_MIN <= frames <= PROP_FRAMES_MAX):
+            errors.append(f'{tag}: frames must be a whole number from '
+                          f'{PROP_FRAMES_MIN} to {PROP_FRAMES_MAX}')
+            frames = 1
+        if p.get('layer', 'stand') not in ('stand', 'ground'):
+            errors.append(f'{tag}: layer must be "stand" (the default) or "ground"')
+        fps = p.get('fps', PROP_FPS_DEFAULT)
+        if not (_is_whole(fps) and PROP_FPS_MIN <= fps <= PROP_FPS_MAX):
+            errors.append(f'{tag}: fps must be a whole number from '
+                          f'{PROP_FPS_MIN} to {PROP_FPS_MAX}')
+        if at is not None and size is not None and rows:
+            if at[0] + size[0] > width or at[1] + size[1] > height:
+                errors.append(f'{tag}: its {size[0]}x{size[1]} footprint at {at[0]},{at[1]} '
+                              f'leaves the map ({width}x{height})')
+        block = p.get('block')
+        if block is not None and size is not None:
+            shaped = (isinstance(block, list) and len(block) == size[1]
+                      and all(isinstance(r, str) and len(r) == size[0]
+                              and set(r) <= {'#', '.'} for r in block))
+            if not shaped:
+                errors.append(f"{tag}: block must be {size[1]} rows of {size[0]} "
+                              f"characters, '#' blocked and '.' open")
+        if pic_path is not None:
+            dims = _picture_size(str(pic_path))
+            if dims is not None and dims[0] % frames:
+                errors.append(f'{tag}: the picture is {dims[0]} px wide, which is not '
+                              f'a whole number of {frames} frames')
+
+    def _placed(where, what):
+        if not _whole_pair(where):
+            return
+        i = prop_at(props, where[0], where[1])
+        if i is not None:
+            errors.append(f"region '{rname}' prop {i} '{props[i].get('pic')}' covers "
+                          f"{what} at {where[0]},{where[1]}")
+
+    for key, spec in _speaker_specs(w).items():
+        if isinstance(spec, dict) and spec.get('region', first_region) == rname:
+            _placed(spec.get('at'), f"speaker '{key}'")
+    if rname == first_region:
+        _placed(w['town'].get('hero_start'), "the hero's start")
+    player = w.get('_player') or w.get('player')
+    wake = player.get('wake') if isinstance(player, dict) else None
+    if isinstance(wake, dict) and wake.get('region') == rname:
+        _placed(wake.get('at'), 'the wake point')
+    for ti, t in enumerate(transitions):
+        if not isinstance(t, dict):
+            continue
+        if t.get('from') == rname:
+            _placed(t.get('at'), f'the door of transition {ti}')
+        if t.get('to') == rname:
+            _placed(t.get('to_at'), f'the arrival of transition {ti}')
+    return errors
+
+
+def _book_prop_errors(books: list, region_geo: dict) -> list[str]:
+    """Each map book whose tile a region's prop blocks."""
+    errors: list[str] = []
+    for b in books:
+        if not isinstance(b, dict) or b.get('found') != 'map':
+            continue
+        region = b.get('region') or 'town'
+        geo = region_geo.get(region)
+        if not isinstance(geo, dict) or not _whole_pair(b.get('at')):
+            continue
+        props = geo.get('props') or []
+        i = prop_at(props, b['at'][0], b['at'][1])
+        if i is not None:
+            errors.append(f"region '{region}' prop {i} '{props[i].get('pic')}' covers "
+                          f"the book '{b.get('title') or b.get('id')}' at "
+                          f"{b['at'][0]},{b['at'][1]}")
+    return errors
 
 
 def _region_enemy_errors(rname: str, geo: dict, levels_mode: bool,
@@ -3419,6 +3616,7 @@ def validate(w: dict, pack_dir: Path | None = None) -> list[str]:
     if pack_dir is not None:
         errors.extend(_tile_errors(Path(pack_dir), w, region_geo))
         errors.extend(_sprite_scale_errors(w, Path(pack_dir)))
+    errors.extend(_people_block_errors(w))
 
     def _door_tile_errors(index, field, rname, at):
         geo = region_geo.get(rname, {})
@@ -3471,6 +3669,18 @@ def validate(w: dict, pack_dir: Path | None = None) -> list[str]:
         if isinstance(geo, dict):
             errors.extend(_region_enemy_errors(rname, geo, levels_mode,
                                                declared=declared_items))
+
+    # The region contracts' props: pictures on the ground that block
+    # walking. Only the first act's regions are baked, so only they are
+    # checked here.
+    if pack_dir is not None:
+        prop_dirs = _region_dirs(Path(pack_dir), w, region_geo)
+        first_region = next(iter(region_geo), None)
+        for rname, geo in region_geo.items():
+            if isinstance(geo, dict):
+                errors.extend(_region_prop_errors(w, rname, geo, Path(pack_dir),
+                                                  prop_dirs.get(rname), transitions,
+                                                  first_region))
 
     # Every act after the first is checked against its OWN regions: its
     # doors must stay inside the act, land on walkable tiles, name
@@ -3556,10 +3766,12 @@ def validate(w: dict, pack_dir: Path | None = None) -> list[str]:
             if stamp_dir.is_dir():
                 from . import stamps as stamps_mod
                 descent = {**descent, 'stamps': stamps_mod.load(stamp_dir)}
-        errors.extend(validate_books(load_library(Path(pack_dir)), town=town,
+        books = load_library(Path(pack_dir))
+        errors.extend(validate_books(books, town=town,
                                      speakers=w.get('speakers'),
                                      regions=declared, descent=descent,
                                      items=_pack_catalog(pack_dir)))
+        errors.extend(_book_prop_errors(books, region_geo))
 
     return errors
 
