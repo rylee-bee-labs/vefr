@@ -83,6 +83,8 @@ window.VEFR_DOOR = {{door_json}};
 // A pack's own way pictures by kind (door, stairs-up, stairs-down, trapdoor), and per region.
 window.VEFR_WAY_ICONS = {{way_icons_json}};
 window.VEFR_REGION_WAY_ICONS = {{region_way_icons_json}};
+// Each region's prop pictures by name ({} for a pack with no props).
+window.VEFR_PROP_PICS = {{prop_pics_json}};
 // Book markers ('map', 'resident'): drawn where a book you have not found
 // can be found, so a book is not invisible.
 window.VEFR_BOOK_ICONS = {{book_icons_json}};

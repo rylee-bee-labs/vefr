@@ -51,6 +51,7 @@
  "445-rules-engine.js",
  "448-asset-loaders.js",
  "450-fog-of-war.js",
+ "455-the-props.js",
  "460-light.js",
  "470-hero-step-motion.js",
  "480-town-input-and-turns.js",

@@ -41,6 +41,7 @@ function setupTown() {
       hero_color: r.hero_color || '#e8e5df',
       speaker_color: r.speaker_color || '#8b939c',
       speaker_head: r.speaker_head || '#d8d5df',
+      props: r.props || [],
     };
   }
 

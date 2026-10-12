@@ -317,13 +317,13 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # #418 phone camera merged with #419 (Talk) on 2026-10-12; measured twice in separate processes, readings equal:
 #   3efab5dcd619fc4e4510f3297cf3e6ea5dcb1a059341f4fcad5c5476b014113d
 #   3efab5dcd619fc4e4510f3297cf3e6ea5dcb1a059341f4fcad5c5476b014113d
-# Touch controls (P3TOUCH) on top of #418 and #419, 2026-10-12; measured twice in separate processes, readings equal:
-#   b583865d4fab64337b692b5bb27fe0593f44d783665ca0938df3f1071d18cc46
-#   b583865d4fab64337b692b5bb27fe0593f44d783665ca0938df3f1071d18cc46
-# The touch button keeps its size in dock mode (P3TOUCH), 2026-10-12; measured twice in separate processes, readings equal:
-#   3c7ef00d1dbb7a581524fc3f2f4f9c3e2c314d87f91293ca55df98b677831c65
-#   3c7ef00d1dbb7a581524fc3f2f4f9c3e2c314d87f91293ca55df98b677831c65
-NO_SKIN_WEAVE_SHA256 = "3c7ef00d1dbb7a581524fc3f2f4f9c3e2c314d87f91293ca55df98b677831c65"
+# #420 object layer merged with #418 phone camera, 2026-10-12; measured twice in separate processes, readings equal:
+#   578de6ada011a5a407a4a9d6cd1e53a10c44a6c2e417dfbfe37549f8b4abb509
+#   578de6ada011a5a407a4a9d6cd1e53a10c44a6c2e417dfbfe37549f8b4abb509
+# Monster parts run without the props part (#420), 2026-10-12; measured twice in separate processes, readings equal:
+#   0a80b00def25f0cfaecd56841753a2285a84daea0a8c74a04dd13833e51a3aca
+#   0a80b00def25f0cfaecd56841753a2285a84daea0a8c74a04dd13833e51a3aca
+NO_SKIN_WEAVE_SHA256 = "0a80b00def25f0cfaecd56841753a2285a84daea0a8c74a04dd13833e51a3aca"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

@@ -1373,6 +1373,27 @@ per step, and settles back to `idle`. The validator checks every
 sheet: the image exists beside it, `frame` and `fps` are in range, the
 directions are known, and every frame index is inside the sheet's grid.
 
+Each direction may also name more states, each a list of frame indexes:
+
+- `idle` - 1 to 16 frames. A list longer than one loops at the sheet's
+  `fps`; a single frame stands still.
+- `walk` - 2 to 16 frames, one per step, as above. Optional: a character
+  that never walks (a resident at their stall) may leave it out, and
+  stands on its `idle`.
+- `talk` - 1 to 16 frames, looped while the speech box is open and the
+  character is beside the hero.
+- `act`, `attack`, `hurt` - 1 to 16 frames each, played once at the
+  sheet's `fps` and then back to `idle`. `act` is the hero taking
+  something; `attack` and `hurt` are the blow struck and the blow taken,
+  for the hero and for a monster alike.
+
+A speaker turns to face the hero when the hero stands beside it, and
+looks down otherwise. A monster faces the way it last stepped. A pack
+that names none of the new states plays as before: a one-frame `idle`
+stands still, and nothing loops or plays once. Under reduced motion
+nothing loops and no one-shot plays: an idle or talk list shows its
+first frame.
+
 ## Story status (draft words and the release gate)
 
 An agent may draft a whole story; nothing ships as canon until the
