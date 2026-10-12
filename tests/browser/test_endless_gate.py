@@ -38,7 +38,15 @@ CELLAR_TOWN_SEEN = "town-seen:cellar:c0"
 
 def _single_floor(section, **extra):
     kept = {key: value for key, value in section.items() if key != "pattern"}
-    return {**kept, "floors": 1, **extra}
+    # No family, no monster, for the same reason `_quiet` gives in
+    # test_descent_reload: these walks are planned against the floor the
+    # generator drew, and a monster that wakes and walks is a step the
+    # plan cannot promise. On the endless cycle's cellar floor the
+    # hunters sit on the row the walk takes, and a bump into one spends
+    # a press the plan did not count, leaving the hero short of the
+    # stair. The vault, its stamps and both gates are the Section's own
+    # keys and stay exactly as declared.
+    return {**kept, "floors": 1, "families": [], **extra}
 
 
 # The one-floor cellar takes the warden slot, where its vault sits; hollow has none.
