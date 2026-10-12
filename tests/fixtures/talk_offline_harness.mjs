@@ -5,9 +5,9 @@
    the player FRESH and logs one flat key/value list:
 
      - static: the cat (seeds only) answers each Talk with its seeded
-       lines in order, wrapping; the stranger (no line at all) is not
-       offered Talk - the Interact words say 'Look at', the press shows
-       its name, and the Talk button shows the same box;
+       line for the time of day; the stranger (no line at all) is not
+       offered Talk, the press opens nothing, and the Talk button says
+       "They didn't answer.";
      - brain: the stranger's words stay 'Talk to', the Talk button says
        "They didn't answer." (the brain was expected and failed, and
        there is no seeded line), and the cat falls back to its seeded

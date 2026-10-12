@@ -704,8 +704,7 @@
   //
   //   resident - every speaker here with a real `at` (the people
   //              talkToSpeaker talks to); with no brain configured, a
-  //              speaker with no offline line is a `place` "Look at" one
-  //              tile off, and only when nothing else is in reach;
+  //              speaker with no offline line is not a target at all;
   //   trader   - the region's shopkeeper, found the way
   //              shopkeeperNear finds it (shopKeyHere) but with NO
   //              distance cut, so the pure block's own reach rules
@@ -733,15 +732,10 @@
   // for a transition or poi, enemy id.
   function interactState() {
     var candidates = [];
-    var lookOnly = [];
     Object.keys(speakers || {}).forEach(function (key) {
       var s = speakers[key];
       if (!s || !Array.isArray(s.at)) return;
-      if (!brainConfigured() && !hasOfflineLine(key, s)) {
-        lookOnly.push({ kind: 'place', id: 'speaker:' + key, name: s.name,
-                        at: [s.at[0], s.at[1]] });
-        return;
-      }
+      if (!brainConfigured() && !hasOfflineLine(key, s)) return;
       candidates.push({ kind: 'resident', id: key, name: s.name,
                         at: [s.at[0], s.at[1]] });
     });
@@ -787,12 +781,8 @@
       candidates.push({ kind: 'enemy', id: e.id, name: e.name,
                         at: [e.at[0], e.at[1]] });
     });
-    var state = { hero: [hero[0], hero[1]], facing: heroFacing,
-                  candidates: candidates };
-    if (lookOnly.length && !interactTargets(state).length) {
-      state.candidates = candidates.concat(lookOnly);
-    }
-    return state;
+    return { hero: [hero[0], hero[1]], facing: heroFacing,
+             candidates: candidates };
   }
 
   // Task 3: fight through the one verb. The row is the same #verb-row
@@ -917,8 +907,6 @@
       } else if (t.kind === 'resident') {
         if (!speakers[t.id]) throw new Error('speaker gone');
         talkToSpeaker({ key: t.id, spec: speakers[t.id], dist: t.dist });
-      } else if (t.kind === 'place' && t.id.indexOf('speaker:') === 0) {
-        showSpeech(t.name, '', '');
       } else if (t.kind === 'place') {
         showSpeech((pois || {})[t.id] || '', (town.poi_text || {})[t.id] || '',
                    '');
@@ -1099,13 +1087,13 @@
       .filter(function (l) { return typeof l === 'string' && l.trim(); });
   }
 
-  var seedCursor = {};
-  function nextSeededLine(key, spec) {
-    var lines = seededLines(spec);
-    if (!lines.length) return null;
-    var i = (seedCursor[key] || 0) % lines.length;
-    seedCursor[key] = i + 1;
-    return lines[i];
+  // The seeded line for the time of day, else the first one: seeds are
+  // keyed by phase, so a dawn line is never said at dusk. Every Talk says
+  // it again, the way a resident repeats themselves.
+  function seededLine(spec, ph) {
+    var own = spec && spec.seeds && spec.seeds[ph];
+    if (typeof own === 'string' && own.trim()) return own;
+    return seededLines(spec)[0] || null;
   }
 
   // Whether the offline talk path can produce any line for this speaker.
@@ -1157,10 +1145,10 @@
           : "From this character's own lines.");
         return;
       }
-      var seeded = nextSeededLine(nearest.key, nearest.spec);
-      if (seeded || !brainConfigured()) {
+      var seeded = seededLine(nearest.spec, ph);
+      if (seeded) {
         document.getElementById('near').textContent = '';
-        showSpeech(nearest.spec.name, seeded || '', '');
+        showSpeech(nearest.spec.name, seeded, '');
       } else {
         document.getElementById('near').textContent = "They didn't answer.";
       }
