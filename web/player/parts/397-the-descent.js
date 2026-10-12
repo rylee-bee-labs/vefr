@@ -273,6 +273,46 @@ window.VEFR_DESCENT = (function () {
     return floorTitle(name) || String(name === undefined ? '' : name);
   }
 
+  // The compass from one tile to another, in the words `point-to` uses.
+  function compass(from, to) {
+    var dx = to[0] - from[0], dy = to[1] - from[1];
+    var vert = dy < 0 ? 'north' : (dy > 0 ? 'south' : '');
+    var horiz = dx < 0 ? 'west' : (dx > 0 ? 'east' : '');
+    return vert && horiz ? vert + '-' + horiz : (vert || horiz);
+  }
+
+  // Arriving on a floor of a labelled Section, on its up-stair: what the
+  // floor is, and which way its stair down lies, so the player is greeted
+  // by the place and a goal ahead rather than by the way back up. The
+  // stair itself is unchanged - still drawn, still walkable, still the way
+  // up once the hero steps off it and back. Null for anything else: a
+  // Section with no label, a baked region, the town, a hero who climbed
+  // up onto the down-stair. The hint names the floor below by its own
+  // title when it has one, else "the stair down"; a floor with no stair
+  // down wired has no hint.
+  function arrival(name, at) {
+    var title = floorTitle(name);
+    if (!title || !Array.isArray(at)) return null;
+    var region = (window.VEFR_REGIONS || {})[name];
+    var up = region ? region.hero_start : null;
+    if (!Array.isArray(up) || up[0] !== at[0] || up[1] !== at[1]) return null;
+    var here = depthOfName(name);
+    var down = null;
+    (window.VEFR_TRANSITIONS || []).forEach(function (t) {
+      if (!down && t && t.from === name && Array.isArray(t.at) &&
+          depthOfName(t.to) > here) down = t;
+    });
+    var line = '';
+    if (down && typeof playerWord === 'function') {
+      var place = floorTitle(down.to) || 'the stair down';
+      var dir = compass(at, down.at);
+      line = dir
+        ? playerWord('where_next.reach', { place: place, direction: dir })
+        : playerWord('where_next.here', { place: place });
+    }
+    return { at: [at[0], at[1]], name: title, line: line };
+  }
+
   // ---- a floor, drawn (the twin of `floor_plan`) ----------------------
   function seedFor(run) { return runSeed(baseSeed(), run); }
 
@@ -2011,7 +2051,7 @@ window.VEFR_DESCENT = (function () {
     runSeed: runSeed, sectionHash: sectionHash, parseName: parseName,
     baseSeed: baseSeed, seedParam: seedParam, seedFor: seedFor,
     isGenerated: isGenerated, depthOfName: depthOfName, floorPlan: floorPlan,
-    floorTitle: floorTitle, placeName: placeName,
+    floorTitle: floorTitle, placeName: placeName, arrival: arrival,
     floorSize: floorSize, floorKindOf: floorKindOf, mobsAt: mobsAt, mobDrops: mobDrops, placeBooks: placeBooks,
     xpFor: xpFor,
     ensureRegion: ensureRegion, onEnter: onEnter, entryHere: entryHere,

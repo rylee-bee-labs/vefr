@@ -298,7 +298,7 @@ them look live:
 | `groups` | slice E7, the same way it hands over the elites |
 | `curve` | slice E10 (scales monster stats at play); today only the balance report reads it, and a monster draws at its Blueprint's own numbers |
 | `loot` | slice E10 (caps the loot tier by depth); nothing reads it today, and a monster draws one drop from its own family's `drops` |
-| `pois` | slice E6 (puts a floor's points of interest in front of the player); today the v3 stage names them and the floor plan drops them |
+| `pois` | slice E6 (puts a floor's points of interest in front of the player); today the v3 stage names them and the floor plan drops them, so they draw nothing and announce nothing - what a floor is called on arrival comes from `label` |
 
 `vefr check` also names a Section that asks for a tileset no picture exists
 for - one in the pack's `tiles/` or the engine's - because such a floor
@@ -467,7 +467,7 @@ and refuses every value below at the pointer that names it.
 |---|---|---|
 | `section` | the Section's number in the descent order | unordered |
 | `id` | **required** - the floor key's middle | - |
-| `label` | the name a player sees, 1 to 40 characters: a hint names one of its floors "the Cellar, floor 2" instead of the region id; the floor key, region and save keys never read it | the id |
+| `label` | the name a player sees, 1 to 40 characters: arriving on a floor says "the Cellar, floor 2" instead of the stair, and a hint names the floor the same way; the floor key, region and save keys never read it | the id (and the arrival names the stair, as before) |
 | `floors` | how many floors it has | 9 |
 | `size` | `{"w": [lo, hi], "h": [lo, hi]}` - every floor draws its own | w 64, h 48 |
 | `rooms` | the `[lo, hi]` room quota a floor draws | 12 |
@@ -482,7 +482,7 @@ and refuses every value below at the pointer that names it.
 | `curve` | `{"hp": [lo, hi], "atk": [lo, hi]}` - the depth multipliers | flat (1.0) |
 | `loot` | `{"tier": N}` - checked, not yet read (E10) | - |
 | `stamps` | the stamp ids this Section may use | none |
-| `pois` | the point-of-interest names its floors carry | none |
+| `pois` | the point-of-interest names its floors carry - checked, not yet read at play (E6) | none |
 | `warden` | a family id, or `{"family", "id", "carries"}` | no warden |
 | `vault` | the vault stamp's id | no vault |
 | `endless` | `{"omens": [{"id", "label", one of `fog_radius`/`groups_per_floor`/`warden_affixes`}], "picks": N}` - the omens an endless descent offers | no omens |

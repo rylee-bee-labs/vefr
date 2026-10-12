@@ -347,7 +347,10 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # A Section's label in the player's hints (#363), 2026-10-12; measured twice in separate processes, readings equal:
 #   7289fe208fe7f306d626b1e154171f3a1848e4e1ad777471dc3a6491f1596442
 #   7289fe208fe7f306d626b1e154171f3a1848e4e1ad777471dc3a6491f1596442
-NO_SKIN_WEAVE_SHA256 = "7289fe208fe7f306d626b1e154171f3a1848e4e1ad777471dc3a6491f1596442"
+# A generated floor announced by its Section's label on arrival (#362), 2026-10-12; measured twice in separate processes, readings equal:
+#   0538c9bd605fa1debc42c2ede3176dda7bc2c17cbfa89ac9c20417967e9cf41b
+#   0538c9bd605fa1debc42c2ede3176dda7bc2c17cbfa89ac9c20417967e9cf41b
+NO_SKIN_WEAVE_SHA256 = "0538c9bd605fa1debc42c2ede3176dda7bc2c17cbfa89ac9c20417967e9cf41b"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

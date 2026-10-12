@@ -1264,8 +1264,9 @@ SECTION = Block(
                 '`cellar-0-3` is the third floor of the cellar, first cycle.'),
         Key('label', 'str', lo=1, hi=40,
             doc='the name a player sees for this Section, when it is not the '
-                'id: a hint names one of its floors "<label>, floor <k>" '
-                'rather than the region id. It names nothing the game keeps: the floor key, the '
+                'id: arriving on one of its floors says "<label>, floor <k>" '
+                'rather than the stair, and a hint names the floor the same '
+                'way. It names nothing the game keeps: the floor key, the '
                 'region and every save key are built from the id alone.',
             say={'wrong-type': '{path} must be a string, the name a player '
                                'sees for this Section'}),
@@ -1359,7 +1360,9 @@ SECTION = Block(
             wired=False,
             wires='slice E6 puts the floor\'s points of interest in front of '
                   'the player; today the v3 stage names them and the floor '
-                  'plan drops them, so the names never reach the map',
+                  'plan drops them, so the names never reach the map and '
+                  'announce nothing on arrival - `label` is what names a '
+                  'floor to the player',
             say={'wrong-type': '{path} must be a list of point-of-interest '
                                'names, such as ["the rusted grate"]',
                  'wrong-element': '{path} must be a point of interest, such '

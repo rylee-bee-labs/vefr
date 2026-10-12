@@ -1,19 +1,21 @@
-"""vefr#363: a hint names a floor of a labelled Section by its title.
+"""vefr#362 and #363: a generated floor is announced by what it is.
 
-A hint (`point-to`) that named a generated floor named it by its region
-id, `cellar-0-1`: the id is machine-made, and a Section's `id` cannot be
-renamed to read better without renaming the region and every save key
-with it. A Section may now declare a `label` (#407), and the player reads
-it: a floor of a labelled Section is "the Cellar, floor 1" to the player
-and `cellar-0-1` to everything the game keeps.
+A hero who goes down a stair arrives on the new floor's up-stair, which is
+where the elevator rule wants them. The arrival used to greet them with
+that stair - the POI line said "the stair up" and the big button "Go up the
+stairs" - and a hint that named a floor named it by its region id,
+`cellar-0-1`. A Section may now declare a `label` (#407), and the player
+reads it:
 
-- a hint names a labelled floor by its title, and the Where next? row is
-  still keyed by the region id;
-- a Section with no label is named by its id, and its row is the row the
-  player always stored;
-- the label reaches the woven file inside the Section the weave already
-  bakes, and it is the only byte that differs from the same pack woven
-  without it.
+- arriving on a floor of a labelled Section, the POI line and the button
+  name the floor ("the Cellar, floor 1"), and reading it says which way
+  the stair down lies, by the floor below's own title when it has one;
+- the up-stair is still drawn and still walkable: once the floor is read,
+  or the hero steps off and back, the same tile offers the way up again;
+- a hint (`point-to`) names a labelled floor by its title, and the region
+  id - the save's key, the rules' id - is the same id it always was;
+- a Section with no label arrives exactly as before, and a pack with no
+  label anywhere weaves byte for byte the file it wove before.
 
 Played through the REAL woven file in jsdom (`descent_arrival_harness.mjs`)
 against the fixture descent; every walk is planned from `delve.floor_plan`,
@@ -45,6 +47,8 @@ LABEL = "the Cellar"
 LABELLED = copy.deepcopy(DESCENT)
 LABELLED["sections"][0]["label"] = LABEL
 
+UP_WORDS = "Go up the stairs"
+
 
 def _compass(start, goal):
     """The direction words `point-to` and the arrival speak, from Python."""
@@ -74,6 +78,89 @@ def _session(html, steps):
 def _arrive(depth, descent):
     """The steps that walk down to `depth` and stop on its up-stair."""
     return _descend(depth, descent=descent)
+
+
+# ---- the arrival -----------------------------------------------------------
+
+def test_arriving_on_a_labelled_floor_names_the_floor_not_the_stair(tmp_path):
+    html = _weave(tmp_path, LABELLED)
+    plan = delve.floor_plan(LABELLED, 1)
+    up, down = plan["anchors"]["up"], plan["anchors"]["down"]
+    steps = _arrive(1, LABELLED) + [
+        "snap:arrived",
+        "click:#interact", "snap:read",
+        "click:#npc-close", "snap:closed",
+        "click:#interact", "wait:150", "snap:climbed",
+    ]
+    snaps = _session(html, steps)
+
+    arrived = snaps["arrived"]
+    # The region id is the one the floor always had, and the hero is on
+    # its up-stair - the arrival tile did not move.
+    assert arrived["region"] == "cellar-0-1"
+    assert arrived["hero"] == up
+    assert arrived["poi"] == "the Cellar, floor 1"
+    assert arrived["interact"] == "Look at the Cellar, floor 1"
+
+    # Reading the floor says which way the stair down lies, and names the
+    # floor below by its own title.
+    read = snaps["read"]
+    assert read["speechOpen"] is True
+    assert read["speechName"] == "the Cellar, floor 1"
+    assert read["speechLine"] == (
+        f"To reach the Cellar, floor 2, go {_compass(up, down)}.")
+    assert read["region"] == "cellar-0-1"
+
+    # Once read, the tile is the stair again, and the stair still works.
+    assert snaps["closed"]["interact"] == UP_WORDS
+    assert snaps["climbed"]["region"] == "town"
+
+
+def test_stepping_off_the_arrival_tile_and_back_finds_the_stair(tmp_path):
+    html = _weave(tmp_path, LABELLED)
+    plan = delve.floor_plan(LABELLED, 1)
+    up = plan["anchors"]["up"]
+    rows = plan["rows"]
+    # One open neighbour of the up-stair, and the step back onto it.
+    back = {"up": "down", "down": "up", "left": "right", "right": "left"}
+    moves = {"up": (0, -1), "down": (0, 1), "left": (-1, 0), "right": (1, 0)}
+    away = next(name for name, (dx, dy) in moves.items()
+                if rows[up[1] + dy][up[0] + dx] != "#")
+    steps = _arrive(1, LABELLED) + [
+        f"walk:{away}", "snap:off", f"walk:{back[away]}", "snap:back",
+    ]
+    snaps = _session(html, steps)
+    assert snaps["back"]["hero"] == up
+    assert snaps["back"]["poi"] == "the stair up"
+    assert snaps["back"]["interact"] == UP_WORDS
+
+
+def test_the_last_labelled_floor_points_at_the_stair_down_when_the_next_has_no_title(tmp_path):
+    # A one-floor labelled Section: the floor below its only floor is the
+    # hollow's first, which declares no label, so the hint names the stair
+    # rather than the hollow's region id.
+    short = copy.deepcopy(LABELLED)
+    short["sections"][0]["floors"] = 1
+    short["sections"][0]["pattern"] = ["entry"]
+    html = _weave(tmp_path, short)
+    plan = delve.floor_plan(short, 1)
+    up, down = plan["anchors"]["up"], plan["anchors"]["down"]
+    assert delve.floor_plan(short, 2)["name"] == "hollow-0-1"
+    snaps = _session(html, _arrive(1, short) + [
+        "snap:arrived", "click:#interact", "snap:read"])
+    assert snaps["arrived"]["region"] == "cellar-0-1"
+    assert snaps["arrived"]["poi"] == "the Cellar, floor 1"
+    assert snaps["read"]["speechLine"] == (
+        f"To reach the stair down, go {_compass(up, down)}.")
+
+
+def test_a_section_with_no_label_arrives_exactly_as_before(tmp_path):
+    html = _weave(tmp_path, DESCENT)
+    snaps = _session(html, _arrive(1, DESCENT) + ["snap:arrived"])
+    arrived = snaps["arrived"]
+    assert arrived["region"] == "cellar-0-1"
+    assert arrived["poi"] == "the stair up"
+    assert arrived["interact"] == UP_WORDS
 
 
 # ---- the hint ----------------------------------------------------------------

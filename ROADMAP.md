@@ -56,6 +56,9 @@ gameplay features over new core machinery.
   with nothing to say is not offered Talk (#419).
 - [player] A Section's `label` reaches play: a hint names a floor of it "the Cellar, floor 2" instead of the region id
   `cellar-0-2`, whose id, floor key and save keys are unchanged; a Section with no label reads as before (#363).
+- [player] Arriving on a floor of a labelled Section names the floor, not the stair back up: the POI line and the
+  button say "the Cellar, floor 2", and reading it points to the stair down. The up-stair is still drawn and
+  walkable, and a Section with no label arrives exactly as before (#362).
 - [authoring] The Storybook design system and its art bible (Cottage's look, kept as a worked example; every game
   chooses its own), and the guide to making a VEFR game look and feel good (#415).
 
