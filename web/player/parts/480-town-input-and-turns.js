@@ -818,7 +818,7 @@
       }
       // A found note is no longer drawn on the map, so it stays a target
       // only on the tile where it lay: the hero has just picked it up and
-      // the button says what she holds. From a tile away it is gone.
+      // the button says what the hero holds. From a tile away it is gone.
       if (bookIsFound(b.id) && !(hero[0] === b.at[0] && hero[1] === b.at[1])) return;
       candidates.push({ kind: 'book', id: b.id, name: b.title || 'the note',
                         at: [b.at[0], b.at[1]] });

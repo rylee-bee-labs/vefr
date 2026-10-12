@@ -37,7 +37,7 @@ ARROW = {"up": "ArrowUp", "down": "ArrowDown",
 # [3, 1]. One press right stands beside it facing it; two stand on it.
 TO_BESIDE = ["right"]
 TO_ON_IT = TO_BESIDE + ["right"]
-TO_EMPTY = ["down", "down"]
+TO_EMPTY = ["down"]
 
 READ = "Read A Note Left at the Door"
 NOTHING_HINT = "Nothing near you to use yet."
@@ -173,7 +173,7 @@ def test_away_from_the_note_the_words_are_the_idle_ones(page, woven):
     the map."""
     open_woven(page, woven)
     walk(page, TO_EMPTY)
-    assert hero_at(page) == [1, 3]
+    assert hero_at(page) == [1, 2]
     idle = words(page)
     assert idle["label"] == "Interact"
     assert idle["hint"] == NOTHING_HINT

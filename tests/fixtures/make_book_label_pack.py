@@ -17,7 +17,7 @@ SAMPLE = ROOT / "worlds" / "sample-world"
 #   hero start ............. [1, 1]
 #   book "A Note Left at the Door" . [3, 1]
 #   spot beside it ........ [2, 1]  facing right: the note is in reach
-#   empty spot ............. [1, 3]  nothing in reach in any direction
+#   empty spot ............. [1, 2]  nothing in reach in any direction
 #
 # The note is a `found: map` book with no `chest: yes`, so it lies on
 # the ground like the sample world's own note and is not a chest.
