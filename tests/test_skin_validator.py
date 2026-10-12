@@ -314,10 +314,13 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # #417 2026-10-12: Talk with no brain says the seeded line (480-town-input-and-turns.js), on top of #416; measured twice in separate processes, readings equal:
 #   aab9d5457b034d7b900bc2ed34ccb99645514acf744739ec559e173b7f9c8d7f
 #   aab9d5457b034d7b900bc2ed34ccb99645514acf744739ec559e173b7f9c8d7f
-# Pixel art mode (P9PIXEL) on top of #419, 2026-10-12; measured twice in separate processes, readings equal:
-#   60112ffa99520c2ddf98c75bf0fd4f476df566ed16e12355569890fe8b197329
-#   60112ffa99520c2ddf98c75bf0fd4f476df566ed16e12355569890fe8b197329
-NO_SKIN_WEAVE_SHA256 = "60112ffa99520c2ddf98c75bf0fd4f476df566ed16e12355569890fe8b197329"
+# #418 phone camera merged with #419 (Talk) on 2026-10-12; measured twice in separate processes, readings equal:
+#   3efab5dcd619fc4e4510f3297cf3e6ea5dcb1a059341f4fcad5c5476b014113d
+#   3efab5dcd619fc4e4510f3297cf3e6ea5dcb1a059341f4fcad5c5476b014113d
+# Pixel art merged with #418 phone camera, 2026-10-12; measured twice in separate processes, readings equal:
+#   1cfa642263601dd2b7ad321bc74a5fe019bb05966c7d53c6b3238cbc2412f4a1
+#   1cfa642263601dd2b7ad321bc74a5fe019bb05966c7d53c6b3238cbc2412f4a1
+NO_SKIN_WEAVE_SHA256 = "1cfa642263601dd2b7ad321bc74a5fe019bb05966c7d53c6b3238cbc2412f4a1"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

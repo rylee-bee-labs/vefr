@@ -169,11 +169,15 @@
     // scrolling map glides during the hop instead of snapping a tile and sliding the hero back.
     // At rest the drawn tile is the settled one, so nothing changes when no step is running.
     var camHero = heroPose().tile;
+    // A phone's camera may pass a map's edge by PHONE_MARGIN tiles.
+    var margin = onPhone ? PHONE_MARGIN * T : 0;
     var camX = mapW <= viewW ? (mapW - viewW) / 2
-      : Math.min(Math.max(camHero[0] * T + T / 2 - viewW / 2, 0), mapW - viewW);
+      : Math.min(Math.max(camHero[0] * T + T / 2 - viewW / 2, -margin), mapW - viewW + margin);
     var camY = mapH <= viewH ? (mapH - viewH) / 2
-      : Math.min(Math.max(camHero[1] * T + T / 2 - viewH / 2, 0), mapH - viewH);
+      : Math.min(Math.max(camHero[1] * T + T / 2 - viewH / 2, -margin), mapH - viewH + margin);
     camX = snapPx(camX); camY = snapPx(camY);
+    cameraAt.x = camX;
+    cameraAt.y = camY;
 
     ctx.fillStyle = town.bg; ctx.fillRect(0, 0, viewW, viewH);
     // The ground the map does not cover takes the skin's table, when the skin

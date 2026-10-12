@@ -213,6 +213,8 @@ def load_pack(pack_dir: Path) -> dict:
         # loads exactly as before, and the validator sees nothing new.
         if 'sound' in config:
             unified['sound'] = config['sound']
+        if 'display' in config:
+            unified['display'] = config['display']
         # The pack's own words for the action-critical lines the engine
         # speaks (vefr #259), carried through ONLY when the pack declares
         # them: a pack with none loads exactly as before, and the
@@ -1464,7 +1466,9 @@ def player_words_errors(w: dict) -> list[str]:
 def display_errors(w: dict) -> list[str]:
     """Every problem with a pack's optional `display` block (empty = good).
 
-    `pixel_art` names the art's native tile size, a whole number from 8 to
+    `phone_tile` is the drawn tile, in CSS pixels, of a touch phone whose
+    map is too big to fit: a whole number from 32 to 72. `pixel_art` names
+    the art's native tile size, a whole number from 8 to
     64: the engine then draws every picture at a whole-number scale of it,
     with no smoothing (docs/guides/world-creation.md, "Pixel art"). A pack
     that declares no `display` gets no output at all.
@@ -3190,6 +3194,7 @@ def validate(w: dict, pack_dir: Path | None = None) -> list[str]:
     # checked beside the other optional catalogs. A pack that declares
     # none gets nothing here.
     errors.extend(sound_errors(w))
+    errors.extend(display_errors(w))
     # The pack's optional player words (vefr #259): the pack's own
     # wording for the action-critical lines the engine speaks. A pack
     # that declares none gets nothing here and says nothing else about
