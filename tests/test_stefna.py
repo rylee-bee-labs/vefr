@@ -1,3 +1,4 @@
+import copy
 import json
 
 import pytest
@@ -46,7 +47,7 @@ def test_stefna_voice_refuses_unknown_declared_voice(monkeypatch):
 
 def test_validator_catches_stefna_voice_typo():
     from vefr.world import load_world
-    w = load_world("sample-world")
+    w = copy.deepcopy(load_world("sample-world"))  # load_world is lru_cached: never edit the shared copy
     w["stefna_voice"] = "nonexistent_voice"
     errs = maplab.validate(w)
     assert any("stefna_voice 'nonexistent_voice'" in e for e in errs)
@@ -54,7 +55,7 @@ def test_validator_catches_stefna_voice_typo():
 
 def test_validator_catches_missing_voice_strike():
     from vefr.world import load_world
-    w = load_world("sample-world")
+    w = copy.deepcopy(load_world("sample-world"))  # load_world is lru_cached: never edit the shared copy
     w["voices"]["keeper"]["strike"] = ""
     errs = maplab.validate(w)
     assert any("missing required non-empty 'strike'" in e for e in errs)
