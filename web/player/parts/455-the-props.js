@@ -77,6 +77,49 @@
     ctx.drawImage(im, propFrame(p) * fw, 0, fw, fh, across[0], up[0], across[1], up[1]);
   }
 
+  // ---- a generated floor's decor (vefr#442) ----
+  // A Section may scatter small pictures over its floors: a puddle, a crack,
+  // a torch on a wall face. They are drawn right after the ground, under
+  // books, loot and everyone, and they never block. The descent wires each
+  // floor's pictures into `VEFR_DECOR_PICS` by region name when the floor is
+  // grown, so they are loaded the first time that floor is drawn.
+  var decorImgs = {};      // src -> Image, shared by every floor
+  function decorSrc(pic) {
+    var pics = (window.VEFR_DECOR_PICS || {})[regionName];
+    var src = pics ? pics[pic] : null;
+    return (typeof src === 'string' && src) ? src : null;
+  }
+  function decorImage(src) {
+    var im = decorImgs[src];
+    if (!im) {
+      im = decorImgs[src] = new Image();
+      im.onload = function () { draw(); };
+      im.src = src;
+    }
+    return (im.complete && im.naturalWidth > 0) ? im : null;
+  }
+  function drawDecor() {
+    var list = Array.isArray(town.decor) ? town.decor : [];
+    // `VEFR_DECOR_DRAWN` is how many seen decor this frame laid down that
+    // have a picture to draw, loaded or not (a harness reads it).
+    var drawn = 0;
+    list.forEach(function (d) {
+      if (!d || !Array.isArray(d.at) || hideUnseen(d.at[0], d.at[1])) return;
+      var src = decorSrc(d.pic);
+      if (!src) return;
+      drawn++;
+      var im = decorImage(src);
+      if (!im) return;
+      var fw = im.naturalWidth, fh = im.naturalHeight;
+      // One tile wide, standing on the tile's bottom edge, as a 1x1 prop is.
+      var box = artSize(fw, fh, T * (fh / fw));
+      var across = snapSpan((d.at[0] + 0.5) * T - box.w / 2, box.w);
+      var up = snapSpan((d.at[1] + 1) * T - box.h, box.h);
+      ctx.drawImage(im, 0, 0, fw, fh, across[0], up[0], across[1], up[1]);
+    });
+    window.VEFR_DECOR_DRAWN = drawn;
+  }
+
   // One ticker for everything that moves on its own. It redraws at most
   // twelve times a second, only while something animates and the page is
   // shown; reduced motion never starts it.

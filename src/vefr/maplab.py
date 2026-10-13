@@ -1911,6 +1911,7 @@ def section_errors(pack_dir) -> list[str]:
                                            drops))
         errors.extend(_warden_key_errors(root, section, rel))
         errors.extend(_section_tile_errors(root, section, rel))
+        errors.extend(_section_decor_errors(root, section, rel))
         errors.extend(_warden_drop_errors(root, section, rel, resolve))
     return errors
 
@@ -1990,6 +1991,36 @@ def _section_tile_errors(root: Path, section: dict, rel: str) -> list[str]:
             f'the tileset {name!r}, and no picture of that name is in this '
             f'pack\'s tiles/ or the engine\'s; the floor would fall back to '
             f'the glyph\'s own colour')
+    return problems
+
+
+def _section_decor_errors(root: Path, section: dict, rel: str) -> list[str]:
+    """Every decor picture a Section names that the pack does not have (vefr#442).
+
+    A decor `pic` is read the way a prop's is, from the pack's own `props/`,
+    and one with no picture would be dressing nobody can see. `shapes` speaks
+    for a wrong value; this speaks for a missing file, which only the pack
+    directory can answer.
+    """
+    from .cli import _prop_picture_path
+
+    decor = section.get('decor')
+    if not isinstance(decor, list):
+        return []
+    sid = section.get('id')
+    sid = sid if isinstance(sid, str) and sid else 'this Section'
+    problems = []
+    for i, entry in enumerate(decor):
+        pic = entry.get('pic') if isinstance(entry, dict) else None
+        if not isinstance(pic, str) or not pic:
+            continue
+        if pic in ('.', '..') or any(c in pic for c in '/\\\0'):
+            problems.append(f'{rel}: /decor/{i}/pic Section {sid} decor {pic!r} must be '
+                            f"a picture's file name with no folder")
+            continue
+        if _prop_picture_path(root, None, pic) is None:
+            problems.append(f'{rel}: /decor/{i}/pic Section {sid} decor {pic!r} has no '
+                            f"picture '{pic}.webp' or '{pic}.png' in this pack's props/")
     return problems
 
 

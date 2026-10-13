@@ -1246,6 +1246,27 @@ ENDLESS = Block(
     ),
 )
 
+# A Section's decor (vefr#442): one picture from the pack's `props/` and
+# where on a generated floor it may lie. The bounds are `vefr.delve`'s
+# `DECOR_PLACES` and `DECOR_EVERY`, written out here because `shapes` is
+# standard-library only (see the module docstring).
+DECOR = Block(
+    name='decor',
+    example='{"pic": "puddle", "on": "floor", "every": 60}',
+    keys=(
+        Key('pic', 'str', lo=1, hi=64, required=True,
+            say={'wrong-type': '{path} must be the name of a picture in '
+                               'props/, such as "puddle"'}),
+        Key('on', 'enum', choices=('floor', 'wall'), required=True),
+        Key('every', 'int', lo=4, hi=2000, required=True,
+            say={'wrong-type': '{path} must be a whole number of tiles, '
+                               'such as 60',
+                 'out-of-range': '{path} must be between 4 and 2000 - how '
+                                 'many tiles of its place carry one picture'}),
+    ),
+    say={'missing-key': '{name} must hold its {key}, such as {example}'},
+)
+
 SECTION = Block(
     name='section',
     example='{"section": 1, "id": "cellar", "floors": 9, "rooms": [12, 18]}',
@@ -1386,6 +1407,16 @@ SECTION = Block(
         # before it lists the Section's other keys in the order it
         # always did, with this one named at the end.
         Key('endless', 'obj', sub=ENDLESS),
+        # vefr#442, after `endless` for the same reason `endless` is last.
+        Key('decor', 'list', sub=DECOR,
+            doc='the small pictures scattered over this Section\'s floors - '
+                'a puddle on the `floor`, a torch on a `wall` face - at about '
+                'one for `every` tiles of that place, on the floor\'s own '
+                '`decor` stream. Decor never blocks and moves nothing else, '
+                'and it is left out of the floor\'s identity, so dressing a '
+                'Section keeps the floors a save remembers.',
+            say={'wrong-type': '{path} must be a list of decor, such as '
+                               '[{"pic": "puddle", "on": "floor", "every": 60}]'}),
     ),
     say={'missing-key': '{name} must hold its {key}'},
 )

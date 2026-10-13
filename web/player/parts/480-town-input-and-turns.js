@@ -258,6 +258,8 @@
         }
       }
     }
+    // A generated floor's decor lies on the ground, under everything else.
+    drawDecor();
     if (water === 'high') {
       ctx.fillStyle = 'rgba(80,80,140,0.35)';
       flood.forEach(function (t) {

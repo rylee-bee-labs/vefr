@@ -276,6 +276,11 @@ A legend entry may also name `"edges": "lane-edges"`: ONE picture in
 + west 8 for each neighbour sharing the symbol) is drawn over the tile so
 one ground blends into the next (docs/guides/rulesets.md, "A ground that
 blends"). A legend naming no edges draws exactly as before.
+A Section (`sections/<id>.json`) may name `decor`: pictures from the
+pack's `props/` scattered over its generated floors, `on` a floor tile or
+a wall face, about one for `every` tiles (docs/guides/rulesets.md, the
+Section contract). Decor never blocks and is not part of a floor's
+identity; a Section naming none draws exactly as before.
 
 SAVES (rule saves): world.json may carry an optional top-level `saves`
   block choosing how much of a run the rules remember:
