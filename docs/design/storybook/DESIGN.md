@@ -3,7 +3,7 @@
 > Category: Game UI
 > Surface: mobile-first web game (VEFR player); the look Cottage of the Breeze chose
 
-**Status: draft for Rylee's review (2026-10-12).** Cottage's cozy, storybook interface: the world fills the
+**Status: approved by Rylee 2026-10-12, built 2026-10-13 (vefr#445, #446), with her later changes in "What changed after play" below.** Cottage's cozy, storybook interface: the world fills the
 screen, and everything else is one thumb away.
 
 **Whose look this is.** VEFR Storybook is **Cottage of the Breeze's** look, kept in VEFR as a worked example a
@@ -39,6 +39,19 @@ From Rylee's review on 2026-10-12 (her words in quotes; the full list is kept in
 Everything else on the OpenDesign boards (control-size slider, left-handed mirror, contrast toggle, sound sliders,
 haptics, message-log page, target glow rings, combat feedback) is a **mockup** until Rylee approves it by name.
 "Simplicity matters too."
+
+## What changed after play (Rylee, 2026-10-13)
+She played the built layout on a phone and at a desk, and these override the sections below where they differ:
+- **Smaller and quieter.** Phone text, the message line and the panels are smaller than the tables below
+  ("go more towards a smaller interface for words and such"). The world gets the screen.
+- **Two buttons only:** the smart button and Bag ("I'd prefer if there were only two buttons"). B appears only
+  while a panel is open. Whisper and Explore are not drawn on a phone; they keep their keys (Q, O), and the Journal
+  can "Listen for a whisper".
+- **No light parchment by default** ("do away with the light parchment background"). Dark stays dark even on a
+  phone in light mode. Parchment is still a choice in Display.
+- **Less bounce:** a hero with a walk sheet has no lean or landing squash ("a little less... bounce").
+- **A desk follows the hero too** (`display.desk_tile`; Cottage uses 48), and its messages are the same one fading
+  line ("I can't see my character at all and I can't make the notes disappear").
 
 ## Layout (portrait 390 x 844, safe areas respected)
 - **Top left:** health pill (label 13 px caps, number 16 px bold), then 1 or 2 quickslots (48 px) with count badges.

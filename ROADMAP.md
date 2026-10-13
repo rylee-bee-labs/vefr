@@ -74,6 +74,17 @@ gameplay features over new core machinery.
 - [authoring] "Make your first game", one page for a beginner (#429), and the Studio creative-learning vision
   (#421, proposed).
 
+### LANDED 2026-10-13 (the storybook layout, built from Rylee's phone and desk playthroughs)
+- [player] A mirrored walk frame really faces left on screen, and a drag on a phone never moves the page (#444).
+- [player] The storybook phone layout (#445): a slim top bar (health, quickslots, a pill Menu; level and gold in
+  the Bag), one message line that fades after 3 s, and only the smart button and Bag over the world (Whisper and
+  Explore stay on Q and O; the Journal can "Listen for a whisper"). Phone text and panels are smaller, the Dark look
+  stays dark on a light-mode phone, and a walk sheet hero walks without the lean and squash. A skinned pack can
+  start on the plain look (`display.look`).
+- [player] A desk follows the hero too (`display.desk_tile`, 32 to 96): the stage is the window, and messages are
+  the phone's one fading line (#446).
+- [engine] A Section can dress its generated floors with decor (#442, #443).
+
 ### IN PROGRESS (decided by Rylee on 2026-10-04; refreshed 2026-10-12)
 - **The endless dungeon** (epic [#273](https://github.com/rylee-bee-labs/vefr/issues/273); design `docs/plans/endless-dungeon/DESIGN.md`, build plan `docs/plans/endless-dungeon/PLAN.md`, research `docs/research/big-generated-maps.md`): floors generated while you play from `seed + depth`, cut into sections of 8 to 11 floors; each ends in a key warden whose key opens a vault with a lore note; acts change the town only; elites, linked groups, hand-painted stamps and much bigger maps (up to 128x96, kept cheap for phones); an endless mode after the story.
   - **Merged:** E0a measurements (#278), F1 fog as a bitset (#287), E0d sleeping monsters and a radius-bounded flood (#288), E2 the v3 Python floor generator with property sweeps (#289).
