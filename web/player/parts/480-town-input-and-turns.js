@@ -79,10 +79,25 @@
   }
   // Draw only while a step is running; on the last frame, stop, return
   // the pose to idle, and paint the settled tile. No idle loop.
+  // A sheet hero keeps its walk frame a moment after a step lands, so a
+  // held walk (a step every 200 ms) never flashes the standing frame
+  // between steps: that flash read as a bounce on every tile.
+  var WALK_LINGER_MS = 140;
+  var heroLinger = 0;
+  function heroRestSoon() {
+    if (heroLinger) window.clearTimeout(heroLinger);
+    heroLinger = window.setTimeout(function () {
+      heroLinger = 0;
+      if (heroAnim) return;
+      heroSetPose('idle');
+      draw();
+    }, WALK_LINGER_MS);
+  }
   function heroFrame() {
     if (!heroAnim) return;
     if (nowMs() - heroAnim.start >= STEP_MS) {
       heroAnim = null;
+      if (heroHasSheet) { draw(); heroRestSoon(); return; }
       heroSetPose('idle');
       draw();
       return;
@@ -100,7 +115,9 @@
     // The lean is a rotation. A real canvas has rotate(); the minimal
     // stub context used by the test harness may not, and in that case
     // the hero still draws, only without the tilt.
-    if (off.lean && typeof ctx.rotate === 'function') {
+    // A sheet steps frame by frame, so it is drawn upright and unsquashed:
+    // the lean and the landing squash on top of its own walk read as a bounce.
+    if (off.lean && !heroHasSheet && typeof ctx.rotate === 'function') {
       ctx.rotate(off.lean * Math.PI / 180);
     }
     if (heroHasSheet && spriteSheetReady('hero')) {
@@ -111,13 +128,12 @@
       var sim = spriteSheetImgs.hero;
       var fw = sheet.frame[0], fh = sheet.frame[1];
       var cols = Math.max(1, Math.floor(sim.naturalWidth / fw));
-      var cell = sheetCell('hero', 'hero', heroFacing, heroAnim ? 'walk' : 'idle', heroWalkStep)
+      var cell = sheetCell('hero', 'hero', heroFacing, (heroAnim || heroLinger) ? 'walk' : 'idle', heroWalkStep)
         || { idx: heroSheetIdx, mirror: heroSheetMirror };
       var col = cell.idx % cols, row = Math.floor(cell.idx / cols);
       if (window.VEFR_HERO_FRAME) window.VEFR_HERO_FRAME.frame = cell.idx;
       var base = artSize(fw, fh, T * 1.5 * spriteScale(window.VEFR_SPRITE_SCALE, 'hero'));
-      var sh = base.h * (1 - off.squash);
-      var sw = base.w * (1 + off.squash);
+      var sh = base.h, sw = base.w;
       var across = snapSpan(-sw / 2, sw), up = snapSpan(-sh, sh);
       if (cell.mirror) {
         drawFlipped(sim, col * fw, row * fh, fw, fh, across[0], up[0], across[1], up[1]);

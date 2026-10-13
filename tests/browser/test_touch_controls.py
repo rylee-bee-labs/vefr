@@ -297,40 +297,26 @@ def test_left_handed_mirrors_the_joystick_and_the_cluster(browser, woven_sample)
             "left-handed did not survive a reload"
 
 
-def test_a_phone_can_whisper_and_explore_by_tapping(browser, woven_sample):
-    """Issue #431: the touch layer hides the Acts row, so Whisper (Q) and Explore (O) need their own taps."""
+def test_a_phone_shows_two_buttons_on_the_world(browser, woven_sample):
+    """The world keeps the screen: the smart button and Bag are the only buttons over it (owner, 2026-10-13).
+    Whisper and Explore were a phone's taps for Q and O (issue #431); they confused a player, so a phone no
+    longer draws them; the keyboard keeps both, and the Journal, where whispers are kept, asks for one."""
     with touch_phone(browser, woven_sample) as page:
         errors = []
         page.on("pageerror", lambda exc: errors.append(str(exc)))
-        width = page.evaluate("innerWidth")
-        for id_ in ("touch-whisper", "touch-explore"):
-            assert page.evaluate(SHOWN, id_), f"#{id_} is not shown on a phone"
-            r = page.evaluate(RECT, id_)
-            assert r["w"] >= 48 and r["h"] >= 48, f"#{id_} is below the 48 px floor: {r}"
-            assert r["l"] >= 0 and r["r"] <= width, f"#{id_} leaves the screen: {r}"
-        assert page.inner_text("#touch-whisper").strip() == "Whisper"
-        assert page.inner_text("#touch-explore").strip() == "Explore"
-
-        page.tap("#touch-explore")
+        shown = page.evaluate("""() => [...document.querySelectorAll('.touch-cluster button')]
+          .filter(b => b.getClientRects().length > 0).map(b => b.id)""")
+        assert sorted(shown) == ["touch-bag", "touch-smart"], f"buttons over the world: {shown}"
+        page.keyboard.press("o")
         page.wait_for_timeout(150)
-        assert page.get_attribute("#touch-explore", "aria-pressed") == "true"
-        assert page.get_attribute("#explore", "aria-pressed") == "true"
-        assert page.inner_text("#explore-status") == "Exploring..."
-        page.tap("#touch-explore")
-        page.wait_for_timeout(150)
-        assert page.get_attribute("#touch-explore", "aria-pressed") == "false", "a second tap did not stop the walk"
-        assert page.inner_text("#explore-status") == "Stopped."
-
-        page.tap("#touch-whisper")
+        assert page.get_attribute("#explore", "aria-pressed") == "true", "O no longer explores"
+        page.keyboard.press("o")
+        # The Journal keeps the whispers and asks for one itself.
+        page.tap("#menu-open")
+        page.tap("#journal-whisper")
         page.wait_for_function("!document.getElementById('npc-box').hidden", timeout=5000)
-        assert page.inner_text("#npc-line").strip(), "the whisper opened an empty speech box"
-        assert not page.evaluate(SHOWN, "touch-whisper") and not page.evaluate(SHOWN, "touch-explore"), \
-            "Whisper and Explore stay up over an open speech box"
-        assert page.evaluate(SHOWN, "touch-b")
-        page.tap("#touch-b")
-        page.wait_for_timeout(150)
-        assert page.evaluate("document.getElementById('npc-box').hidden")
-        assert page.evaluate(SHOWN, "touch-whisper") and page.evaluate(SHOWN, "touch-explore")
+        assert page.evaluate("document.getElementById('menu').hidden"), "the menu stayed over the whisper"
+        assert page.inner_text("#npc-line").strip(), "the Journal's whisper opened an empty speech box"
         assert not errors, errors[:5]
 
 

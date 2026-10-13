@@ -380,7 +380,10 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # The storybook phone layout: a look setting, a slim top bar and a one-line message, 2026-10-13; measured twice in separate processes, readings equal:
 #   fa13a8b845fb10320940f4b8e9326f4f5800cd78a0a8c3ba12111a834e42aab6
 #   fa13a8b845fb10320940f4b8e9326f4f5800cd78a0a8c3ba12111a834e42aab6
-NO_SKIN_WEAVE_SHA256 = "fa13a8b845fb10320940f4b8e9326f4f5800cd78a0a8c3ba12111a834e42aab6"
+# Two buttons on a phone, the Dark look dark on a light-mode phone, a calmer walk, 2026-10-13; measured twice in separate processes, readings equal:
+#   82ae0a667b9c144c7abe8f2d06369ed173159303b92bbcbf6db2ec09a2f13915
+#   82ae0a667b9c144c7abe8f2d06369ed173159303b92bbcbf6db2ec09a2f13915
+NO_SKIN_WEAVE_SHA256 = "82ae0a667b9c144c7abe8f2d06369ed173159303b92bbcbf6db2ec09a2f13915"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

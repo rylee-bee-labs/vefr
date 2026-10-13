@@ -453,8 +453,16 @@
   #d-facts li.confirmed { color: var(--accent); }
   #d-facts li.debunked { color: var(--ink-dim); text-decoration: line-through; }
   #d-feed .card .verdict { margin-top: 0.4rem; font-size: 0.85rem; font-style: italic; }
-  /* The plain look (Display > Look: Dark) keeps no skin decoration. */
+  /* The plain look (Display > Look: Dark) keeps no skin decoration, and it is
+     dark whatever the device's light or dark setting: a light-mode phone
+     otherwise drew every panel on cream paper over the dark world. */
   body.look-plain .hud-mark, body.look-plain .npc-face { display: none; }
+  body.look-plain {
+    --bg: #0B0C0E; --card: #15181D; --card-edge: #33363C;
+    --ink: #E8E5DF; --ink-dim: #A39E92;
+    --accent: #D8AA4E; --accent-on: #1B1206; --danger: #D4644C;
+    color-scheme: dark;
+  }
   /* A phone in play: the approved portrait layout (docs/design/storybook/DESIGN.md).
      The world fills the screen; on top sit only a slim health pill with its
      quickslots (top left) and the menu (top right); the newest message is one
@@ -463,24 +471,38 @@
     body.in-game #hud-level, body.in-game #hud-gold, body.in-game #bag-strip,
     body.in-game .hud--tl .hud-mark { display: none !important; }
     body.in-game .hud--tl { gap: 6px; flex-wrap: nowrap; align-items: center; }
-    body.in-game .hud-hp { padding: 0 12px; min-height: 36px; border-radius: 999px; gap: 8px; }
-    body.in-game .hud-hp-value { font: 700 1rem var(--read); }
+    body.in-game .hud-hp { padding: 0 10px; min-height: 30px; border-radius: 999px; gap: 6px; }
+    body.in-game .hud-hp-bar { width: 44px; height: 6px; }
+    body.in-game .hud-hp-value { font: 700 0.8rem var(--read); }
     body.in-game .touch-quick:not([hidden]) { margin-top: 0; flex-wrap: nowrap; }
-    body.in-game #menu-open { min-height: 48px; padding: 0 16px; border-radius: 999px; font-size: 0.75rem; }
+    body.in-game #menu-open { min-height: 44px; padding: 0 12px; border-radius: 999px; font-size: 0.62rem; }
     body.in-game .toasts { transition: opacity 250ms ease-out; }
     body.in-game .toasts-toggle { display: none; }
     /* Upright, the line stands centred under the top bar; on its side it keeps its corner. */
     @media (orientation: portrait) {
-      body.in-game .toasts { left: 50%; right: auto; top: calc(68px + var(--sai-top)); transform: translateX(-50%);
-        width: max-content; max-width: calc(100% - 32px - var(--sai-left) - var(--sai-right)); justify-items: center; }
+      body.in-game .toasts { left: 50%; right: auto; top: calc(60px + var(--sai-top)); transform: translateX(-50%);
+        width: max-content; max-width: min(300px, calc(100% - 48px - var(--sai-left) - var(--sai-right))); justify-items: center; }
     }
-    body.in-game .toasts p { font-size: 1rem; line-height: 1.35; padding: 6px 14px; border-radius: 18px; text-align: center; }
+    body.in-game .toasts p { font-size: 0.8rem; line-height: 1.3; padding: 4px 12px; border-radius: 14px; text-align: center; }
     body.in-game .toasts p:not(.is-newest) { position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0 !important;
       overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0 !important; }
     body.in-game .toasts.is-collapsed { opacity: 0; }
-    /* Whisper and Explore: small round icons; their words stay for a screen reader. */
-    body.in-game .touch-tool { width: 48px; height: 48px; border-radius: 50%; }
-    body.in-game .touch-tool span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    /* Two buttons on the world: the smart button and Bag. Whisper and Explore
+       stay on the keyboard (Q, O); on a phone they only crowded the corner. */
+    body.in-game .touch-tool { display: none !important; }
+    body.in-game .touch-cluster { grid-template-areas: "b bag" "b smart"; }
+    body.in-game .touch-smart .verb { font-size: 0.6rem; letter-spacing: 0.02em; }
+    /* Speech and panels read small and quiet, so the world keeps the screen. */
+    body.in-game .npc-box { padding: 18px 14px 10px; }
+    body.in-game .npc-box .speaker { font-size: 0.68rem; padding: 3px 10px; top: -12px; }
+    body.in-game .npc-line { font-size: 0.92rem; line-height: 1.4; margin-bottom: 8px; }
+    body.in-game .npc-note { font-size: 0.78rem; }
+    #menu { padding-top: calc(12px + var(--sai-top)); padding-bottom: calc(12px + var(--sai-bottom)); gap: 10px; }
+    #menu .pm { margin: 4px 0 8px; gap: 0 6px; grid-template-columns: 1fr 1fr; }
+    #menu .pm button { justify-content: center; padding: 0 6px; }
+    #menu .pm button { font-size: 0.8rem; }
+    #menu-panel { font-size: 0.9rem; }
+    #menu-panel h2 { font-size: 1rem; margin: 2px 0 6px; }
   }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
@@ -703,8 +725,9 @@
   <div class="carved" id="menu-panel">
     <div data-panel-body="journal">
       <h2>Journal</h2>
+      <p><button type="button" id="journal-whisper">Listen for a whisper</button></p>
       <section id="feed" aria-live="polite">
-        <p class="empty">Nothing yet. Press Whisper to hear what people are saying.</p>
+        <p class="empty">Nothing yet. Listen for a whisper to hear what people are saying.</p>
       </section>
     </div>
     <div data-panel-body="books" hidden>
@@ -3385,6 +3408,14 @@ function bindWhisper() {
   var btn = document.getElementById('whisper');
   var status = document.getElementById('status');
   var feed = document.getElementById('feed');
+  // The Journal keeps the whispers, so it can ask for one too: a phone draws
+  // no Whisper button over the world. The menu closes first, so the whisper's
+  // speech box opens over the game, as it does from the button.
+  var fromJournal = document.getElementById('journal-whisper');
+  if (fromJournal) fromJournal.addEventListener('click', function () {
+    if (window.closeMenu) window.closeMenu();
+    if (!btn.disabled) btn.click();
+  });
   btn.addEventListener('click', async function () {
     btn.disabled = true;
     status.textContent = 'Listening\u2026';
@@ -12151,10 +12182,25 @@ function setupTown() {
   }
   // Draw only while a step is running; on the last frame, stop, return
   // the pose to idle, and paint the settled tile. No idle loop.
+  // A sheet hero keeps its walk frame a moment after a step lands, so a
+  // held walk (a step every 200 ms) never flashes the standing frame
+  // between steps: that flash read as a bounce on every tile.
+  var WALK_LINGER_MS = 140;
+  var heroLinger = 0;
+  function heroRestSoon() {
+    if (heroLinger) window.clearTimeout(heroLinger);
+    heroLinger = window.setTimeout(function () {
+      heroLinger = 0;
+      if (heroAnim) return;
+      heroSetPose('idle');
+      draw();
+    }, WALK_LINGER_MS);
+  }
   function heroFrame() {
     if (!heroAnim) return;
     if (nowMs() - heroAnim.start >= STEP_MS) {
       heroAnim = null;
+      if (heroHasSheet) { draw(); heroRestSoon(); return; }
       heroSetPose('idle');
       draw();
       return;
@@ -12172,7 +12218,9 @@ function setupTown() {
     // The lean is a rotation. A real canvas has rotate(); the minimal
     // stub context used by the test harness may not, and in that case
     // the hero still draws, only without the tilt.
-    if (off.lean && typeof ctx.rotate === 'function') {
+    // A sheet steps frame by frame, so it is drawn upright and unsquashed:
+    // the lean and the landing squash on top of its own walk read as a bounce.
+    if (off.lean && !heroHasSheet && typeof ctx.rotate === 'function') {
       ctx.rotate(off.lean * Math.PI / 180);
     }
     if (heroHasSheet && spriteSheetReady('hero')) {
@@ -12183,13 +12231,12 @@ function setupTown() {
       var sim = spriteSheetImgs.hero;
       var fw = sheet.frame[0], fh = sheet.frame[1];
       var cols = Math.max(1, Math.floor(sim.naturalWidth / fw));
-      var cell = sheetCell('hero', 'hero', heroFacing, heroAnim ? 'walk' : 'idle', heroWalkStep)
+      var cell = sheetCell('hero', 'hero', heroFacing, (heroAnim || heroLinger) ? 'walk' : 'idle', heroWalkStep)
         || { idx: heroSheetIdx, mirror: heroSheetMirror };
       var col = cell.idx % cols, row = Math.floor(cell.idx / cols);
       if (window.VEFR_HERO_FRAME) window.VEFR_HERO_FRAME.frame = cell.idx;
       var base = artSize(fw, fh, T * 1.5 * spriteScale(window.VEFR_SPRITE_SCALE, 'hero'));
-      var sh = base.h * (1 - off.squash);
-      var sw = base.w * (1 + off.squash);
+      var sh = base.h, sw = base.w;
       var across = snapSpan(-sw / 2, sw), up = snapSpan(-sh, sh);
       if (cell.mirror) {
         drawFlipped(sim, col * fw, row * fh, fw, fh, across[0], up[0], across[1], up[1]);

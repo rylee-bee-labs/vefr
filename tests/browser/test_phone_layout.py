@@ -100,6 +100,22 @@ def test_a_plain_look_pack_starts_dark_and_the_skin_is_one_tap_away(browser, tmp
         ctx.close()
 
 
+def test_the_dark_look_stays_dark_on_a_light_mode_phone(browser, tmp_path):
+    """A phone set to light mode drew every panel on cream paper over the dark
+    world; the Dark look is dark whatever the device says."""
+    pack = play_kit.pack(tmp_path, "skin", {"world.json": {"display": {"look": "plain"}}})
+    html = play_kit.weave(pack, tmp_path)
+    ctx = browser.new_context(viewport=PHONE, has_touch=True, is_mobile=True, color_scheme="light")
+    try:
+        page = ctx.new_page()
+        page.goto(html.as_uri())
+        enter(page)
+        card = page.evaluate("getComputedStyle(document.body).getPropertyValue('--card').trim()")
+        assert card.upper() == "#15181D", f"the Dark look drew its panels in {card} on a light-mode phone"
+    finally:
+        ctx.close()
+
+
 def test_a_skinned_pack_that_names_no_look_starts_painted(browser, tmp_path):
     html = play_kit.weave(play_kit.pack(tmp_path, "skin"), tmp_path)
     ctx = phone(browser)
