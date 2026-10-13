@@ -374,7 +374,10 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # A Section's decor drawn on its generated floors (#442), 2026-10-13; measured twice in separate processes, readings equal:
 #   b6f4ea4afb04ec07c027c21fa06bd8b1d9129728a58a12ca2bc56ad8df037f79
 #   b6f4ea4afb04ec07c027c21fa06bd8b1d9129728a58a12ca2bc56ad8df037f79
-NO_SKIN_WEAVE_SHA256 = "b6f4ea4afb04ec07c027c21fa06bd8b1d9129728a58a12ca2bc56ad8df037f79"
+# A mirrored side drawn flipped and a phone drag held in play, 2026-10-13; measured twice in separate processes, readings equal:
+#   9b3e7c3d5aee077ee84f0ddd1259d10fc9e8277ca9340049bf483d559f2f6849
+#   9b3e7c3d5aee077ee84f0ddd1259d10fc9e8277ca9340049bf483d559f2f6849
+NO_SKIN_WEAVE_SHA256 = "9b3e7c3d5aee077ee84f0ddd1259d10fc9e8277ca9340049bf483d559f2f6849"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

@@ -351,6 +351,16 @@ function setupTouchControls(api) {
   touchApi = api;
 }
 
+// A drag on the play area never moves the page (touch-action: none in the
+// stylesheet is the first guard; some phone browsers still rubber-band or
+// pull to refresh past it). A panel's own scrolling is left alone.
+function touchHoldPage(e) {
+  if (!document.body.classList.contains('in-game')) return;
+  if (e.target.closest && e.target.closest('[role="dialog"], .reader-card')) return;
+  if (e.cancelable) e.preventDefault();
+}
+document.getElementById('play').addEventListener('touchmove', touchHoldPage, { passive: false });
+
 var touchZone = document.getElementById('touch-zone');
 touchZone.addEventListener('pointerdown', touchDown);
 window.addEventListener('pointermove', touchMovePointer);

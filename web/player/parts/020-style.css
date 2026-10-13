@@ -397,6 +397,8 @@
     body.in-game.touch-dpad #stage .dpad { display: grid; }
     body.in-game.touch-dpad .touch-zone, body.in-game.touch-dpad .touch-hint { display: none; }
     body.in-game #menu-open { min-width: 48px; min-height: 48px; }
+    /* The page itself holds still in play: no rubber band, no pull to refresh. */
+    html:has(body.in-game), body.in-game { overflow: hidden; overscroll-behavior: none; }
     body.in-game #play { touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
     body.in-game #play .reader-card { touch-action: pan-y; user-select: text; -webkit-user-select: text; }
     body.in-game.touch-modal .touch-zone, body.in-game.touch-modal .touch-hint, body.in-game.touch-modal .touch-base,
