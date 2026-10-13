@@ -340,3 +340,28 @@ def test_the_first_run_hint_names_what_a_phone_shows(browser, woven_sample):
         hint = page.inner_text("#status")
         assert hint == "Move on the left. Near someone, tap the round button.", hint
         assert page.evaluate(SHOWN, "touch-smart"), "the hint names a button the phone does not show"
+
+
+def test_a_drag_on_the_map_never_moves_the_page(browser, woven_sample):
+    """A real touch drag (not a synthetic PointerEvent) on the play area is held.
+
+    touch-action: none is the first guard; some phone browsers still rubber-band
+    the page or pull to refresh past it, so the page also refuses to overscroll
+    and the play area cancels its own touchmoves.
+    """
+    with touch_phone(browser, woven_sample) as page:
+        page.evaluate("""() => { window.__held = [0, 0];
+          document.addEventListener('touchmove', e => { window.__held[e.defaultPrevented ? 0 : 1]++; }); }""")
+        cdp = page.context.new_cdp_session(page)
+        x, y = PHONE["width"] - 60, PHONE["height"] // 2
+        cdp.send("Input.dispatchTouchEvent", {"type": "touchStart", "touchPoints": [{"x": x, "y": y}]})
+        for i in range(1, 8):
+            cdp.send("Input.dispatchTouchEvent", {"type": "touchMove", "touchPoints": [{"x": x, "y": y - 40 * i}]})
+        cdp.send("Input.dispatchTouchEvent", {"type": "touchEnd", "touchPoints": []})
+        page.wait_for_timeout(200)
+        info = page.evaluate("""() => ({ held: window.__held, scroll: [scrollX, scrollY],
+          html: getComputedStyle(document.documentElement).overscrollBehaviorY,
+          body: getComputedStyle(document.body).overflow })""")
+        assert info["held"][0] > 0 and info["held"][1] == 0, info
+        assert info["scroll"] == [0, 0], info
+        assert info["html"] == "none" and info["body"] == "hidden", info

@@ -120,7 +120,7 @@
       var sw = base.w * (1 + off.squash);
       var across = snapSpan(-sw / 2, sw), up = snapSpan(-sh, sh);
       if (cell.mirror) {
-        ctx.drawImage(sim, col * fw, row * fh, fw, fh, across[0] + across[1], up[0], -across[1], up[1]);
+        drawFlipped(sim, col * fw, row * fh, fw, fh, across[0], up[0], across[1], up[1]);
       } else {
         ctx.drawImage(sim, col * fw, row * fh, fw, fh, across[0], up[0], across[1], up[1]);
       }
@@ -134,7 +134,7 @@
       var w = base.w * (1 + off.squash);
       var across = snapSpan(-w / 2, w), up = snapSpan(-h, h);
       // Facing left is the same picture mirrored about the tile centre.
-      if (heroFacing === 'left') ctx.drawImage(im, across[0] + across[1], up[0], -across[1], up[1]);
+      if (heroFacing === 'left') drawFlipped(im, 0, 0, im.naturalWidth, im.naturalHeight, across[0], up[0], across[1], up[1]);
       else ctx.drawImage(im, across[0], up[0], across[1], up[1]);
     } else {
       ctx.fillStyle = town.hero_color || '#e8e5df';

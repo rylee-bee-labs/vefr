@@ -158,6 +158,21 @@
     if (reducedMotion()) return;
     oneShots[actor] = { state: state, start: nowMs() };
   }
+  // Draw a picture flipped left-to-right into the box (dx, dy, dw, dh).
+  // A negative width does not do it: the canvas normalises the box and
+  // draws the picture unflipped, which left a mirrored side facing the
+  // way it was drawn. The flip is a scale about the box instead. A stub
+  // context without scale() draws unflipped rather than not at all.
+  function drawFlipped(im, sx, sy, sw, sh, dx, dy, dw, dh) {
+    if (typeof ctx.scale !== 'function') {
+      ctx.drawImage(im, sx, sy, sw, sh, dx, dy, dw, dh);
+      return;
+    }
+    ctx.save();
+    ctx.scale(-1, 1);
+    ctx.drawImage(im, sx, sy, sw, sh, -(dx + dw), dy, dw, dh);
+    ctx.restore();
+  }
   // A character stands taller than its tile, feet on the tile's bottom.
   // `pose` names who it is (`actor`, the key one-shots are kept under), the
   // way it faces and the state it is in; a character with a ready walk
@@ -177,7 +192,7 @@
       var across = snapSpan(tx * T + (T - box.w) / 2, box.w);
       var up = snapSpan(ty * T + T - box.h, box.h);
       if (cell.mirror) {
-        ctx.drawImage(sim, col * fw, row * fh, fw, fh, across[0] + across[1], up[0], -across[1], up[1]);
+        drawFlipped(sim, col * fw, row * fh, fw, fh, across[0], up[0], across[1], up[1]);
       } else {
         ctx.drawImage(sim, col * fw, row * fh, fw, fh, across[0], up[0], across[1], up[1]);
       }
