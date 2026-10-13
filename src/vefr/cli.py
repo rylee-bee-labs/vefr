@@ -1701,6 +1701,36 @@ def _descent_section_tiles(descent: dict, web_dir: Path,
     return out
 
 
+def _descent_section_decor(descent: dict, pack: Path | None) -> dict:
+    """Each Section's decor pictures, inlined, keyed by Section id then picture name.
+
+    A decor `pic` is read the way a prop's is, from the pack's own `props/`
+    (`_prop_picture_path`). A picture with no file is absent, and the player
+    draws nothing for it; a Section with no decor is left out entirely.
+    """
+    if pack is None:
+        return {}
+    from . import delve as delve_mod
+
+    listed = descent.get('sections') if isinstance(descent, dict) else None
+    out: dict[str, dict[str, str]] = {}
+    for section in (listed if isinstance(listed, list) else []):
+        sid = section.get('id') if isinstance(section, dict) else None
+        if not isinstance(sid, str) or not sid:
+            continue
+        pictures: dict[str, str] = {}
+        for entry in delve_mod.decor_of(section):
+            pic = entry['pic']
+            if pic in pictures:
+                continue
+            f = _prop_picture_path(Path(pack), None, pic)
+            if f is not None:
+                pictures[pic] = _tile_data_uri(f)
+        if pictures:
+            out[sid] = pictures
+    return out
+
+
 SPRITE_SCALE_MIN, SPRITE_SCALE_MAX = 0.2, 2.0
 
 
@@ -2941,6 +2971,12 @@ def weave_html(pack: Path, *, pool: dict | None = None) -> str:
         # bakes an empty table and draws exactly what it drew before.
         descent['section_tiles'] = _descent_section_tiles(
             descent, template_path.parent, pack)
+        # The Sections' decor pictures (vefr#442), keyed by Section id and
+        # then by picture name. A pack whose Sections name no decor bakes no
+        # key, and weaves exactly as it did.
+        section_decor = _descent_section_decor(descent, pack)
+        if section_decor:
+            descent['section_decor'] = section_decor
     out_html = out_html.replace('{{descent_json}}',
                                 _json.dumps(descent or None, ensure_ascii=False))
     # The pack's optional town states (ADR 0015, E8c): the regions whose

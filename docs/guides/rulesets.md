@@ -486,6 +486,7 @@ and refuses every value below at the pointer that names it.
 | `warden` | a family id, or `{"family", "id", "carries"}` | no warden |
 | `vault` | the vault stamp's id | no vault |
 | `endless` | `{"omens": [{"id", "label", one of `fog_radius`/`groups_per_floor`/`warden_affixes`}], "picks": N}` - the omens an endless descent offers | no omens |
+| `decor` | **small pictures scattered over its floors** - see below | no decor |
 
 **`mobs` - how many monsters a floor carries.** Without it the count is
 area policy: one monster per 30 walkable tiles, clamped into 4..36, which
@@ -520,6 +521,40 @@ JavaScript twins in `web/player/parts/396-` and `397-` read the same
 table through the same rule. Code: `src/vefr/sections.py`
 (`mob_count`), `src/vefr/delve_v3.py` (`mob_budget`); tests:
 `tests/test_section_monster_count.py`.
+
+**`decor` - small pictures scattered over its floors** (vefr#442). A
+generated floor has no authored map to put props on, so a Section names
+what dresses its floors instead:
+
+```json
+"decor": [
+  {"pic": "cobweb", "on": "wall", "every": 10},
+  {"pic": "puddle", "on": "floor", "every": 60}
+]
+```
+
+`pic` is a picture in the pack's `props/` (`.webp` or `.png`). `on` is
+where it may lie: `floor` is a walkable tile, `wall` a wall tile with a
+walkable tile right below it, the wall face a player sees from the room.
+`every` (4 to 2000) is how many tiles of that place carry one picture,
+and no entry places more than 48 on one floor. The vault's door, note,
+chest and stair home are never dressed, and no tile gets two pictures.
+
+Decor is dressing only. It is drawn on the floor's own `decor` stream, so
+it moves no wall, stair, monster, chest or book; it never blocks; it is
+drawn right after the ground, under books, loot and everyone; and it is
+left out of the floor's identity hash, so dressing a Section keeps the
+floors a save remembers. A Section with no `decor` draws byte-for-byte
+what it drew before. `vefr check` refuses a bad entry at its pointer, and
+a `pic` the pack has no picture for:
+
+```
+sections/cellar.json: /decor/0/pic Section cellar decor 'puddle' has no picture 'puddle.webp' or 'puddle.png' in this pack's props/
+```
+
+Code: `src/vefr/delve.py` (`decor_of`, `decor_at`), the twins in
+`web/player/parts/397-the-descent.js`, the drawing in `455-the-props.js`;
+tests: `tests/test_section_decor.py`.
 
 A family row may carry an optional `xp`: the experience one kill of that
 family pays, on every floor it stands on. A row that leaves it out is

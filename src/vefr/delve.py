@@ -463,6 +463,17 @@ DEFAULT_FAMILY = "a stranger in the dark"
 # rule).
 MOB_SPACING = 7
 
+# A Section's `decor` (vefr#442): small pictures scattered over its generated
+# floors - a puddle, a crack, a torch on a wall. `floor` is a walkable `.`
+# tile and `wall` a `#` tile with a walkable tile right below it, the wall
+# face a player sees from the room. `every` is how many tiles of that place
+# carry one picture, and no entry places more than `DECOR_MAX_EACH`, so a
+# huge floor stays a floor and its plan stays small.
+DECOR_KEY = 'decor'
+DECOR_PLACES = ('floor', 'wall')
+DECOR_EVERY = (4, 2000)
+DECOR_MAX_EACH = 48
+
 # The high end of "every floor", used where a family names no `depth` range.
 # The Section contract caps `floors` at 11, so this covers any floor a Section
 # may have; it is a default and never a bound, since a range the pack wrote is
@@ -742,7 +753,13 @@ def section_hash(section: dict, stamps=None) -> str:
     floor it would draw. Since stamps reach play (2026-10-09) a stamp edit
     redraws floors too, so a pack that has stamps hashes them with the
     Section; a pack with none hashes exactly as it always did.
+
+    A Section's `decor` is left out (vefr#442): dressing moves no wall and
+    no monster, so dressing a Section must not throw away the floors a save
+    remembers. A Section without decor hashes exactly as it always did.
     """
+    if isinstance(section, dict) and DECOR_KEY in section:
+        section = {key: value for key, value in section.items() if key != DECOR_KEY}
     if stamps:
         return _hash12(_canonical({'section': section, 'stamps': stamps}))
     return _hash12(_canonical(section))
@@ -1514,7 +1531,7 @@ def floor_plan(descent, depth: int, run: int = 0, catalog=None) -> dict:
     if isinstance(descent, dict) and isinstance(descent.get('descent'), dict):
         block = descent['descent']
     source = block.get('blueprint') if isinstance(block, dict) else None
-    return {
+    plan = {
         'name': floor_name(section['id'], cycle, k),
         'key': key,
         'identity': {'gen': GEN_VERSION, 'hash': section_hash(section, stamps),
@@ -1534,6 +1551,69 @@ def floor_plan(descent, depth: int, run: int = 0, catalog=None) -> dict:
         'legend': section_legend(section),
         'fog': block_fog,
     }
+    # `decor` rides along only when the Section names some (vefr#442), so a
+    # Section without it draws the very same floor record it always did.
+    if decor_of(section):
+        vault = plan['vault'] or {}
+        plan['decor'] = decor_at(key, section, rows,
+                                 [vault.get(k) for k in ('door', 'note', 'chest', 'home')])
+    return plan
+
+
+def decor_of(section) -> list[dict]:
+    """A Section's well-formed `decor` entries, in pack order.
+
+    An entry the shape would refuse is skipped rather than half-drawn:
+    `vefr check` speaks for it, and play never meets it.
+    """
+    raw = section.get(DECOR_KEY) if isinstance(section, dict) else None
+    out = []
+    for entry in raw if isinstance(raw, list) else []:
+        if not isinstance(entry, dict):
+            continue
+        pic, on, every = entry.get('pic'), entry.get('on'), entry.get('every')
+        if not isinstance(pic, str) or not pic or on not in DECOR_PLACES:
+            continue
+        if not isinstance(every, int) or isinstance(every, bool) \
+                or not DECOR_EVERY[0] <= every <= DECOR_EVERY[1]:
+            continue
+        out.append({'pic': pic, 'on': on, 'every': every})
+    return out
+
+
+def decor_at(key: str, section: dict, rows: list[str], reserved=()) -> list[dict]:
+    """Where this floor's decor lies, drawn from `v3|<key>|decor`.
+
+    Its own stream, so dressing a Section moves no wall, stair, monster,
+    chest or book. The candidates are read in row order; each entry then
+    takes `len(place) // every` of them (at most `DECOR_MAX_EACH`), one
+    draw per picture, and a taken tile is never given twice. `reserved`
+    tiles (the vault's door, note, chest and stair home) are never dressed.
+    Decor never blocks: it is a picture under everything else.
+    """
+    entries = decor_of(section)
+    if not entries:
+        return []
+    rng = prng(stream_seed(key, DECOR_KEY))
+    skip = {(int(t[0]), int(t[1])) for t in reserved if t is not None}
+    places: dict[str, list[tuple[int, int]]] = {'floor': [], 'wall': []}
+    for y, row in enumerate(rows):
+        below = rows[y + 1] if y + 1 < len(rows) else ''
+        for x, ch in enumerate(row):
+            if (x, y) in skip:
+                continue
+            if ch == '.':
+                places['floor'].append((x, y))
+            elif ch == '#' and x < len(below) and below[x] == '.':
+                places['wall'].append((x, y))
+    out: list[dict] = []
+    for entry in entries:
+        pool = places[entry['on']]
+        count = min(len(pool) // entry['every'], DECOR_MAX_EACH)
+        for _ in range(count):
+            at = pool.pop(int(rng() * len(pool)))
+            out.append({'pic': entry['pic'], 'at': [at[0], at[1]]})
+    return out
 
 
 def contract(width: int, height: int, hero_at,

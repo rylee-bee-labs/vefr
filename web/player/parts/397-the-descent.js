@@ -32,6 +32,11 @@ window.VEFR_DESCENT = (function () {
   var FLOOR_BYTES = 1500;
   var SAVE_BYTES = 250000;
   var DEFAULT_FOG_RADIUS = 5;
+  // A Section's decor (vefr#442), the twins of delve.py's `DECOR_*`.
+  var DECOR_KEY = 'decor';
+  var DECOR_PLACES = ['floor', 'wall'];
+  var DECOR_EVERY = [4, 2000];
+  var DECOR_MAX_EACH = 48;
   var DEFAULT_FAMILY = 'a stranger in the dark';
   var DOC_VERSION = 1;
   var LEGEND_FALLBACK = {
@@ -429,8 +434,15 @@ window.VEFR_DESCENT = (function () {
   }
   // Half of a floor's identity: the Section, and the pack's stamps when it
   // has any, so a stamp edit redraws floors too (twin of `section_hash`).
+  // A Section's `decor` is left out (vefr#442): dressing moves nothing, so it
+  // must not throw away the floors a save remembers.
   function sectionHash(section) {
     var stamps = stampsOf();
+    if (isObj(section) && has(section, DECOR_KEY)) {
+      var bare = {};
+      Object.keys(section).forEach(function (k) { if (k !== DECOR_KEY) bare[k] = section[k]; });
+      section = bare;
+    }
     return hash12(canonical(stamps.length ? { section: section, stamps: stamps } : section));
   }
 
@@ -543,6 +555,49 @@ window.VEFR_DESCENT = (function () {
       });
     }
     return mobs;
+  }
+
+  // ---- a Section's decor (twins of delve.py `decor_of` / `decor_at`) --
+  // Small pictures scattered over a floor on its own `decor` stream, so
+  // dressing moves no wall, stair, monster, chest or book (vefr#442).
+  function decorOf(section) {
+    var raw = section ? section[DECOR_KEY] : null;
+    var out = [];
+    (Array.isArray(raw) ? raw : []).forEach(function (e) {
+      if (!isObj(e)) return;
+      if (typeof e.pic !== 'string' || !e.pic || DECOR_PLACES.indexOf(e.on) < 0) return;
+      if (!isWhole(e.every) || e.every < DECOR_EVERY[0] || e.every > DECOR_EVERY[1]) return;
+      out.push({ pic: e.pic, on: e.on, every: e.every });
+    });
+    return out;
+  }
+
+  function decorAt(key, section, rows, reserved) {
+    var entries = decorOf(section);
+    if (!entries.length) return [];
+    var rng = window.VEFR_DELVE.prng(streamSeed(key, DECOR_KEY));
+    var skip = {};
+    (reserved || []).forEach(function (t) { if (t) skip[t[0] + ',' + t[1]] = true; });
+    var places = { floor: [], wall: [] };
+    for (var y = 0; y < rows.length; y++) {
+      var below = y + 1 < rows.length ? rows[y + 1] : '';
+      for (var x = 0; x < rows[y].length; x++) {
+        if (skip[x + ',' + y]) continue;
+        var ch = rows[y][x];
+        if (ch === '.') places.floor.push([x, y]);
+        else if (ch === '#' && x < below.length && below[x] === '.') places.wall.push([x, y]);
+      }
+    }
+    var out = [];
+    entries.forEach(function (e) {
+      var pool = places[e.on];
+      var count = Math.min(Math.floor(pool.length / e.every), DECOR_MAX_EACH);
+      for (var i = 0; i < count; i++) {
+        var at = pool.splice(Math.floor(rng() * pool.length), 1)[0];
+        out.push({ pic: e.pic, at: [at[0], at[1]] });
+      }
+    });
+    return out;
   }
 
   // ---- the Section's warden (twin of delve.py, ADR 0015, E8a part 1) --
@@ -834,7 +889,7 @@ window.VEFR_DESCENT = (function () {
     // parity harness.
     var blockFog = { radius: Math.max(1, radius) };
     if (fog && fog.shape === 'square') blockFog.shape = 'square';
-    return {
+    var plan = {
       name: floorName(at.section, at.cycle, at.k), key: key,
       identity: { gen: GEN_VERSION, hash: sectionHash(section), key: key },
       depth: depth, cycle: at.cycle, section: at.section, k: at.k,
@@ -849,6 +904,12 @@ window.VEFR_DESCENT = (function () {
       legend: sectionLegend(section),
       fog: blockFog
     };
+    // `decor` rides along only when the Section names some (twin of floor_plan).
+    if (decorOf(section).length) {
+      var v = plan.vault || {};
+      plan.decor = decorAt(key, section, rows, [v.door, v.note, v.chest, v.home]);
+    }
+    return plan;
   }
 
   // ---- canonical JSON and a short digest ------------------------------
@@ -1158,13 +1219,17 @@ window.VEFR_DESCENT = (function () {
       pois[homeKey] = 'the stair home';
       poiText[homeKey] = 'Steps climb out of the vault, all the way home.';
     }
-    return {
+    var entry = {
       map: map, legend: legend, pois: pois, poi_text: poiText,
       hero_start: plan.anchors.up.slice(), sanctuary_tiles: [],
       watch: {}, water_by_phase: {}, flood_tiles: [], tile: 32,
       fog: plan.fog, bg: '#0d0f12', hero_color: '#e8e5df',
       speaker_color: '#8b939c', speaker_head: '#d8d5df'
     };
+    // The floor's decor (vefr#442), only when it has some: pictures under
+    // everything else, never in the way.
+    if (Array.isArray(plan.decor) && plan.decor.length) entry.decor = plan.decor;
+    return entry;
   }
 
   // The region's own enemy record. It carries the `xp` the plan gave the
@@ -1462,6 +1527,20 @@ window.VEFR_DESCENT = (function () {
     return true;
   }
 
+  // The pictures this Section's decor names (vefr#442), keyed by the floor's
+  // region name the way every other region's pictures are. A Section with no
+  // decor pictures wires nothing, and its floors draw no decor.
+  function wireRegionDecor(name, sectionId) {
+    var d = def();
+    var perSection = (d && isObj(d.section_decor)) ? d.section_decor : null;
+    var pictures = perSection && typeof sectionId === 'string' ? perSection[sectionId] : null;
+    if (!isObj(pictures)) return false;
+    var table = window.VEFR_DECOR_PICS;
+    if (!table) table = window.VEFR_DECOR_PICS = {};
+    table[name] = pictures;
+    return true;
+  }
+
   function ensureRegion(name) {
     if (!on() || wired[name]) return false;
     var depth = depthOfName(name);
@@ -1476,6 +1555,7 @@ window.VEFR_DESCENT = (function () {
     // picture table is keyed by is `at.section.id` -- `sectionIdOf` is that,
     // and passing the object itself keys nothing and wires no pictures.
     wireRegionTiles(name, at ? at.section.id : '');
+    wireRegionDecor(name, at ? at.section.id : '');
     pinBooks(name, plan);
     var enemies = window.VEFR_ENEMIES;
     if (!enemies) enemies = window.VEFR_ENEMIES = {};
