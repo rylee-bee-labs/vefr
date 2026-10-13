@@ -156,6 +156,22 @@ a phone plays exactly as it always has. The camera may scroll up to three
 tiles past the map's edge, so the hero is never under the corner buttons;
 the ground past the edge takes the region's backdrop, or the dark.
 
+A screen with a mouse fits a map whole unless the pack names a tile for
+it too. With `desk_tile` it follows the hero the same way, and its
+messages read like a phone's: one line, the newest, folding by itself
+after a few seconds (Messages brings it back):
+
+```json
+"display": {
+  "phone_tile": 52,
+  "desk_tile": 48
+}
+```
+
+`desk_tile` is a whole number from 32 to 96, in CSS pixels. Left out, a
+desk plays exactly as it always has; `?camera=desk` in the address turns
+the follow camera off for one visit.
+
 ### Plain or painted
 
 A pack with a skin starts painted. To start on the engine's plain dark

@@ -497,4 +497,11 @@
     #menu-panel { font-size: 0.9rem; }
     #menu-panel h2 { font-size: 1rem; margin: 2px 0 6px; }
   }
+  /* A desk under the follow camera (display.desk_tile) reads its messages the
+     phone's way: one small line, the newest, fading after a few seconds, so no
+     stack of old hints stands over the hero. Messages brings it back. */
+  body.in-game.follow-camera .toasts { width: max-content; max-width: min(360px, 40%); }
+  body.in-game.follow-camera .toasts p { font-size: 0.85rem; line-height: 1.3; padding: 4px 12px; border-radius: 14px; }
+  body.in-game.follow-camera .toasts p:not(.is-newest) { position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0 !important;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0 !important; }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }

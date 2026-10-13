@@ -238,9 +238,10 @@ function renderBooksPanel() {
 // ms. Long enough to read the newest line on a phone, short enough that the
 // panel is not over the hero by the time the hero has walked on (issue #430).
 var FOLD_MS = 6000;
-// On a touch screen the panel is one small line under the top bar, the newest
-// thing said, and it fades sooner: the approved phone layout, one message at a
-// time, gone after about three seconds (docs/design/storybook/DESIGN.md).
+// Under the follow camera (a touch screen, or a desk with display.desk_tile) the
+// panel is one small line, the newest thing said, and it fades sooner: the
+// approved layout, one message at a time, gone after about three seconds
+// (docs/design/storybook/DESIGN.md).
 var TOUCH_FOLD_MS = 3000;
 function touchMessages() {
   return !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
@@ -257,7 +258,7 @@ function bindMessagePanel() {
   // always does.
   function foldMs() {
     var asked = Number(window.VEFR_MESSAGES_FOLD_MS);
-    return asked > 0 ? asked : (touchMessages() ? TOUCH_FOLD_MS : FOLD_MS);
+    return asked > 0 ? asked : (onPhoneCamera() ? TOUCH_FOLD_MS : FOLD_MS);
   }
   var byHand = store.get(key) === '1';   // a fold by hand is the player's own, and is kept
   var foldTimer = null;
@@ -271,7 +272,10 @@ function bindMessagePanel() {
   // from another visit never silences it there.
   function heldByHand() { return byHand && !touchMessages(); }
   function onPhoneCamera() {
-    return touchMessages() || !!(window.VEFR_STAGE && window.VEFR_STAGE.phone);
+    if (window.VEFR_STAGE) return touchMessages() || !!window.VEFR_STAGE.phone;
+    // Before the camera's first publish: a desk with desk_tile will follow too.
+    var display = (window.VEFR_WORLD && window.VEFR_WORLD.display) || {};
+    return touchMessages() || (!!display.desk_tile && !/[?&]camera=desk\b/.test(window.location.search));
   }
   function foldSoon() {
     if (!onPhoneCamera() || heldByHand()) return;
@@ -293,7 +297,7 @@ function bindMessagePanel() {
     foldSoon();   // opened by hand, it folds itself again after the wait
   });
   if (heldByHand()) setCollapsed(true);
-  else if (touchMessages()) foldSoon();
+  else if (onPhoneCamera()) foldSoon();
   // A new line is a line saying something NEW, not a line being written: a
   // step rewrites the same place name into #poi and the same hint into
   // #use-hint every turn, and a line going quiet clears itself, and neither
