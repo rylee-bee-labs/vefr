@@ -371,7 +371,10 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # All of the 2026-10-12 issue sweep merged together (#362 #363 #366 #422 #424 #425 #431 #437, #343/#345 parts); measured twice in separate processes, readings equal:
 #   68ced1bfc4e74836419c4adc4d54cb4928c375b31318c12cdb12b4969657d09a
 #   68ced1bfc4e74836419c4adc4d54cb4928c375b31318c12cdb12b4969657d09a
-NO_SKIN_WEAVE_SHA256 = "68ced1bfc4e74836419c4adc4d54cb4928c375b31318c12cdb12b4969657d09a"
+# A Section's decor drawn on its generated floors (#442), 2026-10-13; measured twice in separate processes, readings equal:
+#   b6f4ea4afb04ec07c027c21fa06bd8b1d9129728a58a12ca2bc56ad8df037f79
+#   b6f4ea4afb04ec07c027c21fa06bd8b1d9129728a58a12ca2bc56ad8df037f79
+NO_SKIN_WEAVE_SHA256 = "b6f4ea4afb04ec07c027c21fa06bd8b1d9129728a58a12ca2bc56ad8df037f79"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

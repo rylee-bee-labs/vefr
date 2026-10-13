@@ -236,8 +236,8 @@ def test_an_unknown_top_level_key_is_refused_with_the_whole_table():
     assert sentence == (
         "section has an unknown key 'zeta'; it may only hold section, id, "
         "label, floors, size, rooms, tiles, fog, families, pattern, specials, "
-        "elites, groups, mobs, curve, loot, stamps, pois, warden, vault and "
-        "endless")
+        "elites, groups, mobs, curve, loot, stamps, pois, warden, vault, "
+        "endless and decor")
 
 
 def test_the_size_block_bounds_each_half_of_each_pair():
