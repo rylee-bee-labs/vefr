@@ -446,4 +446,55 @@
   #d-facts li.confirmed { color: var(--accent); }
   #d-facts li.debunked { color: var(--ink-dim); text-decoration: line-through; }
   #d-feed .card .verdict { margin-top: 0.4rem; font-size: 0.85rem; font-style: italic; }
+  /* The plain look (Display > Look: Dark) keeps no skin decoration, and it is
+     dark whatever the device's light or dark setting: a light-mode phone
+     otherwise drew every panel on cream paper over the dark world. */
+  body.look-plain .hud-mark, body.look-plain .npc-face { display: none; }
+  body.look-plain {
+    --bg: #0B0C0E; --card: #15181D; --card-edge: #33363C;
+    --ink: #E8E5DF; --ink-dim: #A39E92;
+    --accent: #D8AA4E; --accent-on: #1B1206; --danger: #D4644C;
+    color-scheme: dark;
+  }
+  /* A phone in play: the approved portrait layout (docs/design/storybook/DESIGN.md).
+     The world fills the screen; on top sit only a slim health pill with its
+     quickslots (top left) and the menu (top right); the newest message is one
+     small line under them that fades; level and gold read in the Bag. */
+  @media (pointer: coarse) {
+    body.in-game #hud-level, body.in-game #hud-gold, body.in-game #bag-strip,
+    body.in-game .hud--tl .hud-mark { display: none !important; }
+    body.in-game .hud--tl { gap: 6px; flex-wrap: nowrap; align-items: center; }
+    body.in-game .hud-hp { padding: 0 10px; min-height: 30px; border-radius: 999px; gap: 6px; }
+    body.in-game .hud-hp-bar { width: 44px; height: 6px; }
+    body.in-game .hud-hp-value { font: 700 0.8rem var(--read); }
+    body.in-game .touch-quick:not([hidden]) { margin-top: 0; flex-wrap: nowrap; }
+    body.in-game #menu-open { min-height: 44px; padding: 0 12px; border-radius: 999px; font-size: 0.62rem; }
+    body.in-game .toasts { transition: opacity 250ms ease-out; }
+    body.in-game .toasts-toggle { display: none; }
+    /* Upright, the line stands centred under the top bar; on its side it keeps its corner. */
+    @media (orientation: portrait) {
+      body.in-game .toasts { left: 50%; right: auto; top: calc(60px + var(--sai-top)); transform: translateX(-50%);
+        width: max-content; max-width: min(300px, calc(100% - 48px - var(--sai-left) - var(--sai-right))); justify-items: center; }
+    }
+    body.in-game .toasts p { font-size: 0.8rem; line-height: 1.3; padding: 4px 12px; border-radius: 14px; text-align: center; }
+    body.in-game .toasts p:not(.is-newest) { position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0 !important;
+      overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0 !important; }
+    body.in-game .toasts.is-collapsed { opacity: 0; }
+    /* Two buttons on the world: the smart button and Bag. Whisper and Explore
+       stay on the keyboard (Q, O); on a phone they only crowded the corner. */
+    body.in-game .touch-tool { display: none !important; }
+    body.in-game .touch-cluster { grid-template-areas: "b bag" "b smart"; }
+    body.in-game .touch-smart .verb { font-size: 0.6rem; letter-spacing: 0.02em; }
+    /* Speech and panels read small and quiet, so the world keeps the screen. */
+    body.in-game .npc-box { padding: 18px 14px 10px; }
+    body.in-game .npc-box .speaker { font-size: 0.68rem; padding: 3px 10px; top: -12px; }
+    body.in-game .npc-line { font-size: 0.92rem; line-height: 1.4; margin-bottom: 8px; }
+    body.in-game .npc-note { font-size: 0.78rem; }
+    #menu { padding-top: calc(12px + var(--sai-top)); padding-bottom: calc(12px + var(--sai-bottom)); gap: 10px; }
+    #menu .pm { margin: 4px 0 8px; gap: 0 6px; grid-template-columns: 1fr 1fr; }
+    #menu .pm button { justify-content: center; padding: 0 6px; }
+    #menu .pm button { font-size: 0.8rem; }
+    #menu-panel { font-size: 0.9rem; }
+    #menu-panel h2 { font-size: 1rem; margin: 2px 0 6px; }
+  }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }

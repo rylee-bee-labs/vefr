@@ -713,7 +713,7 @@ SOUND = Block(
     },
 )
 
-# The drawn tile, in CSS pixels, of a touch phone whose map is too big to fit (docs/guides/world-creation.md).
+# The drawn tile, in CSS pixels, a touch phone follows the hero at (docs/guides/world-creation.md).
 PHONE_TILE_LO, PHONE_TILE_HI = 32, 72
 # `display.pixel_art`: how the engine draws the pack's art. A pack
 # that declares `pixel_art` has its art drawn at whole-number scales with no
@@ -735,6 +735,8 @@ DISPLAY = Block(
     keys=(
         Key('phone_tile', 'int', lo=PHONE_TILE_LO, hi=PHONE_TILE_HI),
         Key('pixel_art', 'obj', sub=PIXEL_ART),
+        # The look a skinned pack starts on; the player's pick in Display wins.
+        Key('look', 'enum', choices=('plain', 'skin')),
     ),
 )
 

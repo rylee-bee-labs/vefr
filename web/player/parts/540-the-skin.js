@@ -164,9 +164,60 @@ function dressSpeechBox(speaker) {
   box.insertBefore(im, box.firstChild);
 }
 
+// ---- the look: the skin's pictures, or the plain dark player ----
+// A pack with a skin offers the player a choice in Display: its painted look,
+// or the plain dark one. Where a new player starts is the pack's call
+// (world.json display.look: "plain" starts dark, anything else starts painted,
+// as every skinned pack always has); after that the choice is the player's
+// own and is remembered. Switching is live: the skin's sheet is built once and
+// only switched on and off, so nothing about the game in progress changes.
+var LOOK_KEY = 'vefr-look-' + ((window.VEFR_WORLD && window.VEFR_WORLD.name) || 'world');
+// The player's store (065-store.js) holds the pick; a page without it (the
+// skin part loaded on its own) keeps the pack's look and remembers nothing.
+var lookStore = (typeof store !== 'undefined') ? store : { get: function () { return null; }, set: function () {} };
+function lookPainted() {
+  var mine = lookStore.get(LOOK_KEY);
+  if (mine === 'plain') return false;
+  if (mine === 'skin') return true;
+  var display = (window.VEFR_WORLD && window.VEFR_WORLD.display) || {};
+  return display.look !== 'plain';
+}
+// What the painted look is called in Display: the skin's own title, else its
+// name with the dashes read as spaces.
+function lookTitle(skin) {
+  var t = (skin && (skin.title || skin.name)) || 'Painted';
+  t = String(t).replace(/[-_]+/g, ' ');
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+function setLook(painted) {
+  var style = document.getElementById('vefr-skin-css');
+  if (style) style.disabled = !painted;
+  document.body.classList.toggle('has-skin', painted);
+  document.body.classList.toggle('look-plain', !painted);
+  window.VEFR_LOOK = painted ? 'skin' : 'plain';
+  redrawGround();
+}
+function wireLookSetting(skin) {
+  var box = document.getElementById('look-settings');
+  if (!box) return;
+  box.hidden = false;
+  var painted = document.getElementById('look-skin-label');
+  if (painted) painted.textContent = lookTitle(skin);
+  var inputs = box.querySelectorAll('input[name="look"]');
+  Array.prototype.forEach.call(inputs, function (input) {
+    input.checked = (input.value === 'skin') === lookPainted();
+    input.addEventListener('change', function () {
+      if (!this.checked) return;
+      lookStore.set(LOOK_KEY, this.value === 'skin' ? 'skin' : 'plain');
+      setLook(this.value === 'skin');
+    });
+  });
+}
+
 function applySkin() {
   var skin = window.VEFR_SKIN;
   if (!skin || typeof skin !== 'object') return;
+  wireLookSetting(skin);
   var parts = skin.parts || {};
   var ink = skin.ink || {};
   loadBackdrop(skin);
@@ -431,7 +482,7 @@ function applySkin() {
       + ' (not (forced-colors: active)) {\n' + css + '}\n';
     document.head.appendChild(style);
   }
-  document.body.classList.add('has-skin');
+  setLook(lookPainted());
   // A skin's marks belong to the skin, and to a skin that opted into the
   // themed interface: they are added here and not by the shell, and only when
   // the skin carries at least one of the parts above. A pack with no skin, and

@@ -157,6 +157,16 @@ def test_standing_then_a_step_then_standing(tmp_path):
     assert settled["reads"][FRAME] == {"dir": "right", "state": "idle", "frame": 10, "mirrored": False}
 
 
+def test_a_held_walk_never_flashes_the_standing_frame_between_steps(tmp_path):
+    """A held walk steps every 200 ms and a step's tween takes 110 ms; the walk frame
+    lingers past the tween, so the standing frame no longer flashes between two steps
+    (that flash read as a bounce on every tile, owner, 2026-10-13)."""
+    html = play_kit.weave(build(tmp_path), tmp_path)
+    between = run(html, ["begin", "dir:down", "wait:180"])
+    assert between["errors"] == []
+    assert between["reads"][FRAME]["state"] == "walk", between["reads"][FRAME]
+
+
 def test_a_missing_side_is_the_other_mirrored(tmp_path):
     html = play_kit.weave(build(tmp_path), tmp_path)
     during = run(html, ["begin", "dir:left"])

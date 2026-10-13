@@ -238,6 +238,13 @@ function renderBooksPanel() {
 // ms. Long enough to read the newest line on a phone, short enough that the
 // panel is not over the hero by the time the hero has walked on (issue #430).
 var FOLD_MS = 6000;
+// On a touch screen the panel is one small line under the top bar, the newest
+// thing said, and it fades sooner: the approved phone layout, one message at a
+// time, gone after about three seconds (docs/design/storybook/DESIGN.md).
+var TOUCH_FOLD_MS = 3000;
+function touchMessages() {
+  return !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+}
 // The message stack is a small corner panel that can be folded away; the lines
 // stay in the page (a screen reader still hears them) and the choice is remembered.
 function bindMessagePanel() {
@@ -250,7 +257,7 @@ function bindMessagePanel() {
   // always does.
   function foldMs() {
     var asked = Number(window.VEFR_MESSAGES_FOLD_MS);
-    return asked > 0 ? asked : FOLD_MS;
+    return asked > 0 ? asked : (touchMessages() ? TOUCH_FOLD_MS : FOLD_MS);
   }
   var byHand = store.get(key) === '1';   // a fold by hand is the player's own, and is kept
   var foldTimer = null;
@@ -260,16 +267,21 @@ function bindMessagePanel() {
     panel.classList.toggle('is-collapsed', c);
     toggle.setAttribute('aria-expanded', c ? 'false' : 'true');
   }
-  function onPhoneCamera() { return !!(window.VEFR_STAGE && window.VEFR_STAGE.phone); }
+  // A touch screen has no Messages button to unfold by hand, so a fold kept
+  // from another visit never silences it there.
+  function heldByHand() { return byHand && !touchMessages(); }
+  function onPhoneCamera() {
+    return touchMessages() || !!(window.VEFR_STAGE && window.VEFR_STAGE.phone);
+  }
   function foldSoon() {
-    if (!onPhoneCamera() || byHand) return;
+    if (!onPhoneCamera() || heldByHand()) return;
     if (foldTimer) clearTimeout(foldTimer);
     foldTimer = setTimeout(function () {
       foldTimer = null;
       // Asked again at the fold itself: a window turned sideways, or a line
       // that arrived before the camera published, must not fold a panel the
       // phone camera is no longer drawing under.
-      if (!byHand && onPhoneCamera()) setCollapsed(true);
+      if (!heldByHand() && onPhoneCamera()) setCollapsed(true);
     }, foldMs());
   }
   toggle.addEventListener('click', function () {
@@ -280,13 +292,20 @@ function bindMessagePanel() {
     store.set(key, folded ? '1' : '0');
     foldSoon();   // opened by hand, it folds itself again after the wait
   });
-  if (byHand) setCollapsed(true);
+  if (heldByHand()) setCollapsed(true);
+  else if (touchMessages()) foldSoon();
   // A new line is a line saying something NEW, not a line being written: a
   // step rewrites the same place name into #poi and the same hint into
   // #use-hint every turn, and a line going quiet clears itself, and neither
   // is a line shown. A line nobody can see (`.sr-only`, `hidden`) is not a
   // line shown either.
   var said = lineTexts();
+  (function markOpening() {
+    var lines = panel.querySelectorAll('p');
+    var last = -1;
+    for (var i = 0; i < said.length; i++) if (said[i]) last = i;
+    if (last >= 0) lines[last].classList.add('is-newest');
+  })();
   function lineTexts() {
     return Array.prototype.map.call(panel.querySelectorAll('p'), function (p) {
       if (p.classList.contains('sr-only') || p.hidden || p.closest('[hidden]')) return '';
@@ -296,10 +315,16 @@ function bindMessagePanel() {
   if (window.MutationObserver) {
     new MutationObserver(function () {
       var now = lineTexts();
-      var fresh = false;
-      for (var i = 0; i < now.length; i++) if (now[i] && now[i] !== said[i]) fresh = true;
+      var fresh = -1;
+      for (var i = 0; i < now.length; i++) if (now[i] && now[i] !== said[i]) fresh = i;
       said = now;
-      if (!fresh || byHand || !onPhoneCamera()) return;
+      if (fresh < 0 || heldByHand() || !onPhoneCamera()) return;
+      // The newest line is the one a touch screen shows; the others stay in
+      // the page for a screen reader.
+      var lines = panel.querySelectorAll('p');
+      Array.prototype.forEach.call(lines, function (p, at) {
+        p.classList.toggle('is-newest', at === fresh);
+      });
       setCollapsed(false);
       foldSoon();
     }).observe(panel, { childList: true, characterData: true, subtree: true,

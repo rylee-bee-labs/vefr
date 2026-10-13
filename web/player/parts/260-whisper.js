@@ -3,6 +3,14 @@ function bindWhisper() {
   var btn = document.getElementById('whisper');
   var status = document.getElementById('status');
   var feed = document.getElementById('feed');
+  // The Journal keeps the whispers, so it can ask for one too: a phone draws
+  // no Whisper button over the world. The menu closes first, so the whisper's
+  // speech box opens over the game, as it does from the button.
+  var fromJournal = document.getElementById('journal-whisper');
+  if (fromJournal) fromJournal.addEventListener('click', function () {
+    if (window.closeMenu) window.closeMenu();
+    if (!btn.disabled) btn.click();
+  });
   btn.addEventListener('click', async function () {
     btn.disabled = true;
     status.textContent = 'Listening\u2026';
