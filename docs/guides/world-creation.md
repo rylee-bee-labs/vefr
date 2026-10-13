@@ -141,9 +141,9 @@ optional too; leave it out and the game offers no model at all.
 
 ### The phone's zoom
 
-A touch phone draws a map whole only when that keeps its tile at 36 px or
-more; a bigger map scrolls with the hero at a size you choose. Set that
-size in `world.json`:
+A touch phone follows the hero at a tile size you choose, on every map:
+a big map scrolls, and a map smaller than the screen at that size sits
+centred. Set that size in `world.json`:
 
 ```json
 "display": {
@@ -155,6 +155,23 @@ size in `world.json`:
 a phone plays exactly as it always has. The camera may scroll up to three
 tiles past the map's edge, so the hero is never under the corner buttons;
 the ground past the edge takes the region's backdrop, or the dark.
+
+### Plain or painted
+
+A pack with a skin starts painted. To start on the engine's plain dark
+look instead, with the skin one tap away in Display, say so in
+`world.json`:
+
+```json
+"display": {
+  "look": "plain"
+}
+```
+
+The player's own pick in Display wins over the pack's and is kept for
+the next visit. `look` is `"plain"` or `"skin"`; left out, it is
+`"skin"`. A pack with no skin has nothing to pick, and Display offers
+no choice.
 
 ### Your own tiles and variants
 

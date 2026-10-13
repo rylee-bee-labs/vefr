@@ -248,6 +248,7 @@
     </div>
     <div data-panel-body="bag" hidden>
       <h2>Bag</h2>
+      <p class="status" id="bag-level" hidden></p>
       <p class="status" id="bag-gold"></p>
       <h3 class="equip-heading" id="equip-heading">You</h3>
       <div id="equip-slots" role="list" aria-label="What you are wearing"></div>
@@ -276,6 +277,11 @@
     </div>
     <div data-panel-body="display" hidden>
       <h2>Display</h2>
+      <fieldset class="touch-set" id="look-settings" hidden>
+        <legend>Look</legend>
+        <label><input type="radio" name="look" value="plain"> Dark</label>
+        <label><input type="radio" name="look" value="skin"> <span id="look-skin-label">Painted</span></label>
+      </fieldset>
       <p>The dark shows only the ground you have walked and lit. Turn it off to see the whole map.</p>
       <button type="button" id="fog-toggle" class="cta" aria-pressed="true">Darkness: on</button>
       <p class="status" id="fog-live" role="status" aria-live="polite"></p>

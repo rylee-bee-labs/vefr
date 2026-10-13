@@ -295,9 +295,12 @@ def test_control_bar_is_stable_when_hud_changes(browser, woven):
         page.wait_for_timeout(150)
         full = page.evaluate(RECTS)
         # The HUD moved (proves the test isn't a no-op) and the controls did not.
-        assert sparse["hud-level"] is None, \
-            "the HUD did not start sparse: hud-level was already showing"
-        assert full["hud-level"] is not None, \
+        # A phone's top bar keeps health, quickslots and the light line; level
+        # and gold read in the Bag (docs/design/storybook/DESIGN.md), so the
+        # light line is the piece that grows it here.
+        assert sparse["light-live"] is None, \
+            "the HUD did not start sparse: light-live was already showing"
+        assert full["light-live"] is not None, \
             "the HUD width-state toggle did not flip"
         for name in CONTROLS:
             a = sparse.get(name)
@@ -323,7 +326,9 @@ def test_tap_targets_meet_the_44px_floor(browser, woven):
           const out = {};
           for (const name of names) {
             const el = document.getElementById(name);
-            if (!el || el.hidden) continue;
+            // A control a phone does not draw (the Messages button, since the
+            // newest line shows itself) is not a target.
+            if (!el || el.hidden || !el.getClientRects().length) continue;
             const r = el.getBoundingClientRect();
             out[name] = {w: r.width, h: r.height};
           }

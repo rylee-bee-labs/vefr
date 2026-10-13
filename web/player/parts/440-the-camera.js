@@ -19,7 +19,7 @@
   var MIN_STAGE_W = 420, MIN_STAGE_H = 360;  // enough for the HUD frame's corners
   // The phone camera needs the pack's display.phone_tile; see docs/guides/world-creation.md.
   var PHONE_TILE = (window.VEFR_WORLD.display || {}).phone_tile || 0;
-  var PHONE_MIN_FIT = 36, PHONE_MARGIN = 3;
+  var PHONE_MARGIN = 3;
   var onPhone = false;
   var cameraAt = { x: 0, y: 0 };
   function phoneCamera() {
@@ -63,10 +63,11 @@
     return pixelK * pixelNative / d;
   }
   function fitZoom() {
-    if (onPhone) {
-      var phoneFit = Math.min(viewW / (cols * town.tile), viewH / (rows * town.tile), 3);
-      return phoneFit * town.tile >= PHONE_MIN_FIT ? phoneFit : PHONE_TILE / town.tile;
-    }
+    // The phone camera follows the hero at the pack's tile on every map, the
+    // small ones too: a room shrunk to fit a tall screen left the world a strip
+    // between empty bands (a pack played on a phone, 2026-10-13). A map smaller than
+    // the screen even at that tile is centred, as before.
+    if (onPhone) return PHONE_TILE / town.tile;
     // The HUD sits in the stage's corners, so a whole map must leave a band
     // above and below for it; otherwise it reads whole and still reaches
     // under the buttons.
@@ -203,6 +204,7 @@
   // named one.
   function skinBackdrop() {
     var skin = window.VEFR_SKIN;
+    if (window.VEFR_LOOK === 'plain') return null;   // the plain look keeps the flat ground
     return (skin && typeof skin === 'object') ? (window.VEFR_BACKDROP || null) : null;
   }
   window.VEFR_BACKDROP_STATE = function () {

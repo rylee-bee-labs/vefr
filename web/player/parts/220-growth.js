@@ -80,15 +80,21 @@ function growthNextXp() {
 // say. Practice keeps no counters, and no growth means no line at all
 // (the text is cleared, not just hidden, so it stays out of the page).
 function renderGrowth() {
-  var el = document.getElementById('hud-level');
-  if (!el) return;
+  // The same words stand in the Bag panel too, where a phone, which keeps its
+  // top bar to health and quickslots, reads them.
+  var lines = [document.getElementById('hud-level'), document.getElementById('bag-level')]
+    .filter(function (el) { return !!el; });
+  if (!lines.length) return;
   var g = window.VEFR_GROWTH;
-  if (!g || g.mode !== 'levels') { el.textContent = ''; el.hidden = true; return; }
+  if (!g || g.mode !== 'levels') {
+    lines.forEach(function (el) { el.textContent = ''; el.hidden = true; });
+    return;
+  }
   var stats = growthStats();
   var xp = (typeof GROWTH_STATE.xp === 'number') ? GROWTH_STATE.xp : 0;
-  el.textContent = 'Level ' + stats.level + ' \u00b7 ' + xp + ' of '
+  var text = 'Level ' + stats.level + ' \u00b7 ' + xp + ' of '
     + growthNextXp() + ' ' + XP_WORD;
-  el.hidden = false;
+  lines.forEach(function (el) { el.textContent = text; el.hidden = false; });
 }
 
 // A growth of health heals the hero by the same amount, never above the

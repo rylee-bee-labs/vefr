@@ -453,6 +453,35 @@
   #d-facts li.confirmed { color: var(--accent); }
   #d-facts li.debunked { color: var(--ink-dim); text-decoration: line-through; }
   #d-feed .card .verdict { margin-top: 0.4rem; font-size: 0.85rem; font-style: italic; }
+  /* The plain look (Display > Look: Dark) keeps no skin decoration. */
+  body.look-plain .hud-mark, body.look-plain .npc-face { display: none; }
+  /* A phone in play: the approved portrait layout (docs/design/storybook/DESIGN.md).
+     The world fills the screen; on top sit only a slim health pill with its
+     quickslots (top left) and the menu (top right); the newest message is one
+     small line under them that fades; level and gold read in the Bag. */
+  @media (pointer: coarse) {
+    body.in-game #hud-level, body.in-game #hud-gold, body.in-game #bag-strip,
+    body.in-game .hud--tl .hud-mark { display: none !important; }
+    body.in-game .hud--tl { gap: 6px; flex-wrap: nowrap; align-items: center; }
+    body.in-game .hud-hp { padding: 0 12px; min-height: 36px; border-radius: 999px; gap: 8px; }
+    body.in-game .hud-hp-value { font: 700 1rem var(--read); }
+    body.in-game .touch-quick:not([hidden]) { margin-top: 0; flex-wrap: nowrap; }
+    body.in-game #menu-open { min-height: 48px; padding: 0 16px; border-radius: 999px; font-size: 0.75rem; }
+    body.in-game .toasts { transition: opacity 250ms ease-out; }
+    body.in-game .toasts-toggle { display: none; }
+    /* Upright, the line stands centred under the top bar; on its side it keeps its corner. */
+    @media (orientation: portrait) {
+      body.in-game .toasts { left: 50%; right: auto; top: calc(68px + var(--sai-top)); transform: translateX(-50%);
+        width: max-content; max-width: calc(100% - 32px - var(--sai-left) - var(--sai-right)); justify-items: center; }
+    }
+    body.in-game .toasts p { font-size: 1rem; line-height: 1.35; padding: 6px 14px; border-radius: 18px; text-align: center; }
+    body.in-game .toasts p:not(.is-newest) { position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0 !important;
+      overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0 !important; }
+    body.in-game .toasts.is-collapsed { opacity: 0; }
+    /* Whisper and Explore: small round icons; their words stay for a screen reader. */
+    body.in-game .touch-tool { width: 48px; height: 48px; border-radius: 50%; }
+    body.in-game .touch-tool span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 </head>
@@ -704,6 +733,7 @@
     </div>
     <div data-panel-body="bag" hidden>
       <h2>Bag</h2>
+      <p class="status" id="bag-level" hidden></p>
       <p class="status" id="bag-gold"></p>
       <h3 class="equip-heading" id="equip-heading">You</h3>
       <div id="equip-slots" role="list" aria-label="What you are wearing"></div>
@@ -732,6 +762,11 @@
     </div>
     <div data-panel-body="display" hidden>
       <h2>Display</h2>
+      <fieldset class="touch-set" id="look-settings" hidden>
+        <legend>Look</legend>
+        <label><input type="radio" name="look" value="plain"> Dark</label>
+        <label><input type="radio" name="look" value="skin"> <span id="look-skin-label">Painted</span></label>
+      </fieldset>
       <p>The dark shows only the ground you have walked and lit. Turn it off to see the whole map.</p>
       <button type="button" id="fog-toggle" class="cta" aria-pressed="true">Darkness: on</button>
       <p class="status" id="fog-live" role="status" aria-live="polite"></p>
@@ -1330,6 +1365,13 @@ function renderBooksPanel() {
 // ms. Long enough to read the newest line on a phone, short enough that the
 // panel is not over the hero by the time the hero has walked on (issue #430).
 var FOLD_MS = 6000;
+// On a touch screen the panel is one small line under the top bar, the newest
+// thing said, and it fades sooner: the approved phone layout, one message at a
+// time, gone after about three seconds (docs/design/storybook/DESIGN.md).
+var TOUCH_FOLD_MS = 3000;
+function touchMessages() {
+  return !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+}
 // The message stack is a small corner panel that can be folded away; the lines
 // stay in the page (a screen reader still hears them) and the choice is remembered.
 function bindMessagePanel() {
@@ -1342,7 +1384,7 @@ function bindMessagePanel() {
   // always does.
   function foldMs() {
     var asked = Number(window.VEFR_MESSAGES_FOLD_MS);
-    return asked > 0 ? asked : FOLD_MS;
+    return asked > 0 ? asked : (touchMessages() ? TOUCH_FOLD_MS : FOLD_MS);
   }
   var byHand = store.get(key) === '1';   // a fold by hand is the player's own, and is kept
   var foldTimer = null;
@@ -1352,16 +1394,21 @@ function bindMessagePanel() {
     panel.classList.toggle('is-collapsed', c);
     toggle.setAttribute('aria-expanded', c ? 'false' : 'true');
   }
-  function onPhoneCamera() { return !!(window.VEFR_STAGE && window.VEFR_STAGE.phone); }
+  // A touch screen has no Messages button to unfold by hand, so a fold kept
+  // from another visit never silences it there.
+  function heldByHand() { return byHand && !touchMessages(); }
+  function onPhoneCamera() {
+    return touchMessages() || !!(window.VEFR_STAGE && window.VEFR_STAGE.phone);
+  }
   function foldSoon() {
-    if (!onPhoneCamera() || byHand) return;
+    if (!onPhoneCamera() || heldByHand()) return;
     if (foldTimer) clearTimeout(foldTimer);
     foldTimer = setTimeout(function () {
       foldTimer = null;
       // Asked again at the fold itself: a window turned sideways, or a line
       // that arrived before the camera published, must not fold a panel the
       // phone camera is no longer drawing under.
-      if (!byHand && onPhoneCamera()) setCollapsed(true);
+      if (!heldByHand() && onPhoneCamera()) setCollapsed(true);
     }, foldMs());
   }
   toggle.addEventListener('click', function () {
@@ -1372,13 +1419,20 @@ function bindMessagePanel() {
     store.set(key, folded ? '1' : '0');
     foldSoon();   // opened by hand, it folds itself again after the wait
   });
-  if (byHand) setCollapsed(true);
+  if (heldByHand()) setCollapsed(true);
+  else if (touchMessages()) foldSoon();
   // A new line is a line saying something NEW, not a line being written: a
   // step rewrites the same place name into #poi and the same hint into
   // #use-hint every turn, and a line going quiet clears itself, and neither
   // is a line shown. A line nobody can see (`.sr-only`, `hidden`) is not a
   // line shown either.
   var said = lineTexts();
+  (function markOpening() {
+    var lines = panel.querySelectorAll('p');
+    var last = -1;
+    for (var i = 0; i < said.length; i++) if (said[i]) last = i;
+    if (last >= 0) lines[last].classList.add('is-newest');
+  })();
   function lineTexts() {
     return Array.prototype.map.call(panel.querySelectorAll('p'), function (p) {
       if (p.classList.contains('sr-only') || p.hidden || p.closest('[hidden]')) return '';
@@ -1388,10 +1442,16 @@ function bindMessagePanel() {
   if (window.MutationObserver) {
     new MutationObserver(function () {
       var now = lineTexts();
-      var fresh = false;
-      for (var i = 0; i < now.length; i++) if (now[i] && now[i] !== said[i]) fresh = true;
+      var fresh = -1;
+      for (var i = 0; i < now.length; i++) if (now[i] && now[i] !== said[i]) fresh = i;
       said = now;
-      if (!fresh || byHand || !onPhoneCamera()) return;
+      if (fresh < 0 || heldByHand() || !onPhoneCamera()) return;
+      // The newest line is the one a touch screen shows; the others stay in
+      // the page for a screen reader.
+      var lines = panel.querySelectorAll('p');
+      Array.prototype.forEach.call(lines, function (p, at) {
+        p.classList.toggle('is-newest', at === fresh);
+      });
       setCollapsed(false);
       foldSoon();
     }).observe(panel, { childList: true, characterData: true, subtree: true,
@@ -2893,15 +2953,21 @@ function growthNextXp() {
 // say. Practice keeps no counters, and no growth means no line at all
 // (the text is cleared, not just hidden, so it stays out of the page).
 function renderGrowth() {
-  var el = document.getElementById('hud-level');
-  if (!el) return;
+  // The same words stand in the Bag panel too, where a phone, which keeps its
+  // top bar to health and quickslots, reads them.
+  var lines = [document.getElementById('hud-level'), document.getElementById('bag-level')]
+    .filter(function (el) { return !!el; });
+  if (!lines.length) return;
   var g = window.VEFR_GROWTH;
-  if (!g || g.mode !== 'levels') { el.textContent = ''; el.hidden = true; return; }
+  if (!g || g.mode !== 'levels') {
+    lines.forEach(function (el) { el.textContent = ''; el.hidden = true; });
+    return;
+  }
   var stats = growthStats();
   var xp = (typeof GROWTH_STATE.xp === 'number') ? GROWTH_STATE.xp : 0;
-  el.textContent = 'Level ' + stats.level + ' \u00b7 ' + xp + ' of '
+  var text = 'Level ' + stats.level + ' \u00b7 ' + xp + ' of '
     + growthNextXp() + ' ' + XP_WORD;
-  el.hidden = false;
+  lines.forEach(function (el) { el.textContent = text; el.hidden = false; });
 }
 
 // A growth of health heals the hero by the same amount, never above the
@@ -10630,7 +10696,7 @@ function setupTown() {
   var MIN_STAGE_W = 420, MIN_STAGE_H = 360;  // enough for the HUD frame's corners
   // The phone camera needs the pack's display.phone_tile; see docs/guides/world-creation.md.
   var PHONE_TILE = (window.VEFR_WORLD.display || {}).phone_tile || 0;
-  var PHONE_MIN_FIT = 36, PHONE_MARGIN = 3;
+  var PHONE_MARGIN = 3;
   var onPhone = false;
   var cameraAt = { x: 0, y: 0 };
   function phoneCamera() {
@@ -10674,10 +10740,11 @@ function setupTown() {
     return pixelK * pixelNative / d;
   }
   function fitZoom() {
-    if (onPhone) {
-      var phoneFit = Math.min(viewW / (cols * town.tile), viewH / (rows * town.tile), 3);
-      return phoneFit * town.tile >= PHONE_MIN_FIT ? phoneFit : PHONE_TILE / town.tile;
-    }
+    // The phone camera follows the hero at the pack's tile on every map, the
+    // small ones too: a room shrunk to fit a tall screen left the world a strip
+    // between empty bands (a pack played on a phone, 2026-10-13). A map smaller than
+    // the screen even at that tile is centred, as before.
+    if (onPhone) return PHONE_TILE / town.tile;
     // The HUD sits in the stage's corners, so a whole map must leave a band
     // above and below for it; otherwise it reads whole and still reaches
     // under the buttons.
@@ -10814,6 +10881,7 @@ function setupTown() {
   // named one.
   function skinBackdrop() {
     var skin = window.VEFR_SKIN;
+    if (window.VEFR_LOOK === 'plain') return null;   // the plain look keeps the flat ground
     return (skin && typeof skin === 'object') ? (window.VEFR_BACKDROP || null) : null;
   }
   window.VEFR_BACKDROP_STATE = function () {
@@ -14714,9 +14782,60 @@ function dressSpeechBox(speaker) {
   box.insertBefore(im, box.firstChild);
 }
 
+// ---- the look: the skin's pictures, or the plain dark player ----
+// A pack with a skin offers the player a choice in Display: its painted look,
+// or the plain dark one. Where a new player starts is the pack's call
+// (world.json display.look: "plain" starts dark, anything else starts painted,
+// as every skinned pack always has); after that the choice is the player's
+// own and is remembered. Switching is live: the skin's sheet is built once and
+// only switched on and off, so nothing about the game in progress changes.
+var LOOK_KEY = 'vefr-look-' + ((window.VEFR_WORLD && window.VEFR_WORLD.name) || 'world');
+// The player's store (065-store.js) holds the pick; a page without it (the
+// skin part loaded on its own) keeps the pack's look and remembers nothing.
+var lookStore = (typeof store !== 'undefined') ? store : { get: function () { return null; }, set: function () {} };
+function lookPainted() {
+  var mine = lookStore.get(LOOK_KEY);
+  if (mine === 'plain') return false;
+  if (mine === 'skin') return true;
+  var display = (window.VEFR_WORLD && window.VEFR_WORLD.display) || {};
+  return display.look !== 'plain';
+}
+// What the painted look is called in Display: the skin's own title, else its
+// name with the dashes read as spaces.
+function lookTitle(skin) {
+  var t = (skin && (skin.title || skin.name)) || 'Painted';
+  t = String(t).replace(/[-_]+/g, ' ');
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+function setLook(painted) {
+  var style = document.getElementById('vefr-skin-css');
+  if (style) style.disabled = !painted;
+  document.body.classList.toggle('has-skin', painted);
+  document.body.classList.toggle('look-plain', !painted);
+  window.VEFR_LOOK = painted ? 'skin' : 'plain';
+  redrawGround();
+}
+function wireLookSetting(skin) {
+  var box = document.getElementById('look-settings');
+  if (!box) return;
+  box.hidden = false;
+  var painted = document.getElementById('look-skin-label');
+  if (painted) painted.textContent = lookTitle(skin);
+  var inputs = box.querySelectorAll('input[name="look"]');
+  Array.prototype.forEach.call(inputs, function (input) {
+    input.checked = (input.value === 'skin') === lookPainted();
+    input.addEventListener('change', function () {
+      if (!this.checked) return;
+      lookStore.set(LOOK_KEY, this.value === 'skin' ? 'skin' : 'plain');
+      setLook(this.value === 'skin');
+    });
+  });
+}
+
 function applySkin() {
   var skin = window.VEFR_SKIN;
   if (!skin || typeof skin !== 'object') return;
+  wireLookSetting(skin);
   var parts = skin.parts || {};
   var ink = skin.ink || {};
   loadBackdrop(skin);
@@ -14981,7 +15100,7 @@ function applySkin() {
       + ' (not (forced-colors: active)) {\n' + css + '}\n';
     document.head.appendChild(style);
   }
-  document.body.classList.add('has-skin');
+  setLook(lookPainted());
   // A skin's marks belong to the skin, and to a skin that opted into the
   // themed interface: they are added here and not by the shell, and only when
   // the skin carries at least one of the parts above. A pack with no skin, and

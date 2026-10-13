@@ -5,8 +5,9 @@ never over the map". Under the phone camera (#418, `display.phone_tile`) the map
 fills the window, so there is no room outside it: the camera keeps the hero in
 the middle and the panel, growing down from the top left, reaches her. There the
 panel folds itself a few seconds after its newest line - the lines stay in the
-page for a screen reader, exactly as a fold by hand does - and the Messages
-button opens it again.
+page for a screen reader, exactly as a fold by hand does. On a touch screen the
+panel is one line, the newest, and has no Messages button; a desk window under
+the phone camera keeps the button, which opens it again.
 
 The same pack at a desk window has the old camera and the old panel: nothing
 folds itself. A fold by hand is remembered, and a new line never opens it.
@@ -157,12 +158,28 @@ def test_the_panel_folds_itself_on_a_phone_and_the_button_opens_it_again(browser
         # A new line reads again, and folds itself after its own wait.
         say_a_line(page, "interact")
         wait_shown(page)
+        # A touch screen draws one line, the newest, as a small line under the top bar
+        # (docs/design/storybook/DESIGN.md); the rest stay in the page, clipped, and there
+        # is no Messages button to fold it by hand.
+        drawn = page.evaluate("""() => Array.from(document.querySelectorAll('#toasts p'))
+          .filter(p => p.textContent && p.getBoundingClientRect().width > 2).map(p => p.id)""")
+        assert drawn == ["near"], f"a touch screen draws more than the newest line: {drawn}"
+        assert not page.evaluate("document.getElementById('toasts-toggle').getClientRects().length"), \
+            "a touch screen still draws the Messages button"
         wait_folded(page)
-        # Tapping Messages opens it, and the wait starts again from the tap.
-        page.click("#toasts-toggle")
-        assert panel(page) == [False, "true"], "Messages did not open the folded panel"
-        wait_folded(page)
-        assert panel(page)[0] is True, "the panel did not fold again after it was opened"
+    finally:
+        ctx.close()
+
+
+def test_a_fold_kept_from_a_desk_never_silences_a_touch_screen(browser, served):
+    ctx, page = open_game(browser, served, PHONE_W, PHONE_H, touch=True, query="?camera=phone")
+    try:
+        page.evaluate("() => localStorage.setItem('vefr-ui-messages-' + (window.VEFR_WORLD.name || 'world'), '1')")
+        page.reload()
+        page.click("#ts-enter")
+        page.wait_for_function("window.VEFR_COMBAT", timeout=15000)
+        say_a_line(page, "talk")
+        wait_shown(page)
     finally:
         ctx.close()
 
@@ -170,7 +187,8 @@ def test_the_panel_folds_itself_on_a_phone_and_the_button_opens_it_again(browser
 def test_a_fold_by_hand_is_remembered_and_a_new_line_does_not_open_it(browser, served):
     # The engine's own fold is pushed out of the way here, so the tap below is
     # the player's own fold and never a race with one.
-    ctx, page = open_game(browser, served, PHONE_W, PHONE_H, touch=True, fold_ms=30000,
+    # The Messages button is a desk window's: a touch screen has none (see above).
+    ctx, page = open_game(browser, served, PHONE_W, PHONE_H, touch=False, fold_ms=30000,
                query="?camera=phone")
     try:
         say_a_line(page, "talk")
