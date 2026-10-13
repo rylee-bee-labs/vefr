@@ -166,3 +166,26 @@ def test_a_small_map_on_a_phone_draws_at_the_pack_tile(browser, tmp_path):
         assert abs(stage["tile"] - 52) < 0.5, f"a small map on a phone drew at {stage['tile']} px, not 52"
     finally:
         ctx.close()
+
+
+def test_a_desk_follows_the_hero_at_the_desk_tile_and_its_messages_fade(browser, tmp_path):
+    """A pack with display.desk_tile gives a screen with a mouse the follow camera too: a
+    whole town drawn small left the hero a speck under a stack of hints that never went
+    away (owner, 2026-10-13). One line shows, the newest, and it folds by itself."""
+    pack = play_kit.pack(tmp_path, "interact", {"world.json": {"display": {"desk_tile": 48}}})
+    html = play_kit.weave(pack, tmp_path)
+    ctx = browser.new_context(viewport={"width": 1280, "height": 800})
+    try:
+        page = ctx.new_page()
+        page.add_init_script("window.VEFR_MESSAGES_FOLD_MS = 400")
+        page.goto(html.as_uri())
+        enter(page)
+        stage = page.evaluate("window.VEFR_STAGE")
+        assert stage["phone"] is True and abs(stage["tile"] - 48) < 0.5, stage
+        assert stage["w"] == 1280 and stage["h"] == 800, f"the follow camera's stage is not the window: {stage}"
+        drawn = page.evaluate("""() => [...document.querySelectorAll('#toasts p')]
+          .filter(p => p.getBoundingClientRect().width > 1).length""")
+        assert drawn <= 1, f"{drawn} message lines drawn at once"
+        page.wait_for_function("document.getElementById('toasts').classList.contains('is-collapsed')", timeout=5000)
+    finally:
+        ctx.close()

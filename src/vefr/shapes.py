@@ -734,6 +734,8 @@ DISPLAY = Block(
     example='{"phone_tile": 52, "pixel_art": {"native_tile": 32}}',
     keys=(
         Key('phone_tile', 'int', lo=PHONE_TILE_LO, hi=PHONE_TILE_HI),
+        # The same follow camera on a screen with a mouse, at its own tile.
+        Key('desk_tile', 'int', lo=PHONE_TILE_LO, hi=96),
         Key('pixel_art', 'obj', sub=PIXEL_ART),
         # The look a skinned pack starts on; the player's pick in Display wins.
         Key('look', 'enum', choices=('plain', 'skin')),

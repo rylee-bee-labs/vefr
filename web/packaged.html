@@ -504,6 +504,13 @@
     #menu-panel { font-size: 0.9rem; }
     #menu-panel h2 { font-size: 1rem; margin: 2px 0 6px; }
   }
+  /* A desk under the follow camera (display.desk_tile) reads its messages the
+     phone's way: one small line, the newest, fading after a few seconds, so no
+     stack of old hints stands over the hero. Messages brings it back. */
+  body.in-game.follow-camera .toasts { width: max-content; max-width: min(360px, 40%); }
+  body.in-game.follow-camera .toasts p { font-size: 0.85rem; line-height: 1.3; padding: 4px 12px; border-radius: 14px; }
+  body.in-game.follow-camera .toasts p:not(.is-newest) { position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0 !important;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0 !important; }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 </head>
@@ -1388,9 +1395,10 @@ function renderBooksPanel() {
 // ms. Long enough to read the newest line on a phone, short enough that the
 // panel is not over the hero by the time the hero has walked on (issue #430).
 var FOLD_MS = 6000;
-// On a touch screen the panel is one small line under the top bar, the newest
-// thing said, and it fades sooner: the approved phone layout, one message at a
-// time, gone after about three seconds (docs/design/storybook/DESIGN.md).
+// Under the follow camera (a touch screen, or a desk with display.desk_tile) the
+// panel is one small line, the newest thing said, and it fades sooner: the
+// approved layout, one message at a time, gone after about three seconds
+// (docs/design/storybook/DESIGN.md).
 var TOUCH_FOLD_MS = 3000;
 function touchMessages() {
   return !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
@@ -1407,7 +1415,7 @@ function bindMessagePanel() {
   // always does.
   function foldMs() {
     var asked = Number(window.VEFR_MESSAGES_FOLD_MS);
-    return asked > 0 ? asked : (touchMessages() ? TOUCH_FOLD_MS : FOLD_MS);
+    return asked > 0 ? asked : (onPhoneCamera() ? TOUCH_FOLD_MS : FOLD_MS);
   }
   var byHand = store.get(key) === '1';   // a fold by hand is the player's own, and is kept
   var foldTimer = null;
@@ -1421,7 +1429,10 @@ function bindMessagePanel() {
   // from another visit never silences it there.
   function heldByHand() { return byHand && !touchMessages(); }
   function onPhoneCamera() {
-    return touchMessages() || !!(window.VEFR_STAGE && window.VEFR_STAGE.phone);
+    if (window.VEFR_STAGE) return touchMessages() || !!window.VEFR_STAGE.phone;
+    // Before the camera's first publish: a desk with desk_tile will follow too.
+    var display = (window.VEFR_WORLD && window.VEFR_WORLD.display) || {};
+    return touchMessages() || (!!display.desk_tile && !/[?&]camera=desk\b/.test(window.location.search));
   }
   function foldSoon() {
     if (!onPhoneCamera() || heldByHand()) return;
@@ -1443,7 +1454,7 @@ function bindMessagePanel() {
     foldSoon();   // opened by hand, it folds itself again after the wait
   });
   if (heldByHand()) setCollapsed(true);
-  else if (touchMessages()) foldSoon();
+  else if (onPhoneCamera()) foldSoon();
   // A new line is a line saying something NEW, not a line being written: a
   // step rewrites the same place name into #poi and the same hint into
   // #use-hint every turn, and a line going quiet clears itself, and neither
@@ -10727,16 +10738,21 @@ function setupTown() {
   var MIN_STAGE_W = 420, MIN_STAGE_H = 360;  // enough for the HUD frame's corners
   // The phone camera needs the pack's display.phone_tile; see docs/guides/world-creation.md.
   var PHONE_TILE = (window.VEFR_WORLD.display || {}).phone_tile || 0;
+  // display.desk_tile: the same follow camera on a screen with a mouse, at its own tile.
+  var DESK_TILE = (window.VEFR_WORLD.display || {}).desk_tile || 0;
   var PHONE_MARGIN = 3;
-  var onPhone = false;
+  var onPhone = false;   // the follow camera is on (a phone's, or a desk's with desk_tile)
   var cameraAt = { x: 0, y: 0 };
-  function phoneCamera() {
-    if (!PHONE_TILE) return false;
-    var q = window.location.search;
-    if (/[?&]camera=desk\b/.test(q)) return false;
-    if (/[?&]camera=phone\b/.test(q)) return true;
+  function touchScreen() {
+    if (/[?&]camera=phone\b/.test(window.location.search)) return true;
     return !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
   }
+  // The tile the follow camera draws at here, or 0 for the camera that fits a map whole.
+  function followTile() {
+    if (/[?&]camera=desk\b/.test(window.location.search)) return 0;
+    return touchScreen() ? PHONE_TILE : DESK_TILE;
+  }
+  function phoneCamera() { return followTile() > 0; }
   // Pixel art (`display.pixel_art` in world.json): every picture is drawn at a whole-number
   // scale of the art's native tile, with no smoothing. A pack without it draws exactly as before.
   var pixelNative = (world.display && world.display.pixel_art
@@ -10775,7 +10791,7 @@ function setupTown() {
     // small ones too: a room shrunk to fit a tall screen left the world a strip
     // between empty bands (a pack played on a phone, 2026-10-13). A map smaller than
     // the screen even at that tile is centred, as before.
-    if (onPhone) return PHONE_TILE / town.tile;
+    if (onPhone) return followTile() / town.tile;
     // The HUD sits in the stage's corners, so a whole map must leave a band
     // above and below for it; otherwise it reads whole and still reaches
     // under the buttons.
@@ -10847,7 +10863,9 @@ function setupTown() {
     var dock = window.innerWidth <= 600 && window.innerHeight > window.innerWidth && !onPhone;
     // A map too small for the HUD frame's corners gets the window as its
     // stage as well, so those corners fall on the spare room, not the map.
-    var grow = dock || mw < MIN_STAGE_W || mh < MIN_STAGE_H;
+    // The follow camera's stage is the window as well: a room smaller than the
+    // screen is centred in it, and the top bar keeps to the window's top.
+    var grow = dock || onPhone || mw < MIN_STAGE_W || mh < MIN_STAGE_H;
     // A whole lit map left a band above and below itself (fitZoom); the stage takes it back,
     // so the HUD pieces that hang off its corners stand there and not on corner tiles
     // (issue #424). A dark map, a scrolling one and the phone camera keep the map rectangle.
@@ -10935,6 +10953,7 @@ function setupTown() {
     canvas.height = Math.round(viewH * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     onPhone = phoneCamera();
+    document.body.classList.toggle('follow-camera', onPhone);
     if (pixelNative) ctx.imageSmoothingEnabled = false;   // a canvas resize resets this
     T = town.tile * fitZoom();
     if (pixelNative) T = snapTile(T);

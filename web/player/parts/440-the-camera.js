@@ -19,16 +19,21 @@
   var MIN_STAGE_W = 420, MIN_STAGE_H = 360;  // enough for the HUD frame's corners
   // The phone camera needs the pack's display.phone_tile; see docs/guides/world-creation.md.
   var PHONE_TILE = (window.VEFR_WORLD.display || {}).phone_tile || 0;
+  // display.desk_tile: the same follow camera on a screen with a mouse, at its own tile.
+  var DESK_TILE = (window.VEFR_WORLD.display || {}).desk_tile || 0;
   var PHONE_MARGIN = 3;
-  var onPhone = false;
+  var onPhone = false;   // the follow camera is on (a phone's, or a desk's with desk_tile)
   var cameraAt = { x: 0, y: 0 };
-  function phoneCamera() {
-    if (!PHONE_TILE) return false;
-    var q = window.location.search;
-    if (/[?&]camera=desk\b/.test(q)) return false;
-    if (/[?&]camera=phone\b/.test(q)) return true;
+  function touchScreen() {
+    if (/[?&]camera=phone\b/.test(window.location.search)) return true;
     return !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
   }
+  // The tile the follow camera draws at here, or 0 for the camera that fits a map whole.
+  function followTile() {
+    if (/[?&]camera=desk\b/.test(window.location.search)) return 0;
+    return touchScreen() ? PHONE_TILE : DESK_TILE;
+  }
+  function phoneCamera() { return followTile() > 0; }
   // Pixel art (`display.pixel_art` in world.json): every picture is drawn at a whole-number
   // scale of the art's native tile, with no smoothing. A pack without it draws exactly as before.
   var pixelNative = (world.display && world.display.pixel_art
@@ -67,7 +72,7 @@
     // small ones too: a room shrunk to fit a tall screen left the world a strip
     // between empty bands (a pack played on a phone, 2026-10-13). A map smaller than
     // the screen even at that tile is centred, as before.
-    if (onPhone) return PHONE_TILE / town.tile;
+    if (onPhone) return followTile() / town.tile;
     // The HUD sits in the stage's corners, so a whole map must leave a band
     // above and below for it; otherwise it reads whole and still reaches
     // under the buttons.
@@ -139,7 +144,9 @@
     var dock = window.innerWidth <= 600 && window.innerHeight > window.innerWidth && !onPhone;
     // A map too small for the HUD frame's corners gets the window as its
     // stage as well, so those corners fall on the spare room, not the map.
-    var grow = dock || mw < MIN_STAGE_W || mh < MIN_STAGE_H;
+    // The follow camera's stage is the window as well: a room smaller than the
+    // screen is centred in it, and the top bar keeps to the window's top.
+    var grow = dock || onPhone || mw < MIN_STAGE_W || mh < MIN_STAGE_H;
     // A whole lit map left a band above and below itself (fitZoom); the stage takes it back,
     // so the HUD pieces that hang off its corners stand there and not on corner tiles
     // (issue #424). A dark map, a scrolling one and the phone camera keep the map rectangle.
@@ -227,6 +234,7 @@
     canvas.height = Math.round(viewH * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     onPhone = phoneCamera();
+    document.body.classList.toggle('follow-camera', onPhone);
     if (pixelNative) ctx.imageSmoothingEnabled = false;   // a canvas resize resets this
     T = town.tile * fitZoom();
     if (pixelNative) T = snapTile(T);
