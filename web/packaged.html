@@ -13859,7 +13859,12 @@ function setupTown() {
   document.getElementById('verb-row').addEventListener('click', function (e) {
     var b = e.target.closest('button[data-verb]');
     if (!b) return;
-    b.disabled = true;
+    // A press is held off for a moment so one key cannot fire twice - but
+    // with aria-disabled, not `disabled`: disabling a focused button drops
+    // the focus on the floor, and the walk back up to the combat row was
+    // about eight Tabs every turn (#463).
+    if (b.getAttribute('aria-disabled') === 'true') return;
+    b.setAttribute('aria-disabled', 'true');
     // With an enemy named, the press resolves against it and the
     // monsters take their turn, exactly as after a bump. With no
     // target the press is only journalled, as it always was.
@@ -13875,19 +13880,13 @@ function setupTown() {
       // always was, and no turn runs.
       takeVerb(b.dataset.verb, b.dataset.label, null);
     }
-    // Disabling a focused button drops focus on the floor, and the
-    // walk back up to the combat row was about eight Tabs every turn
-    // (#463). Put it back when the button is usable again - but only
-    // while the focus is still loose or still inside the row, so a
-    // player who moved on with Tab keeps where they went.
-    window.setTimeout(function () {
-      b.disabled = false;
-      var active = document.activeElement;
-      var row = document.getElementById('verb-row');
-      if (!active || active === document.body || (row && row.contains(active))) {
-        b.focus();
-      }
-    }, 400);
+    // The focus lands on the verb just used, by click or by its number key,
+    // so the next press is one key away (unless the row went with the fight).
+    var row = document.getElementById('verb-row');
+    if (row && !row.hidden && b.isConnected) {
+      try { b.focus(); } catch (err) { /* gone */ }
+    }
+    window.setTimeout(function () { b.removeAttribute('aria-disabled'); }, 400);
   });
   canvas.addEventListener('click', tryNPC);
   document.getElementById('dpad').addEventListener('click', function (e) {
