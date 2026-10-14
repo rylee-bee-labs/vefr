@@ -8,7 +8,7 @@
    steps: "begin" | "wait:MS" | "key:NAME" | "dir:NAME" | "walk:a,b" |
           "click:#sel" | "menu:PANEL"
    reads: "NAME" | "NAME.a.b" | "text:#sel" | "exists:#sel" |
-          "visible:#sel" | "attr:#sel|NAME" | "store"
+          "visible:#sel" | "attr:#sel|name" | "store"
    A "NAME.a.b" path splits on '.', so a key that IS a dot - a map glyph -
    is not addressable: read the level above it and index in the test.
    prints one line: {"reads": {...}, "errors": [...], "store": {...}}
@@ -169,21 +169,19 @@ function doRead(read) {
   if (colon === -1) return { ok: true, value: readGlobal(read) };
   const verb = read.slice(0, colon);
   const sel = read.slice(colon + 1);
+  /* "attr:#sel|name": one attribute of one element, split on the last
+     '|' so the selector may hold anything a selector may hold. */
+  if (verb === 'attr') {
+    const bar = sel.lastIndexOf('|');
+    let node = null;
+    try { node = bar === -1 ? null : document.querySelector(sel.slice(0, bar)); } catch (e) { node = null; }
+    return { ok: true, value: node ? node.getAttribute(sel.slice(bar + 1)) : null };
+  }
   let el = null;
   try { el = sel ? document.querySelector(sel) : null; } catch (e) { el = null; }
   if (verb === 'text') return { ok: true, value: el ? el.textContent : null };
   if (verb === 'exists') return { ok: true, value: !!el };
   if (verb === 'visible') return { ok: true, value: !!el && visible(el) };
-  if (verb === 'attr') {
-    /* "attr:#sel|NAME" - the selector and the attribute name are split on
-       the first '|', so an attribute with no name is an unknown read. */
-    const bar = sel.indexOf('|');
-    if (bar === -1) return { ok: false, value: null };
-    const target = sel.slice(0, bar), name = sel.slice(bar + 1);
-    let node = null;
-    try { node = target ? document.querySelector(target) : null; } catch (e) { node = null; }
-    return { ok: true, value: node ? node.getAttribute(name) : null };
-  }
   return { ok: false, value: null };
 }
 

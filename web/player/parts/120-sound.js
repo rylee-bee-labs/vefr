@@ -9,11 +9,24 @@
 // sandboxed iframe's browser storage throws).
 var SOUND_KEY = 'vefr-sound-'
   + ((window.VEFR_WORLD && window.VEFR_WORLD.name) || 'world');
+// The volume slider sits beside the switch in the same block and is stored
+// the same way, one key further on. 0-100, 100 (full) unless the player says
+// otherwise; read at every cue, so a slider moved mid-play is heard at once.
+var SOUND_VOLUME_KEY = SOUND_KEY + '-volume';
+function soundVolume() {
+  var n = parseInt(store.get(SOUND_VOLUME_KEY), 10);
+  if (!(n >= 0 && n <= 100)) n = 100;
+  return n / 100;
+}
 if (window.VEFR_SOUND_DEF && window.VEFR_SOUND_DEF.theme) {
   var soundOn = true;
   soundOn = store.get(SOUND_KEY) !== 'off';
   window.VEFR_SOUND = { theme: window.VEFR_SOUND_DEF.theme,
                         on: soundOn, played: [] };
+  // The player's own volume, as a number 0..1, beside the snapshot above
+  // rather than inside it: VEFR_SOUND's three keys are a contract other code
+  // reads whole, and a fourth would change what they see.
+  window.VEFR_SOUND_VOLUME = soundVolume();
 }
 
 // One table for the nine cues the engine names. Each note is
@@ -52,13 +65,17 @@ function soundContext() {
 }
 
 // One cue, sounded: a start frequency ramping to an end frequency on
-// the oscillator, and a peak gain of at most 0.08 falling
-// exponentially toward silence - never a linear ramp, never a bare
-// stop. A suspended context resumes on a wrapped promise; if any of
-// it throws, the cue stays the record it already made.
+// the oscillator, and a peak gain of at most 0.08 (times the player's
+// own volume) falling exponentially toward silence - never a linear
+// ramp, never a bare stop. A suspended context resumes on a wrapped
+// promise; if any of it throws, the cue stays the record it already
+// made. A slider at zero is silence without being a fault: the cue is
+// still recorded, because the sound is on and only quiet.
 function soundPlay(cue) {
   var ctx = soundContext();
   if (!ctx) return;
+  var vol = soundVolume();
+  if (vol <= 0) return;
   try {
     if (ctx.state === 'suspended' && ctx.resume) {
       var resuming = ctx.resume();
@@ -73,7 +90,7 @@ function soundPlay(cue) {
       osc.frequency.setValueAtTime(n[0], t0);
       osc.frequency.exponentialRampToValueAtTime(n[1], t0 + dur);
       gain.gain.setValueAtTime(0.0001, t0);
-      gain.gain.exponentialRampToValueAtTime(SOUND_PEAK, t0 + 0.012);
+      gain.gain.exponentialRampToValueAtTime(SOUND_PEAK * vol, t0 + 0.012);
       gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
       osc.connect(gain);
       gain.connect(ctx.destination);
@@ -102,9 +119,11 @@ function soundCue(name) {
 }
 
 // Display > Sound: built at boot, ONLY when the pack opted in, so a
-// pack without sound has no switch to find (the id stays null). A real
+// pack without sound has no switch to find (the ids stay null). A real
 // checkbox on a 44px row: keyboard-reachable, the global focus ring
-// left alone, and no colour the menu does not already use.
+// left alone, and no colour the menu does not already use. Beside it,
+// one slider for how loud the cues are - the switch says whether, the
+// slider says how much, and there is only ever this one of each.
 if (window.VEFR_SOUND) {
   (function () {
     var panel = document.querySelector('[data-panel-body="display"]');
@@ -123,6 +142,32 @@ if (window.VEFR_SOUND) {
     label.appendChild(box);
     label.appendChild(document.createTextNode(' Sound'));
     row.appendChild(label);
+
+    var volRow = document.createElement('p');
+    volRow.className = 'sound-row';
+    var volLabel = document.createElement('label');
+    volLabel.htmlFor = 'sound-volume';
+    volLabel.appendChild(document.createTextNode(' Volume'));
+    var vol = document.createElement('input');
+    vol.type = 'range';
+    vol.id = 'sound-volume';
+    vol.min = '0';
+    vol.max = '100';
+    vol.step = '5';
+    vol.value = String(Math.round(soundVolume() * 100));
+    var volOut = document.createElement('output');
+    volOut.id = 'sound-volume-out';
+    volOut.setAttribute('for', 'sound-volume');
+    volOut.textContent = vol.value + '%';
+    vol.addEventListener('input', function () {
+      store.set(SOUND_VOLUME_KEY, vol.value);
+      volOut.textContent = vol.value + '%';
+      window.VEFR_SOUND_VOLUME = soundVolume();
+    });
+    volRow.appendChild(volLabel);
+    volRow.appendChild(vol);
+    volRow.appendChild(volOut);
+
     // After the fog status line, before "Time of day".
     // The panel's own first sub-heading (a direct child): the touch settings carry a nested one, and
     // insertBefore with a grandchild as the reference throws.
@@ -131,6 +176,7 @@ if (window.VEFR_SOUND) {
       if (panel.children[i].matches('h2.menu-sub')) { subhead = panel.children[i]; break; }
     }
     panel.insertBefore(row, subhead);
+    panel.insertBefore(volRow, subhead);
   })();
 }
 
