@@ -85,6 +85,11 @@ gameplay features over new core machinery.
   the phone's one fading line (#446).
 - [engine] A Section can dress its generated floors with decor (#442, #443).
 
+### LANDED 2026-10-14 (the title screen takes the game's own keys)
+- [player] `F`, `E` and `Space` start the game from the title screen, next to Begin and `Enter`, and `Tab` keeps the
+  focus on Begin: it used to walk the focus onto the BODY, an invisible stop that swallowed the next `Enter` (#466).
+  In run-001 that cost 29 of 50 decisions; 7 of 16 runs pressed `F` first on this screen. Tests:
+  `tests/browser/test_title_screen_keys.py`.
 ### LANDED 2026-10-14
 - [player] The game canvas is named for the place the hero is standing in (#461): the fixed "The town, seen from
   above" follows every region change, so a screen reader says "The cottage kitchen, seen from above" indoors and
