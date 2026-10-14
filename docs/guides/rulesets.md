@@ -1632,7 +1632,7 @@ matter) + `src/vefr/maplab.py` (the unknown-value refusal) +
    journal order, feedback lines, and the click budget — the
    pleasant-loop protocol (VEFR-ACT1-SPEC §9): two playtest passes per
    increment, nine-point checklist, dud kill-switch.
-6. **Every overlay the ruleset adds (a panel, a note, a speech box) must be continued by the Interact keys** (E, F, Space, Enter) or deliberately be a choice that keeps its own controls, and a test must say which. A player that needs a click mid-loop breaks the loop (Rylee, 2026-10-02; `tests/test_overlay_interact.py`).
+6. **Every overlay the ruleset adds (a panel, a note, a speech box) must be continued by the Interact keys** (F, Space, Enter) or deliberately be a choice that keeps its own controls, and a test must say which. A player that needs a click mid-loop breaks the loop (Rylee, 2026-10-02; `tests/test_overlay_interact.py`).
 7. ROADMAP entry with pasted gates; dev-guards green; merge without
    `--admin`.
 
