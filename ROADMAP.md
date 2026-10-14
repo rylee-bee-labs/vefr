@@ -85,6 +85,18 @@ gameplay features over new core machinery.
   the phone's one fading line (#446).
 - [engine] A Section can dress its generated floors with decor (#442, #443).
 
+### LANDED 2026-10-14 (the player's own settings: the look and the type scale)
+- [player] The approved type scale, on top of Larger text: the body at 17 px, a title at 20 px, a 48 px button
+  target and nothing anywhere under 13 px (`--text-body`, `--text-title`, `--text-small`, `--tap-target` in the
+  player sheet). Every size carries `--text-scale` itself, so the switch multiplies the whole scale; the phone
+  labels that were written at 9-12 px are the ones that moved.
+- [player] The look is a setting: **Dark** or **Parchment** in Display, remembered per world like the text size
+  and the sound. A pack names the one a new player starts on (`display.palette`, "dark" or "parchment"; Cottage
+  starts Dark) and the player's own pick wins from then on. A pack that names nothing is left alone: the engine
+  takes no side and the device's light or dark setting decides, exactly as before. The look paints the panels
+  over the world as well as the page behind them, from the Storybook tokens; the drawn world is the pack's art
+  and is untouched either way. The pack's own pictures stay their own row in Display, now called **Pictures**.
+
 ### IN PROGRESS (decided by Rylee on 2026-10-04; refreshed 2026-10-12)
 - **The endless dungeon** (epic [#273](https://github.com/rylee-bee-labs/vefr/issues/273); design `docs/plans/endless-dungeon/DESIGN.md`, build plan `docs/plans/endless-dungeon/PLAN.md`, research `docs/research/big-generated-maps.md`): floors generated while you play from `seed + depth`, cut into sections of 8 to 11 floors; each ends in a key warden whose key opens a vault with a lore note; acts change the town only; elites, linked groups, hand-painted stamps and much bigger maps (up to 128x96, kept cheap for phones); an endless mode after the story.
   - **Merged:** E0a measurements (#278), F1 fog as a bitset (#287), E0d sleeping monsters and a radius-bounded flood (#288), E2 the v3 Python floor generator with property sweeps (#289).

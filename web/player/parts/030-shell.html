@@ -278,9 +278,20 @@
     </div>
     <div data-panel-body="display" hidden>
       <h2>Display</h2>
-      <fieldset class="touch-set" id="look-settings" hidden>
+      <!-- The look every player has, touch screen or not: two faces for the
+           same interface, chosen here and remembered (075-player-settings.js).
+           A pack may say which one it starts on (world.json display.palette);
+           from then on the player's own pick is what counts. -->
+      <fieldset class="touch-set" id="look-palette">
         <legend>Look</legend>
-        <label><input type="radio" name="look" value="plain"> Dark</label>
+        <label><input type="radio" name="look-palette" value="dark"> Dark</label>
+        <label><input type="radio" name="look-palette" value="parchment"> Parchment</label>
+      </fieldset>
+      <!-- The pictures, which are a pack's own and not the player's: only a
+           pack that ships a skin offers this row at all (540-the-skin.js). -->
+      <fieldset class="touch-set" id="look-settings" hidden>
+        <legend>Pictures</legend>
+        <label><input type="radio" name="look" value="plain"> None</label>
         <label><input type="radio" name="look" value="skin"> <span id="look-skin-label">Painted</span></label>
       </fieldset>
       <p>The dark shows only the ground you have walked and lit. Turn it off to see the whole map.</p>

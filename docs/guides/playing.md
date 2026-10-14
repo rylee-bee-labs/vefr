@@ -26,10 +26,11 @@ and **Explore**; tap Explore again to stop. While a note, a shop or someone's li
 and a **B** button closes it. Under Display in the Menu you can choose a D-pad instead of the joystick, change
 the Control size, or turn on Left-handed to swap the sides.
 
-Display also holds the two reading settings, next to the Sound switch:
+Display also holds the look, the two reading settings, and the Sound switch:
 
 | Setting | What it does |
 |---|---|
+| **Look** | **Dark** or **Parchment**: the same game in two faces, warm charcoal or cream paper. The game picks the one it starts on; yours is remembered from then on. |
 | **Larger text** | A fifth more on the body text and on every label. |
 | **Reduced motion** | Nothing moves: no walking hop, no fading messages, no blinking. |
 | **Volume** | How loud the sound cues are, when the game has sound at all. The **Sound** switch beside it says whether they sound; the slider says how much. |

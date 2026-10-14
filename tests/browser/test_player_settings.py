@@ -4,16 +4,18 @@ slider that sits under the Sound switch.
 Each one is checked the way the touch settings are (test_touch_controls.py):
 turn it on in the panel, prove the page changed, reload, prove it is still on.
 Larger text and reduced motion are remembered per world, so the key each one
-writes carries the world's name, exactly as the sound and the look keys do.
+writes carries the world's name, exactly as the sound and the pictures keys do.
 
 The volume slider is built only when the pack opted in to sound, like the
 switch beside it, so that half runs on a fixture pack that opted in and the
 "no slider at all" half on the sample world, which did not.
 
-The last test is the readability floor the approved type scale sets: body at
-16px and up, nothing at all under 13px, and the line someone has to read on a
-phone (a spoken line) at 16px. Every selector here is one of the rules that
-floor was written against.
+The last test is the approved type scale itself: the body at 17px, a title at
+20px, a button a 48px target, and nothing anywhere under 13px - including the
+labels a phone draws, which are the ones that used to sit at 9-12px. Every
+selector here is one of the rules that scale was written against. The look
+itself (Dark and Parchment) is test_player_look.py; Larger text is proved on
+top of it here, because the scale is what it multiplies.
 """
 
 import sys
@@ -54,7 +56,17 @@ SOUND_VOLUME = "() => window.VEFR_SOUND_VOLUME"
 
 TRANSITION = """() => getComputedStyle(document.getElementById('toasts')).transitionDuration"""
 
+# How big one box is, in px, for the button target floor.
+SIZE = """sel => { const r = document.querySelector(sel).getBoundingClientRect();
+           return { w: r.width, h: r.height }; }"""
+
 LIFT = 1.2
+
+# The approved type scale (docs/design/storybook/DESIGN.md, "Type").
+BODY_PX = 17.0
+TITLE_PX = 20.0
+TAP_PX = 48.0
+SMALL_PX = 13.0
 
 
 @pytest.fixture(scope="module")
@@ -103,7 +115,8 @@ def test_larger_text_grows_the_body_and_the_labels_and_survives_a_reload(browser
     with playing(browser, woven_sample) as page:
         open_display(page)
         before = page.evaluate(SIZES)
-        assert before["body"] == pytest.approx(16, abs=0.2), before
+        assert before["body"] == pytest.approx(BODY_PX, abs=0.2), \
+            f"the body rests at {before['body']}px, not the approved {BODY_PX}px"
         page.check("#text-large")
         after = page.evaluate(SIZES)
         assert after["body"] == pytest.approx(before["body"] * LIFT, abs=0.3), \
@@ -165,18 +178,23 @@ def test_the_volume_slider_only_exists_with_sound_and_is_remembered(browser, wov
             "a pack without sound was given a Sound switch"
 
 
-# The approved floor: the body reads at 16px and up, nothing reads under 13px,
-# and the spoken line on a phone - the one piece of text a player has to read
-# to play - is a full 16px.
+# The approved floor: the body reads at 17px, nothing reads under 13px, and
+# the spoken line on a phone - the one piece of text a player has to read to
+# play - is at least 16px. The phone half is the one that used to fail: those
+# labels were written at 9-12px, under the floor the scale sets.
 FLOORS = [
-    (False, "body", 16.0),        # the body itself
-    (False, "#menu-open", 13.0),
-    (False, "#interact", 13.0),
-    (False, "#menu .pm button", 13.0),
-    (False, "kbd", 13.0),
-    (True, ".npc-line", 16.0),    # what someone says, on a phone
-    (True, ".npc-box .speaker", 13.0),
-    (True, "#touch-smart .cap", 13.0),
+    (False, "body", SMALL_PX),          # the body itself
+    (False, "#menu-open", SMALL_PX),
+    (False, "#interact", SMALL_PX),
+    (False, "#menu .pm button", SMALL_PX),
+    (False, "kbd", SMALL_PX),
+    (True, ".npc-line", 16.0),          # what someone says, on a phone
+    (True, ".npc-box .speaker", SMALL_PX),
+    (True, "#touch-smart .cap", SMALL_PX),
+    (True, "#touch-smart .verb", SMALL_PX),
+    (True, "#menu-open", SMALL_PX),
+    (True, "#interact", SMALL_PX),
+    (True, ".npc-note", SMALL_PX),
 ]
 
 
@@ -187,6 +205,42 @@ def test_nothing_reads_under_the_approved_floor(browser, woven_sample, phone, se
         got = page.evaluate(PX, selector)
         assert got is not None, f"{selector} is not on the page at all"
         assert got >= floor, f"{selector} reads at {got}px, under the {floor}px floor"
+
+
+def test_the_body_and_a_title_hold_the_approved_sizes(browser, woven_sample):
+    """The two sizes the scale names by number: the body at 17px and a title
+    at 20px. Every other size in the sheet is a floor (nothing under 13px)
+    rather than a fixed number."""
+    with playing(browser, woven_sample) as page:
+        assert page.evaluate(PX, "body") == pytest.approx(BODY_PX, abs=0.2)
+        open_display(page)
+        title = page.evaluate(PX, "#menu-panel h2")
+        assert title == pytest.approx(TITLE_PX, abs=0.2), \
+            f"the panel title reads at {title}px, not the approved {TITLE_PX:.0f}px"
+        tab = page.evaluate(SIZE, "#menu .pm button")
+        assert tab["h"] >= TAP_PX - 0.5, f"a menu tab is {tab['h']:.0f}px tall"
+
+
+# The button half of the scale: a target a thumb can hit. The list is the
+# controls each frame actually draws - a phone shows the touch cluster where
+# a desk shows the action row, so a control missing from one of them is not
+# measured there at all.
+TARGETS = [
+    (False, "#interact"),
+    (False, "#menu-open"),
+    (True, "#menu-open"),
+    (True, "#touch-smart"),
+    (True, "#touch-bag"),
+]
+
+
+@pytest.mark.parametrize("phone,selector", TARGETS, ids=[f"{'phone' if p else 'desk'}-{s}" for p, s in TARGETS])
+def test_buttons_meet_the_approved_48px_target(browser, woven_sample, phone, selector):
+    size, touch = (PHONE, True) if phone else (DESKTOP, False)
+    with playing(browser, woven_sample, size, touch) as page:
+        box = page.evaluate(SIZE, selector)
+        assert box["w"] >= TAP_PX - 0.5 and box["h"] >= TAP_PX - 0.5, \
+            f"{selector} is {box['w']:.0f}x{box['h']:.0f}px, under the {TAP_PX:.0f}px target"
 
 
 def test_the_floor_holds_on_the_title_screen_too(browser, woven_sample):
