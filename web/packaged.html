@@ -605,13 +605,13 @@
           <button type="button" id="touch-smart" class="gbtn gbtn--main touch-btn touch-smart" aria-label="Interact"><span class="verb">Interact</span><span class="cap"></span></button>
           <button type="button" id="touch-bag" class="gbtn touch-btn touch-bag" aria-label="Bag"><span>Bag</span></button>
           <button type="button" id="touch-b" class="gbtn touch-btn touch-b" aria-label="Close panel (B)"><span>B</span></button>
-          <button type="button" id="touch-whisper" class="gbtn touch-btn touch-tool touch-whisper"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 9v6M9 6v12M13 9v6M17 7v10"/></svg><span>Whisper</span></button>
+          <button type="button" id="touch-whisper" class="gbtn touch-btn touch-tool touch-whisper" aria-label="Listen (Q)"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 9v6M9 6v12M13 9v6M17 7v10"/></svg><span>Listen</span></button>
           <button type="button" id="touch-explore" class="gbtn touch-btn touch-tool touch-explore" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg><span>Explore</span></button>
         </div>
         <div class="acts">
           <button type="button" id="interact" class="gbtn gbtn--main"><span id="interact-label">Interact</span> <kbd>F</kbd></button>
           <button type="button" id="talk" class="gbtn gbtn--tool" data-tip="Talk" title="Talk (E)"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 5h16v11H9l-5 4z"/></svg><span class="sr-only">Talk</span><kbd>E</kbd></button>
-          <button type="button" id="whisper" class="gbtn gbtn--tool" data-tip="Whisper" title="Whisper (Q)"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 9v6M9 6v12M13 9v6M17 7v10"/></svg><span class="sr-only">Whisper</span><kbd>Q</kbd></button>
+          <button type="button" id="whisper" class="gbtn gbtn--tool" data-tip="Listen" title="Listen (Q)"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 9v6M9 6v12M13 9v6M17 7v10"/></svg><span class="sr-only">Listen</span><kbd>Q</kbd></button>
           <button type="button" id="bagbtn" class="gbtn gbtn--tool" data-tip="Bag" title="Bag (B)"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 9V7a4 4 0 0 1 8 0v2"/><rect x="4" y="9" width="16" height="12" rx="2"/></svg><span class="sr-only">Bag</span><kbd>B</kbd></button>
           <button type="button" id="explore" class="gbtn gbtn--tool" aria-pressed="false" data-tip="Explore" title="Explore (O)"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg><span class="sr-only">Explore</span><kbd>O</kbd></button>
         </div>
@@ -797,7 +797,7 @@
       <ul>
         <li>Move with the arrow keys or <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd>, or, on a touch screen, drag the joystick (or use the D-pad you chose in Display).</li>
         <li>Use what is near you with <kbd>E</kbd>, <kbd>Space</kbd>, <kbd>Enter</kbd>, <kbd>F</kbd> or the big Interact button. It always says what it will do. The same keys turn the pages of a note and close someone's speech, and <kbd>E</kbd> or <kbd>F</kbd> close a shop.</li>
-        <li>Hear a rumor with <kbd>Q</kbd> or the Whisper button.</li>
+        <li>Hear a rumor with <kbd>Q</kbd> or the Listen button.</li>
         <li>Open your bag with <kbd>B</kbd> or the Bag button.</li>
         <li>Walk the unexplored dark with <kbd>O</kbd> or the Explore button.</li>
         <li>Turn the dark off with <kbd>V</kbd>, or in Display. Dusk and Dawn are in Display too, under Time of day.</li>
@@ -1221,14 +1221,18 @@ function quietTutorial() {
 }
 
 // ---- speech box: whoever is talking, in a box over the game ----
-function showSpeech(speaker, line, note) {
+// `shownAs` is the name the box prints, for a line nobody is saying TO you:
+// the rumor from the Listen button is overheard, so it reads "You overhear
+// <speaker>" while the portrait hook still gets the speaker itself and finds
+// the picture by the speaker's own name. Omitted, the box prints the speaker.
+function showSpeech(speaker, line, note, shownAs) {
   // A skin's portrait hangs off this hook (540-the-skin.js draws it). The
   // hook is read here, when the box is shown, and never when the skin loads,
   // so it does not matter which of the two parts the page loads first: a
   // speech box declared after the skin still gets its portrait. A player
   // with no skin has no hook, and this is one read and nothing more.
   if (typeof window.VEFR_SPEECH_BOX === 'function') window.VEFR_SPEECH_BOX(speaker);
-  document.getElementById('npc-name').textContent = speaker || '';
+  document.getElementById('npc-name').textContent = shownAs || speaker || '';
   document.getElementById('npc-line').textContent = line || '';
   var n = document.getElementById('npc-note');
   n.textContent = note || ''; n.hidden = !note;
@@ -3542,6 +3546,14 @@ function buildPhaseRail() {
 }
 
 // ---- whisper ----
+// The name the player pressed is Listen (issue #470): it hears a rumor from
+// anywhere in town, it does not whisper to whoever happens to be standing
+// there. The box says which of the two it is, so the speech reads
+// "You overhear <the speaker>" and not a reply from whoever is nearby.
+function overheardName(speaker) {
+  return 'You overhear ' + (speaker || 'someone in town');
+}
+
 function bindWhisper() {
   var btn = document.getElementById('whisper');
   var status = document.getElementById('status');
@@ -3595,7 +3607,8 @@ function bindWhisper() {
         + (card.is_true ? '' : '<p class="status">A lie, or close enough.</p>');
       feed.insertBefore(div, feed.firstChild);
       status.textContent = '';
-      showSpeech(card.speaker, '\u201C' + card.whisper + '\u201D', card.is_true ? '' : 'A lie, or close enough.');
+      showSpeech(card.speaker, '\u201C' + card.whisper + '\u201D', card.is_true ? '' : 'A lie, or close enough.',
+        overheardName(card.speaker));
     } catch (err) {
       // No live endpoint (or it failed): draw from the woven pool -
       // real model output, pre-generated at weave time. Pool spent?
@@ -3625,7 +3638,8 @@ function bindWhisper() {
             : respliced ? "Mixed from the game's saved lines."
             : fromFragments ? "From the characters' own lines."
             : fromGrammar ? "From the world's own words." : '')
-          + (card.is_true ? '' : ' A lie, or close enough.'));
+          + (card.is_true ? '' : ' A lie, or close enough.'),
+          overheardName(card.speaker));
       } else {
         status.textContent = 'Nothing came back (' + (err.message || 'failed') + ').';
       }
@@ -14041,11 +14055,13 @@ function setupTown() {
   draw();
   updateUse();
 }
-// ---- touch controls: a floating joystick, one smart button, Bag, Whisper, Explore, B and two quick slots ----
+// ---- touch controls: a floating joystick, one smart button, Bag, Listen, Explore, B and two quick slots ----
 // On a coarse pointer this layer replaces the Acts row. Every action goes through
 // the code the keys already use: move(), doInteract(), useItem(), openBag(), the
-// Acts row's own Whisper and Explore buttons (Q and O press the same), and the
+// Acts row's own Listen and Explore buttons (Q and O press the same), and the
 // panel closers. The D-pad stays for those who choose it in Display.
+// The button a player presses is Listen (#470); its element ids stay
+// `whisper`, which is the engine's own game-name-neutral name for the feature.
 window.__vefrTouch = { log: [] };
 
 var TOUCH_MOVE_KEY = 'vefr-touch-move';
@@ -14317,7 +14333,7 @@ function touchBagPress() {
   if (window.openBag) window.openBag();
 }
 
-// Whisper and Explore press the Acts row's own buttons, hidden on a phone but still
+// Listen and Explore press the Acts row's own buttons, hidden on a phone but still
 // wired, so a tap does exactly what Q and O do (issue #431).
 function touchWhisperPress() {
   touchStopExplore();
@@ -14330,7 +14346,7 @@ function touchExplorePress() {
   document.getElementById('explore').click();
 }
 
-// Explore's pressed state and Whisper's wait while it listens show on the touch twins.
+// Explore's pressed state and Listen's wait while it listens show on the touch twins.
 function touchSyncTools() {
   var ex = document.getElementById('explore');
   var wh = document.getElementById('whisper');

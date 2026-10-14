@@ -85,6 +85,11 @@ gameplay features over new core machinery.
   the phone's one fading line (#446).
 - [engine] A Section can dress its generated floors with decor (#442, #443).
 
+### LANDED 2026-10-14
+- [player] **Whisper is now Listen** (#470): the button, its tooltip and the touch label say "Listen (Q)", and the
+  rumor reads as overheard ("You overhear <the speaker>"), so it no longer looks like a whisper to whoever is
+  standing next to you. How to play names it. The engine keeps its own name for the feature; the Journal's
+  "Listen for a whisper" is unchanged.
 ### LANDED 2026-10-14 (the title screen takes the game's own keys)
 - [player] `F`, `E` and `Space` start the game from the title screen, next to Begin and `Enter`, and `Tab` keeps the
   focus on Begin: it used to walk the focus onto the BODY, an invisible stop that swallowed the next `Enter` (#466).
