@@ -897,6 +897,43 @@
              candidates: candidates };
   }
 
+  // ---- one plain sentence per action (#463) ------------------------
+  //
+  // The result line used to name the action ("last action: console
+  // (dusk)"), which says nothing about what the action did. Each verb
+  // now speaks one sentence that reads as a sentence, and that
+  // sentence is what the line shows.
+  //
+  // The wording is the engine's, so it stays neutral: nothing here
+  // names a pack's creature, and `{what}` is filled from the pack's own
+  // name for the thing acted on. A pack replaces any of these the way
+  // it replaces every other player word - `player_words` in world.json,
+  // key `combat.<verb>` - through the one reader, so the pack's own
+  // sentence wins and this stays the default. The rows are joined onto
+  // the one message table (part 340) rather than kept beside it, and
+  // outside its markers, so the two tables keep their own key sets.
+  var VEFR_COMBAT_WORDS = {
+    attack: 'You hit {what} for {damage}.',
+    console: '{what} quiets a little.',
+    hurl: '{what} does not care for that.',
+    other: 'You say it anyway. Nothing answers.',
+    none: 'There is nothing here to answer that.'
+  };
+  Object.keys(VEFR_COMBAT_WORDS).forEach(function (verb) {
+    VEFR_PLAYER_WORDS['combat.' + verb] = VEFR_COMBAT_WORDS[verb];
+  });
+  // One reader: the verb's own row when the verb - or the pack - has
+  // one, else the catch-all for any verb a pack names, else the line
+  // for a verb pressed with nothing to act on.
+  function verbWord(verb, slots) {
+    var words = (window.VEFR_WORLD && window.VEFR_WORLD.player_words) || {};
+    var key = 'combat.' + verb;
+    if (VEFR_PLAYER_WORDS[key] || typeof words[key] === 'string') {
+      return playerWord(key, slots);
+    }
+    return playerWord('combat.other', slots);
+  }
+
   // Task 3: fight through the one verb. The row is the same #verb-row
   // the surface always shows; naming a target is what "opens" it, and
   // nothing here re-implements the damage maths.
@@ -922,7 +959,11 @@
   function applyVerb(verb, label, enemy) {
     if (!enemy) return false;
     if (verb === 'attack') return heroAttack(enemy);
-    var said = 'You use ' + label + ' on ' + (enemy.name || 'it') + '.';
+    // The plain sentence, not "You use Console on it": what the verb
+    // DID is the line a player reads (#463). `label` is kept in the
+    // signature because the row's word is what the button says, but it
+    // is no longer spelled into the sentence.
+    var said = verbWord(verb, { what: (enemy && enemy.name) || 'it' });
     // The other verbs are words only, but a practice spec can learn from
     // them. The default verbs are `console`/`hurl`; any other name
     // counts toward nothing.
@@ -931,6 +972,27 @@
     if (kind) sayGrowth(practiceSuffix(growBump(kind)));
     combatSay(said);
     return true;
+  }
+  // One verb, acted on and journalled, in that order: the sentence the
+  // verb spoke is the sentence the journal keeps, and it is read before
+  // the monsters take their turn, so their answer cannot be what got
+  // written down. Both call sites go through here, so a verb can never
+  // be journalled without saying what it did.
+  function takeVerb(verb, label, foe) {
+    if (!foe) {
+      // Pressed with nothing named to act on: nothing happens, and the
+      // line says so in a sentence rather than naming the verb.
+      recordVerb(verb, verbWord('none'));
+      return false;
+    }
+    // The live line is emptied first so that what is on it afterwards is
+    // exactly what this verb said - nothing to tell a quiet verb from a
+    // loud one, and nothing left over from the last turn to be mistaken
+    // for this one's sentence.
+    combatSay('');
+    var done = applyVerb(verb, label, foe);
+    recordVerb(verb, combatText());
+    return done;
   }
 
   // A locked door or stair (design/gates-and-guardians.md, step 1).
@@ -1063,8 +1125,7 @@
           // One verb: act at once, no menu - but the turn still runs,
           // unless the verb was refused (a warden that cannot be
           // struck), which changes nothing and therefore costs nothing.
-          recordVerb(verbs[0][0]);
-          if (applyVerb(verbs[0][0], verbs[0][1], foe)) {
+          if (takeVerb(verbs[0][0], verbs[0][1], foe)) {
             lightTick();
             enemyTurn();
           }

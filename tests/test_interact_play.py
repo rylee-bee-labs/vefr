@@ -381,6 +381,9 @@ def test_interact_on_an_enemy_names_it_and_opens_the_verbs(play):
     assert log["enemy-start-row-label"] == "Combat actions"
     assert log["enemy-open-row-label"] == "What to do about a storeroom rat"
     assert log["enemy-verbs"] == ["Strike", "Console", "Hurl an insult"]
+    # Each verb prints the digit that presses it (#463); the label is
+    # read from its own word, so the shortcut is not part of the name.
+    assert log["enemy-verb-keys"] == ["1", "2", "3"]
     assert log["enemy-open-snap"] == log["enemy-open-snap-before"]
 
 
