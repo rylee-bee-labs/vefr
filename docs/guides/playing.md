@@ -25,6 +25,16 @@ will do, so beside a person it says **Talk** and their name. Above it is **Bag**
 and **Explore**; tap Explore again to stop. While a note, a shop or someone's line is open, these step aside
 and a **B** button closes it. Under Display in the Menu you can choose a D-pad instead of the joystick, change
 the Control size, or turn on Left-handed to swap the sides.
+
+Display also holds the two reading settings, next to the Sound switch:
+
+| Setting | What it does |
+|---|---|
+| **Larger text** | A fifth more on the body text and on every label. |
+| **Reduced motion** | Nothing moves: no walking hop, no fading messages, no blinking. |
+| **Volume** | How loud the sound cues are, when the game has sound at all. The **Sound** switch beside it says whether they sound; the slider says how much. |
+
+Each one is remembered in this browser, separately for each game, and comes back the next time you play.
 `Space` and `Enter` press the button that already has the focus.
 While a note or someone's line is on screen, `E`, `F`, `Space` and `Enter` turn the page and then close it.
 In the shop, `E` or `F` closes it too (`Escape` and the Close button still work).
