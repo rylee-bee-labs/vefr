@@ -23,7 +23,7 @@ The milestones, the same thirteen names at every size so the three runs sit side
     03-move-hold          finger down on the floating zone (a key down on a desk), mid-walk
     04-move-release       let go: the ring is gone and the walk has stopped
     05-smart-caption      the smart button with nothing in reach
-    06-smart-press        one press, one action, and what it said
+    06-smart-press        one press - F on a desk - one action, and what it said
     07-bag-open           the Bag, on a phone and on a desk
     08-bag-closed         closed again (the B button closes it on a phone)
     09-settings-open      the menu, on the Display panel
@@ -495,16 +495,37 @@ class Walk:
         self.still("04-move-release",
                    "finger (or key) up: the ring is gone and the walk has stopped")
 
+    def smart_press(self):
+        """The one verb, driven the way this size reaches it: a tap, or the F key.
+
+        A desk shows the Acts row's own Interact button, with the `<kbd>F</kbd>` beside it:
+        the keys are how the walk is driven there, not a finger. The key and the button call
+        the same `doInteract()`, but only a press on a touch button is written into
+        `window.__vefrTouch.log`, so the recorder writes its own entry for the key it sent -
+        one entry per press, tagged `via: 'key'` - and every size is then read from one log.
+        """
+        if self.touch:
+            self.page.tap("#touch-smart")
+        else:
+            self.blur()  # a focused button would take the key itself
+            self.page.keyboard.press("f")
+            self.page.evaluate(
+                "k => window.__vefrTouch.log.push("
+                "{t: performance.now(), kind: 'action', key: k, via: 'key'})",
+                "interact")
+
     def smart_button(self):
-        """05 and 06: read the caption with nothing in reach, then press once."""
+        """05 and 06: read the caption with nothing in reach, then act once."""
         self.page.wait_for_timeout(400)
         self.still("05-smart-caption", "the smart button with nothing in reach, and its caption")
-        before = self.touch_actions("interact") if self.touch else 0
-        self.hit("#touch-smart" if self.touch else "#interact")
+        before = self.touch_actions("interact")
+        self.smart_press()
         self.page.wait_for_timeout(700)  # one press; the touch layer's lockout is 300 ms
-        after = self.touch_actions("interact") if self.touch else 0
+        after = self.touch_actions("interact")
+        how = "the F key" if not self.touch else "a tap"
         self.still("06-smart-press",
-                   f"one press -> {after - before} action(s) in the touch log; what it said")
+                   f"one press with {how} -> {after - before} action(s) in the touch log; "
+                   "what it said")
 
     def bag(self):
         """07 and 08: open the Bag and close it - on a phone, with the B button."""
@@ -565,8 +586,8 @@ class Walk:
         self.still("11-approach", "walked on to the first person; the caption now names them")
 
     def first_interaction(self):
-        """12: press the smart button where it says who it will talk to."""
-        self.hit("#touch-smart" if self.touch else "#interact")
+        """12: act where it says who it will talk to, the way this size acts."""
+        self.smart_press()
         try:
             self.page.wait_for_function("!document.getElementById('npc-box').hidden", timeout=8000)
         except Exception as exc:  # noqa: BLE001 - nothing to talk to is a finding, not a crash
@@ -688,9 +709,15 @@ def record_size(browser, size, url, out):
         walk.run(url)
     finally:
         video = page.video
-        if video:
-            video.save_as(str(out / VIDEO))
+        # The recording is only finished, and the file only complete, once the page that
+        # owns it is closed: save_as on a live page raises "Page is not yet closed".
+        page.close()
         ctx.close()
+        if video:
+            try:
+                video.save_as(str(out / VIDEO))
+            except Exception as exc:  # noqa: BLE001 - a missing video is a note, not a crash
+                walk.errors.append(f"video: {exc}")
         shutil.rmtree(video_dir, ignore_errors=True)
     (out / "notes.md").write_text(walk.notes_md(), encoding="utf-8")
     return walk
