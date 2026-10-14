@@ -127,6 +127,8 @@ class Key:
                              # | 'place-label' (a pack's own sentence, which
                              #   must name its `{place}` slot and must be
                              #   words rather than blanks)
+                             # | 'sentence' (a pack's own sentence with no
+                             #   slot to fill - words rather than blanks)
                              # | 'str-or-obj' (a string, or an object checked by `sub`)
     choices: tuple = ()     # enum values, in sentence order
     lo: int | None = None   # int bounds, str length bounds, or hundredths
@@ -214,6 +216,7 @@ _DEFAULTS = {
 _KIND_SAY = {
     'str': {'wrong-type': '{path} must be a string'},
     'place-label': {'wrong-type': '{path} must be the pack\'s own words for it'},
+    'sentence': {'wrong-type': '{path} must be the pack\'s own words for it'},
     'int': {'wrong-type': '{path} must be a whole number'},
     'bool': {'wrong-type': '{path} must be a yes or a no'},
     'obj': {'wrong-type': '{path} must be an object'},
@@ -310,7 +313,7 @@ def _as_hundredths(n) -> str:
 
 
 def _type_ok(kind: str, value) -> bool:
-    if kind in ('str', 'name-label', 'place-label'):
+    if kind in ('str', 'name-label', 'place-label', 'sentence'):
         return isinstance(value, str)
     if kind == 'str-or-obj':
         return isinstance(value, (str, dict))
@@ -367,7 +370,7 @@ def _out_of_range(key: Key, value) -> bool:
         # before it ever gets here - a table is never compared to a bound.
         return ((key.lo is not None and value < key.lo)
                 or (key.hi is not None and value > key.hi))
-    if key.kind in ('str', 'name-label', 'place-label') or (key.kind == 'str-or-obj' and isinstance(value, str)):
+    if key.kind in ('str', 'name-label', 'place-label', 'sentence') or (key.kind == 'str-or-obj' and isinstance(value, str)):
         n = len(value)
         return ((key.lo is not None and n < key.lo)
                 or (key.hi is not None and n > key.hi))
@@ -511,6 +514,12 @@ def _shape_problem(block, key, value, path):
             return Problem('no-place-slot', pointer,
                            _say(block, key, 'no-place-slot').format(path=path))
         return None
+    if key.kind == 'sentence':
+        # A sentence with no slot to fill: it only has to say something.
+        if not value.strip():
+            return Problem('blank-word', pointer,
+                           _say(block, key, 'blank-word').format(path=path))
+        return None
     if key.kind == 'glyphs':
         return _glyph_problem(block, key, value, path)
     if key.kind == 'depths':
@@ -562,7 +571,7 @@ def _value_problem(block, key, value, path):
                 path=path, kind=key.kind))
     if key.kind == 'hundredths' and not _whole_hundredths(value):
         return _shape_problem(block, key, value, path)
-    if key.kind == 'place-label':
+    if key.kind in ('place-label', 'sentence'):
         # A pack's own sentence is read before it is measured: a blank
         # one is a blank one whatever its length, and a length bound on
         # an empty string would say "between 1 and 200" instead of the
@@ -1514,12 +1523,14 @@ BAG = Block(
 # tables drift, the same way `tests/test_event_table.py` does for
 # `EVENTS`.
 #
-# Every row is a `place-label`: the sentence must name its `{place}`
-# slot (the engine hands it the place being pointed at) and must be
-# words rather than blanks. Nothing is required, and a wrong value is
-# one plain sentence naming this file and the key - never a default
-# substitution, because a pack that meant to speak and did not would
-# otherwise see its own line in play without being told.
+# Every row is words rather than blanks. A row that points somewhere is
+# a `place-label`: the sentence must name its `{place}` slot (the engine
+# hands it the place being pointed at). A row that has nothing to point
+# at is a `sentence` - the strike hint (vefr #464) tells the player what
+# walking does, and there is no place in it to fill. Nothing is required,
+# and a wrong value is one plain sentence naming this file and the key -
+# never a default substitution, because a pack that meant to speak and
+# did not would otherwise see its own line in play without being told.
 PLAYER_WORDS = Block(
     name='player_words',
     example='{"where_next.reach": "To get to {place}, head {direction}."}',
@@ -1528,6 +1539,7 @@ PLAYER_WORDS = Block(
         Key('where_next.reach', 'place-label', lo=1, hi=200),
         Key('where_next.here', 'place-label', lo=1, hi=200),
         Key('where_next.no_way', 'place-label', lo=1, hi=200),
+        Key('combat.walk_to_strike', 'sentence', lo=1, hi=200),
     ),
 )
 

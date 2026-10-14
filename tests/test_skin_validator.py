@@ -386,7 +386,10 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # A desk's follow camera (display.desk_tile) and its one fading message line, 2026-10-13; measured twice in separate processes, readings equal:
 #   d8aa37fc38bdc1d17160232896b30791d9be64b68b49fc7c5ed29d0174597e56
 #   d8aa37fc38bdc1d17160232896b30791d9be64b68b49fc7c5ed29d0174597e56
-NO_SKIN_WEAVE_SHA256 = "d8aa37fc38bdc1d17160232896b30791d9be64b68b49fc7c5ed29d0174597e56"
+# The strike hint said once at the first fight (#464), 2026-10-14; three player parts changed (the message table's fifth row, the held-line flush, and the call beside a landed blow), so the player template moved; measured twice in separate processes, readings equal, and the reading before it on main's own parts reproduced the value above in this same environment:
+#   8c0e7e6ec9f0d9c0a88da27746c2f3b9cc0e675b0f8dac6f1e44e42a6ae9dc8e
+#   8c0e7e6ec9f0d9c0a88da27746c2f3b9cc0e675b0f8dac6f1e44e42a6ae9dc8e
+NO_SKIN_WEAVE_SHA256 = "8c0e7e6ec9f0d9c0a88da27746c2f3b9cc0e675b0f8dac6f1e44e42a6ae9dc8e"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

@@ -242,7 +242,10 @@ def test_the_fight_next_to_the_hero_is_unchanged(tmp_path):
     assert reads["VEFR_COMBAT.enemies.0.id"] == "cellar-rat"
     assert reads["VEFR_COMBAT.enemies.0.at"] == [2, 1]
     assert reads["VEFR_COMBAT.enemies.0.hp"] == 2
-    assert reads["text:#combat-live"] == "a cellar rat hits you for 1."
+    # The line ends with the one-time strike hint: this is the first
+    # fight, and walking into an enemy is the attack (vefr #464).
+    assert reads["text:#combat-live"] == (
+        "a cellar rat hits you for 1. Walk into an enemy to strike it.")
     # The pale thing, six tiles out and inside its sight, walks one
     # tile toward the hero on the same turn.
     assert reads["VEFR_COMBAT.enemies.1.id"] == "pale-thing"

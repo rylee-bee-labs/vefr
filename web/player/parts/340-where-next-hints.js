@@ -10,12 +10,15 @@
 // The keys are typed once on the Python side (shapes.PLAYER_WORDS in
 // src/vefr/shapes.py, which vefr check speaks refusals from);
 // tests/test_player_words.py fails if the two drift.
+// The first four rows point somewhere and fill a `{place}`; the last
+// one (vefr #464) has nothing to point at and fills nothing.
 // -- player words start --
 var VEFR_PLAYER_WORDS = {
   'where_next.goal': 'To reach {place}.',
   'where_next.reach': 'To reach {place}, go {direction}.',
   'where_next.here': 'The way to {place} is right here.',
-  'where_next.no_way': 'No way to {place} is declared from here.'
+  'where_next.no_way': 'No way to {place} is declared from here.',
+  'combat.walk_to_strike': 'Walk into an enemy to strike it.'
 };
 // The one reader: the pack's word when it supplies a usable one, the
 // engine's own otherwise, with the slots filled from what the engine
@@ -34,6 +37,30 @@ function playerWord(key, slots) {
   });
 }
 // -- player words end --
+
+// ---- the strike hint: once, at the first fight ----
+// Walking into an enemy is the attack, and the line that gives it away
+// only gives it away as a result - "You hit a nest of moths for 2." -
+// which is a result, not a rule. The explorers found the rule by
+// accident ("I only moved, yet the moths fell"), so one plain sentence
+// is said at the first landed blow and never again: a hint that comes
+// back every fight stops being read. It is held to the end of that
+// turn rather than said on a line of its own, because the monsters
+// take their turn next and would wipe it, and because a phone draws
+// one line at a time - the fight's own line is the line a phone shows.
+// The flag is per world and lives in the player's storage beside the
+// other `vefr-` saves, so a reload does not bring it back and Start
+// over clears it with the rest.
+function strikeHintKey() {
+  return 'vefr-strike-hint-' + ((window.VEFR_WORLD && window.VEFR_WORLD.name) || 'world');
+}
+function hintStrikeOnce() {
+  var key = strikeHintKey();
+  if (store.get(key) === '1') return false;
+  store.set(key, '1');
+  sayHint(playerWord('combat.walk_to_strike'));
+  return true;
+}
 
 // ---- where next: the point-to hints, kept as player-facing
 // intentions ("Go toward Saltreach.") instead of thrown-away

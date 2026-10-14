@@ -145,6 +145,10 @@
       combatSay('You cannot strike ' + ((e && e.name) || 'it') + '.');
       return false;
     }
+    // The blow lands, so this is a fight: say once, here, that walking
+    // into an enemy is the attack (vefr #464). A warden that cannot be
+    // struck returns above, because there was no fight to teach.
+    hintStrikeOnce();
     var dmg = heroAtk();
     e.hp = Math.max(0, e.hp - dmg);
     playOneShot('hero', 'attack');

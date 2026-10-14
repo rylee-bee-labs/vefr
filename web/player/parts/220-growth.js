@@ -165,20 +165,30 @@ function levelSuffix(r) {
   return ' You are stronger. Level ' + r.level + ': ' + parts.join(', ') + '.';
 }
 
-// Growth sentences are held until the turn's blows are all said, then
-// added to the last line. A monster's counter-blow would otherwise wipe
-// the good news off the screen before the player could read it.
+// Growth sentences - and the one-time strike hint (vefr #464, part 340)
+// are held until the turn's blows are all said, then added to the last
+// line, the hint after the growth because it is about the fight the
+// player just walked into. A monster's counter-blow would otherwise
+// wipe the good news off the screen before the player could read it.
 var PENDING_GROWTH = null;
+var PENDING_HINT = null;
 function sayGrowth(text) {
   if (!text) return;
   PENDING_GROWTH = (PENDING_GROWTH ? PENDING_GROWTH + ' ' : '') + text.replace(/^ /, '');
 }
+function sayHint(text) {
+  if (!text) return;
+  PENDING_HINT = (PENDING_HINT ? PENDING_HINT + ' ' : '') + text.replace(/^ /, '');
+}
 function flushGrowth() {
-  if (!PENDING_GROWTH) return;
-  var text = PENDING_GROWTH; PENDING_GROWTH = null;
+  var held = [PENDING_GROWTH, PENDING_HINT].filter(function (t) {
+    return !!t;
+  }).join(' ');
+  PENDING_GROWTH = null; PENDING_HINT = null;
+  if (!held) return;
   var el = document.getElementById('combat-live');
   if (!el) return;
-  el.textContent = (el.textContent ? el.textContent + ' ' : '') + text;
+  el.textContent = (el.textContent ? el.textContent + ' ' : '') + held;
 }
 
 function renderEncounter() {
