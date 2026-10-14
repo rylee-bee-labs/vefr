@@ -14,7 +14,7 @@ Four claims, and what each is pinned by:
    and once in the player (which holds the wording), and
    `test_the_two_tables_agree` fails if they drift;
 2. the wording has one home - `test_the_wording_lives_in_one_place`
-   finds every one of the four lines exactly once across
+   finds every one of the table's lines exactly once across
    `web/player/parts/`, inside the table;
 3. a pack's own word wins and a bad one is refused -
    `test_a_pack_word_wins` and `test_a_bad_override_is_refused_*`;
@@ -49,15 +49,19 @@ HARNESS = Path(__file__).resolve().parent / "fixtures" / "player_words_harness.m
 TABLE_START = "// -- player words start --"
 TABLE_END = "// -- player words end --"
 
-# The engine's known-good wording, pinned here as literals: these are
-# the exact bytes a player read before the table existed (vefr #259's
-# "To reach floor-1, go north-west"), and a pack that names no word
-# must still read these.
+# The engine's known-good wording, pinned here as literals: the first
+# four are the exact bytes a player read before the table existed (vefr
+# #259's "To reach floor-1, go north-west"), and a pack that names no
+# word must still read these. The fifth is the strike hint (vefr #464),
+# said once at the first fight: it is the table's first line with no
+# `{place}` to fill, which is why its key is a `sentence` and not a
+# `place-label`.
 KNOWN_GOOD = {
     "where_next.goal": "To reach {place}.",
     "where_next.reach": "To reach {place}, go {direction}.",
     "where_next.here": "The way to {place} is right here.",
     "where_next.no_way": "No way to {place} is declared from here.",
+    "combat.walk_to_strike": "Walk into an enemy to strike it.",
 }
 
 
@@ -177,6 +181,22 @@ def test_an_override_naming_no_place_is_refused():
     assert 'must name the place as {place}' in line
 
 
+def test_a_hint_word_needs_no_place_because_it_names_nothing_to_point_at():
+    """The strike hint is a sentence, and a sentence has no slot to fill.
+
+    `combat.walk_to_strike` is the table's first row that is not about a
+    place ("Walk into an enemy to strike it."), so requiring `{place}` of
+    it would refuse the only word that answers it. It is still refused
+    when it says nothing, and when it is not a word at all.
+    """
+    assert _errors({'combat.walk_to_strike': 'Walk into a monster to hit it.'}) == []
+    (blank,) = _errors({'combat.walk_to_strike': '   '})
+    assert blank.startswith('world.json: /player_words/combat.walk_to_strike ')
+    assert 'must be words a player can read, not blanks' in blank
+    (wrong,) = _errors({'combat.walk_to_strike': 7})
+    assert wrong.startswith('world.json: /player_words/combat.walk_to_strike ')
+
+
 def test_an_unknown_key_is_refused():
     """A key the message table does not have could never be read."""
     (line,) = _errors({'where_next.sideways': 'To {place}.'})
@@ -269,15 +289,18 @@ def test_a_bad_word_is_refused_end_to_end(tmp_path):
         # A pack that names none: the exact lines a player read before
         # the table existed, place and direction filled in.
         ('silent', {}),
-        # A pack that names its own word for two of the four: those two
-        # change, the other two keep the engine's.
+        # A pack that names its own word for two of the four where-next
+        # lines and for the strike hint: those change, the rest keep the
+        # engine's.
         ('override', {
             'where_next.reach': 'To get to {place}, head {direction}.',
             'where_next.goal': 'The way on is {place}.',
+            'combat.walk_to_strike': 'Walk into a monster to hit it.',
         }),
         # Words that are not words: the engine's line stands in rather
         # than a blank one reaching a player who has to act.
-        ('unusable', {'where_next.goal': '   ', 'where_next.reach': 5}),
+        ('unusable', {'where_next.goal': '   ', 'where_next.reach': 5,
+                      'combat.walk_to_strike': '  '}),
     ],
 )
 def test_the_engine_lines_reach_a_player(case, words):

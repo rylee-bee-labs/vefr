@@ -165,20 +165,30 @@ function levelSuffix(r) {
   return ' You are stronger. Level ' + r.level + ': ' + parts.join(', ') + '.';
 }
 
-// Growth sentences are held until the turn's blows are all said, then
-// added to the last line. A monster's counter-blow would otherwise wipe
-// the good news off the screen before the player could read it.
+// Growth sentences - and the one-time strike hint (vefr #464, part 340)
+// are held until the turn's blows are all said, then added to the last
+// line, the hint after the growth because it is about the fight the
+// player just walked into. A monster's counter-blow would otherwise
+// wipe the good news off the screen before the player could read it.
 var PENDING_GROWTH = null;
+var PENDING_HINT = null;
 function sayGrowth(text) {
   if (!text) return;
   PENDING_GROWTH = (PENDING_GROWTH ? PENDING_GROWTH + ' ' : '') + text.replace(/^ /, '');
 }
+function sayHint(text) {
+  if (!text) return;
+  PENDING_HINT = (PENDING_HINT ? PENDING_HINT + ' ' : '') + text.replace(/^ /, '');
+}
 function flushGrowth() {
-  if (!PENDING_GROWTH) return;
-  var text = PENDING_GROWTH; PENDING_GROWTH = null;
+  var held = [PENDING_GROWTH, PENDING_HINT].filter(function (t) {
+    return !!t;
+  }).join(' ');
+  PENDING_GROWTH = null; PENDING_HINT = null;
+  if (!held) return;
   var el = document.getElementById('combat-live');
   if (!el) return;
-  el.textContent = (el.textContent ? el.textContent + ' ' : '') + text;
+  el.textContent = (el.textContent ? el.textContent + ' ' : '') + held;
 }
 
 function renderEncounter() {
@@ -217,6 +227,19 @@ function surfaceVerbs() {
   }
   return [['attack', 'Strike'], ['console', 'Console'],
           ['hurl', 'Hurl an insult']];
+}
+
+// The nth button of the combat row, 1 being the first verb, or null.
+// The number keys answer through this, so the key that presses a verb
+// and the digit printed on that verb are one list and cannot drift
+// (#463). Only a surface that shows the row answers: on `plain` and
+// `investigation` the row is hidden and the keys do nothing.
+function combatVerbButton(n) {
+  if (document.body.getAttribute('data-surface') !== 'combat') return null;
+  var row = document.getElementById('verb-row');
+  if (!row) return null;
+  var buttons = row.querySelectorAll('button[data-verb]');
+  return buttons[n - 1] || null;
 }
 
 // The enemy a #verb-row press is aimed at, or null. The row is always

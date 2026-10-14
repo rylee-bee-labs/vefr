@@ -33,6 +33,13 @@
     --display: 'Cinzel', Georgia, 'Times New Roman', serif;
     --read: 'Atkinson Hyperlegible Next', system-ui, -apple-system, 'Segoe UI', sans-serif;
     color-scheme: dark;
+    /* Display > Larger text. One fifth more on the body and on every label
+       that follows it: the player's switch writes this property on the root
+       element, and because every size below is in rem, they all move
+       together. 1 is the default, so a player who never touches the switch
+       sees exactly the sheet as it is written here. */
+    --text-scale: 1;
+    font-size: calc(16px * var(--text-scale, 1));
   }
   @media (prefers-color-scheme: light) {
     :root {
@@ -44,7 +51,7 @@
   }
   * { box-sizing: border-box; }
   html, body { height: 100%; }
-  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.55 var(--read); }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: calc(16px * var(--text-scale, 1))/1.55 var(--read); }
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
   button { font: inherit; }
   [hidden] { display: none !important; }
@@ -54,12 +61,12 @@
   .cta, button.primary, .verb-row button, #kitchen button, #desk button, .dpad button, .gbtn {
     min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
     padding: 8px 18px; border-radius: 4px; cursor: pointer;
-    font: 700 0.8rem/1.25 var(--display); letter-spacing: 0.1em; text-transform: uppercase;
+    font: 700 0.82rem/1.25 var(--display); letter-spacing: 0.1em; text-transform: uppercase;
     border: 1px solid var(--card-edge); background: transparent; color: var(--ink);
   }
   .cta--gold, button.primary { background: var(--accent); color: var(--accent-on); border-color: transparent; }
   button:disabled { opacity: 0.55; cursor: default; }
-  kbd { font: 600 0.72rem ui-monospace, Menlo, monospace; border: 1px solid currentColor; border-radius: 3px; padding: 0 4px; opacity: 0.85; }
+  kbd { font: 600 0.82rem ui-monospace, Menlo, monospace; border: 1px solid currentColor; border-radius: 3px; padding: 0 4px; opacity: 0.85; }
 
   /* carved panel */
   .carved, .card, #config {
@@ -73,7 +80,7 @@
   }
   .carved::before, #config::before { left: 10px; }
   .carved::after, #config::after { right: 10px; }
-  .label { font: 600 0.7rem/1.3 ui-monospace, Menlo, monospace; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
+  .label { font: 600 0.82rem/1.3 ui-monospace, Menlo, monospace; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
   .card { margin-top: 12px; padding: 14px 16px; box-shadow: none; }
   .card .speaker { font: 700 0.8rem var(--display); letter-spacing: 0.06em; color: var(--ink); }
   .card .whisper { margin: 4px 0 0; font-style: italic; }
@@ -90,7 +97,7 @@
   #title-screen h1 { margin: 0; font: 800 clamp(2.4rem, 7vw, 4.6rem)/1 var(--display); letter-spacing: 0.06em; color: #FFF8E8; text-shadow: 0 2px 14px rgba(0, 0, 0, 0.55); }
   #title-screen .title-tagline { margin: 0 0 8px; font-size: 1.1rem; font-style: italic; color: #EDE4CF; }
   #title-screen button { min-height: 48px; padding: 10px 28px; background: var(--accent); color: var(--accent-on); border: 0; }
-  .ts-byline { position: absolute; z-index: 1; left: 8%; bottom: 16px; margin: 0; font-size: 0.75rem; letter-spacing: 0.06em; color: #CFC5AE; }
+  .ts-byline { position: absolute; z-index: 1; left: 8%; bottom: 16px; margin: 0; font-size: 0.82rem; letter-spacing: 0.06em; color: #CFC5AE; }
 
   /* ---- before you play ---- */
   header.game-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap;
@@ -158,7 +165,7 @@
   .bag-pip { width: 22px; height: 22px; object-fit: contain; image-rendering: pixelated; }
   .bag-pip--dot { display: inline-block; border-radius: 50%; background: #CBC6B6; }
   .bag-cell { position: relative; display: inline-flex; }
-  .bag-pip-count { position: absolute; right: -6px; bottom: -6px; min-width: 16px; padding: 0 3px; border: 1px solid var(--glass-edge); border-radius: 8px; background: var(--glass); color: var(--glass-ink); font: 700 0.7rem/14px var(--read); text-align: center; pointer-events: none; }
+  .bag-pip-count { position: absolute; right: -6px; bottom: -6px; min-width: 16px; padding: 0 3px; border: 1px solid var(--glass-edge); border-radius: 8px; background: var(--glass); color: var(--glass-ink); font: 700 0.82rem/16px var(--read); text-align: center; pointer-events: none; }
   .bag-pip--more { width: auto; min-width: 22px; padding: 0 4px; font: 700 0.8rem/22px var(--read); color: var(--glass-ink); text-align: center; }
   .bag-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
   .bag-row-art { width: 32px; height: 32px; object-fit: contain; image-rendering: pixelated; }
@@ -194,7 +201,7 @@
     display: inline-flex; align-items: center; justify-content: center; }
   .gbtn--tool svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8;
     stroke-linecap: round; stroke-linejoin: round; }
-  .gbtn--tool kbd { position: absolute; right: 3px; bottom: 1px; font-size: 0.55rem; line-height: 1; opacity: 0.85; border: 0; background: none; padding: 0; }
+  .gbtn--tool kbd { position: absolute; right: 3px; bottom: 1px; font-size: 0.82rem; line-height: 1; opacity: 0.85; border: 0; background: none; padding: 0; }
   .gbtn--tool[aria-pressed="true"] { border-color: #D8AA4E; box-shadow: inset 0 0 0 2px #D8AA4E; }
   /* #interact is the one control that keeps its words on its face, so it is never
      given a shape too small for them (issue #353: at the phone dock's 44 px square
@@ -211,13 +218,18 @@
   .sound-row { display: flex; align-items: center; min-height: 44px; margin: 10px 0 0; padding: 4px 0; }
   .sound-row label { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 6px; cursor: pointer; }
   .sound-row input { width: 18px; height: 18px; accent-color: var(--accent); }
+  /* Display > Sound > Volume: the same full-width slider row the control size
+     uses, on a 44px target, with the setting's own words beside it. The id
+     selector beats the 18px checkbox rule above, which is for the switch. */
+  .sound-row #sound-volume { flex: 1 1 auto; width: 100%; min-width: 0; min-height: 44px; height: 44px; padding: 0; }
+  #sound-volume-out { min-width: 4ch; text-align: right; color: var(--ink-dim); }
   /* Visually hidden, still read aloud: the quiet way to keep a line for a screen reader. */
   .sr-only, .quiet, .toasts.is-collapsed p { position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0 !important; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0 !important; }
   /* The messages live in a small corner panel (top left, under the health bar), never over the map. */
   .toasts { position: absolute; left: calc(12px + var(--sai-left)); top: calc(64px + var(--sai-top)); z-index: 2; display: grid; gap: 6px; justify-items: start; width: min(210px, 36%); pointer-events: none; }
   .toasts p { margin: 0; padding: 5px 10px; text-align: left; font-size: 0.82rem; }
   .toasts p:empty { display: none; }
-  .toasts-toggle { pointer-events: auto; font: 700 0.7rem var(--display); letter-spacing: 0.08em; text-transform: uppercase; padding: 3px 9px; min-height: 44px; background: var(--glass); color: var(--glass-ink); border: 1px solid var(--glass-edge); border-radius: 4px; cursor: pointer; }
+  .toasts-toggle { pointer-events: auto; font: 700 0.82rem var(--display); letter-spacing: 0.08em; text-transform: uppercase; padding: 3px 9px; min-height: 44px; background: var(--glass); color: var(--glass-ink); border: 1px solid var(--glass-edge); border-radius: 4px; cursor: pointer; }
   .toasts:not(:has(p:not(:empty))) .toasts-toggle { display: none; }
   .encounter-prompt { font-style: italic; }
   body[data-surface="plain"] .encounter-prompt,
@@ -272,6 +284,9 @@
   .verb-row[hidden] { display: none; }
   .verb-row button { background: var(--glass); color: var(--glass-ink); border-color: rgba(242, 236, 221, 0.4); text-transform: none; letter-spacing: 0.02em; font: 700 0.9rem var(--read); }
   .verb-row button::before { content: '\25B6'; color: #D8AA4E; font-size: 0.7rem; }
+  /* The digit that presses the verb, printed on the verb (#463), in the
+     same idiom as the action row's keys. */
+  .verb-row button kbd { margin-left: 2px; font-size: 0.62rem; opacity: 0.8; }
   body[data-surface="plain"] .verb-row,
   body[data-surface="investigation"] .verb-row { display: none; }
   #combat-log { position: absolute; left: calc(16px + var(--sai-left)); bottom: calc(70px + var(--sai-bottom)); z-index: 2; margin: 0; max-width: calc(45% - var(--sai-left)); font-size: 0.85rem; }
@@ -286,7 +301,7 @@
     .acts { flex-direction: column; align-items: center; right: calc(12px + var(--sai-right)); bottom: calc(16px + var(--sai-bottom)); }
     .acts .gbtn--main { width: 72px; height: 72px; border-radius: 50%; padding: 0; font-size: 0.66rem; }
     .acts .gbtn--tool { width: 48px; height: 48px; border-radius: 50%; }
-    .acts kbd { display: none; }
+    .acts kbd, .verb-row kbd { display: none; }
     .npc-box { left: calc(10px + var(--sai-left)); right: calc(10px + var(--sai-right)); bottom: calc(12px + var(--sai-bottom)); }
     .toasts { top: calc(108px + var(--sai-top)); bottom: auto; width: min(210px, 60%); }   /* below the health/level/gold row, which can wrap to two lines */
     .hud-hp-bar { width: 56px; }
@@ -308,7 +323,7 @@
     .acts { flex-direction: row; align-items: flex-end; right: calc(6px + var(--sai-right)); bottom: calc(6px + var(--sai-bottom)); gap: 2px; }
     .acts .gbtn--main { width: auto; min-width: 44px; max-width: calc(100vw - 176px); height: 52px; border-radius: 999px; padding: 0 10px; font-size: 0.6rem; }
     .acts .gbtn--tool { width: 44px; height: 44px; border-radius: 50%; }
-    .acts kbd { display: none; }
+    .acts kbd, .verb-row kbd { display: none; }
   }
   /* The narrowest frames cannot hold the action row beside the d-pad: shave the
      gaps and the Interact circle to the 44px floor so the two sit side by side. */
@@ -350,8 +365,11 @@
   }
   #stage.stage--dock .dpad button { width: 44px; height: 44px; }
   /* The dock's Interact is a pill the label fits inside, not a 44 px circle that
-     cuts it off (issue #353). Same 44 px target, same height, same gold. */
-  #stage.stage--dock .gbtn--main:not(.touch-smart) { width: auto; min-width: 44px; max-width: calc(100vw - 176px); height: 44px; border-radius: 999px; padding: 0 10px; font-size: 0.6rem; }
+     cuts it off (issue #353). Same 44 px target floor, same gold. The label is
+     13px and up, and it wraps: on the narrowest phone four lines of it need
+     more room than one line ever did, so the pill keeps the floor and grows
+     with its own words instead of clipping them. */
+  #stage.stage--dock .gbtn--main:not(.touch-smart) { width: auto; min-width: 44px; max-width: calc(100vw - 176px); min-height: 44px; border-radius: 999px; padding: 2px 10px; font-size: 0.82rem; }
   #stage.stage--dock .gbtn--tool { width: 44px; height: 44px; border-radius: 50%; }
   #stage.stage--dock .acts kbd { display: none; }
   .touch-zone, .touch-hint, .touch-base, .touch-knob, .touch-cluster, .touch-quick, .touch-b, .touch-tool, .touch-settings { display: none; }
@@ -362,7 +380,7 @@
   .touch-smart { grid-area: smart; width: max(48px, calc(72px * var(--touch-scale))); height: max(48px, calc(72px * var(--touch-scale)));
     display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 0.7rem; line-height: 1.15; }
   .touch-smart .verb { font-weight: 700; }
-  .touch-smart .cap { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.62rem; }
+  .touch-smart .cap { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.82rem; }
   .touch-bag { grid-area: bag; width: max(48px, calc(56px * var(--touch-scale))); height: max(48px, calc(56px * var(--touch-scale))); }
   .touch-b { grid-area: b; width: max(48px, calc(56px * var(--touch-scale))); height: max(48px, calc(56px * var(--touch-scale))); }
   /* Whisper and Explore (issue #431): the two tools a phone had no way to reach. They take the
@@ -370,7 +388,7 @@
      these two hide then, so the two never stand together. A word under the icon, no key letter. */
   .touch-tool { width: max(48px, calc(56px * var(--touch-scale))); height: max(48px, calc(56px * var(--touch-scale)));
     border-radius: 16px; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-    font-size: 0.62rem; line-height: 1; text-transform: none; letter-spacing: 0.02em; }
+    font-size: 0.82rem; line-height: 1; text-transform: none; letter-spacing: 0.02em; }
   .touch-tool svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
   .touch-tool[aria-pressed="true"] { border-color: #D8AA4E; box-shadow: inset 0 0 0 2px #D8AA4E; }
   .touch-whisper { grid-area: whisper; }
@@ -494,8 +512,8 @@
     body.in-game .touch-smart .verb { font-size: 0.6rem; letter-spacing: 0.02em; }
     /* Speech and panels read small and quiet, so the world keeps the screen. */
     body.in-game .npc-box { padding: 18px 14px 10px; }
-    body.in-game .npc-box .speaker { font-size: 0.68rem; padding: 3px 10px; top: -12px; }
-    body.in-game .npc-line { font-size: 0.92rem; line-height: 1.4; margin-bottom: 8px; }
+    body.in-game .npc-box .speaker { font-size: 0.82rem; padding: 3px 10px; top: -12px; }
+    body.in-game .npc-line { font-size: 1rem; line-height: 1.4; margin-bottom: 8px; }
     body.in-game .npc-note { font-size: 0.78rem; }
     #menu { padding-top: calc(12px + var(--sai-top)); padding-bottom: calc(12px + var(--sai-bottom)); gap: 10px; }
     #menu .pm { margin: 4px 0 8px; gap: 0 6px; grid-template-columns: 1fr 1fr; }
@@ -512,6 +530,10 @@
   body.in-game.follow-camera .toasts p:not(.is-newest) { position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0 !important;
     overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0 !important; }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+  /* Display > Reduced motion: the same blanket, from the player's own switch,
+     for a device whose system says nothing. The drawn motion reads the same
+     choice through reducedMotion() in 480-town-input-and-turns.js. */
+  body.reduced-motion * { animation: none !important; transition: none !important; }
 </style>
 </head>
 <body>
@@ -586,13 +608,13 @@
           <button type="button" id="touch-smart" class="gbtn gbtn--main touch-btn touch-smart" aria-label="Interact"><span class="verb">Interact</span><span class="cap"></span></button>
           <button type="button" id="touch-bag" class="gbtn touch-btn touch-bag" aria-label="Bag"><span>Bag</span></button>
           <button type="button" id="touch-b" class="gbtn touch-btn touch-b" aria-label="Close panel (B)"><span>B</span></button>
-          <button type="button" id="touch-whisper" class="gbtn touch-btn touch-tool touch-whisper"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 9v6M9 6v12M13 9v6M17 7v10"/></svg><span>Whisper</span></button>
+          <button type="button" id="touch-whisper" class="gbtn touch-btn touch-tool touch-whisper" aria-label="Listen (Q)"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 9v6M9 6v12M13 9v6M17 7v10"/></svg><span>Listen</span></button>
           <button type="button" id="touch-explore" class="gbtn touch-btn touch-tool touch-explore" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg><span>Explore</span></button>
         </div>
         <div class="acts">
           <button type="button" id="interact" class="gbtn gbtn--main"><span id="interact-label">Interact</span> <kbd>F</kbd></button>
-          <button type="button" id="talk" class="gbtn gbtn--tool" data-tip="Talk" title="Talk (E)"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 5h16v11H9l-5 4z"/></svg><span class="sr-only">Talk</span><kbd>E</kbd></button>
-          <button type="button" id="whisper" class="gbtn gbtn--tool" data-tip="Whisper" title="Whisper (Q)"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 9v6M9 6v12M13 9v6M17 7v10"/></svg><span class="sr-only">Whisper</span><kbd>Q</kbd></button>
+          <button type="button" id="talk" class="gbtn gbtn--tool" data-tip="Talk" title="Talk (F)"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 5h16v11H9l-5 4z"/></svg><span class="sr-only">Talk</span><kbd>F</kbd></button>
+          <button type="button" id="whisper" class="gbtn gbtn--tool" data-tip="Listen" title="Listen (Q)"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 9v6M9 6v12M13 9v6M17 7v10"/></svg><span class="sr-only">Listen</span><kbd>Q</kbd></button>
           <button type="button" id="bagbtn" class="gbtn gbtn--tool" data-tip="Bag" title="Bag (B)"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 9V7a4 4 0 0 1 8 0v2"/><rect x="4" y="9" width="16" height="12" rx="2"/></svg><span class="sr-only">Bag</span><kbd>B</kbd></button>
           <button type="button" id="explore" class="gbtn gbtn--tool" aria-pressed="false" data-tip="Explore" title="Explore (O)"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg><span class="sr-only">Explore</span><kbd>O</kbd></button>
         </div>
@@ -777,8 +799,8 @@
       <h2>How to play</h2>
       <ul>
         <li>Move with the arrow keys or <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd>, or, on a touch screen, drag the joystick (or use the D-pad you chose in Display).</li>
-        <li>Use what is near you with <kbd>E</kbd>, <kbd>Space</kbd>, <kbd>Enter</kbd>, <kbd>F</kbd> or the big Interact button. It always says what it will do. The same keys turn the pages of a note and close someone's speech, and <kbd>E</kbd> or <kbd>F</kbd> close a shop.</li>
-        <li>Hear a rumor with <kbd>Q</kbd> or the Whisper button.</li>
+        <li>Use what is near you with <kbd>F</kbd>, <kbd>Space</kbd> or <kbd>Enter</kbd>, or the big Interact button. It always says what it will do. The same keys turn the pages of a note and close someone's speech, and <kbd>F</kbd> is how you close a shop.</li>
+        <li>Hear a rumor with <kbd>Q</kbd> or the Listen button.</li>
         <li>Open your bag with <kbd>B</kbd> or the Bag button.</li>
         <li>Walk the unexplored dark with <kbd>O</kbd> or the Explore button.</li>
         <li>Turn the dark off with <kbd>V</kbd>, or in Display. Dusk and Dawn are in Display too, under Time of day.</li>
@@ -800,6 +822,14 @@
       <p>The dark shows only the ground you have walked and lit. Turn it off to see the whole map.</p>
       <button type="button" id="fog-toggle" class="cta" aria-pressed="true">Darkness: on</button>
       <p class="status" id="fog-live" role="status" aria-live="polite"></p>
+      <!-- Two switches every player has, touch screen or not, so they sit outside
+           .touch-settings (which only a touch screen shows). .touch-set is the
+           panel's own control row: 48px targets, the same ones as the rest. -->
+      <fieldset class="touch-set" id="access-settings">
+        <legend>Reading and motion</legend>
+        <label><input type="checkbox" id="text-large"> Larger text</label>
+        <label><input type="checkbox" id="reduced-motion"> Reduced motion</label>
+      </fieldset>
       <div class="touch-settings" id="touch-settings">
         <h2 class="menu-sub">Controls</h2>
         <fieldset class="touch-set">
@@ -1010,6 +1040,60 @@ function loadConfig() {
 function saveConfig(c) {
   store.setJSON(CONFIG_KEY, c);   // blocked storage: keep going in memory
 }
+// ---- player settings: larger text and reduced motion ----
+// Two switches in the Display panel, stored and applied the way the panel's
+// other settings are: a key in the store, read at the moment it matters, and
+// put back on the page at once. The keys carry the world's name, so one game
+// never borrows another's answer (the pattern the sound and the look use).
+//
+// Larger text is a fifth more on the body and on every label that follows it:
+// --text-scale goes on the root element and every size in the sheet is in rem,
+// so they all move together (020-style.css). Reduced motion lays down the same
+// blanket the OS's own media query does, and the drawn motion asks the same
+// question through reducedMotion(), which is why a player whose phone says
+// nothing can still turn the hopping and the fading off.
+var TEXT_LARGE_SCALE = 1.2;
+
+// Computed per call and never cached, like the rules keys: a world that
+// arrives late must still find its own key, and a reader must see one place
+// where the name is spelled.
+function textLargeKey() {
+  return 'vefr-textsize-' + ((window.VEFR_WORLD && window.VEFR_WORLD.name) || 'world');
+}
+function reducedMotionKey() {
+  return 'vefr-reducedmotion-' + ((window.VEFR_WORLD && window.VEFR_WORLD.name) || 'world');
+}
+function textLarge() {
+  return store.get(textLargeKey()) === '1';
+}
+function reducedMotionOn() {
+  return store.get(reducedMotionKey()) === '1';
+}
+
+function applyPlayerSettings() {
+  document.documentElement.style.setProperty('--text-scale',
+                                           textLarge() ? String(TEXT_LARGE_SCALE) : '1');
+  document.body.classList.toggle('reduced-motion', reducedMotionOn());
+}
+
+function wirePlayerSettings() {
+  var large = document.getElementById('text-large');
+  var motion = document.getElementById('reduced-motion');
+  if (!large || !motion) return;
+  large.checked = textLarge();
+  large.addEventListener('change', function () {
+    store.set(textLargeKey(), large.checked ? '1' : '0');
+    applyPlayerSettings();
+  });
+  motion.checked = reducedMotionOn();
+  motion.addEventListener('change', function () {
+    store.set(reducedMotionKey(), motion.checked ? '1' : '0');
+    applyPlayerSettings();
+  });
+}
+
+applyPlayerSettings();
+wirePlayerSettings();
 // ---- endpoint join + post ----
 // The config URL is player-entered: it may or may not end in /v1 (the
 // placeholder shows one), may carry trailing slashes. Join once, here,
@@ -1118,7 +1202,7 @@ function bootstrap() {
   if (!tutorialDone()) {
     statusEl0.textContent = touch
       ? 'Move on the left. Near someone, tap the round button.'
-      : 'Move with the arrow keys or WASD. Press E to talk.';
+      : 'Move with the arrow keys or WASD. Press F to talk.';
     statusEl0.setAttribute('data-tutorial', '1');
   }
 }
@@ -1140,14 +1224,18 @@ function quietTutorial() {
 }
 
 // ---- speech box: whoever is talking, in a box over the game ----
-function showSpeech(speaker, line, note) {
+// `shownAs` is the name the box prints, for a line nobody is saying TO you:
+// the rumor from the Listen button is overheard, so it reads "You overhear
+// <speaker>" while the portrait hook still gets the speaker itself and finds
+// the picture by the speaker's own name. Omitted, the box prints the speaker.
+function showSpeech(speaker, line, note, shownAs) {
   // A skin's portrait hangs off this hook (540-the-skin.js draws it). The
   // hook is read here, when the box is shown, and never when the skin loads,
   // so it does not matter which of the two parts the page loads first: a
   // speech box declared after the skin still gets its portrait. A player
   // with no skin has no hook, and this is one read and nothing more.
   if (typeof window.VEFR_SPEECH_BOX === 'function') window.VEFR_SPEECH_BOX(speaker);
-  document.getElementById('npc-name').textContent = speaker || '';
+  document.getElementById('npc-name').textContent = shownAs || speaker || '';
   document.getElementById('npc-line').textContent = line || '';
   var n = document.getElementById('npc-note');
   n.textContent = note || ''; n.hidden = !note;
@@ -1515,11 +1603,24 @@ function bindLibrary() {
 // sandboxed iframe's browser storage throws).
 var SOUND_KEY = 'vefr-sound-'
   + ((window.VEFR_WORLD && window.VEFR_WORLD.name) || 'world');
+// The volume slider sits beside the switch in the same block and is stored
+// the same way, one key further on. 0-100, 100 (full) unless the player says
+// otherwise; read at every cue, so a slider moved mid-play is heard at once.
+var SOUND_VOLUME_KEY = SOUND_KEY + '-volume';
+function soundVolume() {
+  var n = parseInt(store.get(SOUND_VOLUME_KEY), 10);
+  if (!(n >= 0 && n <= 100)) n = 100;
+  return n / 100;
+}
 if (window.VEFR_SOUND_DEF && window.VEFR_SOUND_DEF.theme) {
   var soundOn = true;
   soundOn = store.get(SOUND_KEY) !== 'off';
   window.VEFR_SOUND = { theme: window.VEFR_SOUND_DEF.theme,
                         on: soundOn, played: [] };
+  // The player's own volume, as a number 0..1, beside the snapshot above
+  // rather than inside it: VEFR_SOUND's three keys are a contract other code
+  // reads whole, and a fourth would change what they see.
+  window.VEFR_SOUND_VOLUME = soundVolume();
 }
 
 // One table for the nine cues the engine names. Each note is
@@ -1558,13 +1659,17 @@ function soundContext() {
 }
 
 // One cue, sounded: a start frequency ramping to an end frequency on
-// the oscillator, and a peak gain of at most 0.08 falling
-// exponentially toward silence - never a linear ramp, never a bare
-// stop. A suspended context resumes on a wrapped promise; if any of
-// it throws, the cue stays the record it already made.
+// the oscillator, and a peak gain of at most 0.08 (times the player's
+// own volume) falling exponentially toward silence - never a linear
+// ramp, never a bare stop. A suspended context resumes on a wrapped
+// promise; if any of it throws, the cue stays the record it already
+// made. A slider at zero is silence without being a fault: the cue is
+// still recorded, because the sound is on and only quiet.
 function soundPlay(cue) {
   var ctx = soundContext();
   if (!ctx) return;
+  var vol = soundVolume();
+  if (vol <= 0) return;
   try {
     if (ctx.state === 'suspended' && ctx.resume) {
       var resuming = ctx.resume();
@@ -1579,7 +1684,7 @@ function soundPlay(cue) {
       osc.frequency.setValueAtTime(n[0], t0);
       osc.frequency.exponentialRampToValueAtTime(n[1], t0 + dur);
       gain.gain.setValueAtTime(0.0001, t0);
-      gain.gain.exponentialRampToValueAtTime(SOUND_PEAK, t0 + 0.012);
+      gain.gain.exponentialRampToValueAtTime(SOUND_PEAK * vol, t0 + 0.012);
       gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
       osc.connect(gain);
       gain.connect(ctx.destination);
@@ -1608,9 +1713,11 @@ function soundCue(name) {
 }
 
 // Display > Sound: built at boot, ONLY when the pack opted in, so a
-// pack without sound has no switch to find (the id stays null). A real
+// pack without sound has no switch to find (the ids stay null). A real
 // checkbox on a 44px row: keyboard-reachable, the global focus ring
-// left alone, and no colour the menu does not already use.
+// left alone, and no colour the menu does not already use. Beside it,
+// one slider for how loud the cues are - the switch says whether, the
+// slider says how much, and there is only ever this one of each.
 if (window.VEFR_SOUND) {
   (function () {
     var panel = document.querySelector('[data-panel-body="display"]');
@@ -1629,6 +1736,32 @@ if (window.VEFR_SOUND) {
     label.appendChild(box);
     label.appendChild(document.createTextNode(' Sound'));
     row.appendChild(label);
+
+    var volRow = document.createElement('p');
+    volRow.className = 'sound-row';
+    var volLabel = document.createElement('label');
+    volLabel.htmlFor = 'sound-volume';
+    volLabel.appendChild(document.createTextNode(' Volume'));
+    var vol = document.createElement('input');
+    vol.type = 'range';
+    vol.id = 'sound-volume';
+    vol.min = '0';
+    vol.max = '100';
+    vol.step = '5';
+    vol.value = String(Math.round(soundVolume() * 100));
+    var volOut = document.createElement('output');
+    volOut.id = 'sound-volume-out';
+    volOut.setAttribute('for', 'sound-volume');
+    volOut.textContent = vol.value + '%';
+    vol.addEventListener('input', function () {
+      store.set(SOUND_VOLUME_KEY, vol.value);
+      volOut.textContent = vol.value + '%';
+      window.VEFR_SOUND_VOLUME = soundVolume();
+    });
+    volRow.appendChild(volLabel);
+    volRow.appendChild(vol);
+    volRow.appendChild(volOut);
+
     // After the fog status line, before "Time of day".
     // The panel's own first sub-heading (a direct child): the touch settings carry a nested one, and
     // insertBefore with a grandchild as the reference throws.
@@ -1637,6 +1770,7 @@ if (window.VEFR_SOUND) {
       if (panel.children[i].matches('h2.menu-sub')) { subhead = panel.children[i]; break; }
     }
     panel.insertBefore(row, subhead);
+    panel.insertBefore(volRow, subhead);
   })();
 }
 
@@ -3072,20 +3206,30 @@ function levelSuffix(r) {
   return ' You are stronger. Level ' + r.level + ': ' + parts.join(', ') + '.';
 }
 
-// Growth sentences are held until the turn's blows are all said, then
-// added to the last line. A monster's counter-blow would otherwise wipe
-// the good news off the screen before the player could read it.
+// Growth sentences - and the one-time strike hint (vefr #464, part 340)
+// are held until the turn's blows are all said, then added to the last
+// line, the hint after the growth because it is about the fight the
+// player just walked into. A monster's counter-blow would otherwise
+// wipe the good news off the screen before the player could read it.
 var PENDING_GROWTH = null;
+var PENDING_HINT = null;
 function sayGrowth(text) {
   if (!text) return;
   PENDING_GROWTH = (PENDING_GROWTH ? PENDING_GROWTH + ' ' : '') + text.replace(/^ /, '');
 }
+function sayHint(text) {
+  if (!text) return;
+  PENDING_HINT = (PENDING_HINT ? PENDING_HINT + ' ' : '') + text.replace(/^ /, '');
+}
 function flushGrowth() {
-  if (!PENDING_GROWTH) return;
-  var text = PENDING_GROWTH; PENDING_GROWTH = null;
+  var held = [PENDING_GROWTH, PENDING_HINT].filter(function (t) {
+    return !!t;
+  }).join(' ');
+  PENDING_GROWTH = null; PENDING_HINT = null;
+  if (!held) return;
   var el = document.getElementById('combat-live');
   if (!el) return;
-  el.textContent = (el.textContent ? el.textContent + ' ' : '') + text;
+  el.textContent = (el.textContent ? el.textContent + ' ' : '') + held;
 }
 
 function renderEncounter() {
@@ -3124,6 +3268,19 @@ function surfaceVerbs() {
   }
   return [['attack', 'Strike'], ['console', 'Console'],
           ['hurl', 'Hurl an insult']];
+}
+
+// The nth button of the combat row, 1 being the first verb, or null.
+// The number keys answer through this, so the key that presses a verb
+// and the digit printed on that verb are one list and cannot drift
+// (#463). Only a surface that shows the row answers: on `plain` and
+// `investigation` the row is hidden and the keys do nothing.
+function combatVerbButton(n) {
+  if (document.body.getAttribute('data-surface') !== 'combat') return null;
+  var row = document.getElementById('verb-row');
+  if (!row) return null;
+  var buttons = row.querySelectorAll('button[data-verb]');
+  return buttons[n - 1] || null;
 }
 
 // The enemy a #verb-row press is aimed at, or null. The row is always
@@ -3351,10 +3508,15 @@ globalThis.startoverKeys = function (storage) {
 // Verbs record to the packaged player's own journal - the same
 // no-failure contract as the server route they mirror
 // (/api/combat/action): the action only lives in the log.
+//
+// `result` is the sentence the verb spoke, which the result line shows
+// instead of naming the action (#463). It is optional so an entry
+// written before the sentence existed still reads.
 const COMBAT_KEY = 'vefr-packaged-combat';
-function recordVerb(verb) {
+function recordVerb(verb, result) {
   var log = store.getJSON(COMBAT_KEY, []);
-  log.push({ verb: verb, phase: STATE.get().phase, at: new Date().toISOString() });
+  log.push({ verb: verb, phase: STATE.get().phase, result: result || '',
+             at: new Date().toISOString() });
   store.setJSON(COMBAT_KEY, log);
   renderCombatLog(log);
 }
@@ -3372,12 +3534,21 @@ function journalVisit(poi, x, y) {
   store.setJSON(MOVES_KEY, log);
 }
 
+// The result line: what the last action DID, in words (#463). It used
+// to name the action ("last action: console (dusk)"), which told a
+// reader nothing about what Console or an insult actually did - so the
+// sentence the verb spoke is the line. An entry with no sentence of its
+// own (written before this line existed) falls back to the old
+// wording rather than going blank; the phase stays on the title for
+// anyone who wants it.
 function renderCombatLog(log) {
   var el = document.getElementById('combat-log');
   if (!el) return;
   if (!log || !log.length) { el.textContent = ''; return; }
   var last = log[log.length - 1];
-  el.textContent = 'last action: ' + last.verb + ' (' + last.phase + ')';
+  el.textContent = last.result
+    || 'last action: ' + last.verb + (last.phase ? ' (' + last.phase + ')' : '');
+  if (last.phase) el.title = last.phase;
 }
 
 // The combat line: one plain sentence for the eye and the screen
@@ -3386,6 +3557,13 @@ function renderCombatLog(log) {
 function combatSay(msg) {
   var el = document.getElementById('combat-live');
   if (el) el.textContent = msg || '';
+}
+
+// The live line as it stands, so a caller can see what an action added
+// to it before the monsters' turn writes over it.
+function combatText() {
+  var el = document.getElementById('combat-live');
+  return el ? (el.textContent || '') : '';
 }
 
 // ---- phase rail ----
@@ -3415,6 +3593,14 @@ function buildPhaseRail() {
 }
 
 // ---- whisper ----
+// The name the player pressed is Listen (issue #470): it hears a rumor from
+// anywhere in town, it does not whisper to whoever happens to be standing
+// there. The box says which of the two it is, so the speech reads
+// "You overhear <the speaker>" and not a reply from whoever is nearby.
+function overheardName(speaker) {
+  return 'You overhear ' + (speaker || 'someone in town');
+}
+
 function bindWhisper() {
   var btn = document.getElementById('whisper');
   var status = document.getElementById('status');
@@ -3468,7 +3654,8 @@ function bindWhisper() {
         + (card.is_true ? '' : '<p class="status">A lie, or close enough.</p>');
       feed.insertBefore(div, feed.firstChild);
       status.textContent = '';
-      showSpeech(card.speaker, '\u201C' + card.whisper + '\u201D', card.is_true ? '' : 'A lie, or close enough.');
+      showSpeech(card.speaker, '\u201C' + card.whisper + '\u201D', card.is_true ? '' : 'A lie, or close enough.',
+        overheardName(card.speaker));
     } catch (err) {
       // No live endpoint (or it failed): draw from the woven pool -
       // real model output, pre-generated at weave time. Pool spent?
@@ -3498,7 +3685,8 @@ function bindWhisper() {
             : respliced ? "Mixed from the game's saved lines."
             : fromFragments ? "From the characters' own lines."
             : fromGrammar ? "From the world's own words." : '')
-          + (card.is_true ? '' : ' A lie, or close enough.'));
+          + (card.is_true ? '' : ' A lie, or close enough.'),
+          overheardName(card.speaker));
       } else {
         status.textContent = 'Nothing came back (' + (err.message || 'failed') + ').';
       }
@@ -4063,12 +4251,15 @@ function rulesStartsNow() {
 // The keys are typed once on the Python side (shapes.PLAYER_WORDS in
 // src/vefr/shapes.py, which vefr check speaks refusals from);
 // tests/test_player_words.py fails if the two drift.
+// The first four rows point somewhere and fill a `{place}`; the last
+// one (vefr #464) has nothing to point at and fills nothing.
 // -- player words start --
 var VEFR_PLAYER_WORDS = {
   'where_next.goal': 'To reach {place}.',
   'where_next.reach': 'To reach {place}, go {direction}.',
   'where_next.here': 'The way to {place} is right here.',
-  'where_next.no_way': 'No way to {place} is declared from here.'
+  'where_next.no_way': 'No way to {place} is declared from here.',
+  'combat.walk_to_strike': 'Walk into an enemy to strike it.'
 };
 // The one reader: the pack's word when it supplies a usable one, the
 // engine's own otherwise, with the slots filled from what the engine
@@ -4087,6 +4278,30 @@ function playerWord(key, slots) {
   });
 }
 // -- player words end --
+
+// ---- the strike hint: once, at the first fight ----
+// Walking into an enemy is the attack, and the line that gives it away
+// only gives it away as a result - "You hit a nest of moths for 2." -
+// which is a result, not a rule. The explorers found the rule by
+// accident ("I only moved, yet the moths fell"), so one plain sentence
+// is said at the first landed blow and never again: a hint that comes
+// back every fight stops being read. It is held to the end of that
+// turn rather than said on a line of its own, because the monsters
+// take their turn next and would wipe it, and because a phone draws
+// one line at a time - the fight's own line is the line a phone shows.
+// The flag is per world and lives in the player's storage beside the
+// other `vefr-` saves, so a reload does not bring it back and Start
+// over clears it with the rest.
+function strikeHintKey() {
+  return 'vefr-strike-hint-' + ((window.VEFR_WORLD && window.VEFR_WORLD.name) || 'world');
+}
+function hintStrikeOnce() {
+  var key = strikeHintKey();
+  if (store.get(key) === '1') return false;
+  store.set(key, '1');
+  sayHint(playerWord('combat.walk_to_strike'));
+  return true;
+}
 
 // ---- where next: the point-to hints, kept as player-facing
 // intentions ("Go toward Saltreach.") instead of thrown-away
@@ -9136,6 +9351,13 @@ window.VEFR_DESCENT = (function () {
   // are the ones the hero left. And the why-log names the floor, so what
   // happened can be read back without watching the screen for it.
   function deathResume(name) {
+    // A hero who falls in the fight that would have taught the strike hint
+    // wakes to their own line, not to a lesson (#464): the hint is dropped
+    // and stays owed, so the next fight says it.
+    if (typeof PENDING_HINT !== 'undefined' && PENDING_HINT) {
+      PENDING_HINT = null;
+      try { store.set(strikeHintKey(), ''); } catch (e) { /* storage closed */ }
+    }
     if (!on() || !isGenerated(name)) return null;
     var depth = depthOfName(name);
     var plan = depth ? floorPlan(depth) : null;
@@ -9712,6 +9934,38 @@ function setupTown() {
   var speakers = regionSpeakers(regionName);
   var hero = (Array.isArray(start.at) && start.at.length === 2
     ? start.at : town.hero_start).slice();
+
+  // The canvas's name, for a screen reader (vefr#461). The shell writes
+  // one name into the markup and it never moved: a hero who stepped
+  // through the door was still standing on a canvas called "the town".
+  // The name is the place, so it is set on the way in and on every
+  // region change (enterRegion), never on a click.
+  //
+  // A generated floor is the one place the ENGINE named, so the descent
+  // answers first: a Section's label and the floor number - the words
+  // the POI line and the hints already say (vefr#362) - else the floor
+  // id, which is what every other surface falls back to. Every other
+  // region is the pack's own: the author named it, and its region key
+  // is that name, said in words.
+  function placeInWords(name) {
+    var D = window.VEFR_DESCENT;
+    if (D && typeof D.isGenerated === 'function' && D.isGenerated(name)) {
+      return String(typeof D.placeName === 'function' ? D.placeName(name) : name);
+    }
+    var words = String(name === undefined || name === null ? '' : name)
+      .replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!words) return '';
+    // A key that already reads as a name keeps its own article.
+    return /^(the|a|an)\s/i.test(words) ? words : 'The ' + words;
+  }
+
+  function nameTheCanvas(name) {
+    var el = document.getElementById('town-canvas');
+    var place = el ? placeInWords(name) : '';
+    if (!el || !place) return;
+    el.setAttribute('aria-label', place + ', seen from above');
+  }
+  nameTheCanvas(regionName);
 
   // The current region's speakers. The baked group (window.VEFR_SPEAKERS)
   // says which keys belong here; a full spec from the world (with
@@ -10320,6 +10574,10 @@ function setupTown() {
       combatSay('You cannot strike ' + ((e && e.name) || 'it') + '.');
       return false;
     }
+    // The blow lands, so this is a fight: say once, here, that walking
+    // into an enemy is the attack (vefr #464). A warden that cannot be
+    // struck returns above, because there was no fight to teach.
+    hintStrikeOnce();
     var dmg = heroAtk();
     e.hp = Math.max(0, e.hp - dmg);
     playOneShot('hero', 'attack');
@@ -10330,7 +10588,10 @@ function setupTown() {
     wakeOne(e);
     makeNoise('fight');
     soundCue('hit');
-    var said = 'You hit ' + e.name + ' for ' + dmg + '.';
+    // The blow says itself in one sentence, from the same message
+    // table every other player line comes from (#463) - the bytes are
+    // the ones this always read.
+    var said = verbWord('attack', { what: e.name, damage: String(dmg) });
     // A landed blow is one practice count; levels mode ignores it.
     sayGrowth(practiceSuffix(growBump('strikes')));
     if (e.hp <= 0) {
@@ -12163,9 +12424,13 @@ function setupTown() {
       ? window.performance.now() : Date.now();
   }
   // Read at move time, never cached, so a change of preference is felt.
+  // The OS's own setting and the player's Display > Reduced motion switch are
+  // the same question: either one asking for still motion gets still motion,
+  // and the sheet lays down the matching blanket in CSS (020-style.css).
   function reducedMotion() {
     return !!(window.matchMedia
-      && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+      || reducedMotionOn();
   }
   // Where the hero is DRAWN right now: the settled tile when no step is
   // running, else the tweened tile plus its offset. Never moves the
@@ -12725,6 +12990,7 @@ function setupTown() {
     var changed = where !== name;
     fireRule('enters', { place: name });   // one `enters` per arrival
     regionName = name;
+    nameTheCanvas(name);   // the canvas is named for where the hero is (vefr#461)
     town = regionTown(where);
     legend = town.legend;
     pois = town.pois;
@@ -13059,6 +13325,43 @@ function setupTown() {
              candidates: candidates };
   }
 
+  // ---- one plain sentence per action (#463) ------------------------
+  //
+  // The result line used to name the action ("last action: console
+  // (dusk)"), which says nothing about what the action did. Each verb
+  // now speaks one sentence that reads as a sentence, and that
+  // sentence is what the line shows.
+  //
+  // The wording is the engine's, so it stays neutral: nothing here
+  // names a pack's creature, and `{what}` is filled from the pack's own
+  // name for the thing acted on. A pack replaces any of these the way
+  // it replaces every other player word - `player_words` in world.json,
+  // key `combat.<verb>` - through the one reader, so the pack's own
+  // sentence wins and this stays the default. The rows are joined onto
+  // the one message table (part 340) rather than kept beside it, and
+  // outside its markers, so the two tables keep their own key sets.
+  var VEFR_COMBAT_WORDS = {
+    attack: 'You hit {what} for {damage}.',
+    console: '{what} quiets a little.',
+    hurl: '{what} does not care for that.',
+    other: 'You say it anyway. Nothing answers.',
+    none: 'There is nothing here to answer that.'
+  };
+  Object.keys(VEFR_COMBAT_WORDS).forEach(function (verb) {
+    VEFR_PLAYER_WORDS['combat.' + verb] = VEFR_COMBAT_WORDS[verb];
+  });
+  // One reader: the verb's own row when the verb - or the pack - has
+  // one, else the catch-all for any verb a pack names, else the line
+  // for a verb pressed with nothing to act on.
+  function verbWord(verb, slots) {
+    var words = (window.VEFR_WORLD && window.VEFR_WORLD.player_words) || {};
+    var key = 'combat.' + verb;
+    if (VEFR_PLAYER_WORDS[key] || typeof words[key] === 'string') {
+      return playerWord(key, slots);
+    }
+    return playerWord('combat.other', slots);
+  }
+
   // Task 3: fight through the one verb. The row is the same #verb-row
   // the surface always shows; naming a target is what "opens" it, and
   // nothing here re-implements the damage maths.
@@ -13084,7 +13387,11 @@ function setupTown() {
   function applyVerb(verb, label, enemy) {
     if (!enemy) return false;
     if (verb === 'attack') return heroAttack(enemy);
-    var said = 'You use ' + label + ' on ' + (enemy.name || 'it') + '.';
+    // The plain sentence, not "You use Console on it": what the verb
+    // DID is the line a player reads (#463). `label` is kept in the
+    // signature because the row's word is what the button says, but it
+    // is no longer spelled into the sentence.
+    var said = verbWord(verb, { what: (enemy && enemy.name) || 'it' });
     // The other verbs are words only, but a practice spec can learn from
     // them. The default verbs are `console`/`hurl`; any other name
     // counts toward nothing.
@@ -13093,6 +13400,27 @@ function setupTown() {
     if (kind) sayGrowth(practiceSuffix(growBump(kind)));
     combatSay(said);
     return true;
+  }
+  // One verb, acted on and journalled, in that order: the sentence the
+  // verb spoke is the sentence the journal keeps, and it is read before
+  // the monsters take their turn, so their answer cannot be what got
+  // written down. Both call sites go through here, so a verb can never
+  // be journalled without saying what it did.
+  function takeVerb(verb, label, foe) {
+    if (!foe) {
+      // Pressed with nothing named to act on: nothing happens, and the
+      // line says so in a sentence rather than naming the verb.
+      recordVerb(verb, verbWord('none'));
+      return false;
+    }
+    // The live line is emptied first so that what is on it afterwards is
+    // exactly what this verb said - nothing to tell a quiet verb from a
+    // loud one, and nothing left over from the last turn to be mistaken
+    // for this one's sentence.
+    combatSay('');
+    var done = applyVerb(verb, label, foe);
+    recordVerb(verb, combatText());
+    return done;
   }
 
   // A locked door or stair (design/gates-and-guardians.md, step 1).
@@ -13226,8 +13554,7 @@ function setupTown() {
           // One verb: act at once, no menu - but the turn still runs,
           // unless the verb was refused (a warden that cannot be
           // struck), which changes nothing and therefore costs nothing.
-          recordVerb(verbs[0][0]);
-          if (applyVerb(verbs[0][0], verbs[0][1], foe)) {
+          if (takeVerb(verbs[0][0], verbs[0][1], foe)) {
             lightTick();
             enemyTurn();
           }
@@ -13452,10 +13779,11 @@ function setupTown() {
   }
 
   // One speaker's line - the talk path itself, shared by the Talk
-  // button, the canvas click, the old E key, and Interact's resident
-  // pick. The line is the pack's own: straight from the model when
-  // one answers, else from the woven pool, else spliced from this
-  // character's fragments, else the speaker's seeded line in turn.
+  // button, the canvas click, the F key (E is its unadvertised alias),
+  // and Interact's resident pick. The line is the pack's own: straight
+  // from the model when one answers, else from the woven pool, else
+  // spliced from this character's fragments, else the speaker's seeded
+  // line in turn.
   function talkToSpeaker(nearest) {
     var ph = phase();
     libraryFromSpeaker(nearest.key);
@@ -13785,36 +14113,63 @@ function setupTown() {
   renderCombatLog(store.getJSON(COMBAT_KEY, []));
   /* The act's verbs are the pack's own vocabulary; baked defaults
      keep the old costume when the act declares none. The list lives
-     in surfaceVerbs() so the row and the enemy menu share one home. */
+     in surfaceVerbs() so the row and the enemy menu share one home.
+     Each button prints the number that presses it, in the order it
+     sits in the row (#463), the same idiom the action row uses for
+     its own keys. */
   (function () {
     var row = document.getElementById('verb-row');
     var verbs = surfaceVerbs();
-    verbs.forEach(function (pair) {
+    verbs.forEach(function (pair, i) {
       var b = document.createElement('button');
       b.type = 'button';
       b.dataset.verb = pair[0];
-      b.textContent = pair[1];
+      // The label is kept beside its own word: the verb is the pack's
+      // and the digit is a shortcut, and the two must not be read as
+      // one name.
+      var label = document.createElement('span');
+      label.className = 'verb';
+      label.textContent = pair[1];
+      b.dataset.label = pair[1];
+      var key = document.createElement('kbd');
+      key.textContent = String(i + 1);
+      b.appendChild(label);
+      b.appendChild(document.createTextNode(' '));
+      b.appendChild(key);
       row.appendChild(b);
     });
   })();
   document.getElementById('verb-row').addEventListener('click', function (e) {
     var b = e.target.closest('button[data-verb]');
     if (!b) return;
-    b.disabled = true;
-    recordVerb(b.dataset.verb);
+    // A press is held off for a moment so one key cannot fire twice - but
+    // with aria-disabled, not `disabled`: disabling a focused button drops
+    // the focus on the floor, and the walk back up to the combat row was
+    // about eight Tabs every turn (#463).
+    if (b.getAttribute('aria-disabled') === 'true') return;
+    b.setAttribute('aria-disabled', 'true');
     // With an enemy named, the press resolves against it and the
     // monsters take their turn, exactly as after a bump. With no
     // target the press is only journalled, as it always was.
     if (VERB_TARGET) {
-      var done = applyVerb(b.dataset.verb, b.textContent, VERB_TARGET);
-      if (done !== false) {
+      if (takeVerb(b.dataset.verb, b.dataset.label, VERB_TARGET) !== false) {
         lightTick();
         enemyTurn();
       }
       closeEnemyVerbs();
       updateUse();
+    } else {
+      // No enemy named: the press is journalled and said, as it
+      // always was, and no turn runs.
+      takeVerb(b.dataset.verb, b.dataset.label, null);
     }
-    window.setTimeout(function () { b.disabled = false; }, 400);
+    // The focus lands on the verb just used, by click or by its number key,
+    // so the next press is one key away (unless the row went with the fight).
+    var row = document.getElementById('verb-row');
+    if (row && !row.hidden && b.isConnected) {
+      try { b.focus(); } catch (err) { /* gone */ }
+    }
+    window.setTimeout(function () { b.removeAttribute('aria-disabled'); }, 400);
   });
   canvas.addEventListener('click', tryNPC);
   document.getElementById('dpad').addEventListener('click', function (e) {
@@ -13828,6 +14183,9 @@ function setupTown() {
     if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
     // Any key but the toggle itself halts an autoexplore walk.
     if (exploring() && e.key !== 'o' && e.key !== 'O') exploreStop('Stopped.');
+    // F is the one name for Interact (vefr#467); E answers to it too, so
+    // a player who learned the old key is never stuck, but no hint, label
+    // or key letter names it.
     // The Interact keys keep the loop going: while a note or a speech box
     // is up they CONTINUE it (next page, then close) instead of needing a
     // click. A focused button handles its own Enter and Space, and a held
@@ -13916,6 +14274,16 @@ function setupTown() {
     else if (e.key === 'b' || e.key === 'B') { if (window.openBag) window.openBag(); }
     else if (e.key === 'o' || e.key === 'O') startExplore();
     else if (e.key === 'v' || e.key === 'V') toggleFog();
+    // The fight verbs answer 1, 2, 3 - the digits printed on them
+    // (#463). The row's own order is the key's, and a surface with no
+    // row shown has no verb to press, so the keys do nothing there.
+    else if (/^[1-9]$/.test(e.key)) {
+      var verbBtn = combatVerbButton(Number(e.key));
+      if (verbBtn) {
+        e.preventDefault();
+        if (!e.repeat) verbBtn.click();
+      }
+    }
     else if (!onButton && (e.key === ' ' || e.key === 'Enter')) {
       e.preventDefault();
       if (!box.hidden) box.hidden = true; else doInteract();
@@ -13933,11 +14301,13 @@ function setupTown() {
   draw();
   updateUse();
 }
-// ---- touch controls: a floating joystick, one smart button, Bag, Whisper, Explore, B and two quick slots ----
+// ---- touch controls: a floating joystick, one smart button, Bag, Listen, Explore, B and two quick slots ----
 // On a coarse pointer this layer replaces the Acts row. Every action goes through
 // the code the keys already use: move(), doInteract(), useItem(), openBag(), the
-// Acts row's own Whisper and Explore buttons (Q and O press the same), and the
+// Acts row's own Listen and Explore buttons (Q and O press the same), and the
 // panel closers. The D-pad stays for those who choose it in Display.
+// The button a player presses is Listen (#470); its element ids stay
+// `whisper`, which is the engine's own game-name-neutral name for the feature.
 window.__vefrTouch = { log: [] };
 
 var TOUCH_MOVE_KEY = 'vefr-touch-move';
@@ -14209,7 +14579,7 @@ function touchBagPress() {
   if (window.openBag) window.openBag();
 }
 
-// Whisper and Explore press the Acts row's own buttons, hidden on a phone but still
+// Listen and Explore press the Acts row's own buttons, hidden on a phone but still
 // wired, so a tap does exactly what Q and O do (issue #431).
 function touchWhisperPress() {
   touchStopExplore();
@@ -14222,7 +14592,7 @@ function touchExplorePress() {
   document.getElementById('explore').click();
 }
 
-// Explore's pressed state and Whisper's wait while it listens show on the touch twins.
+// Explore's pressed state and Listen's wait while it listens show on the touch twins.
 function touchSyncTools() {
   var ex = document.getElementById('explore');
   var wh = document.getElementById('whisper');
@@ -15244,7 +15614,14 @@ applySkin();
 // ---- title screen ----
 var titleScreen = document.getElementById('title-screen');
 var tsEnter = document.getElementById('ts-enter');
-tsEnter.addEventListener('click', function () {
+// One way in, whichever key or the button got there. The flag matters
+// because the key handler below and the button's own click can both
+// fire for one press (Enter/Space on a focused button is the button's),
+// and the world must start once.
+var begun = false;
+function beginGame() {
+  if (begun) return;
+  begun = true;
   titleScreen.setAttribute('aria-hidden', 'true');
   // After fade completes, remove from flow and show the game
   setTimeout(function () {
@@ -15261,9 +15638,29 @@ tsEnter.addEventListener('click', function () {
     // In persist mode a reload skips it: the save already saw it.
     if (rulesStartsNow()) fireRule('starts', {});
   }, 0);
+}
+tsEnter.addEventListener('click', beginGame);
+// The keys the title screen answers to (vefr#466). Begin holds the focus
+// when the screen paints, so Enter and Space already reached it; F and E
+// are the game's own Interact keys and did nothing here at all - a
+// runner pressed F first on this screen in 7 of 16 runs - so they start
+// the game here too. Tab is the other half: Begin is the only control on
+// this screen, so Tab had nowhere to go but off the page, dropping focus
+// onto the BODY, an invisible stop that swallowed the next Enter. It is
+// held on Begin instead.
+document.addEventListener('keydown', function (e) {
+  if (begun) return;
+  if (e.key === 'Tab') { e.preventDefault(); tsEnter.focus(); return; }
+  if (e.key === 'f' || e.key === 'F' || e.key === 'e' || e.key === 'E'
+    || e.key === ' ' || e.key === 'Enter') {
+    if (e.repeat) return;
+    // Space and Enter on a focused Begin are the button's own click; not
+    // calling preventDefault keeps that path working, and `begun` stops
+    // the second arrival from starting the world twice.
+    beginGame();
+  }
 });
 // Focus the enter button after paint
-requestAnimationFrame(function () { tsEnter.focus(); });
-</script>
+requestAnimationFrame(function () { tsEnter.focus(); });</script>
 </body>
 </html>

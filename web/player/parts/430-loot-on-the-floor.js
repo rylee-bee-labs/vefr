@@ -145,6 +145,10 @@
       combatSay('You cannot strike ' + ((e && e.name) || 'it') + '.');
       return false;
     }
+    // The blow lands, so this is a fight: say once, here, that walking
+    // into an enemy is the attack (vefr #464). A warden that cannot be
+    // struck returns above, because there was no fight to teach.
+    hintStrikeOnce();
     var dmg = heroAtk();
     e.hp = Math.max(0, e.hp - dmg);
     playOneShot('hero', 'attack');
@@ -155,7 +159,10 @@
     wakeOne(e);
     makeNoise('fight');
     soundCue('hit');
-    var said = 'You hit ' + e.name + ' for ' + dmg + '.';
+    // The blow says itself in one sentence, from the same message
+    // table every other player line comes from (#463) - the bytes are
+    // the ones this always read.
+    var said = verbWord('attack', { what: e.name, damage: String(dmg) });
     // A landed blow is one practice count; levels mode ignores it.
     sayGrowth(practiceSuffix(growBump('strikes')));
     if (e.hp <= 0) {
