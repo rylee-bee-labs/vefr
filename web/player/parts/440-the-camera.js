@@ -34,6 +34,14 @@
     return touchScreen() ? PHONE_TILE : DESK_TILE;
   }
   function phoneCamera() { return followTile() > 0; }
+  // The camera's vertical offset for a room shorter than the window: centred, so a map that
+  // fits reads whole in the middle of the screen, as every other camera draws it. The follow
+  // camera clamps instead (issue #448): a short room centred in a tall window floated in dark
+  // bands above and below it, on a phone and at a desk alike, and the band above it is the one
+  // the top bar stands on. Clamped, the room starts at the window's top, under the top bar,
+  // and the dark ground is all below it, where the touch controls are. Its width is untouched:
+  // a room narrower than the window stays centred, or it would read off to one side.
+  function shortMapY(mapH) { return onPhone ? 0 : (mapH - viewH) / 2; }
   // Pixel art (`display.pixel_art` in world.json): every picture is drawn at a whole-number
   // scale of the art's native tile, with no smoothing. A pack without it draws exactly as before.
   var pixelNative = (world.display && world.display.pixel_art
@@ -127,9 +135,11 @@
     var rect = canvas.getBoundingClientRect();
     var mx, my, mw, mh;
     if (mapW <= viewW && mapH <= viewH) {
-      // The whole map reads: it is centred on the canvas.
+      // The whole map reads: it is centred on the canvas, or, where the follow camera clamps a
+      // short room to the window's top (issue #448), under the top bar. This is where draw()
+      // puts it, so the published rectangle is the drawn one either way.
       mx = rect.left + (viewW - mapW) / 2;
-      my = rect.top + (viewH - mapH) / 2;
+      my = rect.top - shortMapY(mapH);
       mw = mapW;
       mh = mapH;
     } else {
