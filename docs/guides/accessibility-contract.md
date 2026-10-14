@@ -229,6 +229,16 @@ Players can switch to accent-colored rings if they prefer.
 :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 ```
 
+**And a dialog keeps it.** While a dialog is open - a book, a character's
+line, a set of choices, the pause menu - Tab and Shift+Tab walk that
+dialog's own controls and never step onto the page behind it. When the
+dialog closes, the focus goes back to the control that opened it; if
+that control is gone, it goes to the one control every screen has
+(Menu). The woven player does this for every `role="dialog"` it opens
+(`web/player/parts/045-dialog-focus.js`), so a new dialog gets it
+without knowing the rule exists. Pinned by
+`tests/test_dialog_focus.py` and `tests/browser/test_dialog_focus.py`.
+
 ### 6. Sound = Visual
 
 Every audio event has a visual counterpart. Captions are ON by default.
@@ -396,6 +406,7 @@ Import `vefr-foundation.css` — it provides all of these out of the box:
 - [ ] All interactive elements have `min-height: 44px; min-width: 44px`
 - [ ] Motion defaults to `off` — verify nothing animates at default prefs
 - [ ] Focus rings visible on every interactive element via `:focus-visible`
+- [ ] Tab stays inside an open dialog, and comes back to the control that opened it
 - [ ] Body font is Atkinson Hyperlegible Next with fallback stack
 - [ ] All `data-prefs` CSS selectors from the engine are supported
 - [ ] No player-facing text below 14px

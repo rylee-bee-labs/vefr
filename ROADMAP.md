@@ -85,6 +85,12 @@ gameplay features over new core machinery.
   the phone's one fading line (#446).
 - [engine] A Section can dress its generated floors with decor (#442, #443).
 
+### LANDED 2026-10-14 (the keyboard stays in the box)
+- [player] Tab stays inside an open dialog and closing it hands the focus back to the control that opened it (#462).
+  Every `role="dialog"` in the woven player - the pause menu, a book, a line of speech, a trade, the identify list, the
+  two end cards - is one rule in `web/player/parts/045-dialog-focus.js`, so a new dialog gets it for free. Tests:
+  `tests/test_dialog_focus.py` (jsdom) and `tests/browser/test_dialog_focus.py` (Chromium).
+
 ### IN PROGRESS (decided by Rylee on 2026-10-04; refreshed 2026-10-12)
 - **The endless dungeon** (epic [#273](https://github.com/rylee-bee-labs/vefr/issues/273); design `docs/plans/endless-dungeon/DESIGN.md`, build plan `docs/plans/endless-dungeon/PLAN.md`, research `docs/research/big-generated-maps.md`): floors generated while you play from `seed + depth`, cut into sections of 8 to 11 floors; each ends in a key warden whose key opens a vault with a lore note; acts change the town only; elites, linked groups, hand-painted stamps and much bigger maps (up to 128x96, kept cheap for phones); an endless mode after the story.
   - **Merged:** E0a measurements (#278), F1 fog as a bitset (#287), E0d sleeping monsters and a radius-bounded flood (#288), E2 the v3 Python floor generator with property sweeps (#289).
