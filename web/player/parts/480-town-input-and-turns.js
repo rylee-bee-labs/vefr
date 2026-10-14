@@ -590,6 +590,7 @@
     var changed = where !== name;
     fireRule('enters', { place: name });   // one `enters` per arrival
     regionName = name;
+    nameTheCanvas(name);   // the canvas is named for where the hero is (vefr#461)
     town = regionTown(where);
     legend = town.legend;
     pois = town.pois;

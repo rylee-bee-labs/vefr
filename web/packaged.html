@@ -9840,6 +9840,38 @@ function setupTown() {
   var hero = (Array.isArray(start.at) && start.at.length === 2
     ? start.at : town.hero_start).slice();
 
+  // The canvas's name, for a screen reader (vefr#461). The shell writes
+  // one name into the markup and it never moved: a hero who stepped
+  // through the door was still standing on a canvas called "the town".
+  // The name is the place, so it is set on the way in and on every
+  // region change (enterRegion), never on a click.
+  //
+  // A generated floor is the one place the ENGINE named, so the descent
+  // answers first: a Section's label and the floor number - the words
+  // the POI line and the hints already say (vefr#362) - else the floor
+  // id, which is what every other surface falls back to. Every other
+  // region is the pack's own: the author named it, and its region key
+  // is that name, said in words.
+  function placeInWords(name) {
+    var D = window.VEFR_DESCENT;
+    if (D && typeof D.isGenerated === 'function' && D.isGenerated(name)) {
+      return String(typeof D.placeName === 'function' ? D.placeName(name) : name);
+    }
+    var words = String(name === undefined || name === null ? '' : name)
+      .replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!words) return '';
+    // A key that already reads as a name keeps its own article.
+    return /^(the|a|an)\s/i.test(words) ? words : 'The ' + words;
+  }
+
+  function nameTheCanvas(name) {
+    var el = document.getElementById('town-canvas');
+    var place = el ? placeInWords(name) : '';
+    if (!el || !place) return;
+    el.setAttribute('aria-label', place + ', seen from above');
+  }
+  nameTheCanvas(regionName);
+
   // The current region's speakers. The baked group (window.VEFR_SPEAKERS)
   // says which keys belong here; a full spec from the world (with
   // `near`, etc.) wins when present, so single-region behavior is
@@ -12839,6 +12871,7 @@ function setupTown() {
     var changed = where !== name;
     fireRule('enters', { place: name });   // one `enters` per arrival
     regionName = name;
+    nameTheCanvas(name);   // the canvas is named for where the hero is (vefr#461)
     town = regionTown(where);
     legend = town.legend;
     pois = town.pois;

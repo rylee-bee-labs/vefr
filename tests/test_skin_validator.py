@@ -389,7 +389,10 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # Three settings in Display - larger text, reduced motion, volume (#473), 2026-10-14; measured twice in separate processes, readings equal:
 #   6ca8bb7e68c75e1ecf535e809ae6065b32f8f7bf295183e024c9939afc9e3501
 #   6ca8bb7e68c75e1ecf535e809ae6065b32f8f7bf295183e024c9939afc9e3501
-NO_SKIN_WEAVE_SHA256 = "6ca8bb7e68c75e1ecf535e809ae6065b32f8f7bf295183e024c9939afc9e3501"
+# Main merged into the #461 change, 2026-10-14; measured twice in separate processes, readings equal:
+#   5507922bae1d70f88fb2fbe16769683dfac028bf23e2a15f10662d50961d567d
+#   5507922bae1d70f88fb2fbe16769683dfac028bf23e2a15f10662d50961d567d
+NO_SKIN_WEAVE_SHA256 = "5507922bae1d70f88fb2fbe16769683dfac028bf23e2a15f10662d50961d567d"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():
