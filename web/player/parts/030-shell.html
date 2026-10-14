@@ -286,6 +286,14 @@
       <p>The dark shows only the ground you have walked and lit. Turn it off to see the whole map.</p>
       <button type="button" id="fog-toggle" class="cta" aria-pressed="true">Darkness: on</button>
       <p class="status" id="fog-live" role="status" aria-live="polite"></p>
+      <!-- Two switches every player has, touch screen or not, so they sit outside
+           .touch-settings (which only a touch screen shows). .touch-set is the
+           panel's own control row: 48px targets, the same ones as the rest. -->
+      <fieldset class="touch-set" id="access-settings">
+        <legend>Reading and motion</legend>
+        <label><input type="checkbox" id="text-large"> Larger text</label>
+        <label><input type="checkbox" id="reduced-motion"> Reduced motion</label>
+      </fieldset>
       <div class="touch-settings" id="touch-settings">
         <h2 class="menu-sub">Controls</h2>
         <fieldset class="touch-set">

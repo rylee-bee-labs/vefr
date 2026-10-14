@@ -90,6 +90,15 @@ gameplay features over new core machinery.
   rumor reads as overheard ("You overhear <the speaker>"), so it no longer looks like a whisper to whoever is
   standing next to you. How to play names it. The engine keeps its own name for the feature; the Journal's
   "Listen for a whisper" is unchanged.
+### LANDED 2026-10-14 (the title screen takes the game's own keys)
+- [player] `F`, `E` and `Space` start the game from the title screen, next to Begin and `Enter`, and `Tab` keeps the
+  focus on Begin: it used to walk the focus onto the BODY, an invisible stop that swallowed the next `Enter` (#466).
+  In run-001 that cost 29 of 50 decisions; 7 of 16 runs pressed `F` first on this screen. Tests:
+  `tests/browser/test_title_screen_keys.py`.
+### LANDED 2026-10-14
+- [player] The game canvas is named for the place the hero is standing in (#461): the fixed "The town, seen from
+  above" follows every region change, so a screen reader says "The cottage kitchen, seen from above" indoors and
+  a descent floor answers with its Section's own label. Tests: `tests/test_canvas_place_label.py`.
 
 ### IN PROGRESS (decided by Rylee on 2026-10-04; refreshed 2026-10-12)
 - **The endless dungeon** (epic [#273](https://github.com/rylee-bee-labs/vefr/issues/273); design `docs/plans/endless-dungeon/DESIGN.md`, build plan `docs/plans/endless-dungeon/PLAN.md`, research `docs/research/big-generated-maps.md`): floors generated while you play from `seed + depth`, cut into sections of 8 to 11 floors; each ends in a key warden whose key opens a vault with a lore note; acts change the town only; elites, linked groups, hand-painted stamps and much bigger maps (up to 128x96, kept cheap for phones); an endless mode after the story.
