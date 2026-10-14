@@ -90,15 +90,29 @@
   renderCombatLog(store.getJSON(COMBAT_KEY, []));
   /* The act's verbs are the pack's own vocabulary; baked defaults
      keep the old costume when the act declares none. The list lives
-     in surfaceVerbs() so the row and the enemy menu share one home. */
+     in surfaceVerbs() so the row and the enemy menu share one home.
+     Each button prints the number that presses it, in the order it
+     sits in the row (#463), the same idiom the action row uses for
+     its own keys. */
   (function () {
     var row = document.getElementById('verb-row');
     var verbs = surfaceVerbs();
-    verbs.forEach(function (pair) {
+    verbs.forEach(function (pair, i) {
       var b = document.createElement('button');
       b.type = 'button';
       b.dataset.verb = pair[0];
-      b.textContent = pair[1];
+      // The label is kept beside its own word: the verb is the pack's
+      // and the digit is a shortcut, and the two must not be read as
+      // one name.
+      var label = document.createElement('span');
+      label.className = 'verb';
+      label.textContent = pair[1];
+      b.dataset.label = pair[1];
+      var key = document.createElement('kbd');
+      key.textContent = String(i + 1);
+      b.appendChild(label);
+      b.appendChild(document.createTextNode(' '));
+      b.appendChild(key);
       row.appendChild(b);
     });
   })();
@@ -106,20 +120,34 @@
     var b = e.target.closest('button[data-verb]');
     if (!b) return;
     b.disabled = true;
-    recordVerb(b.dataset.verb);
     // With an enemy named, the press resolves against it and the
     // monsters take their turn, exactly as after a bump. With no
     // target the press is only journalled, as it always was.
     if (VERB_TARGET) {
-      var done = applyVerb(b.dataset.verb, b.textContent, VERB_TARGET);
-      if (done !== false) {
+      if (takeVerb(b.dataset.verb, b.dataset.label, VERB_TARGET) !== false) {
         lightTick();
         enemyTurn();
       }
       closeEnemyVerbs();
       updateUse();
+    } else {
+      // No enemy named: the press is journalled and said, as it
+      // always was, and no turn runs.
+      takeVerb(b.dataset.verb, b.dataset.label, null);
     }
-    window.setTimeout(function () { b.disabled = false; }, 400);
+    // Disabling a focused button drops focus on the floor, and the
+    // walk back up to the combat row was about eight Tabs every turn
+    // (#463). Put it back when the button is usable again - but only
+    // while the focus is still loose or still inside the row, so a
+    // player who moved on with Tab keeps where they went.
+    window.setTimeout(function () {
+      b.disabled = false;
+      var active = document.activeElement;
+      var row = document.getElementById('verb-row');
+      if (!active || active === document.body || (row && row.contains(active))) {
+        b.focus();
+      }
+    }, 400);
   });
   canvas.addEventListener('click', tryNPC);
   document.getElementById('dpad').addEventListener('click', function (e) {
@@ -221,6 +249,16 @@
     else if (e.key === 'b' || e.key === 'B') { if (window.openBag) window.openBag(); }
     else if (e.key === 'o' || e.key === 'O') startExplore();
     else if (e.key === 'v' || e.key === 'V') toggleFog();
+    // The fight verbs answer 1, 2, 3 - the digits printed on them
+    // (#463). The row's own order is the key's, and a surface with no
+    // row shown has no verb to press, so the keys do nothing there.
+    else if (/^[1-9]$/.test(e.key)) {
+      var verbBtn = combatVerbButton(Number(e.key));
+      if (verbBtn) {
+        e.preventDefault();
+        if (!e.repeat) verbBtn.click();
+      }
+    }
     else if (!onButton && (e.key === ' ' || e.key === 'Enter')) {
       e.preventDefault();
       if (!box.hidden) box.hidden = true; else doInteract();

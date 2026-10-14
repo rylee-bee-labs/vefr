@@ -265,6 +265,9 @@
   .verb-row[hidden] { display: none; }
   .verb-row button { background: var(--glass); color: var(--glass-ink); border-color: rgba(242, 236, 221, 0.4); text-transform: none; letter-spacing: 0.02em; font: 700 0.9rem var(--read); }
   .verb-row button::before { content: '\25B6'; color: #D8AA4E; font-size: 0.7rem; }
+  /* The digit that presses the verb, printed on the verb (#463), in the
+     same idiom as the action row's keys. */
+  .verb-row button kbd { margin-left: 2px; font-size: 0.62rem; opacity: 0.8; }
   body[data-surface="plain"] .verb-row,
   body[data-surface="investigation"] .verb-row { display: none; }
   #combat-log { position: absolute; left: calc(16px + var(--sai-left)); bottom: calc(70px + var(--sai-bottom)); z-index: 2; margin: 0; max-width: calc(45% - var(--sai-left)); font-size: 0.85rem; }
@@ -279,7 +282,7 @@
     .acts { flex-direction: column; align-items: center; right: calc(12px + var(--sai-right)); bottom: calc(16px + var(--sai-bottom)); }
     .acts .gbtn--main { width: 72px; height: 72px; border-radius: 50%; padding: 0; font-size: 0.66rem; }
     .acts .gbtn--tool { width: 48px; height: 48px; border-radius: 50%; }
-    .acts kbd { display: none; }
+    .acts kbd, .verb-row kbd { display: none; }
     .npc-box { left: calc(10px + var(--sai-left)); right: calc(10px + var(--sai-right)); bottom: calc(12px + var(--sai-bottom)); }
     .toasts { top: calc(108px + var(--sai-top)); bottom: auto; width: min(210px, 60%); }   /* below the health/level/gold row, which can wrap to two lines */
     .hud-hp-bar { width: 56px; }
@@ -301,7 +304,7 @@
     .acts { flex-direction: row; align-items: flex-end; right: calc(6px + var(--sai-right)); bottom: calc(6px + var(--sai-bottom)); gap: 2px; }
     .acts .gbtn--main { width: auto; min-width: 44px; max-width: calc(100vw - 176px); height: 52px; border-radius: 999px; padding: 0 10px; font-size: 0.6rem; }
     .acts .gbtn--tool { width: 44px; height: 44px; border-radius: 50%; }
-    .acts kbd { display: none; }
+    .acts kbd, .verb-row kbd { display: none; }
   }
   /* The narrowest frames cannot hold the action row beside the d-pad: shave the
      gaps and the Interact circle to the 44px floor so the two sit side by side. */

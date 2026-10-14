@@ -272,6 +272,9 @@
   .verb-row[hidden] { display: none; }
   .verb-row button { background: var(--glass); color: var(--glass-ink); border-color: rgba(242, 236, 221, 0.4); text-transform: none; letter-spacing: 0.02em; font: 700 0.9rem var(--read); }
   .verb-row button::before { content: '\25B6'; color: #D8AA4E; font-size: 0.7rem; }
+  /* The digit that presses the verb, printed on the verb (#463), in the
+     same idiom as the action row's keys. */
+  .verb-row button kbd { margin-left: 2px; font-size: 0.62rem; opacity: 0.8; }
   body[data-surface="plain"] .verb-row,
   body[data-surface="investigation"] .verb-row { display: none; }
   #combat-log { position: absolute; left: calc(16px + var(--sai-left)); bottom: calc(70px + var(--sai-bottom)); z-index: 2; margin: 0; max-width: calc(45% - var(--sai-left)); font-size: 0.85rem; }
@@ -286,7 +289,7 @@
     .acts { flex-direction: column; align-items: center; right: calc(12px + var(--sai-right)); bottom: calc(16px + var(--sai-bottom)); }
     .acts .gbtn--main { width: 72px; height: 72px; border-radius: 50%; padding: 0; font-size: 0.66rem; }
     .acts .gbtn--tool { width: 48px; height: 48px; border-radius: 50%; }
-    .acts kbd { display: none; }
+    .acts kbd, .verb-row kbd { display: none; }
     .npc-box { left: calc(10px + var(--sai-left)); right: calc(10px + var(--sai-right)); bottom: calc(12px + var(--sai-bottom)); }
     .toasts { top: calc(108px + var(--sai-top)); bottom: auto; width: min(210px, 60%); }   /* below the health/level/gold row, which can wrap to two lines */
     .hud-hp-bar { width: 56px; }
@@ -308,7 +311,7 @@
     .acts { flex-direction: row; align-items: flex-end; right: calc(6px + var(--sai-right)); bottom: calc(6px + var(--sai-bottom)); gap: 2px; }
     .acts .gbtn--main { width: auto; min-width: 44px; max-width: calc(100vw - 176px); height: 52px; border-radius: 999px; padding: 0 10px; font-size: 0.6rem; }
     .acts .gbtn--tool { width: 44px; height: 44px; border-radius: 50%; }
-    .acts kbd { display: none; }
+    .acts kbd, .verb-row kbd { display: none; }
   }
   /* The narrowest frames cannot hold the action row beside the d-pad: shave the
      gaps and the Interact circle to the 44px floor so the two sit side by side. */
@@ -3126,6 +3129,19 @@ function surfaceVerbs() {
           ['hurl', 'Hurl an insult']];
 }
 
+// The nth button of the combat row, 1 being the first verb, or null.
+// The number keys answer through this, so the key that presses a verb
+// and the digit printed on that verb are one list and cannot drift
+// (#463). Only a surface that shows the row answers: on `plain` and
+// `investigation` the row is hidden and the keys do nothing.
+function combatVerbButton(n) {
+  if (document.body.getAttribute('data-surface') !== 'combat') return null;
+  var row = document.getElementById('verb-row');
+  if (!row) return null;
+  var buttons = row.querySelectorAll('button[data-verb]');
+  return buttons[n - 1] || null;
+}
+
 // The enemy a #verb-row press is aimed at, or null. The row is always
 // on screen, so naming a target is what "opens" the enemy menu;
 // Escape, a resolved verb or a bump clears it again.
@@ -3351,10 +3367,15 @@ globalThis.startoverKeys = function (storage) {
 // Verbs record to the packaged player's own journal - the same
 // no-failure contract as the server route they mirror
 // (/api/combat/action): the action only lives in the log.
+//
+// `result` is the sentence the verb spoke, which the result line shows
+// instead of naming the action (#463). It is optional so an entry
+// written before the sentence existed still reads.
 const COMBAT_KEY = 'vefr-packaged-combat';
-function recordVerb(verb) {
+function recordVerb(verb, result) {
   var log = store.getJSON(COMBAT_KEY, []);
-  log.push({ verb: verb, phase: STATE.get().phase, at: new Date().toISOString() });
+  log.push({ verb: verb, phase: STATE.get().phase, result: result || '',
+             at: new Date().toISOString() });
   store.setJSON(COMBAT_KEY, log);
   renderCombatLog(log);
 }
@@ -3372,12 +3393,21 @@ function journalVisit(poi, x, y) {
   store.setJSON(MOVES_KEY, log);
 }
 
+// The result line: what the last action DID, in words (#463). It used
+// to name the action ("last action: console (dusk)"), which told a
+// reader nothing about what Console or an insult actually did - so the
+// sentence the verb spoke is the line. An entry with no sentence of its
+// own (written before this line existed) falls back to the old
+// wording rather than going blank; the phase stays on the title for
+// anyone who wants it.
 function renderCombatLog(log) {
   var el = document.getElementById('combat-log');
   if (!el) return;
   if (!log || !log.length) { el.textContent = ''; return; }
   var last = log[log.length - 1];
-  el.textContent = 'last action: ' + last.verb + ' (' + last.phase + ')';
+  el.textContent = last.result
+    || 'last action: ' + last.verb + (last.phase ? ' (' + last.phase + ')' : '');
+  if (last.phase) el.title = last.phase;
 }
 
 // The combat line: one plain sentence for the eye and the screen
@@ -3386,6 +3416,13 @@ function renderCombatLog(log) {
 function combatSay(msg) {
   var el = document.getElementById('combat-live');
   if (el) el.textContent = msg || '';
+}
+
+// The live line as it stands, so a caller can see what an action added
+// to it before the monsters' turn writes over it.
+function combatText() {
+  var el = document.getElementById('combat-live');
+  return el ? (el.textContent || '') : '';
 }
 
 // ---- phase rail ----
@@ -10330,7 +10367,10 @@ function setupTown() {
     wakeOne(e);
     makeNoise('fight');
     soundCue('hit');
-    var said = 'You hit ' + e.name + ' for ' + dmg + '.';
+    // The blow says itself in one sentence, from the same message
+    // table every other player line comes from (#463) - the bytes are
+    // the ones this always read.
+    var said = verbWord('attack', { what: e.name, damage: String(dmg) });
     // A landed blow is one practice count; levels mode ignores it.
     sayGrowth(practiceSuffix(growBump('strikes')));
     if (e.hp <= 0) {
@@ -13014,6 +13054,43 @@ function setupTown() {
              candidates: candidates };
   }
 
+  // ---- one plain sentence per action (#463) ------------------------
+  //
+  // The result line used to name the action ("last action: console
+  // (dusk)"), which says nothing about what the action did. Each verb
+  // now speaks one sentence that reads as a sentence, and that
+  // sentence is what the line shows.
+  //
+  // The wording is the engine's, so it stays neutral: nothing here
+  // names a pack's creature, and `{what}` is filled from the pack's own
+  // name for the thing acted on. A pack replaces any of these the way
+  // it replaces every other player word - `player_words` in world.json,
+  // key `combat.<verb>` - through the one reader, so the pack's own
+  // sentence wins and this stays the default. The rows are joined onto
+  // the one message table (part 340) rather than kept beside it, and
+  // outside its markers, so the two tables keep their own key sets.
+  var VEFR_COMBAT_WORDS = {
+    attack: 'You hit {what} for {damage}.',
+    console: '{what} quiets a little.',
+    hurl: '{what} does not care for that.',
+    other: 'You say it anyway. Nothing answers.',
+    none: 'There is nothing here to answer that.'
+  };
+  Object.keys(VEFR_COMBAT_WORDS).forEach(function (verb) {
+    VEFR_PLAYER_WORDS['combat.' + verb] = VEFR_COMBAT_WORDS[verb];
+  });
+  // One reader: the verb's own row when the verb - or the pack - has
+  // one, else the catch-all for any verb a pack names, else the line
+  // for a verb pressed with nothing to act on.
+  function verbWord(verb, slots) {
+    var words = (window.VEFR_WORLD && window.VEFR_WORLD.player_words) || {};
+    var key = 'combat.' + verb;
+    if (VEFR_PLAYER_WORDS[key] || typeof words[key] === 'string') {
+      return playerWord(key, slots);
+    }
+    return playerWord('combat.other', slots);
+  }
+
   // Task 3: fight through the one verb. The row is the same #verb-row
   // the surface always shows; naming a target is what "opens" it, and
   // nothing here re-implements the damage maths.
@@ -13039,7 +13116,11 @@ function setupTown() {
   function applyVerb(verb, label, enemy) {
     if (!enemy) return false;
     if (verb === 'attack') return heroAttack(enemy);
-    var said = 'You use ' + label + ' on ' + (enemy.name || 'it') + '.';
+    // The plain sentence, not "You use Console on it": what the verb
+    // DID is the line a player reads (#463). `label` is kept in the
+    // signature because the row's word is what the button says, but it
+    // is no longer spelled into the sentence.
+    var said = verbWord(verb, { what: (enemy && enemy.name) || 'it' });
     // The other verbs are words only, but a practice spec can learn from
     // them. The default verbs are `console`/`hurl`; any other name
     // counts toward nothing.
@@ -13048,6 +13129,27 @@ function setupTown() {
     if (kind) sayGrowth(practiceSuffix(growBump(kind)));
     combatSay(said);
     return true;
+  }
+  // One verb, acted on and journalled, in that order: the sentence the
+  // verb spoke is the sentence the journal keeps, and it is read before
+  // the monsters take their turn, so their answer cannot be what got
+  // written down. Both call sites go through here, so a verb can never
+  // be journalled without saying what it did.
+  function takeVerb(verb, label, foe) {
+    if (!foe) {
+      // Pressed with nothing named to act on: nothing happens, and the
+      // line says so in a sentence rather than naming the verb.
+      recordVerb(verb, verbWord('none'));
+      return false;
+    }
+    // The live line is emptied first so that what is on it afterwards is
+    // exactly what this verb said - nothing to tell a quiet verb from a
+    // loud one, and nothing left over from the last turn to be mistaken
+    // for this one's sentence.
+    combatSay('');
+    var done = applyVerb(verb, label, foe);
+    recordVerb(verb, combatText());
+    return done;
   }
 
   // A locked door or stair (design/gates-and-guardians.md, step 1).
@@ -13180,8 +13282,7 @@ function setupTown() {
           // One verb: act at once, no menu - but the turn still runs,
           // unless the verb was refused (a warden that cannot be
           // struck), which changes nothing and therefore costs nothing.
-          recordVerb(verbs[0][0]);
-          if (applyVerb(verbs[0][0], verbs[0][1], foe)) {
+          if (takeVerb(verbs[0][0], verbs[0][1], foe)) {
             lightTick();
             enemyTurn();
           }
@@ -13729,15 +13830,29 @@ function setupTown() {
   renderCombatLog(store.getJSON(COMBAT_KEY, []));
   /* The act's verbs are the pack's own vocabulary; baked defaults
      keep the old costume when the act declares none. The list lives
-     in surfaceVerbs() so the row and the enemy menu share one home. */
+     in surfaceVerbs() so the row and the enemy menu share one home.
+     Each button prints the number that presses it, in the order it
+     sits in the row (#463), the same idiom the action row uses for
+     its own keys. */
   (function () {
     var row = document.getElementById('verb-row');
     var verbs = surfaceVerbs();
-    verbs.forEach(function (pair) {
+    verbs.forEach(function (pair, i) {
       var b = document.createElement('button');
       b.type = 'button';
       b.dataset.verb = pair[0];
-      b.textContent = pair[1];
+      // The label is kept beside its own word: the verb is the pack's
+      // and the digit is a shortcut, and the two must not be read as
+      // one name.
+      var label = document.createElement('span');
+      label.className = 'verb';
+      label.textContent = pair[1];
+      b.dataset.label = pair[1];
+      var key = document.createElement('kbd');
+      key.textContent = String(i + 1);
+      b.appendChild(label);
+      b.appendChild(document.createTextNode(' '));
+      b.appendChild(key);
       row.appendChild(b);
     });
   })();
@@ -13745,20 +13860,34 @@ function setupTown() {
     var b = e.target.closest('button[data-verb]');
     if (!b) return;
     b.disabled = true;
-    recordVerb(b.dataset.verb);
     // With an enemy named, the press resolves against it and the
     // monsters take their turn, exactly as after a bump. With no
     // target the press is only journalled, as it always was.
     if (VERB_TARGET) {
-      var done = applyVerb(b.dataset.verb, b.textContent, VERB_TARGET);
-      if (done !== false) {
+      if (takeVerb(b.dataset.verb, b.dataset.label, VERB_TARGET) !== false) {
         lightTick();
         enemyTurn();
       }
       closeEnemyVerbs();
       updateUse();
+    } else {
+      // No enemy named: the press is journalled and said, as it
+      // always was, and no turn runs.
+      takeVerb(b.dataset.verb, b.dataset.label, null);
     }
-    window.setTimeout(function () { b.disabled = false; }, 400);
+    // Disabling a focused button drops focus on the floor, and the
+    // walk back up to the combat row was about eight Tabs every turn
+    // (#463). Put it back when the button is usable again - but only
+    // while the focus is still loose or still inside the row, so a
+    // player who moved on with Tab keeps where they went.
+    window.setTimeout(function () {
+      b.disabled = false;
+      var active = document.activeElement;
+      var row = document.getElementById('verb-row');
+      if (!active || active === document.body || (row && row.contains(active))) {
+        b.focus();
+      }
+    }, 400);
   });
   canvas.addEventListener('click', tryNPC);
   document.getElementById('dpad').addEventListener('click', function (e) {
@@ -13860,6 +13989,16 @@ function setupTown() {
     else if (e.key === 'b' || e.key === 'B') { if (window.openBag) window.openBag(); }
     else if (e.key === 'o' || e.key === 'O') startExplore();
     else if (e.key === 'v' || e.key === 'V') toggleFog();
+    // The fight verbs answer 1, 2, 3 - the digits printed on them
+    // (#463). The row's own order is the key's, and a surface with no
+    // row shown has no verb to press, so the keys do nothing there.
+    else if (/^[1-9]$/.test(e.key)) {
+      var verbBtn = combatVerbButton(Number(e.key));
+      if (verbBtn) {
+        e.preventDefault();
+        if (!e.repeat) verbBtn.click();
+      }
+    }
     else if (!onButton && (e.key === ' ' || e.key === 'Enter')) {
       e.preventDefault();
       if (!box.hidden) box.hidden = true; else doInteract();
