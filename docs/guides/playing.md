@@ -10,18 +10,21 @@ You cannot get anything wrong here; the game tells you what it is doing as you g
 |---|---|
 | Arrow keys, or `W` `A` `S` `D` | Move one tile. On a touch screen, put a finger on the left side and slide it the way to go. In a note, `A` and `D` turn the page like the arrows. |
 | `E`, `Space`, `Enter`, `F` | Interact. All four keys do the same one thing. |
-| `Q` | Hear a whisper: what people are saying right now. |
+| `Q` | Hear a rumor: what people are saying right now. |
 | `B` | Open the bag. |
 | `O` | Walk the unexplored dark. Press it again to stop. |
 | `V` | Turn the dark off and on. |
 | `Escape` | Open the pause menu. Press it again to close it. |
 
 One big button, **Interact**, sits at the bottom right and says what it will do. On a computer, beside it are
-four small icon buttons: Talk (`E`), Whisper (`Q`), Bag (`B`) and Explore (`O`). Each keeps its word for a screen
+four small icon buttons: Talk (`E`), Listen (`Q`), Bag (`B`) and Explore (`O`). Each keeps its word for a screen
 reader and a tooltip, and a tiny key letter. The Dusk and Dawn buttons live in the Menu, under Display, as "Time of day".
 
+**Listen** hears a rumor from anywhere in town, so it is not a whisper to whoever is standing next to you.
+The box says so: "You overhear <the speaker>". The Journal keeps what you overhear, and can ask for one.
+
 On a touch screen the bottom right holds a smaller set. The big round button is Interact: it says what it
-will do, so beside a person it says **Talk** and their name. Above it is **Bag**. To the left are **Whisper**
+will do, so beside a person it says **Talk** and their name. Above it is **Bag**. To the left are **Listen**
 and **Explore**; tap Explore again to stop. While a note, a shop or someone's line is open, these step aside
 and a **B** button closes it. Under Display in the Menu you can choose a D-pad instead of the joystick, change
 the Control size, or turn on Left-handed to swap the sides.

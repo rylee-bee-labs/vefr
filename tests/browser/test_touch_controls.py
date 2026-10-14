@@ -299,7 +299,7 @@ def test_left_handed_mirrors_the_joystick_and_the_cluster(browser, woven_sample)
 
 def test_a_phone_shows_two_buttons_on_the_world(browser, woven_sample):
     """The world keeps the screen: the smart button and Bag are the only buttons over it (owner, 2026-10-13).
-    Whisper and Explore were a phone's taps for Q and O (issue #431); they confused a player, so a phone no
+    Listen and Explore were a phone's taps for Q and O (issue #431); they confused a player, so a phone no
     longer draws them; the keyboard keeps both, and the Journal, where whispers are kept, asks for one."""
     with touch_phone(browser, woven_sample) as page:
         errors = []
@@ -317,6 +317,8 @@ def test_a_phone_shows_two_buttons_on_the_world(browser, woven_sample):
         page.wait_for_function("!document.getElementById('npc-box').hidden", timeout=5000)
         assert page.evaluate("document.getElementById('menu').hidden"), "the menu stayed over the whisper"
         assert page.inner_text("#npc-line").strip(), "the Journal's whisper opened an empty speech box"
+        # Issue #470: the rumor is overheard, not said to whoever is standing here.
+        assert page.inner_text("#npc-name").startswith("You overhear "), page.inner_text("#npc-name")
         assert not errors, errors[:5]
 
 
