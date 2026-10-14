@@ -84,6 +84,8 @@ gameplay features over new core machinery.
 - [player] A desk follows the hero too (`display.desk_tile`, 32 to 96): the stage is the window, and messages are
   the phone's one fading line (#446).
 - [engine] A Section can dress its generated floors with decor (#442, #443).
+- [player] One name for the interact key: every hint, label and key letter says F, and E stays an
+  unadvertised alias that still reaches the same verb, combat included (#467).
 
 ### LANDED 2026-10-14
 - [player] **Whisper is now Listen** (#470): the button, its tooltip and the touch label say "Listen (Q)", and the

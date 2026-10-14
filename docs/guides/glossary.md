@@ -74,7 +74,7 @@ The Norse or studio name sits beside it. It never replaces it. If you add a new 
 | **play it here** | Open the game you are making inside the studio, in a pane, with no download. | "weave and open" | in use |
 | **undo** | Put the last kept edit back, in plain words. One step only. | "revert" | in use |
 | **equip** / **take off** | Wear or remove an item in a slot. From the Bag panel: a "You" section shows all five slots, a carried thing gets **Equip**, a worn one gets **Take off**, and wearing something into a full slot hands the old one back to the bag. | "wield" | in use (`design/equipment.md`, `docs/guides/rulesets.md`) |
-| **interact** | Looks at what is near you and does the one thing that fits: talk, trade, open, go through, look or fight. | `tryNPC` "talk", `useHere` "use", the separate `E` / `F` keys | in use |
+| **interact** | Looks at what is near you and does the one thing that fits: talk, trade, open, go through, look or fight. | `tryNPC` "talk", `useHere` "use", the `F` key (`E` answers too, unadvertised) | in use |
 | **start over** | Clears the saved games for every game on the same site, then returns to the title screen. | `clear saves` | in use |
 | **normalize** | Expands a Blueprint into the owned regions' `enemies` lists and refreshes `blueprint.lock.json`. Read-only without `--out`. | (new) | in use (`docs/guides/blueprint.md`) |
 

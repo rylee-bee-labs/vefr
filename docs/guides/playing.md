@@ -9,17 +9,17 @@ You cannot get anything wrong here; the game tells you what it is doing as you g
 | Key | What it does |
 |---|---|
 | Arrow keys, or `W` `A` `S` `D` | Move one tile. On a touch screen, put a finger on the left side and slide it the way to go. In a note, `A` and `D` turn the page like the arrows. |
-| `E`, `Space`, `Enter`, `F` | Interact. All four keys do the same one thing. |
+| `F`, `Space`, `Enter` | Interact. All three keys do the same one thing. |
 | `Q` | Hear a rumor: what people are saying right now. |
 | `B` | Open the bag. |
 | `O` | Walk the unexplored dark. Press it again to stop. |
 | `V` | Turn the dark off and on. |
 | `Escape` | Open the pause menu. Press it again to close it. |
 
-On the title screen, **Begin** has the focus and takes `Enter`, `Space`, `F` and `E`, so any of the four starts the game. `Tab` keeps the focus on **Begin** instead of walking it off the screen.
+On the title screen, **Begin** has the focus and takes `Enter`, `Space` and `F`, so any of them starts the game. `Tab` keeps the focus on **Begin** instead of walking it off the screen.
 
 One big button, **Interact**, sits at the bottom right and says what it will do. On a computer, beside it are
-four small icon buttons: Talk (`E`), Listen (`Q`), Bag (`B`) and Explore (`O`). Each keeps its word for a screen
+four small icon buttons: Talk (`F`), Listen (`Q`), Bag (`B`) and Explore (`O`). Each keeps its word for a screen
 reader and a tooltip, and a tiny key letter. The Dusk and Dawn buttons live in the Menu, under Display, as "Time of day".
 
 **Listen** hears a rumor from anywhere in town, so it is not a whisper to whoever is standing next to you.
@@ -41,8 +41,8 @@ Display also holds the two reading settings, next to the Sound switch:
 
 Each one is remembered in this browser, separately for each game, and comes back the next time you play.
 `Space` and `Enter` press the button that already has the focus.
-While a note or someone's line is on screen, `E`, `F`, `Space` and `Enter` turn the page and then close it.
-In the shop, `E` or `F` closes it too (`Escape` and the Close button still work).
+While a note or someone's line is on screen, `F`, `Space` and `Enter` turn the page and then close it.
+In the shop, `F` closes it too (`Escape` and the Close button still work).
 
 The screen stays quiet. The how-to-move line goes after your first step. A place's name shows for a few
 seconds when you arrive. The fight buttons appear only with a monster near. Everything else sits in a small

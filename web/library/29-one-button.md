@@ -12,7 +12,7 @@ So VEFR keeps the controls small.
 
 * * *
 
-There is one verb. Press E, F, Space or Enter, or tap the one big
+There is one verb. Press F, Space or Enter, or tap the one big
 button. The button's own words tell you what the next press will do:
 "Go through the door", "Talk to the keeper", "Open the chest".
 

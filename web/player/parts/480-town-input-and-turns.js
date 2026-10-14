@@ -1279,10 +1279,11 @@
   }
 
   // One speaker's line - the talk path itself, shared by the Talk
-  // button, the canvas click, the old E key, and Interact's resident
-  // pick. The line is the pack's own: straight from the model when
-  // one answers, else from the woven pool, else spliced from this
-  // character's fragments, else the speaker's seeded line in turn.
+  // button, the canvas click, the F key (E is its unadvertised alias),
+  // and Interact's resident pick. The line is the pack's own: straight
+  // from the model when one answers, else from the woven pool, else
+  // spliced from this character's fragments, else the speaker's seeded
+  // line in turn.
   function talkToSpeaker(nearest) {
     var ph = phase();
     libraryFromSpeaker(nearest.key);

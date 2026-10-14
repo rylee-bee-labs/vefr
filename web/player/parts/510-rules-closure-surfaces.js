@@ -133,6 +133,9 @@
     if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
     // Any key but the toggle itself halts an autoexplore walk.
     if (exploring() && e.key !== 'o' && e.key !== 'O') exploreStop('Stopped.');
+    // F is the one name for Interact (vefr#467); E answers to it too, so
+    // a player who learned the old key is never stuck, but no hint, label
+    // or key letter names it.
     // The Interact keys keep the loop going: while a note or a speech box
     // is up they CONTINUE it (next page, then close) instead of needing a
     // click. A focused button handles its own Enter and Space, and a held
