@@ -189,6 +189,24 @@ the next visit. `look` is `"plain"` or `"skin"`; left out, it is
 `"skin"`. A pack with no skin has nothing to pick, and Display offers
 no choice.
 
+### Dark or Parchment
+
+Every game plays in one of two looks, and the player chooses between
+them in Display. A pack says which one a new player starts on:
+
+```json
+"display": {
+  "palette": "dark"
+}
+```
+
+`palette` is `"dark"` or `"parchment"`: warm charcoal panels and cream
+words, or cream paper panels and dark ink. The player's own pick wins
+over the pack's and is kept for the next visit. Left out, the engine
+takes no side: the interface follows the device's own light or dark
+setting, exactly as it did before this setting existed. Neither choice
+changes the drawn world, which is your art and keeps its own colours.
+
 ### Your own tiles and variants
 
 A region may bring its own ground pictures in a `tiles/` directory beside

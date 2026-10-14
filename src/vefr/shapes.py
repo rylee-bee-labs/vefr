@@ -739,6 +739,9 @@ DISPLAY = Block(
         Key('pixel_art', 'obj', sub=PIXEL_ART),
         # The look a skinned pack starts on; the player's pick in Display wins.
         Key('look', 'enum', choices=('plain', 'skin')),
+        # Which of the two faces a new player starts on. Left out, the engine's
+        # own default stands and the device's light or dark setting decides.
+        Key('palette', 'enum', choices=('dark', 'parchment')),
     ),
 )
 
