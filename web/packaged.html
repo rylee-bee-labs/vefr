@@ -12759,12 +12759,11 @@ function setupTown() {
     // stair arrival sets it aside: a door opens both ways and means the
     // same thing from either side, a wake is not an arrival at all, and
     // a tile the hero can never step off of is not a landing.
-    landing = null;
-    var landingStair = via === 'stairs' ? transitionAt(hero[0], hero[1]) : null;
-    if (landingStair && transitionCandidate(landingStair).kind === 'stairs'
-        && stepOffExists(hero[0], hero[1])) {
-      landing = [hero[0], hero[1]];
-    }
+    // Any arrival by a transition (`via` is the kind used: a door into the
+    // descent drops the hero on a floor's stair just as a stair does) sets
+    // the tile aside; whether a stair is on it is asked when the button is
+    // drawn, because a generated floor wires its stairs on arrival.
+    landing = (via && stepOffExists(hero[0], hero[1])) ? [hero[0], hero[1]] : null;
     resize();
     draw();
     refreshPoi();
@@ -13022,18 +13021,24 @@ function setupTown() {
       candidates.push({ kind: 'place', id: ARRIVAL_ID, name: arrivalNote.name,
                         at: [hero[0], hero[1]] });
     }
+    function onLanding(x, y) {
+      return landingHere() && x === landing[0] && y === landing[1];
+    }
     function onArrival(x, y) {
       // The tile the hero stands on when they arrive: the note above
       // where there is one, else the landing itself (vefr#465) - while
       // they are still on it.
-      return (arrived && x === hero[0] && y === hero[1])
-        || (landingHere() && x === landing[0] && y === landing[1]);
+      return (arrived && x === hero[0] && y === hero[1]) || onLanding(x, y);
     }
     transitions().forEach(function (tr) {
       if (!tr || tr.from !== regionName || !Array.isArray(tr.at)) return;
       if (typeof tr.at[0] !== 'number' || typeof tr.at[1] !== 'number') return;
-      if (onArrival(tr.at[0], tr.at[1])) return;
-      candidates.push(transitionCandidate(tr));
+      var c = transitionCandidate(tr);
+      if (arrived && tr.at[0] === hero[0] && tr.at[1] === hero[1]) return;
+      // A stair on the landing waits for the first step; a door on it
+      // opens both ways and means the same from either side, so it stays.
+      if (onLanding(tr.at[0], tr.at[1]) && c.kind === 'stairs') return;
+      candidates.push(c);
     });
     var texts = town.poi_text || {};
     Object.keys(texts).forEach(function (key) {

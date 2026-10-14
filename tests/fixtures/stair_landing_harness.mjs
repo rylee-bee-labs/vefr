@@ -25,7 +25,7 @@ const dom = new JSDOM(html, {
   runScripts: 'dangerously', pretendToBeVisual: true, url: 'http://localhost/', virtualConsole,
   beforeParse: (window) => {
     window.HTMLCanvasElement.prototype.getContext = function () {
-      return new Proxy({ canvas: this }, get: (t, k) => (k in t ? t[k] : noop) });
+      return new Proxy({ canvas: this }, { get: (t, k) => (k in t ? t[k] : noop) });
     };
     window.matchMedia = () => ({ matches: false, addListener: noop, removeEventListener: noop });
     window.addEventListener('error', (e) => errors.push(String(e.message || e)));

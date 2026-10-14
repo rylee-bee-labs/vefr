@@ -42,17 +42,17 @@ HARNESS = Path(__file__).resolve().parent / "fixtures" / "stair_landing_harness.
 #   cellar beside .... [2, 1]   one step off the landing
 DOWN = {"from": "town", "at": [9, 3], "to": "cellar", "to_at": [1, 1]}
 UP = {"from": "cellar", "at": [1, 1], "to": "town", "to_at": [9, 3]}
-STAIR_POIS = {"acts/act-1/town/contract.json": {"9, 3": "the stair down"},
-              "acts/act-1/cellar/contract.json": {"1, 1": "the stair up"}}
+STAIR_POIS = {"acts/act-1/town/contract.json": {"pois": {"9,3": "the stair down"}},
+              "acts/act-1/cellar/contract.json": {"pois": {"1,1": "the stair up"}}}
 # The same two transitions with no `stair` in either tile's name: both are
 # doors, so both act the moment the hero stands on them.
-DOOR_POIS = {"acts/act-1/town/contract.json": {"9, 3": "the way down"},
-             "acts/act-1/cellar/contract.json": {"1, 1": "the way back"}}
+DOOR_POIS = {"acts/act-1/town/contract.json": {"pois": {"9,3": "the way down"}},
+             "acts/act-1/cellar/contract.json": {"pois": {"1,1": "the way back"}}}
 
 # The town from the fixture's own start to the stand-spot, around the
 # rat that sleeps at [2, 1]: down the west wall, across the south walk,
 # then one step up so the stair is the tile the hero faces.
-TO_THE_STAIR = ["walk:down,down,down,down",
+TO_THE_STAIR = ["begin", "walk:down,down,down,down",
                 "walk:right,right,right,right,right,right,right,right",
                 "walk:up"]
 
