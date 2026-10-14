@@ -9173,6 +9173,13 @@ window.VEFR_DESCENT = (function () {
   // are the ones the hero left. And the why-log names the floor, so what
   // happened can be read back without watching the screen for it.
   function deathResume(name) {
+    // A hero who falls in the fight that would have taught the strike hint
+    // wakes to their own line, not to a lesson (#464): the hint is dropped
+    // and stays owed, so the next fight says it.
+    if (typeof PENDING_HINT !== 'undefined' && PENDING_HINT) {
+      PENDING_HINT = null;
+      try { store.set(strikeHintKey(), ''); } catch (e) { /* storage closed */ }
+    }
     if (!on() || !isGenerated(name)) return null;
     var depth = depthOfName(name);
     var plan = depth ? floorPlan(depth) : null;

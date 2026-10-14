@@ -48,10 +48,9 @@ BUMP = "dir:right"
 
 # The flag the hint leaves behind, in the player's own storage, keyed by
 # the world's name the way every other `vefr-` save is. The combat
-# fixture is the shipped sample world with a fight added, and that
-# world's name is `sample-world` (tests/fixtures/make_combat_pack.py
-# copies the pack and never renames it).
-HINT_KEY = "vefr-strike-hint-sample-world"
+# fixture's world is named `combat-test` (its other saves are
+# `vefr-hp-combat-test` and so on).
+HINT_KEY = "vefr-strike-hint-combat-test"
 
 
 def _fight(tmp_path, bumps, patch=None, store=None):
