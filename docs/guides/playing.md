@@ -16,6 +16,8 @@ You cannot get anything wrong here; the game tells you what it is doing as you g
 | `V` | Turn the dark off and on. |
 | `Escape` | Open the pause menu. Press it again to close it. |
 
+On the title screen, **Begin** has the focus and takes `Enter`, `Space`, `F` and `E`, so any of the four starts the game. `Tab` keeps the focus on **Begin** instead of walking it off the screen.
+
 One big button, **Interact**, sits at the bottom right and says what it will do. On a computer, beside it are
 four small icon buttons: Talk (`E`), Whisper (`Q`), Bag (`B`) and Explore (`O`). Each keeps its word for a screen
 reader and a tooltip, and a tiny key letter. The Dusk and Dawn buttons live in the Menu, under Display, as "Time of day".
