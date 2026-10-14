@@ -386,7 +386,10 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # A desk's follow camera (display.desk_tile) and its one fading message line, 2026-10-13; measured twice in separate processes, readings equal:
 #   d8aa37fc38bdc1d17160232896b30791d9be64b68b49fc7c5ed29d0174597e56
 #   d8aa37fc38bdc1d17160232896b30791d9be64b68b49fc7c5ed29d0174597e56
-NO_SKIN_WEAVE_SHA256 = "d8aa37fc38bdc1d17160232896b30791d9be64b68b49fc7c5ed29d0174597e56"
+# Three settings in Display - larger text, reduced motion, volume (#473), 2026-10-14; measured twice in separate processes, readings equal:
+#   6ca8bb7e68c75e1ecf535e809ae6065b32f8f7bf295183e024c9939afc9e3501
+#   6ca8bb7e68c75e1ecf535e809ae6065b32f8f7bf295183e024c9939afc9e3501
+NO_SKIN_WEAVE_SHA256 = "6ca8bb7e68c75e1ecf535e809ae6065b32f8f7bf295183e024c9939afc9e3501"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():
