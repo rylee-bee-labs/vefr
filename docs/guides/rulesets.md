@@ -799,6 +799,17 @@ remembered per region, per world (`vefr-slain-<world>-<region>` in the
 player's storage), so a cleared room stays cleared; a wounded one
 resets when the page reloads.
 
+**The strike hint.** Nothing about the bump looks like an attack, and
+the line that gives it away ("You hit a cellar rat for 2.") is a
+result, not a rule — so one hint is said at the first landed blow of a
+game: "Walk into an enemy to strike it." It rides the fight's own line,
+after the monsters' turn, so a counter-blow cannot wipe it off the
+screen and a phone (which draws one message line) still draws it. It is
+said once per world: the flag is `vefr-strike-hint-<world>` in the
+player's storage, beside the other saves, so a reload does not bring it
+back and Start over clears it with the rest. A pack names its own words
+for it in `player_words` as `combat.walk_to_strike` (vefr #464).
+
 **Cozy death.** At zero hp the hero is restored to `hp`, one plain
 line is shown ("You wake in the temple. You lost nothing that
 mattered."), and the hero wakes at `wake`. Nothing is lost.
@@ -1632,7 +1643,7 @@ matter) + `src/vefr/maplab.py` (the unknown-value refusal) +
    journal order, feedback lines, and the click budget — the
    pleasant-loop protocol (VEFR-ACT1-SPEC §9): two playtest passes per
    increment, nine-point checklist, dud kill-switch.
-6. **Every overlay the ruleset adds (a panel, a note, a speech box) must be continued by the Interact keys** (E, F, Space, Enter) or deliberately be a choice that keeps its own controls, and a test must say which. A player that needs a click mid-loop breaks the loop (Rylee, 2026-10-02; `tests/test_overlay_interact.py`).
+6. **Every overlay the ruleset adds (a panel, a note, a speech box) must be continued by the Interact keys** (F, Space, Enter) or deliberately be a choice that keeps its own controls, and a test must say which. A player that needs a click mid-loop breaks the loop (Rylee, 2026-10-02; `tests/test_overlay_interact.py`).
 7. ROADMAP entry with pasted gates; dev-guards green; merge without
    `--admin`.
 
@@ -1657,6 +1668,7 @@ at the call site. v0 of that table is the four where-next lines:
 | `where_next.reach` | `To reach {place}, go {direction}.` | which way to step to get there |
 | `where_next.here` | `The way to {place} is right here.` | it is already where the hero stands |
 | `where_next.no_way` | `No way to {place} is declared from here.` | the action is not available |
+| `combat.walk_to_strike` | `Walk into an enemy to strike it.` | walking into an enemy IS the attack (vefr #464) |
 
 Those defaults are the strings the player already read (vefr #259:
 "To reach floor-1, go north-west" — a region id and a compass where a
@@ -1669,7 +1681,8 @@ pack's own sentence:
 
 ```json
 "player_words": {
-  "where_next.reach": "To get to {place}, head {direction}."
+  "where_next.reach": "To get to {place}, head {direction}.",
+  "combat.walk_to_strike": "Walk into a monster to hit it."
 }
 ```
 
@@ -1679,10 +1692,13 @@ about a pack that names no word):
 - the block is optional and additive; a pack that declares none plays
   the engine's own wording byte for byte, and nothing about it is ever
   reported;
-- every value must be a string, must say something (not empty, not only
-  spaces), and must name its `{place}` slot — the engine hands it the
-  place being pointed at. `{direction}` is available too and stays as
-  written when there is no direction to fill it;
+- every value must be a string and must say something (not empty, not
+  only spaces);
+- a row that points somewhere must also name its `{place}` slot — the
+  engine hands it the place being pointed at. `{direction}` is available
+  too and stays as written when there is no direction to fill it.
+  `combat.walk_to_strike` is the one row with nothing to point at, so
+  it is a plain sentence and needs no slot;
 - a key the table does not have is refused: a word nothing can ever
   read is a word the author thought they had said;
 - each refusal is one plain sentence naming `world.json` and the key.
@@ -1697,15 +1713,52 @@ the player (`VEFR_PLAYER_WORDS` in
 the world object the weave already bakes, so there is no new
 placeholder and no new bake step.
 
-Code: `src/vefr/shapes.py` (`PLAYER_WORDS`, the `place-label` kind) +
+Code: `src/vefr/shapes.py` (`PLAYER_WORDS`, the `place-label` and
+`sentence` kinds) +
 `src/vefr/maplab.py` (`player_words_errors`) + `web/player/parts/340-where-next-hints.js`
-(`VEFR_PLAYER_WORDS`, `playerWord`); tests: `tests/test_player_words.py`.
+(`VEFR_PLAYER_WORDS`, `playerWord`, `hintStrikeOnce`); tests:
+`tests/test_player_words.py`, `tests/test_strike_hint.py`.
 
 A floor of a Section that declares a `label` fills `{place}` with its
 title, "the Cellar, floor 2", where it used to be the region id
 `cellar-0-2` (vefr #363); the Where next? row is still keyed by the id.
 Every other region, and every floor of a Section with no label, fills it
 with the region id exactly as before.
+
+### The fight's own words (vefr #463)
+
+One plain sentence per combat action, shown in the result line where
+the old line named the action ("last action: console (dusk)"). The
+rows live in the player's message table and are read through the same
+`playerWord`, with keys `combat.<verb>`:
+
+| Key | Default | What it is |
+|---|---|---|
+| `combat.attack` | `You hit {what} for {damage}.` | a blow, for the damage it did |
+| `combat.console` | `{what} quiets a little.` | the default console verb |
+| `combat.hurl` | `{what} does not care for that.` | the default insult verb |
+| `combat.other` | `You say it anyway. Nothing answers.` | any other verb the act names |
+| `combat.none` | `There is nothing here to answer that.` | a verb pressed with nothing in reach |
+
+`{what}` is filled with the pack's own name for the thing acted on, so
+no default names anybody's creature. A pack that names one of these
+keys in `player_words` wins that row.
+
+**Known gap:** `vefr check` does not know these five keys yet and
+refuses them as unknown (the key set is typed in `shapes.PLAYER_WORDS`).
+The player honours them; adding them to the shape is a pack-contract
+change and is waiting on an owner decision. Until then the defaults are
+what ships.
+
+The combat buttons also answer `1`, `2`, `3` in the order they sit in
+the row, and each prints its digit (vefr #463); focus stays on the verb
+you last used, so a fight is playable from the keyboard alone. On a
+surface with no combat row (`plain`, `investigation`) the row and its
+keys are both absent.
+
+Code: `web/player/parts/480-town-input-and-turns.js` (`VEFR_COMBAT_WORDS`,
+`verbWord`, `takeVerb`) + `web/player/parts/510-rules-closure-surfaces.js`
+(the buttons and the number keys); tests: `tests/test_combat_keys.py`.
 
 Out of scope for v0: every other string in the player, display names
 for authored regions, POI labels in `point-to`, and any pluralization or

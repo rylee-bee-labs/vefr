@@ -284,6 +284,9 @@
   .verb-row[hidden] { display: none; }
   .verb-row button { background: var(--glass); color: var(--glass-ink); border-color: rgba(242, 236, 221, 0.4); text-transform: none; letter-spacing: 0.02em; font: 700 0.9rem var(--read); }
   .verb-row button::before { content: '\25B6'; color: #D8AA4E; font-size: 0.7rem; }
+  /* The digit that presses the verb, printed on the verb (#463), in the
+     same idiom as the action row's keys. */
+  .verb-row button kbd { margin-left: 2px; font-size: 0.62rem; opacity: 0.8; }
   body[data-surface="plain"] .verb-row,
   body[data-surface="investigation"] .verb-row { display: none; }
   #combat-log { position: absolute; left: calc(16px + var(--sai-left)); bottom: calc(70px + var(--sai-bottom)); z-index: 2; margin: 0; max-width: calc(45% - var(--sai-left)); font-size: 0.85rem; }
@@ -298,7 +301,7 @@
     .acts { flex-direction: column; align-items: center; right: calc(12px + var(--sai-right)); bottom: calc(16px + var(--sai-bottom)); }
     .acts .gbtn--main { width: 72px; height: 72px; border-radius: 50%; padding: 0; font-size: 0.66rem; }
     .acts .gbtn--tool { width: 48px; height: 48px; border-radius: 50%; }
-    .acts kbd { display: none; }
+    .acts kbd, .verb-row kbd { display: none; }
     .npc-box { left: calc(10px + var(--sai-left)); right: calc(10px + var(--sai-right)); bottom: calc(12px + var(--sai-bottom)); }
     .toasts { top: calc(108px + var(--sai-top)); bottom: auto; width: min(210px, 60%); }   /* below the health/level/gold row, which can wrap to two lines */
     .hud-hp-bar { width: 56px; }
@@ -320,7 +323,7 @@
     .acts { flex-direction: row; align-items: flex-end; right: calc(6px + var(--sai-right)); bottom: calc(6px + var(--sai-bottom)); gap: 2px; }
     .acts .gbtn--main { width: auto; min-width: 44px; max-width: calc(100vw - 176px); height: 52px; border-radius: 999px; padding: 0 10px; font-size: 0.6rem; }
     .acts .gbtn--tool { width: 44px; height: 44px; border-radius: 50%; }
-    .acts kbd { display: none; }
+    .acts kbd, .verb-row kbd { display: none; }
   }
   /* The narrowest frames cannot hold the action row beside the d-pad: shave the
      gaps and the Interact circle to the 44px floor so the two sit side by side. */
@@ -610,7 +613,7 @@
         </div>
         <div class="acts">
           <button type="button" id="interact" class="gbtn gbtn--main"><span id="interact-label">Interact</span> <kbd>F</kbd></button>
-          <button type="button" id="talk" class="gbtn gbtn--tool" data-tip="Talk" title="Talk (E)"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 5h16v11H9l-5 4z"/></svg><span class="sr-only">Talk</span><kbd>E</kbd></button>
+          <button type="button" id="talk" class="gbtn gbtn--tool" data-tip="Talk" title="Talk (F)"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 5h16v11H9l-5 4z"/></svg><span class="sr-only">Talk</span><kbd>F</kbd></button>
           <button type="button" id="whisper" class="gbtn gbtn--tool" data-tip="Listen" title="Listen (Q)"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 9v6M9 6v12M13 9v6M17 7v10"/></svg><span class="sr-only">Listen</span><kbd>Q</kbd></button>
           <button type="button" id="bagbtn" class="gbtn gbtn--tool" data-tip="Bag" title="Bag (B)"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 9V7a4 4 0 0 1 8 0v2"/><rect x="4" y="9" width="16" height="12" rx="2"/></svg><span class="sr-only">Bag</span><kbd>B</kbd></button>
           <button type="button" id="explore" class="gbtn gbtn--tool" aria-pressed="false" data-tip="Explore" title="Explore (O)"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg><span class="sr-only">Explore</span><kbd>O</kbd></button>
@@ -796,7 +799,7 @@
       <h2>How to play</h2>
       <ul>
         <li>Move with the arrow keys or <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd>, or, on a touch screen, drag the joystick (or use the D-pad you chose in Display).</li>
-        <li>Use what is near you with <kbd>E</kbd>, <kbd>Space</kbd>, <kbd>Enter</kbd>, <kbd>F</kbd> or the big Interact button. It always says what it will do. The same keys turn the pages of a note and close someone's speech, and <kbd>E</kbd> or <kbd>F</kbd> close a shop.</li>
+        <li>Use what is near you with <kbd>F</kbd>, <kbd>Space</kbd> or <kbd>Enter</kbd>, or the big Interact button. It always says what it will do. The same keys turn the pages of a note and close someone's speech, and <kbd>F</kbd> is how you close a shop.</li>
         <li>Hear a rumor with <kbd>Q</kbd> or the Listen button.</li>
         <li>Open your bag with <kbd>B</kbd> or the Bag button.</li>
         <li>Walk the unexplored dark with <kbd>O</kbd> or the Explore button.</li>
@@ -858,6 +861,175 @@
 <div class="touch-base" id="touch-base" aria-hidden="true" hidden></div>
 <div class="touch-knob" id="touch-knob" aria-hidden="true" hidden></div>
 <script>
+// ---- dialog focus: Tab stays inside an open dialog, and comes back to the opener
+// (issue #462). Every box that opens over the game here is a `role="dialog"`:
+// the pause menu, a book, a character's line, a trade, the identify list, the
+// two end cards. The page behind them never stops being focusable, so one Tab
+// walked out of the box and into Menu, Messages, Talk, Whisper, Bag and Explore
+// (run-004: "Keyboard focus during dialogs often drifted to underlying page
+// buttons"; run-002 and run-003 found Close and Read on several Tabs away).
+//
+// Two rules, one for every dialog, so a new box gets them for free:
+//   1. Tab and Shift+Tab cycle the controls of the dialog that is open, and
+//      never step onto the page behind it.
+//   2. A dialog that closes while the focus is on it - or on nothing, because
+//      a browser drops focus to the body the moment the control holding it is
+//      hidden - hands focus back to the control it was opened from. A close
+//      that already put focus somewhere is left alone: the menu returning to
+//      the Menu button, and Start over asking its question in the same box,
+//      both know where they want the focus.
+function bindDialogFocus() {
+  var DIALOG = '[role="dialog"]';
+  var records = [];         // one per dialog: {el: dialog, open: bool, opener: node}
+  var outside = null;       // the last control focused outside every dialog
+
+  // On screen now: not hidden, and not inside anything hidden. Every dialog in
+  // this player opens and closes on the `hidden` attribute, but a dialog can
+  // sit inside a hidden parent (the play surface is hidden until the game is
+  // entered), so the ancestors are asked as well.
+  function onScreen(el) {
+    for (var cur = el; cur; cur = cur.parentElement) {
+      if (cur.hidden) return false;
+      if (cur.style && cur.style.display === 'none') return false;
+    }
+    return true;
+  }
+
+  // The stops a Tab walks inside one dialog, in the order it walks them. A
+  // disabled control, one with tabindex="-1", and one inside a panel that is
+  // hidden (the pause menu keeps ten panels, one open) are steps past.
+  function stops(dialog) {
+    var all = dialog.querySelectorAll(
+      'a[href], button, input, select, textarea, [tabindex]');
+    return Array.prototype.filter.call(all, function (el) {
+      if (el.disabled) return false;
+      if (el.getAttribute('tabindex') === '-1') return false;
+      return onScreen(el);
+    });
+  }
+
+  // The dialog a key belongs to: the last one on screen in the page. The
+  // pause menu is last in the markup, so a box opened on top of it wins.
+  // A page that is being torn down (a reload, a closed window) has no
+  // document left to ask; nothing is open there.
+  function alive() { return typeof document !== 'undefined' && !!document && !!document.querySelectorAll; }
+
+  function topDialog() {
+    if (!alive()) return null;
+    var list = document.querySelectorAll(DIALOG);
+    for (var i = list.length - 1; i >= 0; i--) {
+      if (onScreen(list[i])) return list[i];
+    }
+    return null;
+  }
+
+  document.addEventListener('keydown', function (e) {
+    // `defaultPrevented` first: Start over already owns the Tab between its
+    // two buttons, and its handler runs before this one.
+    if (e.key !== 'Tab' || e.defaultPrevented) return;
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    var dialog = topDialog();
+    if (!dialog) return;
+    var here = stops(dialog);
+    // A box with nothing to press keeps the Tab on itself rather than letting
+    // it walk out into the page.
+    if (!here.length) {
+      e.preventDefault();
+      if (dialog.focus) dialog.focus();
+      return;
+    }
+    var at = here.indexOf(document.activeElement);
+    var to;
+    if (at === -1) to = e.shiftKey ? here[here.length - 1] : here[0];
+    else if (e.shiftKey) to = here[(at - 1 + here.length) % here.length];
+    else to = here[(at + 1) % here.length];
+    e.preventDefault();
+    to.focus();
+  });
+
+  function recordFor(dialog) {
+    for (var i = 0; i < records.length; i++) {
+      if (records[i].el === dialog) return records[i];
+    }
+    var rec = { el: dialog, open: false, opener: null };
+    records.push(rec);
+    return rec;
+  }
+
+  // Somewhere a focus can actually land: still in the page, still on screen.
+  function landable(el) {
+    return !!(el && el.focus && el !== document.body
+              && el !== document.documentElement && onScreen(el));
+  }
+
+  // The one place that watches the dialogs. It is told about an open and a
+  // close by the `hidden` attribute either way, so a dialog is trapped and
+  // answered for without every surface that opens one knowing this part
+  // exists.
+  function sync() {
+    if (!alive()) return;
+    var list = document.querySelectorAll(DIALOG);
+    for (var i = 0; i < list.length; i++) {
+      var dialog = list[i];
+      var rec = recordFor(dialog);
+      var now = onScreen(dialog);
+      if (now === rec.open) continue;
+      rec.open = now;
+      if (now) {
+        rec.opener = outside;
+        // A dialog that opens and leaves the focus on the page behind it would
+        // let the next key act on the page: put the focus on its first control,
+        // after the surface that opened it has had its own say.
+        (function (d) {
+          setTimeout(function () {
+            if (!alive() || !onScreen(d) || topDialog() !== d) return;
+            var a = document.activeElement;
+            if (a && d.contains(a)) return;
+            var first = stops(d)[0];
+            if (first) first.focus(); else if (d.focus) d.focus();
+          }, 0);
+        })(dialog);
+        continue;
+      }
+      var back = rec.opener;
+      rec.opener = null;
+      var here = document.activeElement;
+      var lost = !here || here === document.body || here === document.documentElement
+                 || dialog.contains(here);
+      if (!lost) continue;
+      // An opener that has since left the page (the book button of a panel
+      // that closed with it) is no place to send the focus; the Menu button
+      // is the one control every surface has.
+      if (!landable(back)) back = document.getElementById('menu-open');
+      // Another dialog still open (or just opened) owns the focus now: the
+      // opener behind it is not where the next key should go.
+      var still = topDialog();
+      if (still && !(back && still.contains(back))) continue;
+      if (landable(back)) { try { back.focus(); } catch (e) { /* gone */ } }
+    }
+  }
+
+  // The opener is remembered as the last control focused outside every dialog,
+  // which is known before a dialog moves focus into itself - a "who has the
+  // focus now" read at open time would only ever answer with the dialog.
+  document.addEventListener('focusin', function (e) {
+    var d = topDialog();
+    if (!d) { outside = e.target; return; }
+    // A focus that lands on the page behind an open dialog (a script focusing
+    // its own button, a click on the page) is brought back into the dialog.
+    if (!d.contains(e.target)) {
+      var first = stops(d)[0];
+      if (first && first !== e.target) first.focus();
+      else if (d.focus && d !== e.target) d.focus();
+    }
+  });
+
+  if (window.MutationObserver) {
+    new MutationObserver(sync).observe(document.documentElement,
+      { attributes: true, subtree: true, attributeFilter: ['hidden'] });
+  }
+}
+bindDialogFocus();
 // ---- inlined world pack ----
 window.VEFR_WORLD = {{world_json}};
 // Ground tiles, keyed by map symbol: the same picture tiles the
@@ -1199,7 +1371,7 @@ function bootstrap() {
   if (!tutorialDone()) {
     statusEl0.textContent = touch
       ? 'Move on the left. Near someone, tap the round button.'
-      : 'Move with the arrow keys or WASD. Press E to talk.';
+      : 'Move with the arrow keys or WASD. Press F to talk.';
     statusEl0.setAttribute('data-tutorial', '1');
   }
 }
@@ -3203,20 +3375,30 @@ function levelSuffix(r) {
   return ' You are stronger. Level ' + r.level + ': ' + parts.join(', ') + '.';
 }
 
-// Growth sentences are held until the turn's blows are all said, then
-// added to the last line. A monster's counter-blow would otherwise wipe
-// the good news off the screen before the player could read it.
+// Growth sentences - and the one-time strike hint (vefr #464, part 340)
+// are held until the turn's blows are all said, then added to the last
+// line, the hint after the growth because it is about the fight the
+// player just walked into. A monster's counter-blow would otherwise
+// wipe the good news off the screen before the player could read it.
 var PENDING_GROWTH = null;
+var PENDING_HINT = null;
 function sayGrowth(text) {
   if (!text) return;
   PENDING_GROWTH = (PENDING_GROWTH ? PENDING_GROWTH + ' ' : '') + text.replace(/^ /, '');
 }
+function sayHint(text) {
+  if (!text) return;
+  PENDING_HINT = (PENDING_HINT ? PENDING_HINT + ' ' : '') + text.replace(/^ /, '');
+}
 function flushGrowth() {
-  if (!PENDING_GROWTH) return;
-  var text = PENDING_GROWTH; PENDING_GROWTH = null;
+  var held = [PENDING_GROWTH, PENDING_HINT].filter(function (t) {
+    return !!t;
+  }).join(' ');
+  PENDING_GROWTH = null; PENDING_HINT = null;
+  if (!held) return;
   var el = document.getElementById('combat-live');
   if (!el) return;
-  el.textContent = (el.textContent ? el.textContent + ' ' : '') + text;
+  el.textContent = (el.textContent ? el.textContent + ' ' : '') + held;
 }
 
 function renderEncounter() {
@@ -3255,6 +3437,19 @@ function surfaceVerbs() {
   }
   return [['attack', 'Strike'], ['console', 'Console'],
           ['hurl', 'Hurl an insult']];
+}
+
+// The nth button of the combat row, 1 being the first verb, or null.
+// The number keys answer through this, so the key that presses a verb
+// and the digit printed on that verb are one list and cannot drift
+// (#463). Only a surface that shows the row answers: on `plain` and
+// `investigation` the row is hidden and the keys do nothing.
+function combatVerbButton(n) {
+  if (document.body.getAttribute('data-surface') !== 'combat') return null;
+  var row = document.getElementById('verb-row');
+  if (!row) return null;
+  var buttons = row.querySelectorAll('button[data-verb]');
+  return buttons[n - 1] || null;
 }
 
 // The enemy a #verb-row press is aimed at, or null. The row is always
@@ -3482,10 +3677,15 @@ globalThis.startoverKeys = function (storage) {
 // Verbs record to the packaged player's own journal - the same
 // no-failure contract as the server route they mirror
 // (/api/combat/action): the action only lives in the log.
+//
+// `result` is the sentence the verb spoke, which the result line shows
+// instead of naming the action (#463). It is optional so an entry
+// written before the sentence existed still reads.
 const COMBAT_KEY = 'vefr-packaged-combat';
-function recordVerb(verb) {
+function recordVerb(verb, result) {
   var log = store.getJSON(COMBAT_KEY, []);
-  log.push({ verb: verb, phase: STATE.get().phase, at: new Date().toISOString() });
+  log.push({ verb: verb, phase: STATE.get().phase, result: result || '',
+             at: new Date().toISOString() });
   store.setJSON(COMBAT_KEY, log);
   renderCombatLog(log);
 }
@@ -3503,12 +3703,21 @@ function journalVisit(poi, x, y) {
   store.setJSON(MOVES_KEY, log);
 }
 
+// The result line: what the last action DID, in words (#463). It used
+// to name the action ("last action: console (dusk)"), which told a
+// reader nothing about what Console or an insult actually did - so the
+// sentence the verb spoke is the line. An entry with no sentence of its
+// own (written before this line existed) falls back to the old
+// wording rather than going blank; the phase stays on the title for
+// anyone who wants it.
 function renderCombatLog(log) {
   var el = document.getElementById('combat-log');
   if (!el) return;
   if (!log || !log.length) { el.textContent = ''; return; }
   var last = log[log.length - 1];
-  el.textContent = 'last action: ' + last.verb + ' (' + last.phase + ')';
+  el.textContent = last.result
+    || 'last action: ' + last.verb + (last.phase ? ' (' + last.phase + ')' : '');
+  if (last.phase) el.title = last.phase;
 }
 
 // The combat line: one plain sentence for the eye and the screen
@@ -3517,6 +3726,13 @@ function renderCombatLog(log) {
 function combatSay(msg) {
   var el = document.getElementById('combat-live');
   if (el) el.textContent = msg || '';
+}
+
+// The live line as it stands, so a caller can see what an action added
+// to it before the monsters' turn writes over it.
+function combatText() {
+  var el = document.getElementById('combat-live');
+  return el ? (el.textContent || '') : '';
 }
 
 // ---- phase rail ----
@@ -4204,12 +4420,15 @@ function rulesStartsNow() {
 // The keys are typed once on the Python side (shapes.PLAYER_WORDS in
 // src/vefr/shapes.py, which vefr check speaks refusals from);
 // tests/test_player_words.py fails if the two drift.
+// The first four rows point somewhere and fill a `{place}`; the last
+// one (vefr #464) has nothing to point at and fills nothing.
 // -- player words start --
 var VEFR_PLAYER_WORDS = {
   'where_next.goal': 'To reach {place}.',
   'where_next.reach': 'To reach {place}, go {direction}.',
   'where_next.here': 'The way to {place} is right here.',
-  'where_next.no_way': 'No way to {place} is declared from here.'
+  'where_next.no_way': 'No way to {place} is declared from here.',
+  'combat.walk_to_strike': 'Walk into an enemy to strike it.'
 };
 // The one reader: the pack's word when it supplies a usable one, the
 // engine's own otherwise, with the slots filled from what the engine
@@ -4228,6 +4447,30 @@ function playerWord(key, slots) {
   });
 }
 // -- player words end --
+
+// ---- the strike hint: once, at the first fight ----
+// Walking into an enemy is the attack, and the line that gives it away
+// only gives it away as a result - "You hit a nest of moths for 2." -
+// which is a result, not a rule. The explorers found the rule by
+// accident ("I only moved, yet the moths fell"), so one plain sentence
+// is said at the first landed blow and never again: a hint that comes
+// back every fight stops being read. It is held to the end of that
+// turn rather than said on a line of its own, because the monsters
+// take their turn next and would wipe it, and because a phone draws
+// one line at a time - the fight's own line is the line a phone shows.
+// The flag is per world and lives in the player's storage beside the
+// other `vefr-` saves, so a reload does not bring it back and Start
+// over clears it with the rest.
+function strikeHintKey() {
+  return 'vefr-strike-hint-' + ((window.VEFR_WORLD && window.VEFR_WORLD.name) || 'world');
+}
+function hintStrikeOnce() {
+  var key = strikeHintKey();
+  if (store.get(key) === '1') return false;
+  store.set(key, '1');
+  sayHint(playerWord('combat.walk_to_strike'));
+  return true;
+}
 
 // ---- where next: the point-to hints, kept as player-facing
 // intentions ("Go toward Saltreach.") instead of thrown-away
@@ -9277,6 +9520,13 @@ window.VEFR_DESCENT = (function () {
   // are the ones the hero left. And the why-log names the floor, so what
   // happened can be read back without watching the screen for it.
   function deathResume(name) {
+    // A hero who falls in the fight that would have taught the strike hint
+    // wakes to their own line, not to a lesson (#464): the hint is dropped
+    // and stays owed, so the next fight says it.
+    if (typeof PENDING_HINT !== 'undefined' && PENDING_HINT) {
+      PENDING_HINT = null;
+      try { store.set(strikeHintKey(), ''); } catch (e) { /* storage closed */ }
+    }
     if (!on() || !isGenerated(name)) return null;
     var depth = depthOfName(name);
     var plan = depth ? floorPlan(depth) : null;
@@ -10493,6 +10743,10 @@ function setupTown() {
       combatSay('You cannot strike ' + ((e && e.name) || 'it') + '.');
       return false;
     }
+    // The blow lands, so this is a fight: say once, here, that walking
+    // into an enemy is the attack (vefr #464). A warden that cannot be
+    // struck returns above, because there was no fight to teach.
+    hintStrikeOnce();
     var dmg = heroAtk();
     e.hp = Math.max(0, e.hp - dmg);
     playOneShot('hero', 'attack');
@@ -10503,7 +10757,10 @@ function setupTown() {
     wakeOne(e);
     makeNoise('fight');
     soundCue('hit');
-    var said = 'You hit ' + e.name + ' for ' + dmg + '.';
+    // The blow says itself in one sentence, from the same message
+    // table every other player line comes from (#463) - the bytes are
+    // the ones this always read.
+    var said = verbWord('attack', { what: e.name, damage: String(dmg) });
     // A landed blow is one practice count; levels mode ignores it.
     sayGrowth(practiceSuffix(growBump('strikes')));
     if (e.hp <= 0) {
@@ -12836,6 +13093,19 @@ function setupTown() {
     return !((town.legend[row.charAt(x)] || {}).solid) && !propBlocked(x, y);
   }
 
+  // Whether the hero can step off (x, y) at all - any open neighbour,
+  // in a fixed order so the answer is the same everywhere. A stair
+  // landing is only set aside when there is somewhere to step to
+  // (vefr#465): a tile the hero can never leave is never a landing, or
+  // the way back would be gone as well.
+  function stepOffExists(x, y) {
+    var steps = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+    for (var i = 0; i < steps.length; i++) {
+      if (tileOpen(x + steps[i][0], y + steps[i][1])) return true;
+    }
+    return false;
+  }
+
   // The floor tile nearest `[x, y]` by Manhattan distance, scanning
   // row-major so a tie keeps the first tile found: the answer is the same
   // on every machine and in both languages.
@@ -12868,9 +13138,13 @@ function setupTown() {
     if (moved) saveFloor();
   }
 
-  // Enter another region through a door: swap the current map,
-  // speakers, and hero, then resize, draw, and refresh the POI line.
-  function enterRegion(name, at) {
+  // Enter another region through a door or a stair: swap the current
+  // map, speakers, and hero, then resize, draw, and refresh the POI
+  // line. `via` is the kind of transition the hero came by ('door',
+  // 'stairs', or nothing for a wake and for the New-descent control),
+  // and it only decides one thing: whether the tile they land on is set
+  // aside as a landing (below).
+  function enterRegion(name, at, via) {
     // The virtual region (slice E1): a floor that was never baked at
     // weave time is drawn and inserted here, before the player is asked
     // for it, so every path below - the map, the monsters, the stairs,
@@ -12911,6 +13185,20 @@ function setupTown() {
     // other region arrives exactly as it did.
     arrivalNote = (window.VEFR_DESCENT && typeof window.VEFR_DESCENT.arrival === 'function')
       ? window.VEFR_DESCENT.arrival(name, hero) : null;
+    // The tile a stair drops the hero on is a landing, not the way back
+    // (vefr#465). The hero stands exactly where the transition wrote -
+    // the floor's up anchor, which the geometry and the elevator rule
+    // are built on - but the stair on that tile stays set aside until
+    // they have stepped off it, so the prompt cannot flip from "Go down
+    // the stairs" to "Go up the stairs" on the very next press. Only a
+    // stair arrival sets it aside: a door opens both ways and means the
+    // same thing from either side, a wake is not an arrival at all, and
+    // a tile the hero can never step off of is not a landing.
+    // Any arrival by a transition (`via` is the kind used: a door into the
+    // descent drops the hero on a floor's stair just as a stair does) sets
+    // the tile aside; whether a stair is on it is asked when the button is
+    // drawn, because a generated floor wires its stairs on arrival.
+    landing = (via && stepOffExists(hero[0], hero[1])) ? [hero[0], hero[1]] : null;
     resize();
     draw();
     refreshPoi();
@@ -13158,20 +13446,34 @@ function setupTown() {
       candidates.push({ kind: 'book', id: b.id, name: b.title || 'the note',
                         at: [b.at[0], b.at[1]] });
     });
-    // Just arrived on a labelled floor (vefr#362): the tile the hero
-    // stands on is the floor itself, not the stair under them, until they
-    // step off or read it. The stair is only set aside for that moment.
+    // Just arrived (vefr#362, #465): the tile the hero stands on is where
+    // they arrived, not the stair under them. On a labelled floor it is
+    // the floor itself, read as a note; on any other stair landing it is
+    // nothing at all until they step off. The stair is set aside for
+    // exactly that moment, and no longer.
     var arrived = arrivalHere();
     if (arrived) {
       candidates.push({ kind: 'place', id: ARRIVAL_ID, name: arrivalNote.name,
                         at: [hero[0], hero[1]] });
     }
-    function onArrival(x, y) { return arrived && x === hero[0] && y === hero[1]; }
+    function onLanding(x, y) {
+      return landingHere() && x === landing[0] && y === landing[1];
+    }
+    function onArrival(x, y) {
+      // The tile the hero stands on when they arrive: the note above
+      // where there is one, else the landing itself (vefr#465) - while
+      // they are still on it.
+      return (arrived && x === hero[0] && y === hero[1]) || onLanding(x, y);
+    }
     transitions().forEach(function (tr) {
       if (!tr || tr.from !== regionName || !Array.isArray(tr.at)) return;
       if (typeof tr.at[0] !== 'number' || typeof tr.at[1] !== 'number') return;
-      if (onArrival(tr.at[0], tr.at[1])) return;
-      candidates.push(transitionCandidate(tr));
+      var c = transitionCandidate(tr);
+      if (arrived && tr.at[0] === hero[0] && tr.at[1] === hero[1]) return;
+      // A stair on the landing waits for the first step; a door on it
+      // opens both ways and means the same from either side, so it stays.
+      if (onLanding(tr.at[0], tr.at[1]) && c.kind === 'stairs') return;
+      candidates.push(c);
     });
     var texts = town.poi_text || {};
     Object.keys(texts).forEach(function (key) {
@@ -13190,6 +13492,43 @@ function setupTown() {
     });
     return { hero: [hero[0], hero[1]], facing: heroFacing,
              candidates: candidates };
+  }
+
+  // ---- one plain sentence per action (#463) ------------------------
+  //
+  // The result line used to name the action ("last action: console
+  // (dusk)"), which says nothing about what the action did. Each verb
+  // now speaks one sentence that reads as a sentence, and that
+  // sentence is what the line shows.
+  //
+  // The wording is the engine's, so it stays neutral: nothing here
+  // names a pack's creature, and `{what}` is filled from the pack's own
+  // name for the thing acted on. A pack replaces any of these the way
+  // it replaces every other player word - `player_words` in world.json,
+  // key `combat.<verb>` - through the one reader, so the pack's own
+  // sentence wins and this stays the default. The rows are joined onto
+  // the one message table (part 340) rather than kept beside it, and
+  // outside its markers, so the two tables keep their own key sets.
+  var VEFR_COMBAT_WORDS = {
+    attack: 'You hit {what} for {damage}.',
+    console: '{what} quiets a little.',
+    hurl: '{what} does not care for that.',
+    other: 'You say it anyway. Nothing answers.',
+    none: 'There is nothing here to answer that.'
+  };
+  Object.keys(VEFR_COMBAT_WORDS).forEach(function (verb) {
+    VEFR_PLAYER_WORDS['combat.' + verb] = VEFR_COMBAT_WORDS[verb];
+  });
+  // One reader: the verb's own row when the verb - or the pack - has
+  // one, else the catch-all for any verb a pack names, else the line
+  // for a verb pressed with nothing to act on.
+  function verbWord(verb, slots) {
+    var words = (window.VEFR_WORLD && window.VEFR_WORLD.player_words) || {};
+    var key = 'combat.' + verb;
+    if (VEFR_PLAYER_WORDS[key] || typeof words[key] === 'string') {
+      return playerWord(key, slots);
+    }
+    return playerWord('combat.other', slots);
   }
 
   // Task 3: fight through the one verb. The row is the same #verb-row
@@ -13217,7 +13556,11 @@ function setupTown() {
   function applyVerb(verb, label, enemy) {
     if (!enemy) return false;
     if (verb === 'attack') return heroAttack(enemy);
-    var said = 'You use ' + label + ' on ' + (enemy.name || 'it') + '.';
+    // The plain sentence, not "You use Console on it": what the verb
+    // DID is the line a player reads (#463). `label` is kept in the
+    // signature because the row's word is what the button says, but it
+    // is no longer spelled into the sentence.
+    var said = verbWord(verb, { what: (enemy && enemy.name) || 'it' });
     // The other verbs are words only, but a practice spec can learn from
     // them. The default verbs are `console`/`hurl`; any other name
     // counts toward nothing.
@@ -13226,6 +13569,27 @@ function setupTown() {
     if (kind) sayGrowth(practiceSuffix(growBump(kind)));
     combatSay(said);
     return true;
+  }
+  // One verb, acted on and journalled, in that order: the sentence the
+  // verb spoke is the sentence the journal keeps, and it is read before
+  // the monsters take their turn, so their answer cannot be what got
+  // written down. Both call sites go through here, so a verb can never
+  // be journalled without saying what it did.
+  function takeVerb(verb, label, foe) {
+    if (!foe) {
+      // Pressed with nothing named to act on: nothing happens, and the
+      // line says so in a sentence rather than naming the verb.
+      recordVerb(verb, verbWord('none'));
+      return false;
+    }
+    // The live line is emptied first so that what is on it afterwards is
+    // exactly what this verb said - nothing to tell a quiet verb from a
+    // loud one, and nothing left over from the last turn to be mistaken
+    // for this one's sentence.
+    combatSay('');
+    var done = applyVerb(verb, label, foe);
+    recordVerb(verb, combatText());
+    return done;
   }
 
   // A locked door or stair (design/gates-and-guardians.md, step 1).
@@ -13289,7 +13653,7 @@ function setupTown() {
           makeNoise('door');
         }
         fireRule('opens', { what: trans.to });
-        enterRegion(trans.to, trans.to_at);
+        enterRegion(trans.to, trans.to_at, t.kind);
       } else if (t.kind === 'chest') {
         var books = libraryBooks(), book = null;
         for (var i = 0; i < books.length; i++) {
@@ -13340,8 +13704,9 @@ function setupTown() {
         if (!speakers[t.id]) throw new Error('speaker gone');
         talkToSpeaker({ key: t.id, spec: speakers[t.id], dist: t.dist });
       } else if (t.kind === 'place' && t.id === ARRIVAL_ID) {
-        // The floor, read: its name and the way on. Once read, the tile
-        // is the stair again, so the next press offers the way back up.
+        // The floor, read: its name and the way on. Reading it spends the
+        // note; the landing stays set aside until the hero steps off the
+        // tile, so the stair never answers the press that read (vefr#465).
         showSpeech(arrivalNote.name, arrivalNote.line, '');
         arrivalNote = null;
       } else if (t.kind === 'place') {
@@ -13358,8 +13723,7 @@ function setupTown() {
           // One verb: act at once, no menu - but the turn still runs,
           // unless the verb was refused (a warden that cannot be
           // struck), which changes nothing and therefore costs nothing.
-          recordVerb(verbs[0][0]);
-          if (applyVerb(verbs[0][0], verbs[0][1], foe)) {
+          if (takeVerb(verbs[0][0], verbs[0][1], foe)) {
             lightTick();
             enemyTurn();
           }
@@ -13419,6 +13783,15 @@ function setupTown() {
   var arrivalNote = null;
   function arrivalHere() {
     return !!(arrivalNote && hero[0] === arrivalNote.at[0] && hero[1] === arrivalNote.at[1]);
+  }
+  // The stair tile an arrival dropped the hero on (vefr#465): `[x, y]`
+  // while they are still standing on it, else null. The stair on that
+  // tile is no Interact target until they step off - the first step
+  // clears this, exactly as it clears the note above - so a stair never
+  // answers the press that took it, in the other direction, at once.
+  var landing = null;
+  function landingHere() {
+    return !!(landing && hero[0] === landing[0] && hero[1] === landing[1]);
   }
 
   // The named place the hero now stands on, written to the POI line.
@@ -13504,6 +13877,7 @@ function setupTown() {
     }
     hero = [nx, ny];
     arrivalNote = null;   // the arrival is over at the first step
+    landing = null;       // and so is the set-aside: the stair is a stair
     quietTutorial();
     // Draw-only: start the hop now, but the game state above is already
     // settled and the turn below is never gated on the animation.
@@ -13574,10 +13948,11 @@ function setupTown() {
   }
 
   // One speaker's line - the talk path itself, shared by the Talk
-  // button, the canvas click, the old E key, and Interact's resident
-  // pick. The line is the pack's own: straight from the model when
-  // one answers, else from the woven pool, else spliced from this
-  // character's fragments, else the speaker's seeded line in turn.
+  // button, the canvas click, the F key (E is its unadvertised alias),
+  // and Interact's resident pick. The line is the pack's own: straight
+  // from the model when one answers, else from the woven pool, else
+  // spliced from this character's fragments, else the speaker's seeded
+  // line in turn.
   function talkToSpeaker(nearest) {
     var ph = phase();
     libraryFromSpeaker(nearest.key);
@@ -13907,36 +14282,63 @@ function setupTown() {
   renderCombatLog(store.getJSON(COMBAT_KEY, []));
   /* The act's verbs are the pack's own vocabulary; baked defaults
      keep the old costume when the act declares none. The list lives
-     in surfaceVerbs() so the row and the enemy menu share one home. */
+     in surfaceVerbs() so the row and the enemy menu share one home.
+     Each button prints the number that presses it, in the order it
+     sits in the row (#463), the same idiom the action row uses for
+     its own keys. */
   (function () {
     var row = document.getElementById('verb-row');
     var verbs = surfaceVerbs();
-    verbs.forEach(function (pair) {
+    verbs.forEach(function (pair, i) {
       var b = document.createElement('button');
       b.type = 'button';
       b.dataset.verb = pair[0];
-      b.textContent = pair[1];
+      // The label is kept beside its own word: the verb is the pack's
+      // and the digit is a shortcut, and the two must not be read as
+      // one name.
+      var label = document.createElement('span');
+      label.className = 'verb';
+      label.textContent = pair[1];
+      b.dataset.label = pair[1];
+      var key = document.createElement('kbd');
+      key.textContent = String(i + 1);
+      b.appendChild(label);
+      b.appendChild(document.createTextNode(' '));
+      b.appendChild(key);
       row.appendChild(b);
     });
   })();
   document.getElementById('verb-row').addEventListener('click', function (e) {
     var b = e.target.closest('button[data-verb]');
     if (!b) return;
-    b.disabled = true;
-    recordVerb(b.dataset.verb);
+    // A press is held off for a moment so one key cannot fire twice - but
+    // with aria-disabled, not `disabled`: disabling a focused button drops
+    // the focus on the floor, and the walk back up to the combat row was
+    // about eight Tabs every turn (#463).
+    if (b.getAttribute('aria-disabled') === 'true') return;
+    b.setAttribute('aria-disabled', 'true');
     // With an enemy named, the press resolves against it and the
     // monsters take their turn, exactly as after a bump. With no
     // target the press is only journalled, as it always was.
     if (VERB_TARGET) {
-      var done = applyVerb(b.dataset.verb, b.textContent, VERB_TARGET);
-      if (done !== false) {
+      if (takeVerb(b.dataset.verb, b.dataset.label, VERB_TARGET) !== false) {
         lightTick();
         enemyTurn();
       }
       closeEnemyVerbs();
       updateUse();
+    } else {
+      // No enemy named: the press is journalled and said, as it
+      // always was, and no turn runs.
+      takeVerb(b.dataset.verb, b.dataset.label, null);
     }
-    window.setTimeout(function () { b.disabled = false; }, 400);
+    // The focus lands on the verb just used, by click or by its number key,
+    // so the next press is one key away (unless the row went with the fight).
+    var row = document.getElementById('verb-row');
+    if (row && !row.hidden && b.isConnected) {
+      try { b.focus(); } catch (err) { /* gone */ }
+    }
+    window.setTimeout(function () { b.removeAttribute('aria-disabled'); }, 400);
   });
   canvas.addEventListener('click', tryNPC);
   document.getElementById('dpad').addEventListener('click', function (e) {
@@ -13950,6 +14352,9 @@ function setupTown() {
     if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
     // Any key but the toggle itself halts an autoexplore walk.
     if (exploring() && e.key !== 'o' && e.key !== 'O') exploreStop('Stopped.');
+    // F is the one name for Interact (vefr#467); E answers to it too, so
+    // a player who learned the old key is never stuck, but no hint, label
+    // or key letter names it.
     // The Interact keys keep the loop going: while a note or a speech box
     // is up they CONTINUE it (next page, then close) instead of needing a
     // click. A focused button handles its own Enter and Space, and a held
@@ -14038,6 +14443,16 @@ function setupTown() {
     else if (e.key === 'b' || e.key === 'B') { if (window.openBag) window.openBag(); }
     else if (e.key === 'o' || e.key === 'O') startExplore();
     else if (e.key === 'v' || e.key === 'V') toggleFog();
+    // The fight verbs answer 1, 2, 3 - the digits printed on them
+    // (#463). The row's own order is the key's, and a surface with no
+    // row shown has no verb to press, so the keys do nothing there.
+    else if (/^[1-9]$/.test(e.key)) {
+      var verbBtn = combatVerbButton(Number(e.key));
+      if (verbBtn) {
+        e.preventDefault();
+        if (!e.repeat) verbBtn.click();
+      }
+    }
     else if (!onButton && (e.key === ' ' || e.key === 'Enter')) {
       e.preventDefault();
       if (!box.hidden) box.hidden = true; else doInteract();

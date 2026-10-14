@@ -58,7 +58,7 @@ gameplay features over new core machinery.
   `cellar-0-2`, whose id, floor key and save keys are unchanged; a Section with no label reads as before (#363).
 - [player] Arriving on a floor of a labelled Section names the floor, not the stair back up: the POI line and the
   button say "the Cellar, floor 2", and reading it points to the stair down. The up-stair is still drawn and
-  walkable, and a Section with no label arrives exactly as before (#362).
+  walkable, and the stair a hero lands on is set aside until they step off it (#362, #465).
 - [authoring] The Storybook design system and its art bible (Cottage's look, kept as a worked example; every game
   chooses its own), and the guide to making a VEFR game look and feel good (#415).
 
@@ -84,6 +84,8 @@ gameplay features over new core machinery.
 - [player] A desk follows the hero too (`display.desk_tile`, 32 to 96): the stage is the window, and messages are
   the phone's one fading line (#446).
 - [engine] A Section can dress its generated floors with decor (#442, #443).
+- [player] One name for the interact key: every hint, label and key letter says F, and E stays an
+  unadvertised alias that still reaches the same verb, combat included (#467).
 
 ### LANDED 2026-10-14
 - [player] **Whisper is now Listen** (#470): the button, its tooltip and the touch label say "Listen (Q)", and the
@@ -99,6 +101,26 @@ gameplay features over new core machinery.
 - [player] The game canvas is named for the place the hero is standing in (#461): the fixed "The town, seen from
   above" follows every region change, so a screen reader says "The cottage kitchen, seen from above" indoors and
   a descent floor answers with its Section's own label. Tests: `tests/test_canvas_place_label.py`.
+
+### LANDED 2026-10-14 (the fight, from the keyboard)
+- [player] The combat row keeps the focus on the verb you last used, so a fight no longer costs eight Tabs a turn back to the buttons; the verbs answer `1`, `2` and `3` and print their digit (#463).
+- [player] The result line is one plain sentence per action - what Strike, Console and Hurl did - instead of naming the action (`last action: console (dusk)`). The wording is the engine's and stays game-name-neutral, and a pack replaces it through `player_words` (`combat.<verb>`; `vefr check` does not know those keys yet - see the known gap in [rulesets.md](docs/guides/rulesets.md)).
+
+### LANDED 2026-10-14 (the keyboard stays in the box)
+- [player] Tab stays inside an open dialog and closing it hands the focus back to the control that opened it (#462).
+  Every `role="dialog"` in the woven player - the pause menu, a book, a line of speech, a trade, the identify list, the
+  two end cards - is one rule in `web/player/parts/045-dialog-focus.js`, so a new dialog gets it for free. Tests:
+  `tests/test_dialog_focus.py` (jsdom) and `tests/browser/test_dialog_focus.py` (Chromium).
+### LANDED 2026-10-14 (the stair bounce)
+- [engine] Arriving by a stair lands the hero on the tile the transition names - usually the stair back up - and
+  the very next Interact press offered "Go up the stairs", so the prompt flipped between the way down and the way
+  back up with no step in between (seen in the Haiku and DeepSeek runs, apl-2 and apl-4). The landing tile is now
+  set aside: the stair on it is not an Interact target until the hero has stepped off, and the stair answers again
+  as soon as they step off and back onto it. The hero still lands where the transition wrote - a generated floor's
+  up anchor, which the geometry and the elevator rule are built on - a door landing is untouched (a door opens both
+  ways), and a wake is not an arrival at all. A labelled floor's own arrival note (#362) reads as before and does
+  not hand the stair back when it is read. Issue #465; tests: `tests/test_stair_landing.py` and
+  `tests/test_descent_arrival.py`; player guide: "Arriving by stairs" in `docs/guides/playing.md`.
 
 ### IN PROGRESS (decided by Rylee on 2026-10-04; refreshed 2026-10-12)
 - **The endless dungeon** (epic [#273](https://github.com/rylee-bee-labs/vefr/issues/273); design `docs/plans/endless-dungeon/DESIGN.md`, build plan `docs/plans/endless-dungeon/PLAN.md`, research `docs/research/big-generated-maps.md`): floors generated while you play from `seed + depth`, cut into sections of 8 to 11 floors; each ends in a key warden whose key opens a vault with a lore note; acts change the town only; elites, linked groups, hand-painted stamps and much bigger maps (up to 128x96, kept cheap for phones); an endless mode after the story.
@@ -147,6 +169,8 @@ gameplay features over new core machinery.
 - [player] Music; a second skin; per-run guardians and weighted tables; `stakes` as a real mechanic; optional Ink conversations (#143); richer floors (#145); save compatibility across content changes.
 
 ## Landed
+
+- [x] **The game says that walking into an enemy is the attack, once** (2026-10-14, [#464](https://github.com/rylee-bee-labs/vefr/issues/464)): bump-to-attack was the one rule a player could only learn by accident - run-002 step 48 reads "You hit a nest of moths for 2. a nest of moths falls." and the explorer's note was "I only moved, yet the moths fell." The line gave the result away, never the rule. The first landed blow of a game now says one plain sentence, "Walk into an enemy to strike it.", held to the end of that turn beside the growth lines so a counter-blow cannot wipe it off the screen before the player has read it, and after the fight's own words so a phone - which draws one message line - draws it too. It is said once per world (`vefr-strike-hint-<world>` in the player's storage, so a reload does not bring it back and Start over clears it with the rest), and a pack names its own words for it in `player_words` as `combat.walk_to_strike`, the table's first row with no `{place}` to fill and so the first `sentence` kind on the schema table. No pack contract change beyond that one optional key, and a pack that names none plays the engine's line byte for byte. Guide: [`docs/guides/rulesets.md`](docs/guides/rulesets.md) (Bump to attack; Player words); tests: `tests/test_strike_hint.py`, `tests/test_player_words.py`.
 
 - [x] **A deep landing's up-stair is the way home during play too** (2026-10-12, [#366](https://github.com/rylee-bee-labs/vefr/issues/366)): floors generated during play now follow the elevator rule that `delve --section` already bakes. A floor whose pattern slot is `entry` or `landing` climbs straight to `descent.entry.region` at `descent.entry.at`. It no longer climbs one floor at a time. Each landing the hero reaches is kept in the save's `flags.landing`, so it stays after a reload. Floor 1 is unchanged. If a Section's pattern has neither slot, its stairs climb floor by floor as before. No key was added. A new run also drops the previous run's stairs home from generated floors, so an old tile cannot be a hidden stair to town. Guide: `docs/guides/rulesets.md` (Landings). Tests: `tests/test_descent_landings.py`, `tests/browser/test_landing_home.py`.
 - [x] **The touch controls are built for real: a floating joystick, one contextual action button, a Bag button, quickslots, and Settings** (2026-10-12, P3TOUCH): on a touch screen the player drags a floating joystick anywhere on the left of the map to walk, with the same step rhythm the prototype was accepted with, and the lower-right cluster holds the smart button (it says what it will do: Read, Talk, Open, Fight, Go down) with the Bag button above it. Health sits top left with two quickslots for usable bag items; the Menu button sits top right. The old D-pad and action row stay hidden on touch unless Display chooses the D-pad. Display gains the move-style choice (joystick or D-pad), Control size from 75% to 150%, and Left-handed, all kept across reloads. Keyboard and gamepad are unchanged. The layer's logic is in `515-touch-controls.js`, its styles in the coarse-pointer block of the style sheet, and its checks in `tests/browser/test_touch_controls.py`.

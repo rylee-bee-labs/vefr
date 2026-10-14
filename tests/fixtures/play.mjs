@@ -8,7 +8,7 @@
    steps: "begin" | "wait:MS" | "key:NAME" | "dir:NAME" | "walk:a,b" |
           "click:#sel" | "menu:PANEL"
    reads: "NAME" | "NAME.a.b" | "text:#sel" | "exists:#sel" |
-          "visible:#sel" | "attr:#sel|name" | "store"
+          "visible:#sel" | "focused:#sel" | "attr:#sel|name" | "store"
    A "NAME.a.b" path splits on '.', so a key that IS a dot - a map glyph -
    is not addressable: read the level above it and index in the test.
    prints one line: {"reads": {...}, "errors": [...], "store": {...}}
@@ -182,6 +182,10 @@ function doRead(read) {
   if (verb === 'text') return { ok: true, value: el ? el.textContent : null };
   if (verb === 'exists') return { ok: true, value: !!el };
   if (verb === 'visible') return { ok: true, value: !!el && visible(el) };
+  /* Whether this element holds the keyboard focus right now - the read
+     that proves a control kept focus instead of dropping it on the
+     floor. False for an element that is not there at all. */
+  if (verb === 'focused') return { ok: true, value: !!el && document.activeElement === el };
   return { ok: false, value: null };
 }
 

@@ -10,12 +10,15 @@ reads it:
 - arriving on a floor of a labelled Section, the POI line and the button
   name the floor ("the Cellar, floor 1"), and reading it says which way
   the stair down lies, by the floor below's own title when it has one;
-- the up-stair is still drawn and still walkable: once the floor is read,
-  or the hero steps off and back, the same tile offers the way up again;
+- the up-stair is still drawn and still walkable: once the hero steps
+  off the landing and back onto it, the same tile offers the way up
+  again (vefr#465);
 - a hint (`point-to`) names a labelled floor by its title, and the region
   id - the save's key, the rules' id - is the same id it always was;
-- a Section with no label arrives exactly as before, and a pack with no
-  label anywhere weaves byte for byte the file it wove before.
+- a Section with no label says nothing on arrival - the POI line still
+  names the stair the hero stands on, and the stair is set aside until
+  they step (vefr#465) - and a pack with no label anywhere weaves byte
+  for byte the file it wove before.
 
 Played through the REAL woven file in jsdom (`descent_arrival_harness.mjs`)
 against the fixture descent; every walk is planned from `delve.floor_plan`,
@@ -80,16 +83,29 @@ def _arrive(depth, descent):
     return _descend(depth, descent=descent)
 
 
+def _away_and_back(plan):
+    """Two steps: off the arrival tile in an open direction, and back."""
+    up = plan["anchors"]["up"]
+    rows = plan["rows"]
+    back = {"up": "down", "down": "up", "left": "right", "right": "left"}
+    moves = {"up": (0, -1), "down": (0, 1), "left": (-1, 0), "right": (1, 0)}
+    away = next(name for name, (dx, dy) in moves.items()
+                if rows[up[1] + dy][up[0] + dx] != "#")
+    return f"walk:{away}", f"walk:{back[away]}"
+
+
 # ---- the arrival -----------------------------------------------------------
 
 def test_arriving_on_a_labelled_floor_names_the_floor_not_the_stair(tmp_path):
     html = _weave(tmp_path, LABELLED)
     plan = delve.floor_plan(LABELLED, 1)
     up, down = plan["anchors"]["up"], plan["anchors"]["down"]
+    away, back = _away_and_back(plan)
     steps = _arrive(1, LABELLED) + [
         "snap:arrived",
         "click:#interact", "snap:read",
         "click:#npc-close", "snap:closed",
+        away, back, "snap:off_and_back",
         "click:#interact", "wait:150", "snap:climbed",
     ]
     snaps = _session(html, steps)
@@ -111,8 +127,15 @@ def test_arriving_on_a_labelled_floor_names_the_floor_not_the_stair(tmp_path):
         f"To reach the Cellar, floor 2, go {_compass(up, down)}.")
     assert read["region"] == "cellar-0-1"
 
-    # Once read, the tile is the stair again, and the stair still works.
-    assert snaps["closed"]["interact"] == UP_WORDS
+    # Reading the floor spends the note, not the landing: the tile under
+    # the hero is still set aside (vefr#465), so the stair cannot answer
+    # the very next press - and it answers as soon as they step off and
+    # back onto it.
+    assert snaps["closed"]["interact"] != UP_WORDS, \
+        "the stair flipped back the moment the floor was read"
+    again = snaps["off_and_back"]
+    assert again["hero"] == up
+    assert again["interact"] == UP_WORDS
     assert snaps["climbed"]["region"] == "town"
 
 
@@ -120,14 +143,10 @@ def test_stepping_off_the_arrival_tile_and_back_finds_the_stair(tmp_path):
     html = _weave(tmp_path, LABELLED)
     plan = delve.floor_plan(LABELLED, 1)
     up = plan["anchors"]["up"]
-    rows = plan["rows"]
     # One open neighbour of the up-stair, and the step back onto it.
-    back = {"up": "down", "down": "up", "left": "right", "right": "left"}
-    moves = {"up": (0, -1), "down": (0, 1), "left": (-1, 0), "right": (1, 0)}
-    away = next(name for name, (dx, dy) in moves.items()
-                if rows[up[1] + dy][up[0] + dx] != "#")
+    away, back = _away_and_back(plan)
     steps = _arrive(1, LABELLED) + [
-        f"walk:{away}", "snap:off", f"walk:{back[away]}", "snap:back",
+        away, "snap:off", back, "snap:back",
     ]
     snaps = _session(html, steps)
     assert snaps["back"]["hero"] == up
@@ -154,13 +173,16 @@ def test_the_last_labelled_floor_points_at_the_stair_down_when_the_next_has_no_t
         f"To reach the stair down, go {_compass(up, down)}.")
 
 
-def test_a_section_with_no_label_arrives_exactly_as_before(tmp_path):
+def test_a_section_with_no_label_arrives_on_a_set_aside_landing(tmp_path):
+    # With no label there is no note to read, so the landing carries
+    # nothing at all: the POI line names the stair the hero is standing
+    # on, and the stair itself waits for a step (vefr#465).
     html = _weave(tmp_path, DESCENT)
     snaps = _session(html, _arrive(1, DESCENT) + ["snap:arrived"])
     arrived = snaps["arrived"]
     assert arrived["region"] == "cellar-0-1"
     assert arrived["poi"] == "the stair up"
-    assert arrived["interact"] == UP_WORDS
+    assert arrived["interact"] != UP_WORDS
 
 
 # ---- the hint ----------------------------------------------------------------

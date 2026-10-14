@@ -34,7 +34,7 @@ import pytest
 import play_kit
 from vefr import delve
 
-from test_descent_deltas import _descend, _doc, _json_store, _play
+from test_descent_deltas import _descend, _doc, _json_store, _off_and_back, _play
 from test_descent_floors import DESCENT
 
 pytestmark = pytest.mark.skipif(shutil.which("node") is None, reason="node not installed")
@@ -199,7 +199,8 @@ def test_returning_to_town_clears_the_drops_with_the_kills_and_the_chests(tmp_pa
     doc = _doc(first)
     doc["floors"]["cellar-0-1"]["drops"] = [{"at": [10, 10], "item": "pebble"}]
 
-    home = _play(tmp_path, _descend(1) + ["click:#interact", "wait:200"],
+    home = _play(tmp_path, _descend(1) + _off_and_back(delve.floor_plan(DESCENT, 1)) +
+                 ["click:#interact", "wait:200"],
                  store=_json_store(doc))
     assert home["reads"]["VEFR_COMBAT.region"] == "town"
     record = _doc(home)["floors"]["cellar-0-1"]

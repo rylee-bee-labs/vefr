@@ -398,7 +398,22 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # Main merged into the #470 change, 2026-10-14; measured twice in separate processes, readings equal:
 #   8db8a3d84556d4b0e956de5e92cfaf0bc87ada0a47935105f7d558695a2124a6
 #   8db8a3d84556d4b0e956de5e92cfaf0bc87ada0a47935105f7d558695a2124a6
-NO_SKIN_WEAVE_SHA256 = "8db8a3d84556d4b0e956de5e92cfaf0bc87ada0a47935105f7d558695a2124a6"
+# F everywhere, merged with Listen (#467), 2026-10-14; measured twice in separate processes, readings equal:
+#   793bbd72cacac799042960da5078c5d3e94b5ee8ba47c967fc1c3528f9848633
+#   793bbd72cacac799042960da5078c5d3e94b5ee8ba47c967fc1c3528f9848633
+# Main merged into the #463 change, 2026-10-14; measured twice in separate processes, readings equal:
+#   b8f182378ebd00890686415c17b9bfe61e116b9cd86696857cabc5dcbe94c8e5
+#   b8f182378ebd00890686415c17b9bfe61e116b9cd86696857cabc5dcbe94c8e5
+# Main merged into the #464 change, 2026-10-14; measured twice in separate processes, readings equal:
+#   05e94f97089c006bd4d8d7278028b35c6367773ca3fa7d21b8c8ca8f9ef3ee30
+#   05e94f97089c006bd4d8d7278028b35c6367773ca3fa7d21b8c8ca8f9ef3ee30
+# Main merged into the #465 change, 2026-10-14; measured twice in separate processes, readings equal:
+#   f512821602e4f0fc8fad40cdc1391cfd5e05693a633d59db8901fc5a7dc82373
+#   f512821602e4f0fc8fad40cdc1391cfd5e05693a633d59db8901fc5a7dc82373
+# Main merged into the #462 change, 2026-10-14; measured twice in separate processes, readings equal:
+#   6b241cdfee6f9efb43b3d30d0468403a717290659cb1750bdcd5e0dcbe096a91
+#   6b241cdfee6f9efb43b3d30d0468403a717290659cb1750bdcd5e0dcbe096a91
+NO_SKIN_WEAVE_SHA256 = "6b241cdfee6f9efb43b3d30d0468403a717290659cb1750bdcd5e0dcbe096a91"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():
