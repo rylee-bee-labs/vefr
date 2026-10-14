@@ -38,8 +38,10 @@ def opencode_provider(name: str) -> dict:
 def make_chat(base_url: str, model: str, api_key: str | None, max_tokens: int = 1200,
               timeout: int = 180):
     def chat(messages) -> dict:
-        body = json.dumps({"model": model, "messages": messages, "temperature": 0.7,
-                           "max_tokens": max_tokens}).encode()
+        req_body = {"model": model, "messages": messages, "max_tokens": max_tokens}
+        if "anthropic.com" not in base_url:  # newer Claude models refuse `temperature`
+            req_body["temperature"] = 0.7
+        body = json.dumps(req_body).encode()
         h = {"Content-Type": "application/json"}
         if api_key:
             h["Authorization"] = "Bearer " + api_key
