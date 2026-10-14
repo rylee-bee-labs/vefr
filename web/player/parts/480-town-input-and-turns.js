@@ -537,6 +537,19 @@
     return !((town.legend[row.charAt(x)] || {}).solid) && !propBlocked(x, y);
   }
 
+  // Whether the hero can step off (x, y) at all - any open neighbour,
+  // in a fixed order so the answer is the same everywhere. A stair
+  // landing is only set aside when there is somewhere to step to
+  // (vefr#465): a tile the hero can never leave is never a landing, or
+  // the way back would be gone as well.
+  function stepOffExists(x, y) {
+    var steps = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+    for (var i = 0; i < steps.length; i++) {
+      if (tileOpen(x + steps[i][0], y + steps[i][1])) return true;
+    }
+    return false;
+  }
+
   // The floor tile nearest `[x, y]` by Manhattan distance, scanning
   // row-major so a tie keeps the first tile found: the answer is the same
   // on every machine and in both languages.
@@ -569,9 +582,13 @@
     if (moved) saveFloor();
   }
 
-  // Enter another region through a door: swap the current map,
-  // speakers, and hero, then resize, draw, and refresh the POI line.
-  function enterRegion(name, at) {
+  // Enter another region through a door or a stair: swap the current
+  // map, speakers, and hero, then resize, draw, and refresh the POI
+  // line. `via` is the kind of transition the hero came by ('door',
+  // 'stairs', or nothing for a wake and for the New-descent control),
+  // and it only decides one thing: whether the tile they land on is set
+  // aside as a landing (below).
+  function enterRegion(name, at, via) {
     // The virtual region (slice E1): a floor that was never baked at
     // weave time is drawn and inserted here, before the player is asked
     // for it, so every path below - the map, the monsters, the stairs,
@@ -611,6 +628,21 @@
     // other region arrives exactly as it did.
     arrivalNote = (window.VEFR_DESCENT && typeof window.VEFR_DESCENT.arrival === 'function')
       ? window.VEFR_DESCENT.arrival(name, hero) : null;
+    // The tile a stair drops the hero on is a landing, not the way back
+    // (vefr#465). The hero stands exactly where the transition wrote -
+    // the floor's up anchor, which the geometry and the elevator rule
+    // are built on - but the stair on that tile stays set aside until
+    // they have stepped off it, so the prompt cannot flip from "Go down
+    // the stairs" to "Go up the stairs" on the very next press. Only a
+    // stair arrival sets it aside: a door opens both ways and means the
+    // same thing from either side, a wake is not an arrival at all, and
+    // a tile the hero can never step off of is not a landing.
+    landing = null;
+    var landingStair = via === 'stairs' ? transitionAt(hero[0], hero[1]) : null;
+    if (landingStair && transitionCandidate(landingStair).kind === 'stairs'
+        && stepOffExists(hero[0], hero[1])) {
+      landing = [hero[0], hero[1]];
+    }
     resize();
     draw();
     refreshPoi();
@@ -858,15 +890,23 @@
       candidates.push({ kind: 'book', id: b.id, name: b.title || 'the note',
                         at: [b.at[0], b.at[1]] });
     });
-    // Just arrived on a labelled floor (vefr#362): the tile the hero
-    // stands on is the floor itself, not the stair under them, until they
-    // step off or read it. The stair is only set aside for that moment.
+    // Just arrived (vefr#362, #465): the tile the hero stands on is where
+    // they arrived, not the stair under them. On a labelled floor it is
+    // the floor itself, read as a note; on any other stair landing it is
+    // nothing at all until they step off. The stair is set aside for
+    // exactly that moment, and no longer.
     var arrived = arrivalHere();
     if (arrived) {
       candidates.push({ kind: 'place', id: ARRIVAL_ID, name: arrivalNote.name,
                         at: [hero[0], hero[1]] });
     }
-    function onArrival(x, y) { return arrived && x === hero[0] && y === hero[1]; }
+    function onArrival(x, y) {
+      // The tile the hero stands on when they arrive: the note above
+      // where there is one, else the landing itself (vefr#465) - while
+      // they are still on it.
+      return (arrived && x === hero[0] && y === hero[1])
+        || (landingHere() && x === landing[0] && y === landing[1]);
+    }
     transitions().forEach(function (tr) {
       if (!tr || tr.from !== regionName || !Array.isArray(tr.at)) return;
       if (typeof tr.at[0] !== 'number' || typeof tr.at[1] !== 'number') return;
@@ -989,7 +1029,7 @@
           makeNoise('door');
         }
         fireRule('opens', { what: trans.to });
-        enterRegion(trans.to, trans.to_at);
+        enterRegion(trans.to, trans.to_at, t.kind);
       } else if (t.kind === 'chest') {
         var books = libraryBooks(), book = null;
         for (var i = 0; i < books.length; i++) {
@@ -1040,8 +1080,9 @@
         if (!speakers[t.id]) throw new Error('speaker gone');
         talkToSpeaker({ key: t.id, spec: speakers[t.id], dist: t.dist });
       } else if (t.kind === 'place' && t.id === ARRIVAL_ID) {
-        // The floor, read: its name and the way on. Once read, the tile
-        // is the stair again, so the next press offers the way back up.
+        // The floor, read: its name and the way on. Reading it spends the
+        // note; the landing stays set aside until the hero steps off the
+        // tile, so the stair never answers the press that read (vefr#465).
         showSpeech(arrivalNote.name, arrivalNote.line, '');
         arrivalNote = null;
       } else if (t.kind === 'place') {
@@ -1119,6 +1160,15 @@
   var arrivalNote = null;
   function arrivalHere() {
     return !!(arrivalNote && hero[0] === arrivalNote.at[0] && hero[1] === arrivalNote.at[1]);
+  }
+  // The stair tile an arrival dropped the hero on (vefr#465): `[x, y]`
+  // while they are still standing on it, else null. The stair on that
+  // tile is no Interact target until they step off - the first step
+  // clears this, exactly as it clears the note above - so a stair never
+  // answers the press that took it, in the other direction, at once.
+  var landing = null;
+  function landingHere() {
+    return !!(landing && hero[0] === landing[0] && hero[1] === landing[1]);
   }
 
   // The named place the hero now stands on, written to the POI line.
@@ -1204,6 +1254,7 @@
     }
     hero = [nx, ny];
     arrivalNote = null;   // the arrival is over at the first step
+    landing = null;       // and so is the set-aside: the stair is a stair
     quietTutorial();
     // Draw-only: start the hop now, but the game state above is already
     // settled and the turn below is never gated on the animation.

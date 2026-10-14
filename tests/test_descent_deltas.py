@@ -143,6 +143,24 @@ def _descend(depth, at=None, avoid_mobs=True, descent=None):
     return [s for s in steps if s != "walk:"]
 
 
+def _off_and_back(plan):
+    """Step off the floor's up-stair and back onto it (vefr#465).
+
+    A stair landing is set aside until the hero has stepped off it, so a
+    test that means to climb home straight off an arrival walks the hero
+    off the stair and back, the way a player does. The step out is to a
+    tile that is open and holds no monster, so it is a step and not a
+    bump.
+    """
+    up = plan["anchors"]["up"]
+    mobs = [m["at"] for m in plan["mobs"]]
+    back = {"up": "down", "down": "up", "left": "right", "right": "left"}
+    away = next(name for name, (dx, dy) in DIRS.items()
+                if [up[0] + dx, up[1] + dy] not in mobs
+                and _walkable(plan, up[0] + dx, up[1] + dy))
+    return [f"walk:{away}", f"walk:{back[away]}"]
+
+
 def _play(tmp_path, steps, store=None, pack=None, patch=None):
     html = play_kit.weave(play_kit.pack(tmp_path, pack or "descent", patch=patch),
                           tmp_path)
@@ -297,8 +315,11 @@ def test_returning_to_town_clears_the_kills_and_keeps_the_memory(tmp_path):
     assert set(record["kills"]) <= {m["id"] for m in plan["mobs"]}
     assert killed["reads"]["VEFR_COMBAT.hero"]["hp"] > 0
 
-    # Now walk home: into the town, on the stair the descent put there.
-    home = _play(tmp_path, _descend(1) + ["click:#interact", "wait:200"],
+    # Now walk home: off the landing the descent put the hero on, back
+    # onto its up-stair, and up into the town (vefr#465: the stair on a
+    # landing is not the stair back until the hero has stepped off).
+    home = _play(tmp_path, _descend(1) + _off_and_back(plan) +
+                 ["click:#interact", "wait:200"],
                  store=killed["store"], patch=DESCENT_PATCH)
     assert home["reads"]["VEFR_COMBAT.region"] == "town"
     record = _doc(home)["floors"]["cellar-0-1"]
