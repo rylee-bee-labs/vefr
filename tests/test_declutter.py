@@ -47,7 +47,7 @@ def test_interact_is_the_one_big_button(seen):
     assert seen["mainButtons"] == ["interact"]
 
 
-@pytest.mark.parametrize("bid,word,key", [("talk", "Talk", "E"), ("whisper", "Whisper", "Q"),
+@pytest.mark.parametrize("bid,word,key", [("talk", "Talk", "E"), ("whisper", "Listen", "Q"),
                                           ("bagbtn", "Bag", "B"), ("explore", "Explore", "O")])
 def test_each_small_button_keeps_its_word_its_key_and_a_hidden_icon(seen, bid, word, key):
     t = seen["tools"][bid]

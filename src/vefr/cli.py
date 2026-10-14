@@ -2634,7 +2634,8 @@ def weave_html(pack: Path, *, pool: dict | None = None) -> str:
     ledger = (pack / 'ledger.md').read_text(encoding='utf-8') if (pack / 'ledger.md').exists() else ''
     voices = {}
     if (pack / 'voices').exists():
-        for sf in (pack / 'voices').glob('*.md'):
+        # Sorted: the woven file must not depend on the order the disk lists files.
+        for sf in sorted((pack / 'voices').glob('*.md')):
             if sf.name.endswith('.fragments.md'):
                 continue
             voices[sf.stem] = sf.read_text(encoding='utf-8')

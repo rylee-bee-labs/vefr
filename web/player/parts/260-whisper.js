@@ -1,4 +1,12 @@
 // ---- whisper ----
+// The name the player pressed is Listen (issue #470): it hears a rumor from
+// anywhere in town, it does not whisper to whoever happens to be standing
+// there. The box says which of the two it is, so the speech reads
+// "You overhear <the speaker>" and not a reply from whoever is nearby.
+function overheardName(speaker) {
+  return 'You overhear ' + (speaker || 'someone in town');
+}
+
 function bindWhisper() {
   var btn = document.getElementById('whisper');
   var status = document.getElementById('status');
@@ -52,7 +60,8 @@ function bindWhisper() {
         + (card.is_true ? '' : '<p class="status">A lie, or close enough.</p>');
       feed.insertBefore(div, feed.firstChild);
       status.textContent = '';
-      showSpeech(card.speaker, '\u201C' + card.whisper + '\u201D', card.is_true ? '' : 'A lie, or close enough.');
+      showSpeech(card.speaker, '\u201C' + card.whisper + '\u201D', card.is_true ? '' : 'A lie, or close enough.',
+        overheardName(card.speaker));
     } catch (err) {
       // No live endpoint (or it failed): draw from the woven pool -
       // real model output, pre-generated at weave time. Pool spent?
@@ -82,7 +91,8 @@ function bindWhisper() {
             : respliced ? "Mixed from the game's saved lines."
             : fromFragments ? "From the characters' own lines."
             : fromGrammar ? "From the world's own words." : '')
-          + (card.is_true ? '' : ' A lie, or close enough.'));
+          + (card.is_true ? '' : ' A lie, or close enough.'),
+          overheardName(card.speaker));
       } else {
         status.textContent = 'Nothing came back (' + (err.message || 'failed') + ').';
       }

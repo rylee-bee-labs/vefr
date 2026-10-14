@@ -1,8 +1,10 @@
-// ---- touch controls: a floating joystick, one smart button, Bag, Whisper, Explore, B and two quick slots ----
+// ---- touch controls: a floating joystick, one smart button, Bag, Listen, Explore, B and two quick slots ----
 // On a coarse pointer this layer replaces the Acts row. Every action goes through
 // the code the keys already use: move(), doInteract(), useItem(), openBag(), the
-// Acts row's own Whisper and Explore buttons (Q and O press the same), and the
+// Acts row's own Listen and Explore buttons (Q and O press the same), and the
 // panel closers. The D-pad stays for those who choose it in Display.
+// The button a player presses is Listen (#470); its element ids stay
+// `whisper`, which is the engine's own game-name-neutral name for the feature.
 window.__vefrTouch = { log: [] };
 
 var TOUCH_MOVE_KEY = 'vefr-touch-move';
@@ -274,7 +276,7 @@ function touchBagPress() {
   if (window.openBag) window.openBag();
 }
 
-// Whisper and Explore press the Acts row's own buttons, hidden on a phone but still
+// Listen and Explore press the Acts row's own buttons, hidden on a phone but still
 // wired, so a tap does exactly what Q and O do (issue #431).
 function touchWhisperPress() {
   touchStopExplore();
@@ -287,7 +289,7 @@ function touchExplorePress() {
   document.getElementById('explore').click();
 }
 
-// Explore's pressed state and Whisper's wait while it listens show on the touch twins.
+// Explore's pressed state and Listen's wait while it listens show on the touch twins.
 function touchSyncTools() {
   var ex = document.getElementById('explore');
   var wh = document.getElementById('whisper');
