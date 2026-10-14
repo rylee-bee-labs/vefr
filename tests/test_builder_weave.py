@@ -610,3 +610,28 @@ def test_a_chest_book_bakes_its_drops(tmp_path):
     assert books["in-a-chest"]["chest"] is True
     assert books["in-a-chest"]["drops"] == ["cloudy-potion", "brass-ring"]
 
+
+
+def test_woven_voices_do_not_depend_on_disk_order(woven, monkeypatch):
+    """Two weaves of one pack are byte-identical whatever order the disk lists
+    voices in (2026-10-14: the ryleebee.com Cottage build differed between
+    rebuilds only in VEFR_VOICES key order, because the glob was unsorted)."""
+    voices = woven / "voices"
+    voices.mkdir(exist_ok=True)
+    for name in ("zeta", "alpha", "mid"):
+        (voices / f"{name}.md").write_text(f"You are {name}.\n", encoding="utf-8")
+
+    first = cli.weave_html(woven)
+    real_glob = Path.glob
+
+    def backwards(self, pattern, *args, **kwargs):
+        found = list(real_glob(self, pattern, *args, **kwargs))
+        return iter(sorted(found, reverse=True)) if self == voices else iter(found)
+
+    monkeypatch.setattr(Path, "glob", backwards)
+    second = cli.weave_html(woven)
+
+    baked = _baked(second, "VEFR_VOICES")
+    assert list(baked) == sorted(baked), "voices must bake in name order"
+    assert {"alpha", "mid", "zeta"} <= set(baked)
+    assert first == second, "the woven file must not depend on disk order"
