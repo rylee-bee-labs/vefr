@@ -223,3 +223,17 @@ def test_browser_observation_hides_what_a_player_cannot_perceive(tmp_path):
     for secret in ["under the rug", "the vault", "the-king-is-asleep", *apl.CANARIES.values()]:
         assert secret not in aria
     assert obs["image"][:2] == b"\xff\xd8"  # a JPEG thumbnail, not the full PNG
+
+
+def test_browser_draws_text():
+    """Without fonts, every screenshot is wordless and the vision check fails for the wrong reason."""
+    sync_api = pytest.importorskip("playwright.sync_api")
+    from play import text_renders
+    with sync_api.sync_playwright() as pw:
+        exe = os.environ.get("APL_CHROMIUM")
+        try:
+            browser = pw.chromium.launch(executable_path=exe) if exe else pw.chromium.launch()
+        except Exception as e:  # noqa: BLE001
+            pytest.skip(f"no Chromium: {e}")
+        assert text_renders(browser)
+        browser.close()

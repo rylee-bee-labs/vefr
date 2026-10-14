@@ -56,6 +56,19 @@ def make_chat(base_url: str, model: str, api_key: str | None, max_tokens: int = 
     return chat
 
 
+def text_renders(browser) -> bool:
+    """A browser with no usable fonts draws pages with no words at all, and every
+    screenshot (and the vision check) is quietly blank.  Catch that first."""
+    page = browser.new_page(viewport={"width": 320, "height": 120})
+    shots = []
+    for text in ("OTTER 47", ""):
+        page.set_content('<body style="background:#111;color:#eee;font:48px sans-serif;margin:0">'
+                         f"{text}</body>")
+        shots.append(page.screenshot())
+    page.close()
+    return shots[0] != shots[1]
+
+
 def vision_check(chat, browser) -> dict:
     """Prove the model reads images: show it a word and a number only the picture carries."""
     page = browser.new_page(viewport={"width": 640, "height": 360})
@@ -252,6 +265,10 @@ def main(argv=None) -> int:
     with sync_playwright() as pw:
         browser = launch(pw)
         run["chromium"] = browser.version
+        if not text_renders(browser):
+            print("this Chromium draws no text (missing fonts?): screenshots would be blank. "
+                  "Install fonts or use a browser that has them.", file=sys.stderr)
+            return 4
         if chat is not None and not args.text_only:
             vc = vision_check(chat, browser)
             run["vision_check"] = vc

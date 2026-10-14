@@ -17,7 +17,7 @@ It changes nothing in `src/`, `web/` or any pack.
 | `play.py` | one run: weave, open, play, write the evidence and `report.md` |
 | `replay.py` | press a run's keys again with no model and report the first divergence |
 | `profiles/curious-explorer.md` | the player's instructions (`{game}` is the pack's title) |
-| `test_agent_player.py` | actions, limits, stop rules, leakage (35 tests) |
+| `test_agent_player.py` | actions, limits, stop rules, leakage (36 tests) |
 
 ## What the agent may see
 
@@ -83,7 +83,7 @@ uv run --group test pytest experiments/agent-player -q
 uv run --group test python experiments/agent-player/play.py --pack "$PACK" \
   --policy random --seed apl-1 --canary --out /tmp/apl/dry
 # C. a real session, with a provider already in ~/.config/opencode/opencode.json
-#    (the same file bench/design/run.py reads). It must pass the image check first,
+#    (the same file bench/design/run.py reads). It checks that the browser draws text (no fonts = blank screenshots, exit 4), then the image check,
 #    or use --text-only and say so.
 #    Models that think inline (`<think>`) need --max-reply-tokens room (default 4000).
 uv run --group test python experiments/agent-player/play.py --pack "$PACK" \
