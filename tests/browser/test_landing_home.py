@@ -20,6 +20,25 @@ def _hero(page):
         "() => ({region: window.VEFR_COMBAT.region, at: window.VEFR_COMBAT.hero.at})")
 
 
+KEYS = {"up": "ArrowUp", "down": "ArrowDown", "left": "ArrowLeft", "right": "ArrowRight"}
+
+
+def _step_off_and_back(page, plan):
+    """A stair does not answer on the tile it dropped the hero on (vefr#465):
+    one step off the landing, in an open direction, and one step back."""
+    up = plan["anchors"]["up"]
+    rows = plan["rows"]
+    back = {"up": "down", "down": "up", "left": "right", "right": "left"}
+    moves = {"up": (0, -1), "down": (0, 1), "left": (-1, 0), "right": (1, 0)}
+    away = next(name for name, (dx, dy) in moves.items()
+                if rows[up[1] + dy][up[0] + dx] != "#")
+    page.keyboard.press(KEYS[away])
+    page.wait_for_timeout(200)
+    page.keyboard.press(KEYS[back[away]])
+    page.wait_for_timeout(200)
+    assert _hero(page)["at"] == up
+
+
 def test_a_deep_landings_stair_climbs_to_town_and_the_landing_is_kept(page, woven):  # noqa: F811
     open_woven(page, woven)
     descend_to(page, 3)
@@ -29,6 +48,7 @@ def test_a_deep_landings_stair_climbs_to_town_and_the_landing_is_kept(page, wove
         "() => window.VEFR_COMBAT && window.VEFR_COMBAT.region === '%s'" % four["name"])
     assert _hero(page)["at"] == four["anchors"]["up"]
 
+    _step_off_and_back(page, four)
     page.locator("#interact").click()
     page.wait_for_function(
         "() => window.VEFR_COMBAT && window.VEFR_COMBAT.region === '%s'" % ENTRY["region"])
@@ -50,6 +70,7 @@ def test_an_ordinary_floor_below_a_landing_climbs_one_floor(page, woven):  # noq
     two = delve.floor_plan(DESCENT, 2)
     page.wait_for_function(
         "() => window.VEFR_COMBAT && window.VEFR_COMBAT.region === '%s'" % three["name"])
+    _step_off_and_back(page, three)
     page.locator("#interact").click()
     page.wait_for_function(
         "() => window.VEFR_COMBAT && window.VEFR_COMBAT.region === '%s'" % two["name"])
