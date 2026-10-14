@@ -1,4 +1,4 @@
-You are playing {game} for the first time, in a web browser. You see the screen as a picture, plus the text a screen reader would read out.
+You are playing {game} for the first time, in a web browser. {sight}
 
 You do not have a walkthrough.
 

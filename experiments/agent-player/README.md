@@ -17,13 +17,14 @@ It changes nothing in `src/`, `web/` or any pack.
 | `play.py` | one run: weave, open, play, write the evidence and `report.md` |
 | `replay.py` | press a run's keys again with no model and report the first divergence |
 | `profiles/curious-explorer.md` | the player's instructions (`{game}` is the pack's title) |
-| `test_agent_player.py` | actions, limits, stop rules, leakage (33 tests) |
+| `test_agent_player.py` | actions, limits, stop rules, leakage (35 tests) |
 
 ## What the agent may see
 
 **Player** (the prompt): a 640x360 JPEG of the screen, the page's ARIA snapshot
 (`locator.aria_snapshot()`: hidden and `display:none` content is left out,
-screen-reader-only text is kept), the result of its last action ("nothing
+screen-reader-only text is kept), which control has keyboard focus (a sighted
+player sees the ring; the snapshot doesn't say), the result of its last action ("nothing
 visible changed" and so on), its own journal and its last six actions.
 
 **Never in a prompt:** `window.VEFR_*` globals, maps, flags, book text it hasn't
@@ -84,6 +85,7 @@ uv run --group test python experiments/agent-player/play.py --pack "$PACK" \
 # C. a real session, with a provider already in ~/.config/opencode/opencode.json
 #    (the same file bench/design/run.py reads). It must pass the image check first,
 #    or use --text-only and say so.
+#    Models that think inline (`<think>`) need --max-reply-tokens room (default 4000).
 uv run --group test python experiments/agent-player/play.py --pack "$PACK" \
   --policy model --provider opencode:<name> --model <model id> \
   --profile curious-explorer --seed apl-1 --canary --out /tmp/apl/run-001

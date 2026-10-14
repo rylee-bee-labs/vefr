@@ -62,7 +62,7 @@ def vision_check(chat, browser) -> dict:
     page.close()
     policy = apl.ModelPolicy(chat, "You describe images exactly.")
     r = policy.decide("What word and what number are written in the image? Answer in a few words.", img)
-    text = (r.get("text") or "").upper()
+    text = apl.strip_thinking(r.get("text")).upper()
     return {"ok": "OTTER" in text and "47" in text, "reply": text[:200],
             "tokens_in": r.get("tokens_in"), "tokens_out": r.get("tokens_out")}
 
@@ -115,7 +115,7 @@ def final_report(chat, system: str, trace: list[dict], journal: list[str]) -> di
                      + (f"\n   thought: {r.get('thought')}" if r.get("thought") else ""))
     prompt = REPORT_ASK + "\n".join(lines) + "\n\nJournal:\n" + "\n".join(journal or ["(empty)"])
     r = chat([{"role": "system", "content": system}, {"role": "user", "content": prompt}])
-    m = re.search(r"\{.*\}", r.get("text") or "", re.S)
+    m = re.search(r"\{.*\}", apl.strip_thinking(r.get("text")), re.S)
     try:
         body = json.loads(m.group(0)) if m else {}
     except json.JSONDecodeError:
@@ -200,6 +200,8 @@ def parse_args(argv=None):
     ap.add_argument("--model")
     ap.add_argument("--api-key-env", help="env var holding the key when --provider is a URL")
     ap.add_argument("--text-only", action="store_true", help="send no screenshot (ARIA text only)")
+    ap.add_argument("--max-reply-tokens", type=int, default=4000,
+                    help="per reply; models that think inline need room for it")
     return ap.parse_args(argv)
 
 
@@ -216,7 +218,11 @@ def main(argv=None) -> int:
     profile = (HERE / "profiles" / f"{args.profile}.md").read_text(encoding="utf-8")
     # The game's title is what its title screen shows a player; nothing else is read.
     title = json.loads((pack / "world.json").read_text()).get("title") or "this game"
-    system = profile.strip().replace("{game}", title) + "\n\n" + apl.ACTION_HELP
+    sight = ("You can't see the screen: you get the text a screen reader would read out, and nothing else."
+             if args.text_only else
+             "You see the screen as a picture, plus the text a screen reader would read out.")
+    system = (profile.strip().replace("{game}", title).replace("{sight}", sight)
+              + "\n\n" + apl.ACTION_HELP)
 
     chat = None
     provider = model = None
@@ -230,14 +236,14 @@ def main(argv=None) -> int:
         else:
             base, key = args.provider, os.environ.get(args.api_key_env or "", None)
         provider, model = args.provider, args.model
-        chat = make_chat(base, model, key)
+        chat = make_chat(base, model, key, max_tokens=args.max_reply_tokens)
 
     html, sha = weave(pack, out)
     run = {"profile": args.profile, "pack": str(pack), "pack_name": pack.name,
            "mode": "player (text-only ARIA)" if args.text_only else "player",
            "policy": args.policy, "provider": provider, "model": model,
            "seed": args.seed, "viewport": list(vw), "settle_ms": args.settle_ms,
-           "canary": args.canary, "limits": limits.__dict__,
+           "max_reply_tokens": args.max_reply_tokens, "canary": args.canary, "limits": limits.__dict__,
            "vefr": git_id(VEFR_ROOT), "pack_repo": git_id(pack), "weave_sha256": sha}
     t_start = time.monotonic()
     with sync_playwright() as pw:

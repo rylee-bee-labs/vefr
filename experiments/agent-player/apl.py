@@ -101,9 +101,14 @@ def keys_for(action: dict) -> list[str]:
     return []
 
 
+def strip_thinking(text: str | None) -> str:
+    """Drop `<think>` blocks (some models reason inline), closed or cut off."""
+    return re.sub(r"<think>.*?(</think>|\Z)", "", text or "", flags=re.S)
+
+
 def parse_decision(text: str) -> dict:
     """The model's reply -> {thought, action, note}.  Raises ActionError."""
-    m = re.search(r"\{.*\}", text or "", re.S)
+    m = re.search(r"\{.*\}", strip_thinking(text), re.S)
     if not m:
         raise ActionError("no JSON object in reply")
     try:
@@ -178,8 +183,11 @@ def observe_player(page, scaler=None) -> dict:
     """
     png = page.screenshot()
     aria = page.locator("body").aria_snapshot()
+    # A sighted player sees the focus ring; the ARIA snapshot doesn't say where it is.
+    focused = page.locator("*:focus")
+    focus = focused.first.aria_snapshot().strip() if focused.count() else ""
     small = scaler(png) if scaler else png
-    return {"aria": aria, "png": png, "image": small,
+    return {"aria": aria, "focus": focus or "(no control has focus)", "png": png, "image": small,
             "aria_digest": digest(aria), "png_digest": digest(png)}
 
 
@@ -307,7 +315,7 @@ def describe_change(prev: dict, now: dict) -> str:
     return "nothing visible changed"
 
 
-def build_prompt(state: RunState, obs: dict, limits: Limits, last: str) -> str:
+def build_prompt(state: RunState, obs: dict, limits: Limits, last: str, text_only=False) -> str:
     """The text half of one decision.  Built ONLY from player-side data."""
     notes = "\n".join(f"- {n}" for n in state.journal[-20:]) or "- (none yet)"
     recent = "\n".join(state.recent[-6:]) or "(this is your first look)"
@@ -318,7 +326,9 @@ def build_prompt(state: RunState, obs: dict, limits: Limits, last: str) -> str:
         f"Your journal:\n{notes}\n\n"
         f"Your recent actions:\n{recent}\n\n"
         f"What the screen's accessible text says now (ARIA snapshot):\n{obs['aria']}\n\n"
-        "The attached image is the current screen."
+        f"Keyboard focus is on: {obs.get('focus') or '(unknown)'}\n\n"
+        + ("There is no picture: you only have the text above. Don't describe what you can't see."
+           if text_only else "The attached image is the current screen.")
     )
 
 
@@ -355,7 +365,7 @@ def run_loop(game, policy, out: Path, limits: Limits, *, clock=time.monotonic,
             if game.errors:
                 st.stop = f"page error: {game.errors[0][:200]}"
                 break
-            prompt = build_prompt(st, obs, limits, last)
+            prompt = build_prompt(st, obs, limits, last, text_only)
             prompts.write(json.dumps({"step": st.step + 1, "system": system_prompt,
                                       "text": prompt, "image": not text_only}) + "\n")
             t0 = clock()

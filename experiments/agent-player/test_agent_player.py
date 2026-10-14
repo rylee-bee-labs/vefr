@@ -58,6 +58,13 @@ def test_parse_decision_is_strict():
             apl.parse_decision(bad)
 
 
+def test_thinking_blocks_are_ignored():
+    reply = '<think>maybe {"action": {"type": "back"}}</think>{"action": {"type": "talk"}}'
+    assert apl.parse_decision(reply)["action"] == {"type": "talk"}
+    with pytest.raises(apl.ActionError):  # cut off mid-thought: no decision, not a guess
+        apl.parse_decision('<think>I will {"action": {"type": "talk"}} and')
+
+
 # ---- the loop, against a fake game --------------------------------------
 class FakeGame:
     """Stands in for the browser.  `moves` makes the screen change on arrow keys."""
@@ -162,6 +169,12 @@ def test_player_observation_never_runs_page_script():
         assert not called & SCRIPT_CALLS, (fn.__name__, called & SCRIPT_CALLS)
 
 
+def test_text_only_prompt_does_not_promise_a_picture(tmp_path):
+    apl.run_loop(FakeGame(), apl.ScriptedPolicy([move()] * 2), tmp_path, apl.Limits(), text_only=True)
+    prompts = [json.loads(ln) for ln in (tmp_path / "prompts.jsonl").read_text().splitlines()]
+    assert prompts and all("attached image" not in p["text"] and "no picture" in p["text"] for p in prompts)
+
+
 def test_qa_state_never_reaches_a_prompt(tmp_path):
     apl.run_loop(FakeGame(), apl.ScriptedPolicy([move()] * 5), tmp_path, apl.Limits())
     prompts = (tmp_path / "prompts.jsonl").read_text()
@@ -181,7 +194,7 @@ def test_leak_audit_catches_canaries_and_hidden_facts(tmp_path):
 
 FIXTURE = """<!doctype html><html><body>
 <main><h1>A visible room</h1><p role="status">You see a door.</p>
-<button>Open <kbd>F</kbd></button><span class="sr" style="position:absolute;left:-9999px">Screen reader hint</span>
+<button autofocus>Open <kbd>F</kbd></button><span class="sr" style="position:absolute;left:-9999px">Screen reader hint</span>
 <div hidden>Secret: the key is under the rug</div>
 <div style="display:none">Undiscovered room: the vault</div></main>
 <script>window.VEFR_SECRET_FLAG = "the-king-is-asleep";</script></body></html>"""
@@ -206,6 +219,7 @@ def test_browser_observation_hides_what_a_player_cannot_perceive(tmp_path):
         browser.close()
     aria = obs["aria"]
     assert "You see a door." in aria and "Screen reader hint" in aria
+    assert "Open" in obs["focus"]
     for secret in ["under the rug", "the vault", "the-king-is-asleep", *apl.CANARIES.values()]:
         assert secret not in aria
     assert obs["image"][:2] == b"\xff\xd8"  # a JPEG thumbnail, not the full PNG
