@@ -43,6 +43,7 @@ def make_chat(base_url: str, model: str, api_key: str | None, max_tokens: int = 
         h = {"Content-Type": "application/json"}
         if api_key:
             h["Authorization"] = "Bearer " + api_key
+            h["x-api-key"] = api_key  # Anthropic's native header; same key, same host
         req = urllib.request.Request(base_url.rstrip("/") + "/chat/completions", data=body, headers=h)
         with urllib.request.urlopen(req, timeout=timeout) as r:
             out = json.loads(r.read())
