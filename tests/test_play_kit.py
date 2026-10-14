@@ -59,6 +59,7 @@ def test_menu_click_and_visibility_reads(tmp_path):
                                  "read": ["visible:#menu", "exists:#no-such-element", "text:#menu-title"]})
     assert out["reads"]["visible:#menu"] is True
     assert out["reads"]["exists:#no-such-element"] is False
+    assert out["reads"]["text:#menu-title"]
 
 
 def test_the_attr_read_reads_an_attribute(tmp_path):
@@ -68,7 +69,6 @@ def test_the_attr_read_reads_an_attribute(tmp_path):
     out = play(woven(tmp_path), {"steps": ["begin"], "read": [read]})
     assert out["errors"] == []
     assert out["reads"][read] == "Combat actions"
-    assert out["reads"]["text:#menu-title"]
 
 
 def test_store_is_injected_and_returned(tmp_path):
