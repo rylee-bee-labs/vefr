@@ -389,7 +389,10 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # The strike hint said once at the first fight (#464), 2026-10-14; three player parts changed (the message table's fifth row, the held-line flush, and the call beside a landed blow), so the player template moved; measured twice in separate processes, readings equal, and the reading before it on main's own parts reproduced the value above in this same environment:
 #   8c0e7e6ec9f0d9c0a88da27746c2f3b9cc0e675b0f8dac6f1e44e42a6ae9dc8e
 #   8c0e7e6ec9f0d9c0a88da27746c2f3b9cc0e675b0f8dac6f1e44e42a6ae9dc8e
-NO_SKIN_WEAVE_SHA256 = "8c0e7e6ec9f0d9c0a88da27746c2f3b9cc0e675b0f8dac6f1e44e42a6ae9dc8e"
+# The first fight says that walking into an enemy is the attack (#464), 2026-10-14; measured twice in separate processes, readings equal:
+#   1b096d4a57c66492377032cef226da1a4dec27e46bbcb7b7434bade5f1fe3cd1
+#   1b096d4a57c66492377032cef226da1a4dec27e46bbcb7b7434bade5f1fe3cd1
+NO_SKIN_WEAVE_SHA256 = "1b096d4a57c66492377032cef226da1a4dec27e46bbcb7b7434bade5f1fe3cd1"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():
