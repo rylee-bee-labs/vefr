@@ -22,6 +22,7 @@ the size that was asked for, and a name would prove nothing.
 """
 
 import json
+import concurrent.futures
 import os
 import sys
 from pathlib import Path
@@ -39,6 +40,20 @@ SHELL = ROOT / "web" / "player" / "parts" / "030-shell.html"
 sys.path.insert(0, str(ROOT / "tests" / "fixtures"))
 
 
+def _off_loop(fn, *args, **kwargs):
+    """Run `fn` on a fresh thread and return its result (or raise its error).
+
+    Playwright's sync API refuses to start in a thread whose asyncio loop is
+    running, and the shared live Chromium of `tests/browser/fixtures.py` leaves
+    exactly that behind in the main thread once any browser test has used it.
+    In one pytest process those tests run first, so every sync Playwright here
+    failed with "using Playwright Sync API inside the asyncio loop" (found
+    2026-10-14; CI's `-n auto` mostly hid it by putting them in other workers).
+    A fresh thread has no loop, so this file works whatever ran before it."""
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+        return pool.submit(fn, *args, **kwargs).result()
+
+
 @pytest.fixture(scope="module")
 def browser():
     """A headless Chromium for this module, or a skip.
@@ -53,14 +68,20 @@ def browser():
         if os.environ.get("VEFR_BROWSER_REQUIRED") == "1":
             pytest.fail(f"browser required but unavailable: {e}")
         pytest.skip(f"Playwright is not installed: {e}")
-    with sync_playwright() as p:
-        try:
-            instance = p.chromium.launch()
-        except Exception as e:  # noqa: BLE001 - Chromium not installed
-            if os.environ.get("VEFR_BROWSER_REQUIRED") == "1":
-                pytest.fail(f"browser required but unavailable: {e}")
-            pytest.skip(f"no Chromium for Playwright: {e}")
-        instance.close()
+    def _probe():
+        with sync_playwright() as p:
+            try:
+                instance = p.chromium.launch()
+            except Exception as e:  # noqa: BLE001 - Chromium not installed
+                return None, e
+            instance.close()
+            return instance, None
+
+    instance, err = _off_loop(_probe)
+    if err is not None:
+        if os.environ.get("VEFR_BROWSER_REQUIRED") == "1":
+            pytest.fail(f"browser required but unavailable: {err}")
+        pytest.skip(f"no Chromium for Playwright: {err}")
     # This is only the skip guard. It holds no live browser because
     # `devtools._session` opens its own `sync_playwright()` per `look`, and two
     # sync Playwright sessions cannot share one thread.
@@ -81,7 +102,7 @@ def _look(**kw):
     base = dict(html=None, pack=str(SAMPLE), out=None, steps="",
                 json=True, scenario=None, sizes=None, at=None, seed=None)
     base.update(kw)
-    return cli.cmd_look(SimpleNamespace(**base))
+    return _off_loop(cli.cmd_look, SimpleNamespace(**base))
 
 
 def _woven(pack, folder, name):
@@ -372,6 +393,10 @@ SEED_JS = """() => {
 
 
 def _read_seed(html, seed=None):
+    return _off_loop(_read_seed_here, html, seed)
+
+
+def _read_seed_here(html, seed=None):
     from playwright.sync_api import sync_playwright
 
     with sync_playwright() as p:
@@ -428,6 +453,10 @@ def test_a_pack_with_no_descent_ignores_the_seed_exactly_as_it_did_today(
     """No descent means no seed to choose. The parameter is read by the
     descent, which is off, so the game is the game it was - and `vefr
     look --seed` still writes its screenshot."""
+    _off_loop(_play_without_descent, woven)
+
+
+def _play_without_descent(woven):
     from playwright.sync_api import sync_playwright
 
     with sync_playwright() as p:
