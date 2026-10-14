@@ -168,6 +168,34 @@ def test_a_small_map_on_a_phone_draws_at_the_pack_tile(browser, tmp_path):
         ctx.close()
 
 
+def test_a_short_room_on_a_phone_sits_under_the_top_bar(browser, tmp_path):
+    """A room shorter than the window is not drawn floating in dark bands above and below
+    (issue #448): under the follow camera the camera clamps it, so the room starts at the
+    window's top and the dark ground is all below it. Its width stays centred."""
+    pack = play_kit.pack(tmp_path, "interact", {"world.json": {"display": {"phone_tile": 52}}})
+    act = pack / "acts" / "act-1"
+    (act / "town" / "map.md").write_text("#####\n#...#\n#...#\n#####\n", encoding="utf-8")
+    cfg = json.loads((act / "world.json").read_text(encoding="utf-8"))
+    cfg["transitions"] = []
+    (act / "world.json").write_text(json.dumps(cfg), encoding="utf-8")
+    html = play_kit.weave(pack, tmp_path)
+    ctx = phone(browser)
+    try:
+        page = ctx.new_page()
+        page.goto(html.as_uri() + "?camera=phone")
+        enter(page)
+        cam = page.evaluate("window.VEFR_CAMERA()")
+        m = page.evaluate("window.VEFR_STAGE.map")
+        top = page.evaluate("document.getElementById('town-canvas').getBoundingClientRect().top")
+        assert cam["y"] == 0, f"a short room is still centred vertically: camera y {cam['y']}"
+        assert m["y"] == pytest.approx(top), f"the drawn room does not start at the window's top: {m}"
+        assert m["h"] < PHONE["height"], f"this room is not short: {m}"
+        # the width is untouched: a room narrower than the window stays centred
+        assert cam["x"] == pytest.approx(-(PHONE["width"] - m["w"]) / 2), f"the room slid sideways: {cam}"
+    finally:
+        ctx.close()
+
+
 def test_a_desk_follows_the_hero_at_the_desk_tile_and_its_messages_fade(browser, tmp_path):
     """A pack with display.desk_tile gives a screen with a mouse the follow camera too: a
     whole town drawn small left the hero a speck under a stack of hints that never went

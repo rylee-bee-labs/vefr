@@ -193,7 +193,7 @@
     var margin = onPhone ? PHONE_MARGIN * T : 0;
     var camX = mapW <= viewW ? (mapW - viewW) / 2
       : Math.min(Math.max(camHero[0] * T + T / 2 - viewW / 2, -margin), mapW - viewW + margin);
-    var camY = mapH <= viewH ? (mapH - viewH) / 2
+    var camY = mapH <= viewH ? shortMapY(mapH)   // a room shorter than the window: clamped under the top bar (issue #448)
       : Math.min(Math.max(camHero[1] * T + T / 2 - viewH / 2, -margin), mapH - viewH + margin);
     camX = snapPx(camX); camY = snapPx(camY);
     cameraAt.x = camX;
