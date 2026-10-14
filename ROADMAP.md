@@ -106,6 +106,11 @@ gameplay features over new core machinery.
 - [player] The combat row keeps the focus on the verb you last used, so a fight no longer costs eight Tabs a turn back to the buttons; the verbs answer `1`, `2` and `3` and print their digit (#463).
 - [player] The result line is one plain sentence per action - what Strike, Console and Hurl did - instead of naming the action (`last action: console (dusk)`). The wording is the engine's and stays game-name-neutral, and a pack replaces it through `player_words` (`combat.<verb>`; `vefr check` does not know those keys yet - see the known gap in [rulesets.md](docs/guides/rulesets.md)).
 
+### LANDED 2026-10-14 (the keyboard stays in the box)
+- [player] Tab stays inside an open dialog and closing it hands the focus back to the control that opened it (#462).
+  Every `role="dialog"` in the woven player - the pause menu, a book, a line of speech, a trade, the identify list, the
+  two end cards - is one rule in `web/player/parts/045-dialog-focus.js`, so a new dialog gets it for free. Tests:
+  `tests/test_dialog_focus.py` (jsdom) and `tests/browser/test_dialog_focus.py` (Chromium).
 ### LANDED 2026-10-14 (the stair bounce)
 - [engine] Arriving by a stair lands the hero on the tile the transition names - usually the stair back up - and
   the very next Interact press offered "Go up the stairs", so the prompt flipped between the way down and the way
