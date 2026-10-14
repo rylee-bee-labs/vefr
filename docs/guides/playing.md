@@ -91,6 +91,15 @@ Press it anyway and Interact says one friendly line:
 
 It costs you nothing and does not waste a turn.
 
+## Arriving by stairs
+
+A stair drops you on the tile the transition names, which is usually the stair back up.
+That tile is a landing: it has nothing to use until you step off it.
+Step off, and the stair is there again - drawn, walkable, and yours to press.
+So the button never flips from "Go down the stairs" to "Go up the stairs" on two presses in a row.
+
+A door landing is left alone: a door opens both ways, and means the same thing from either side.
+
 ## Fighting
 
 Walking into a monster still hits it, exactly as before.

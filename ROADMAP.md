@@ -58,7 +58,7 @@ gameplay features over new core machinery.
   `cellar-0-2`, whose id, floor key and save keys are unchanged; a Section with no label reads as before (#363).
 - [player] Arriving on a floor of a labelled Section names the floor, not the stair back up: the POI line and the
   button say "the Cellar, floor 2", and reading it points to the stair down. The up-stair is still drawn and
-  walkable, and a Section with no label arrives exactly as before (#362).
+  walkable, and the stair a hero lands on is set aside until they step off it (#362, #465).
 - [authoring] The Storybook design system and its art bible (Cottage's look, kept as a worked example; every game
   chooses its own), and the guide to making a VEFR game look and feel good (#415).
 
@@ -105,6 +105,17 @@ gameplay features over new core machinery.
 ### LANDED 2026-10-14 (the fight, from the keyboard)
 - [player] The combat row keeps the focus on the verb you last used, so a fight no longer costs eight Tabs a turn back to the buttons; the verbs answer `1`, `2` and `3` and print their digit (#463).
 - [player] The result line is one plain sentence per action - what Strike, Console and Hurl did - instead of naming the action (`last action: console (dusk)`). The wording is the engine's and stays game-name-neutral, and a pack replaces it through `player_words` (`combat.<verb>`; `vefr check` does not know those keys yet - see the known gap in [rulesets.md](docs/guides/rulesets.md)).
+
+### LANDED 2026-10-14 (the stair bounce)
+- [engine] Arriving by a stair lands the hero on the tile the transition names - usually the stair back up - and
+  the very next Interact press offered "Go up the stairs", so the prompt flipped between the way down and the way
+  back up with no step in between (seen in the Haiku and DeepSeek runs, apl-2 and apl-4). The landing tile is now
+  set aside: the stair on it is not an Interact target until the hero has stepped off, and the stair answers again
+  as soon as they step off and back onto it. The hero still lands where the transition wrote - a generated floor's
+  up anchor, which the geometry and the elevator rule are built on - a door landing is untouched (a door opens both
+  ways), and a wake is not an arrival at all. A labelled floor's own arrival note (#362) reads as before and does
+  not hand the stair back when it is read. Issue #465; tests: `tests/test_stair_landing.py` and
+  `tests/test_descent_arrival.py`; player guide: "Arriving by stairs" in `docs/guides/playing.md`.
 
 ### IN PROGRESS (decided by Rylee on 2026-10-04; refreshed 2026-10-12)
 - **The endless dungeon** (epic [#273](https://github.com/rylee-bee-labs/vefr/issues/273); design `docs/plans/endless-dungeon/DESIGN.md`, build plan `docs/plans/endless-dungeon/PLAN.md`, research `docs/research/big-generated-maps.md`): floors generated while you play from `seed + depth`, cut into sections of 8 to 11 floors; each ends in a key warden whose key opens a vault with a lore note; acts change the town only; elites, linked groups, hand-painted stamps and much bigger maps (up to 128x96, kept cheap for phones); an endless mode after the story.
