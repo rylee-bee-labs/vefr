@@ -47,7 +47,12 @@ function bindDialogFocus() {
 
   // The dialog a key belongs to: the last one on screen in the page. The
   // pause menu is last in the markup, so a box opened on top of it wins.
+  // A page that is being torn down (a reload, a closed window) has no
+  // document left to ask; nothing is open there.
+  function alive() { return typeof document !== 'undefined' && !!document && !!document.querySelectorAll; }
+
   function topDialog() {
+    if (!alive()) return null;
     var list = document.querySelectorAll(DIALOG);
     for (var i = list.length - 1; i >= 0; i--) {
       if (onScreen(list[i])) return list[i];
@@ -99,6 +104,7 @@ function bindDialogFocus() {
   // answered for without every surface that opens one knowing this part
   // exists.
   function sync() {
+    if (!alive()) return;
     var list = document.querySelectorAll(DIALOG);
     for (var i = 0; i < list.length; i++) {
       var dialog = list[i];
@@ -106,7 +112,22 @@ function bindDialogFocus() {
       var now = onScreen(dialog);
       if (now === rec.open) continue;
       rec.open = now;
-      if (now) { rec.opener = outside; continue; }
+      if (now) {
+        rec.opener = outside;
+        // A dialog that opens and leaves the focus on the page behind it would
+        // let the next key act on the page: put the focus on its first control,
+        // after the surface that opened it has had its own say.
+        (function (d) {
+          setTimeout(function () {
+            if (!alive() || !onScreen(d) || topDialog() !== d) return;
+            var a = document.activeElement;
+            if (a && d.contains(a)) return;
+            var first = stops(d)[0];
+            if (first) first.focus(); else if (d.focus) d.focus();
+          }, 0);
+        })(dialog);
+        continue;
+      }
       var back = rec.opener;
       rec.opener = null;
       var here = document.activeElement;
@@ -117,6 +138,10 @@ function bindDialogFocus() {
       // that closed with it) is no place to send the focus; the Menu button
       // is the one control every surface has.
       if (!landable(back)) back = document.getElementById('menu-open');
+      // Another dialog still open (or just opened) owns the focus now: the
+      // opener behind it is not where the next key should go.
+      var still = topDialog();
+      if (still && !(back && still.contains(back))) continue;
       if (landable(back)) { try { back.focus(); } catch (e) { /* gone */ } }
     }
   }
@@ -125,7 +150,15 @@ function bindDialogFocus() {
   // which is known before a dialog moves focus into itself - a "who has the
   // focus now" read at open time would only ever answer with the dialog.
   document.addEventListener('focusin', function (e) {
-    if (!topDialog()) outside = e.target;
+    var d = topDialog();
+    if (!d) { outside = e.target; return; }
+    // A focus that lands on the page behind an open dialog (a script focusing
+    // its own button, a click on the page) is brought back into the dialog.
+    if (!d.contains(e.target)) {
+      var first = stops(d)[0];
+      if (first && first !== e.target) first.focus();
+      else if (d.focus && d !== e.target) d.focus();
+    }
   });
 
   if (window.MutationObserver) {

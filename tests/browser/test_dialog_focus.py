@@ -106,7 +106,13 @@ def test_a_book_keeps_the_focus_and_hands_it_back(playing):
     assert len({w["label"] for w in seen}) > 1, (
         "every Tab landed on the same control, so the reader is not being walked: "
         + str(seen))
-    playing.click("#reader-close")
+    # Closing a book can earn another (a book that unlocks on `book:<id>`), and
+    # the library opens that one straight away; close each until the reader stays shut.
+    for _ in range(4):
+        playing.click("#reader-close")
+        playing.wait_for_timeout(200)
+        if playing.is_hidden("#reader"):
+            break
     playing.wait_for_selector("#reader", state="hidden")
     where = playing.evaluate(WHERE, "reader")
     assert not where["inBox"] and where["label"] not in ("nothing", "body", "html"), (
