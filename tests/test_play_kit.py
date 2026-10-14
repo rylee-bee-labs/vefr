@@ -14,6 +14,7 @@ tests/fixtures/play.mjs: one jsdom runner driven by a data spec, replacing a 35-
           "text:#sel"        the element's text, or null
           "exists:#sel"      true/false
           "visible:#sel"     exists and neither it nor an ancestor is hidden
+          "attr:#sel|NAME"   the element's attribute value, or null (selector and attribute split on the first '|')
           "store"            the whole localStorage as an object (also always returned as "store")
   An unknown step or read makes the process exit 2 with one plain sentence on stderr.
   That one line is written whole HOWEVER LONG it is - stdout is drained before the process exits, so a read's size
@@ -58,6 +59,15 @@ def test_menu_click_and_visibility_reads(tmp_path):
                                  "read": ["visible:#menu", "exists:#no-such-element", "text:#menu-title"]})
     assert out["reads"]["visible:#menu"] is True
     assert out["reads"]["exists:#no-such-element"] is False
+
+
+def test_the_attr_read_reads_an_attribute(tmp_path):
+    """`attr:#sel|NAME` is how a test sees state that lives in an attribute
+    (the combat row's own label), which no text read can reach."""
+    read = "attr:#verb-row|aria-label"
+    out = play(woven(tmp_path), {"steps": ["begin"], "read": [read]})
+    assert out["errors"] == []
+    assert out["reads"][read] == "Combat actions"
     assert out["reads"]["text:#menu-title"]
 
 

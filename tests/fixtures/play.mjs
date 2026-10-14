@@ -8,7 +8,7 @@
    steps: "begin" | "wait:MS" | "key:NAME" | "dir:NAME" | "walk:a,b" |
           "click:#sel" | "menu:PANEL"
    reads: "NAME" | "NAME.a.b" | "text:#sel" | "exists:#sel" |
-          "visible:#sel" | "store"
+          "visible:#sel" | "attr:#sel|NAME" | "store"
    A "NAME.a.b" path splits on '.', so a key that IS a dot - a map glyph -
    is not addressable: read the level above it and index in the test.
    prints one line: {"reads": {...}, "errors": [...], "store": {...}}
@@ -174,6 +174,16 @@ function doRead(read) {
   if (verb === 'text') return { ok: true, value: el ? el.textContent : null };
   if (verb === 'exists') return { ok: true, value: !!el };
   if (verb === 'visible') return { ok: true, value: !!el && visible(el) };
+  if (verb === 'attr') {
+    /* "attr:#sel|NAME" - the selector and the attribute name are split on
+       the first '|', so an attribute with no name is an unknown read. */
+    const bar = sel.indexOf('|');
+    if (bar === -1) return { ok: false, value: null };
+    const target = sel.slice(0, bar), name = sel.slice(bar + 1);
+    let node = null;
+    try { node = target ? document.querySelector(target) : null; } catch (e) { node = null; }
+    return { ok: true, value: node ? node.getAttribute(name) : null };
+  }
   return { ok: false, value: null };
 }
 
