@@ -233,7 +233,10 @@ the nearest unexplored ground; the walk stops on its own when a monster
 comes into the light, the hero is wounded, or there is nothing left to
 see. A carried torch widens that circle for a few turns; a chalked map
 lays the whole place open. The dark is the pack's to set: press `V`, or
-use Display in the pause menu, to see the whole map. Models help while
+use Display in the pause menu, to see the whole map. In a fight, the
+verbs answer `1`, `2` and `3` (each prints its own digit), the focus
+stays on the verb you last used, and the result line says in one plain
+sentence what the action did. Models help while
 you make the game, in the studio; the finished file is complete on its own
 (`docs/adr/0003-models-in-the-studio.md`). A game can still offer players
 an optional model of their own for fresh lines.

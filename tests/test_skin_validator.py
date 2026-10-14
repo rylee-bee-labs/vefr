@@ -386,13 +386,28 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # A desk's follow camera (display.desk_tile) and its one fading message line, 2026-10-13; measured twice in separate processes, readings equal:
 #   d8aa37fc38bdc1d17160232896b30791d9be64b68b49fc7c5ed29d0174597e56
 #   d8aa37fc38bdc1d17160232896b30791d9be64b68b49fc7c5ed29d0174597e56
-# The strike hint said once at the first fight (#464), 2026-10-14; three player parts changed (the message table's fifth row, the held-line flush, and the call beside a landed blow), so the player template moved; measured twice in separate processes, readings equal, and the reading before it on main's own parts reproduced the value above in this same environment:
-#   8c0e7e6ec9f0d9c0a88da27746c2f3b9cc0e675b0f8dac6f1e44e42a6ae9dc8e
-#   8c0e7e6ec9f0d9c0a88da27746c2f3b9cc0e675b0f8dac6f1e44e42a6ae9dc8e
-# The first fight says that walking into an enemy is the attack (#464), 2026-10-14; measured twice in separate processes, readings equal:
-#   1b096d4a57c66492377032cef226da1a4dec27e46bbcb7b7434bade5f1fe3cd1
-#   1b096d4a57c66492377032cef226da1a4dec27e46bbcb7b7434bade5f1fe3cd1
-NO_SKIN_WEAVE_SHA256 = "1b096d4a57c66492377032cef226da1a4dec27e46bbcb7b7434bade5f1fe3cd1"
+# Three settings in Display - larger text, reduced motion, volume (#473), 2026-10-14; measured twice in separate processes, readings equal:
+#   6ca8bb7e68c75e1ecf535e809ae6065b32f8f7bf295183e024c9939afc9e3501
+#   6ca8bb7e68c75e1ecf535e809ae6065b32f8f7bf295183e024c9939afc9e3501
+# Main merged into the #461 change, 2026-10-14; measured twice in separate processes, readings equal:
+#   5507922bae1d70f88fb2fbe16769683dfac028bf23e2a15f10662d50961d567d
+#   5507922bae1d70f88fb2fbe16769683dfac028bf23e2a15f10662d50961d567d
+# Main merged into the #466 change, 2026-10-14; measured twice in separate processes, readings equal:
+#   c311f714c37037836c37ff2e67a3226117b18001a4192cc6fb9884f5d31e4572
+#   c311f714c37037836c37ff2e67a3226117b18001a4192cc6fb9884f5d31e4572
+# Main merged into the #470 change, 2026-10-14; measured twice in separate processes, readings equal:
+#   8db8a3d84556d4b0e956de5e92cfaf0bc87ada0a47935105f7d558695a2124a6
+#   8db8a3d84556d4b0e956de5e92cfaf0bc87ada0a47935105f7d558695a2124a6
+# F everywhere, merged with Listen (#467), 2026-10-14; measured twice in separate processes, readings equal:
+#   793bbd72cacac799042960da5078c5d3e94b5ee8ba47c967fc1c3528f9848633
+#   793bbd72cacac799042960da5078c5d3e94b5ee8ba47c967fc1c3528f9848633
+# Main merged into the #463 change, 2026-10-14; measured twice in separate processes, readings equal:
+#   b8f182378ebd00890686415c17b9bfe61e116b9cd86696857cabc5dcbe94c8e5
+#   b8f182378ebd00890686415c17b9bfe61e116b9cd86696857cabc5dcbe94c8e5
+# Main merged into the #464 change, 2026-10-14; measured twice in separate processes, readings equal:
+#   05e94f97089c006bd4d8d7278028b35c6367773ca3fa7d21b8c8ca8f9ef3ee30
+#   05e94f97089c006bd4d8d7278028b35c6367773ca3fa7d21b8c8ca8f9ef3ee30
+NO_SKIN_WEAVE_SHA256 = "05e94f97089c006bd4d8d7278028b35c6367773ca3fa7d21b8c8ca8f9ef3ee30"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():
