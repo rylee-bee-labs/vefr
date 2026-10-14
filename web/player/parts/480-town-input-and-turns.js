@@ -41,9 +41,13 @@
       ? window.performance.now() : Date.now();
   }
   // Read at move time, never cached, so a change of preference is felt.
+  // The OS's own setting and the player's Display > Reduced motion switch are
+  // the same question: either one asking for still motion gets still motion,
+  // and the sheet lays down the matching blanket in CSS (020-style.css).
   function reducedMotion() {
     return !!(window.matchMedia
-      && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+      || reducedMotionOn();
   }
   // Where the hero is DRAWN right now: the settled tile when no step is
   // running, else the tweened tile plus its offset. Never moves the
