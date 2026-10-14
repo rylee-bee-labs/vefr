@@ -32,6 +32,8 @@ In the shop, `E` or `F` closes it too (`Escape` and the Close button still work)
 The screen stays quiet. The how-to-move line goes after your first step. A place's name shows for a few
 seconds when you arrive. The fight buttons appear only with a monster near. Everything else sits in a small
 **Messages** panel in the top left that you can fold away; a screen reader still hears every line.
+The map itself is named for where you are standing, and it changes when you walk through a door: the hero
+is in the cottage kitchen, so a screen reader says "The cottage kitchen, seen from above", not "the town".
 
 ## What Interact does
 
