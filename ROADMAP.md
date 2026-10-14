@@ -84,6 +84,8 @@ gameplay features over new core machinery.
 - [player] A desk follows the hero too (`display.desk_tile`, 32 to 96): the stage is the window, and messages are
   the phone's one fading line (#446).
 - [engine] A Section can dress its generated floors with decor (#442, #443).
+- [player] One name for the interact key: every hint, label and key letter says F, and E stays an
+  unadvertised alias that still reaches the same verb, combat included (#467).
 
 ### IN PROGRESS (decided by Rylee on 2026-10-04; refreshed 2026-10-12)
 - **The endless dungeon** (epic [#273](https://github.com/rylee-bee-labs/vefr/issues/273); design `docs/plans/endless-dungeon/DESIGN.md`, build plan `docs/plans/endless-dungeon/PLAN.md`, research `docs/research/big-generated-maps.md`): floors generated while you play from `seed + depth`, cut into sections of 8 to 11 floors; each ends in a key warden whose key opens a vault with a lore note; acts change the town only; elites, linked groups, hand-painted stamps and much bigger maps (up to 128x96, kept cheap for phones); an endless mode after the story.

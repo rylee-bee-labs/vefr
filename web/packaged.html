@@ -591,7 +591,7 @@
         </div>
         <div class="acts">
           <button type="button" id="interact" class="gbtn gbtn--main"><span id="interact-label">Interact</span> <kbd>F</kbd></button>
-          <button type="button" id="talk" class="gbtn gbtn--tool" data-tip="Talk" title="Talk (E)"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 5h16v11H9l-5 4z"/></svg><span class="sr-only">Talk</span><kbd>E</kbd></button>
+          <button type="button" id="talk" class="gbtn gbtn--tool" data-tip="Talk" title="Talk (F)"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 5h16v11H9l-5 4z"/></svg><span class="sr-only">Talk</span><kbd>F</kbd></button>
           <button type="button" id="whisper" class="gbtn gbtn--tool" data-tip="Whisper" title="Whisper (Q)"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 9v6M9 6v12M13 9v6M17 7v10"/></svg><span class="sr-only">Whisper</span><kbd>Q</kbd></button>
           <button type="button" id="bagbtn" class="gbtn gbtn--tool" data-tip="Bag" title="Bag (B)"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 9V7a4 4 0 0 1 8 0v2"/><rect x="4" y="9" width="16" height="12" rx="2"/></svg><span class="sr-only">Bag</span><kbd>B</kbd></button>
           <button type="button" id="explore" class="gbtn gbtn--tool" aria-pressed="false" data-tip="Explore" title="Explore (O)"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg><span class="sr-only">Explore</span><kbd>O</kbd></button>
@@ -777,7 +777,7 @@
       <h2>How to play</h2>
       <ul>
         <li>Move with the arrow keys or <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd>, or, on a touch screen, drag the joystick (or use the D-pad you chose in Display).</li>
-        <li>Use what is near you with <kbd>E</kbd>, <kbd>Space</kbd>, <kbd>Enter</kbd>, <kbd>F</kbd> or the big Interact button. It always says what it will do. The same keys turn the pages of a note and close someone's speech, and <kbd>E</kbd> or <kbd>F</kbd> close a shop.</li>
+        <li>Use what is near you with <kbd>F</kbd>, <kbd>Space</kbd> or <kbd>Enter</kbd>, or the big Interact button. It always says what it will do. The same keys turn the pages of a note and close someone's speech, and <kbd>F</kbd> is how you close a shop.</li>
         <li>Hear a rumor with <kbd>Q</kbd> or the Whisper button.</li>
         <li>Open your bag with <kbd>B</kbd> or the Bag button.</li>
         <li>Walk the unexplored dark with <kbd>O</kbd> or the Explore button.</li>
@@ -1118,7 +1118,7 @@ function bootstrap() {
   if (!tutorialDone()) {
     statusEl0.textContent = touch
       ? 'Move on the left. Near someone, tap the round button.'
-      : 'Move with the arrow keys or WASD. Press E to talk.';
+      : 'Move with the arrow keys or WASD. Press F to talk.';
     statusEl0.setAttribute('data-tutorial', '1');
   }
 }
@@ -13396,10 +13396,11 @@ function setupTown() {
   }
 
   // One speaker's line - the talk path itself, shared by the Talk
-  // button, the canvas click, the old E key, and Interact's resident
-  // pick. The line is the pack's own: straight from the model when
-  // one answers, else from the woven pool, else spliced from this
-  // character's fragments, else the speaker's seeded line in turn.
+  // button, the canvas click, the F key (E is its unadvertised alias),
+  // and Interact's resident pick. The line is the pack's own: straight
+  // from the model when one answers, else from the woven pool, else
+  // spliced from this character's fragments, else the speaker's seeded
+  // line in turn.
   function talkToSpeaker(nearest) {
     var ph = phase();
     libraryFromSpeaker(nearest.key);
@@ -13772,6 +13773,9 @@ function setupTown() {
     if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
     // Any key but the toggle itself halts an autoexplore walk.
     if (exploring() && e.key !== 'o' && e.key !== 'O') exploreStop('Stopped.');
+    // F is the one name for Interact (vefr#467); E answers to it too, so
+    // a player who learned the old key is never stuck, but no hint, label
+    // or key letter names it.
     // The Interact keys keep the loop going: while a note or a speech box
     // is up they CONTINUE it (next page, then close) instead of needing a
     // click. A focused button handles its own Enter and Space, and a held

@@ -9,7 +9,7 @@ You cannot get anything wrong here; the game tells you what it is doing as you g
 | Key | What it does |
 |---|---|
 | Arrow keys, or `W` `A` `S` `D` | Move one tile. On a touch screen, put a finger on the left side and slide it the way to go. In a note, `A` and `D` turn the page like the arrows. |
-| `E`, `Space`, `Enter`, `F` | Interact. All four keys do the same one thing. |
+| `F`, `Space`, `Enter` | Interact. All three keys do the same one thing. |
 | `Q` | Hear a whisper: what people are saying right now. |
 | `B` | Open the bag. |
 | `O` | Walk the unexplored dark. Press it again to stop. |
@@ -17,7 +17,7 @@ You cannot get anything wrong here; the game tells you what it is doing as you g
 | `Escape` | Open the pause menu. Press it again to close it. |
 
 One big button, **Interact**, sits at the bottom right and says what it will do. On a computer, beside it are
-four small icon buttons: Talk (`E`), Whisper (`Q`), Bag (`B`) and Explore (`O`). Each keeps its word for a screen
+four small icon buttons: Talk (`F`), Whisper (`Q`), Bag (`B`) and Explore (`O`). Each keeps its word for a screen
 reader and a tooltip, and a tiny key letter. The Dusk and Dawn buttons live in the Menu, under Display, as "Time of day".
 
 On a touch screen the bottom right holds a smaller set. The big round button is Interact: it says what it
@@ -26,8 +26,8 @@ and **Explore**; tap Explore again to stop. While a note, a shop or someone's li
 and a **B** button closes it. Under Display in the Menu you can choose a D-pad instead of the joystick, change
 the Control size, or turn on Left-handed to swap the sides.
 `Space` and `Enter` press the button that already has the focus.
-While a note or someone's line is on screen, `E`, `F`, `Space` and `Enter` turn the page and then close it.
-In the shop, `E` or `F` closes it too (`Escape` and the Close button still work).
+While a note or someone's line is on screen, `F`, `Space` and `Enter` turn the page and then close it.
+In the shop, `F` closes it too (`Escape` and the Close button still work).
 
 The screen stays quiet. The how-to-move line goes after your first step. A place's name shows for a few
 seconds when you arrive. The fight buttons appear only with a monster near. Everything else sits in a small

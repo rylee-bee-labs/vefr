@@ -20,7 +20,7 @@
     {
       "id": "interact",
       "name": "One button for everything",
-      "what": "E, F, Space, Enter or one button talks, opens, trades, goes through doors and starts a fight; it also turns note pages and closes speech.",
+      "what": "F, Space, Enter or one button talks, opens, trades, goes through doors and starts a fight; it also turns note pages and closes speech. E answers to the same verb as an unadvertised alias.",
       "status": "built",
       "detect": "always",
       "docs": [
@@ -29,13 +29,14 @@
       "design": "design/one-button-interact.md",
       "tests": [
         "tests/test_interact_play.py",
+        "tests/test_interact_key_name.py",
         "tests/test_overlay_interact.py"
       ]
     },
     {
       "id": "quiet-ui",
       "name": "A quiet, uncluttered screen, WASD and a calm step",
-      "what": "The how-to-move line goes after your first step, fight buttons show only near a monster, messages sit in a small corner panel, Interact is the one big button with four small icon buttons beside it, Dusk and Dawn live in the Menu, WASD walks, and Trade closes with E or F.",
+      "what": "The how-to-move line goes after your first step, fight buttons show only near a monster, messages sit in a small corner panel, Interact is the one big button with four small icon buttons beside it, Dusk and Dawn live in the Menu, WASD walks, and Trade closes with F.",
       "status": "built",
       "detect": "always",
       "docs": [
