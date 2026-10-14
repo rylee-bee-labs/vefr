@@ -1632,7 +1632,7 @@ matter) + `src/vefr/maplab.py` (the unknown-value refusal) +
    journal order, feedback lines, and the click budget — the
    pleasant-loop protocol (VEFR-ACT1-SPEC §9): two playtest passes per
    increment, nine-point checklist, dud kill-switch.
-6. **Every overlay the ruleset adds (a panel, a note, a speech box) must be continued by the Interact keys** (E, F, Space, Enter) or deliberately be a choice that keeps its own controls, and a test must say which. A player that needs a click mid-loop breaks the loop (Rylee, 2026-10-02; `tests/test_overlay_interact.py`).
+6. **Every overlay the ruleset adds (a panel, a note, a speech box) must be continued by the Interact keys** (F, Space, Enter) or deliberately be a choice that keeps its own controls, and a test must say which. A player that needs a click mid-loop breaks the loop (Rylee, 2026-10-02; `tests/test_overlay_interact.py`).
 7. ROADMAP entry with pasted gates; dev-guards green; merge without
    `--admin`.
 
@@ -1706,6 +1706,41 @@ title, "the Cellar, floor 2", where it used to be the region id
 `cellar-0-2` (vefr #363); the Where next? row is still keyed by the id.
 Every other region, and every floor of a Section with no label, fills it
 with the region id exactly as before.
+
+### The fight's own words (vefr #463)
+
+One plain sentence per combat action, shown in the result line where
+the old line named the action ("last action: console (dusk)"). The
+rows live in the player's message table and are read through the same
+`playerWord`, with keys `combat.<verb>`:
+
+| Key | Default | What it is |
+|---|---|---|
+| `combat.attack` | `You hit {what} for {damage}.` | a blow, for the damage it did |
+| `combat.console` | `{what} quiets a little.` | the default console verb |
+| `combat.hurl` | `{what} does not care for that.` | the default insult verb |
+| `combat.other` | `You say it anyway. Nothing answers.` | any other verb the act names |
+| `combat.none` | `There is nothing here to answer that.` | a verb pressed with nothing in reach |
+
+`{what}` is filled with the pack's own name for the thing acted on, so
+no default names anybody's creature. A pack that names one of these
+keys in `player_words` wins that row.
+
+**Known gap:** `vefr check` does not know these five keys yet and
+refuses them as unknown (the key set is typed in `shapes.PLAYER_WORDS`).
+The player honours them; adding them to the shape is a pack-contract
+change and is waiting on an owner decision. Until then the defaults are
+what ships.
+
+The combat buttons also answer `1`, `2`, `3` in the order they sit in
+the row, and each prints its digit (vefr #463); focus stays on the verb
+you last used, so a fight is playable from the keyboard alone. On a
+surface with no combat row (`plain`, `investigation`) the row and its
+keys are both absent.
+
+Code: `web/player/parts/480-town-input-and-turns.js` (`VEFR_COMBAT_WORDS`,
+`verbWord`, `takeVerb`) + `web/player/parts/510-rules-closure-surfaces.js`
+(the buttons and the number keys); tests: `tests/test_combat_keys.py`.
 
 Out of scope for v0: every other string in the player, display names
 for authored regions, POI labels in `point-to`, and any pluralization or

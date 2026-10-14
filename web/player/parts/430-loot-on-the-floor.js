@@ -155,7 +155,10 @@
     wakeOne(e);
     makeNoise('fight');
     soundCue('hit');
-    var said = 'You hit ' + e.name + ' for ' + dmg + '.';
+    // The blow says itself in one sentence, from the same message
+    // table every other player line comes from (#463) - the bytes are
+    // the ones this always read.
+    var said = verbWord('attack', { what: e.name, damage: String(dmg) });
     // A landed blow is one practice count; levels mode ignores it.
     sayGrowth(practiceSuffix(growBump('strikes')));
     if (e.hp <= 0) {

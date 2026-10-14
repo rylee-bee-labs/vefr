@@ -337,7 +337,10 @@ try {
         g.document.getElementById('verb-row').getAttribute('aria-label'));
     say('enemy-verbs',
         [...g.document.querySelectorAll('#verb-row button')]
-          .map((b) => b.textContent));
+          .map((b) => b.querySelector('.verb').textContent));
+    say('enemy-verb-keys',
+        [...g.document.querySelectorAll('#verb-row button kbd')]
+          .map((k) => k.textContent));
     const before = g.snap();
     g.key('e');                                   // open the enemy menu
     await g.wait(50);

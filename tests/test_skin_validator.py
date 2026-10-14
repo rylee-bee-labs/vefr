@@ -392,7 +392,25 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # Main merged into the #462 change, 2026-10-14; measured twice in separate processes, readings equal:
 #   f94862f71eb975ef0319943e0c91123ae1909d20c330424e1756b80d4194d7b6
 #   f94862f71eb975ef0319943e0c91123ae1909d20c330424e1756b80d4194d7b6
-NO_SKIN_WEAVE_SHA256 = "f94862f71eb975ef0319943e0c91123ae1909d20c330424e1756b80d4194d7b6"
+# Main merged into the #461 change, 2026-10-14; measured twice in separate processes, readings equal:
+#   5507922bae1d70f88fb2fbe16769683dfac028bf23e2a15f10662d50961d567d
+#   5507922bae1d70f88fb2fbe16769683dfac028bf23e2a15f10662d50961d567d
+# Main merged into the #466 change, 2026-10-14; measured twice in separate processes, readings equal:
+#   c311f714c37037836c37ff2e67a3226117b18001a4192cc6fb9884f5d31e4572
+#   c311f714c37037836c37ff2e67a3226117b18001a4192cc6fb9884f5d31e4572
+# Main merged into the #470 change, 2026-10-14; measured twice in separate processes, readings equal:
+#   8db8a3d84556d4b0e956de5e92cfaf0bc87ada0a47935105f7d558695a2124a6
+#   8db8a3d84556d4b0e956de5e92cfaf0bc87ada0a47935105f7d558695a2124a6
+# F everywhere, merged with Listen (#467), 2026-10-14; measured twice in separate processes, readings equal:
+#   793bbd72cacac799042960da5078c5d3e94b5ee8ba47c967fc1c3528f9848633
+#   793bbd72cacac799042960da5078c5d3e94b5ee8ba47c967fc1c3528f9848633
+# Main merged into the #463 change, 2026-10-14; measured twice in separate processes, readings equal:
+#   b8f182378ebd00890686415c17b9bfe61e116b9cd86696857cabc5dcbe94c8e5
+#   b8f182378ebd00890686415c17b9bfe61e116b9cd86696857cabc5dcbe94c8e5
+# Main merged into the #462 change again, 2026-10-14; measured twice in separate processes, readings equal:
+#   7b80a8d4d4731530a942bf9acc9213b20603242109fe79b4216c60771c6d3323
+#   7b80a8d4d4731530a942bf9acc9213b20603242109fe79b4216c60771c6d3323
+NO_SKIN_WEAVE_SHA256 = "7b80a8d4d4731530a942bf9acc9213b20603242109fe79b4216c60771c6d3323"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

@@ -219,6 +219,19 @@ function surfaceVerbs() {
           ['hurl', 'Hurl an insult']];
 }
 
+// The nth button of the combat row, 1 being the first verb, or null.
+// The number keys answer through this, so the key that presses a verb
+// and the digit printed on that verb are one list and cannot drift
+// (#463). Only a surface that shows the row answers: on `plain` and
+// `investigation` the row is hidden and the keys do nothing.
+function combatVerbButton(n) {
+  if (document.body.getAttribute('data-surface') !== 'combat') return null;
+  var row = document.getElementById('verb-row');
+  if (!row) return null;
+  var buttons = row.querySelectorAll('button[data-verb]');
+  return buttons[n - 1] || null;
+}
+
 // The enemy a #verb-row press is aimed at, or null. The row is always
 // on screen, so naming a target is what "opens" the enemy menu;
 // Escape, a resolved verb or a bump clears it again.
