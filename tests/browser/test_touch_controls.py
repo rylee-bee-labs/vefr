@@ -318,7 +318,9 @@ def test_a_phone_shows_two_buttons_on_the_world(browser, woven_sample):
         assert page.evaluate("document.getElementById('menu').hidden"), "the menu stayed over the whisper"
         assert page.inner_text("#npc-line").strip(), "the Journal's whisper opened an empty speech box"
         # Issue #470: the rumor is overheard, not said to whoever is standing here.
-        assert page.inner_text("#npc-name").startswith("You overhear "), page.inner_text("#npc-name")
+        # textContent, not innerText: the name plate is drawn in capitals by CSS
+        name = page.text_content("#npc-name") or ""
+        assert name.startswith("You overhear "), name
         assert not errors, errors[:5]
 
 
