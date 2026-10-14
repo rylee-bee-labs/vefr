@@ -404,7 +404,10 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # Main merged into the #463 change, 2026-10-14; measured twice in separate processes, readings equal:
 #   b8f182378ebd00890686415c17b9bfe61e116b9cd86696857cabc5dcbe94c8e5
 #   b8f182378ebd00890686415c17b9bfe61e116b9cd86696857cabc5dcbe94c8e5
-NO_SKIN_WEAVE_SHA256 = "b8f182378ebd00890686415c17b9bfe61e116b9cd86696857cabc5dcbe94c8e5"
+# Main merged into the #464 change, 2026-10-14; measured twice in separate processes, readings equal:
+#   05e94f97089c006bd4d8d7278028b35c6367773ca3fa7d21b8c8ca8f9ef3ee30
+#   05e94f97089c006bd4d8d7278028b35c6367773ca3fa7d21b8c8ca8f9ef3ee30
+NO_SKIN_WEAVE_SHA256 = "05e94f97089c006bd4d8d7278028b35c6367773ca3fa7d21b8c8ca8f9ef3ee30"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

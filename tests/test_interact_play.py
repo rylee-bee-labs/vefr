@@ -352,7 +352,10 @@ def test_regression_a_bump_still_strikes_and_the_enemy_answers(play):
     rat_after = after["enemies"][0]
     assert rat_after["hp"] == rat_before["hp"] - before["hero"]["atk"]
     assert rat_after["alive"] is True
-    assert log["bump-said"] == "a storeroom rat hits you for 1."
+    # The first fight of this boot carries the one-time strike hint
+    # (vefr #464) after the rat's own line.
+    assert log["bump-said"] == (
+        "a storeroom rat hits you for 1. Walk into an enemy to strike it.")
 
 
 def test_regression_one_arrow_press_moves_exactly_one_tile(play):
@@ -399,7 +402,10 @@ def test_strike_from_the_enemy_menu_hurts_it_and_the_enemy_answers(play):
     assert after["enemies"][0]["alive"] is True
     assert after["hero"]["hp"] == before["hero"]["hp"] - 1
     assert log["enemy-strike-row-label"] == "Combat actions"
-    assert log["enemy-strike-said"] == "a storeroom rat hits you for 1."
+    # This boot's first fight, so the strike hint rides the line here
+    # too - a strike from the menu is the same strike as a bump.
+    assert log["enemy-strike-said"] == (
+        "a storeroom rat hits you for 1. Walk into an enemy to strike it.")
 
 
 def test_console_does_no_damage_but_still_spends_a_turn(play):
