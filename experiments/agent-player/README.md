@@ -17,7 +17,7 @@ It changes nothing in `src/`, `web/` or any pack.
 | `play.py` | one run: weave, open, play, write the evidence and `report.md` |
 | `replay.py` | press a run's keys again with no model and report the first divergence |
 | `profiles/curious-explorer.md` | the player's instructions (`{game}` is the pack's title) |
-| `test_agent_player.py` | actions, limits, stop rules, leakage (36 tests) |
+| `test_agent_player.py` | actions, limits, stop rules, leakage (37 tests) |
 
 ## What the agent may see
 

@@ -58,6 +58,13 @@ def test_parse_decision_is_strict():
             apl.parse_decision(bad)
 
 
+def test_first_object_wins_over_trailing_text_or_a_second_object():
+    for reply in ['{"action": {"type": "talk"}} I talked to the cat.',
+                  '{"action": {"type": "talk"}}\n{"action": {"type": "back"}}',
+                  'Plan: {not json} then {"action": {"type": "talk"}}']:
+        assert apl.parse_decision(reply)["action"] == {"type": "talk"}
+
+
 def test_thinking_blocks_are_ignored():
     reply = '<think>maybe {"action": {"type": "back"}}</think>{"action": {"type": "talk"}}'
     assert apl.parse_decision(reply)["action"] == {"type": "talk"}

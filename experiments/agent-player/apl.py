@@ -106,16 +106,26 @@ def strip_thinking(text: str | None) -> str:
     return re.sub(r"<think>.*?(</think>|\Z)", "", text or "", flags=re.S)
 
 
+def first_json_object(text: str) -> dict | None:
+    """The first complete JSON object in `text`; prose or a second object after it is ignored."""
+    dec = json.JSONDecoder()
+    for i, ch in enumerate(text):
+        if ch == "{":
+            try:
+                obj, _ = dec.raw_decode(text, i)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(obj, dict):
+                return obj
+    return None
+
+
 def parse_decision(text: str) -> dict:
     """The model's reply -> {thought, action, note}.  Raises ActionError."""
-    m = re.search(r"\{.*\}", strip_thinking(text), re.S)
-    if not m:
+    obj = first_json_object(strip_thinking(text))
+    if obj is None:
         raise ActionError("no JSON object in reply")
-    try:
-        obj = json.loads(m.group(0))
-    except json.JSONDecodeError as e:
-        raise ActionError(f"reply is not valid JSON: {e.msg}") from None
-    if not isinstance(obj, dict) or "action" not in obj:
+    if "action" not in obj:
         raise ActionError("reply has no action")
     extra = set(obj) - OPTIONAL - {"action"}
     if extra:
