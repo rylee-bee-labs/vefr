@@ -26,13 +26,13 @@ from pathlib import Path
 
 # ---- the closed action vocabulary --------------------------------------
 # Only what the player's own UI advertises (030-shell.html: "Interact F",
-# "Talk E", "Whisper Q", "Bag B", "Explore O"), plus the keys any dialog or
+# "Talk F", "Listen Q", "Bag B", "Explore O"), plus the keys any dialog or
 # menu answers to.  Anything else is refused.
 DIRS = {"up": "ArrowUp", "down": "ArrowDown", "left": "ArrowLeft", "right": "ArrowRight"}
 SINGLE = {
     "interact": "f",
-    "talk": "e",
-    "whisper": "q",
+    "talk": "f",
+    "listen": "q",
     "bag": "b",
     "explore": "o",
     "confirm": "Enter",
@@ -47,8 +47,8 @@ Reply with ONE JSON object and nothing else:
 "action" is exactly one of:
   {"type": "move", "dir": "up|down|left|right", "steps": 1-5}   arrow keys
   {"type": "interact"}      F  - does whatever the big on-screen button says
-  {"type": "talk"}          E
-  {"type": "whisper"}       Q
+  {"type": "talk"}          F  - the same key as interact; use it beside someone
+  {"type": "listen"}        Q  - overhear what people nearby are saying
   {"type": "bag"}           B  - open your bag
   {"type": "explore"}       O
   {"type": "confirm"}       Enter - continue a dialog, press the focused button

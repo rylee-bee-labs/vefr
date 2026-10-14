@@ -39,7 +39,7 @@ collected (QA side). If any of these turns up in `prompts.jsonl`, the run fails.
 
 ## Actions
 
-`move` (dir, 1 to 5 steps), `interact` (F), `talk` (E), `whisper` (Q), `bag` (B),
+`move` (dir, 1 to 5 steps), `interact` (F), `talk` (F), `listen` (Q), `bag` (B),
 `explore` (O), `confirm` (Enter), `back` (Escape), `next_control` (Tab), `wait`,
 `finish` (reason). Anything else is refused and logged. Two refusals in a row
 end the run.
