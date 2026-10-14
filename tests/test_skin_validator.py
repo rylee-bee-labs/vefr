@@ -389,9 +389,6 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # Three settings in Display - larger text, reduced motion, volume (#473), 2026-10-14; measured twice in separate processes, readings equal:
 #   6ca8bb7e68c75e1ecf535e809ae6065b32f8f7bf295183e024c9939afc9e3501
 #   6ca8bb7e68c75e1ecf535e809ae6065b32f8f7bf295183e024c9939afc9e3501
-# Main merged into the #462 change, 2026-10-14; measured twice in separate processes, readings equal:
-#   f94862f71eb975ef0319943e0c91123ae1909d20c330424e1756b80d4194d7b6
-#   f94862f71eb975ef0319943e0c91123ae1909d20c330424e1756b80d4194d7b6
 # Main merged into the #461 change, 2026-10-14; measured twice in separate processes, readings equal:
 #   5507922bae1d70f88fb2fbe16769683dfac028bf23e2a15f10662d50961d567d
 #   5507922bae1d70f88fb2fbe16769683dfac028bf23e2a15f10662d50961d567d
@@ -408,9 +405,9 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 #   b8f182378ebd00890686415c17b9bfe61e116b9cd86696857cabc5dcbe94c8e5
 #   b8f182378ebd00890686415c17b9bfe61e116b9cd86696857cabc5dcbe94c8e5
 # Main merged into the #462 change again, 2026-10-14; measured twice in separate processes, readings equal:
-#   7b80a8d4d4731530a942bf9acc9213b20603242109fe79b4216c60771c6d3323
-#   7b80a8d4d4731530a942bf9acc9213b20603242109fe79b4216c60771c6d3323
-NO_SKIN_WEAVE_SHA256 = "7b80a8d4d4731530a942bf9acc9213b20603242109fe79b4216c60771c6d3323"
+#   a9c68ef15899fa72944a664cbe46d48445358e2c5fc5f9960f5bbcc2b88f410d
+#   a9c68ef15899fa72944a664cbe46d48445358e2c5fc5f9960f5bbcc2b88f410d
+NO_SKIN_WEAVE_SHA256 = "a9c68ef15899fa72944a664cbe46d48445358e2c5fc5f9960f5bbcc2b88f410d"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

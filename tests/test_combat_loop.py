@@ -94,7 +94,11 @@ def test_a_bump_attacks_and_the_answer_lands(fight):
     assert after["hero"]["at"] == [1, 1]
     rat = _by_id(after)["cellar-rat"]
     assert rat["hp"] == 2 and rat["alive"] is True
-    assert log["said-bump1"] == "a cellar rat hits you for 1."
+    # The first fight carries the one-time strike hint with it (vefr
+    # #464), after the counter-blow so the monsters cannot wipe it off
+    # the line before the player has read it. The second bump does not.
+    assert log["said-bump1"] == (
+        "a cellar rat hits you for 1. Walk into an enemy to strike it.")
     assert log["hp-line1"] == "2/3"
 
 

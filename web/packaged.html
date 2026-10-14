@@ -3375,20 +3375,30 @@ function levelSuffix(r) {
   return ' You are stronger. Level ' + r.level + ': ' + parts.join(', ') + '.';
 }
 
-// Growth sentences are held until the turn's blows are all said, then
-// added to the last line. A monster's counter-blow would otherwise wipe
-// the good news off the screen before the player could read it.
+// Growth sentences - and the one-time strike hint (vefr #464, part 340)
+// are held until the turn's blows are all said, then added to the last
+// line, the hint after the growth because it is about the fight the
+// player just walked into. A monster's counter-blow would otherwise
+// wipe the good news off the screen before the player could read it.
 var PENDING_GROWTH = null;
+var PENDING_HINT = null;
 function sayGrowth(text) {
   if (!text) return;
   PENDING_GROWTH = (PENDING_GROWTH ? PENDING_GROWTH + ' ' : '') + text.replace(/^ /, '');
 }
+function sayHint(text) {
+  if (!text) return;
+  PENDING_HINT = (PENDING_HINT ? PENDING_HINT + ' ' : '') + text.replace(/^ /, '');
+}
 function flushGrowth() {
-  if (!PENDING_GROWTH) return;
-  var text = PENDING_GROWTH; PENDING_GROWTH = null;
+  var held = [PENDING_GROWTH, PENDING_HINT].filter(function (t) {
+    return !!t;
+  }).join(' ');
+  PENDING_GROWTH = null; PENDING_HINT = null;
+  if (!held) return;
   var el = document.getElementById('combat-live');
   if (!el) return;
-  el.textContent = (el.textContent ? el.textContent + ' ' : '') + text;
+  el.textContent = (el.textContent ? el.textContent + ' ' : '') + held;
 }
 
 function renderEncounter() {
@@ -4410,12 +4420,15 @@ function rulesStartsNow() {
 // The keys are typed once on the Python side (shapes.PLAYER_WORDS in
 // src/vefr/shapes.py, which vefr check speaks refusals from);
 // tests/test_player_words.py fails if the two drift.
+// The first four rows point somewhere and fill a `{place}`; the last
+// one (vefr #464) has nothing to point at and fills nothing.
 // -- player words start --
 var VEFR_PLAYER_WORDS = {
   'where_next.goal': 'To reach {place}.',
   'where_next.reach': 'To reach {place}, go {direction}.',
   'where_next.here': 'The way to {place} is right here.',
-  'where_next.no_way': 'No way to {place} is declared from here.'
+  'where_next.no_way': 'No way to {place} is declared from here.',
+  'combat.walk_to_strike': 'Walk into an enemy to strike it.'
 };
 // The one reader: the pack's word when it supplies a usable one, the
 // engine's own otherwise, with the slots filled from what the engine
@@ -4434,6 +4447,30 @@ function playerWord(key, slots) {
   });
 }
 // -- player words end --
+
+// ---- the strike hint: once, at the first fight ----
+// Walking into an enemy is the attack, and the line that gives it away
+// only gives it away as a result - "You hit a nest of moths for 2." -
+// which is a result, not a rule. The explorers found the rule by
+// accident ("I only moved, yet the moths fell"), so one plain sentence
+// is said at the first landed blow and never again: a hint that comes
+// back every fight stops being read. It is held to the end of that
+// turn rather than said on a line of its own, because the monsters
+// take their turn next and would wipe it, and because a phone draws
+// one line at a time - the fight's own line is the line a phone shows.
+// The flag is per world and lives in the player's storage beside the
+// other `vefr-` saves, so a reload does not bring it back and Start
+// over clears it with the rest.
+function strikeHintKey() {
+  return 'vefr-strike-hint-' + ((window.VEFR_WORLD && window.VEFR_WORLD.name) || 'world');
+}
+function hintStrikeOnce() {
+  var key = strikeHintKey();
+  if (store.get(key) === '1') return false;
+  store.set(key, '1');
+  sayHint(playerWord('combat.walk_to_strike'));
+  return true;
+}
 
 // ---- where next: the point-to hints, kept as player-facing
 // intentions ("Go toward Saltreach.") instead of thrown-away
@@ -9483,6 +9520,13 @@ window.VEFR_DESCENT = (function () {
   // are the ones the hero left. And the why-log names the floor, so what
   // happened can be read back without watching the screen for it.
   function deathResume(name) {
+    // A hero who falls in the fight that would have taught the strike hint
+    // wakes to their own line, not to a lesson (#464): the hint is dropped
+    // and stays owed, so the next fight says it.
+    if (typeof PENDING_HINT !== 'undefined' && PENDING_HINT) {
+      PENDING_HINT = null;
+      try { store.set(strikeHintKey(), ''); } catch (e) { /* storage closed */ }
+    }
     if (!on() || !isGenerated(name)) return null;
     var depth = depthOfName(name);
     var plan = depth ? floorPlan(depth) : null;
@@ -10699,6 +10743,10 @@ function setupTown() {
       combatSay('You cannot strike ' + ((e && e.name) || 'it') + '.');
       return false;
     }
+    // The blow lands, so this is a fight: say once, here, that walking
+    // into an enemy is the attack (vefr #464). A warden that cannot be
+    // struck returns above, because there was no fight to teach.
+    hintStrikeOnce();
     var dmg = heroAtk();
     e.hp = Math.max(0, e.hp - dmg);
     playOneShot('hero', 'attack');

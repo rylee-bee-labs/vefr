@@ -225,6 +225,9 @@ with the rules for agents; `docs/guides/residents.md` names the residents.
 title picture, name and tagline, and a Begin button. The game fills the
 screen, with speech, choices and health drawn over it and a pause menu
 (`Esc`) for the journal. Everything the world needs is inside the file.
+Walking into an enemy is the attack, and the first fight of a game says
+so once ("Walk into an enemy to strike it."); a pack names its own words
+for it in `player_words`.
 In a region that declares fog, press `O` or tap **Explore** to walk to
 the nearest unexplored ground; the walk stops on its own when a monster
 comes into the light, the hero is wounded, or there is nothing left to

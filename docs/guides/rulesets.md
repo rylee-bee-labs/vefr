@@ -799,6 +799,17 @@ remembered per region, per world (`vefr-slain-<world>-<region>` in the
 player's storage), so a cleared room stays cleared; a wounded one
 resets when the page reloads.
 
+**The strike hint.** Nothing about the bump looks like an attack, and
+the line that gives it away ("You hit a cellar rat for 2.") is a
+result, not a rule — so one hint is said at the first landed blow of a
+game: "Walk into an enemy to strike it." It rides the fight's own line,
+after the monsters' turn, so a counter-blow cannot wipe it off the
+screen and a phone (which draws one message line) still draws it. It is
+said once per world: the flag is `vefr-strike-hint-<world>` in the
+player's storage, beside the other saves, so a reload does not bring it
+back and Start over clears it with the rest. A pack names its own words
+for it in `player_words` as `combat.walk_to_strike` (vefr #464).
+
 **Cozy death.** At zero hp the hero is restored to `hp`, one plain
 line is shown ("You wake in the temple. You lost nothing that
 mattered."), and the hero wakes at `wake`. Nothing is lost.
@@ -1657,6 +1668,7 @@ at the call site. v0 of that table is the four where-next lines:
 | `where_next.reach` | `To reach {place}, go {direction}.` | which way to step to get there |
 | `where_next.here` | `The way to {place} is right here.` | it is already where the hero stands |
 | `where_next.no_way` | `No way to {place} is declared from here.` | the action is not available |
+| `combat.walk_to_strike` | `Walk into an enemy to strike it.` | walking into an enemy IS the attack (vefr #464) |
 
 Those defaults are the strings the player already read (vefr #259:
 "To reach floor-1, go north-west" — a region id and a compass where a
@@ -1669,7 +1681,8 @@ pack's own sentence:
 
 ```json
 "player_words": {
-  "where_next.reach": "To get to {place}, head {direction}."
+  "where_next.reach": "To get to {place}, head {direction}.",
+  "combat.walk_to_strike": "Walk into a monster to hit it."
 }
 ```
 
@@ -1679,10 +1692,13 @@ about a pack that names no word):
 - the block is optional and additive; a pack that declares none plays
   the engine's own wording byte for byte, and nothing about it is ever
   reported;
-- every value must be a string, must say something (not empty, not only
-  spaces), and must name its `{place}` slot — the engine hands it the
-  place being pointed at. `{direction}` is available too and stays as
-  written when there is no direction to fill it;
+- every value must be a string and must say something (not empty, not
+  only spaces);
+- a row that points somewhere must also name its `{place}` slot — the
+  engine hands it the place being pointed at. `{direction}` is available
+  too and stays as written when there is no direction to fill it.
+  `combat.walk_to_strike` is the one row with nothing to point at, so
+  it is a plain sentence and needs no slot;
 - a key the table does not have is refused: a word nothing can ever
   read is a word the author thought they had said;
 - each refusal is one plain sentence naming `world.json` and the key.
@@ -1697,9 +1713,11 @@ the player (`VEFR_PLAYER_WORDS` in
 the world object the weave already bakes, so there is no new
 placeholder and no new bake step.
 
-Code: `src/vefr/shapes.py` (`PLAYER_WORDS`, the `place-label` kind) +
+Code: `src/vefr/shapes.py` (`PLAYER_WORDS`, the `place-label` and
+`sentence` kinds) +
 `src/vefr/maplab.py` (`player_words_errors`) + `web/player/parts/340-where-next-hints.js`
-(`VEFR_PLAYER_WORDS`, `playerWord`); tests: `tests/test_player_words.py`.
+(`VEFR_PLAYER_WORDS`, `playerWord`, `hintStrikeOnce`); tests:
+`tests/test_player_words.py`, `tests/test_strike_hint.py`.
 
 A floor of a Section that declares a `label` fills `{place}` with its
 title, "the Cellar, floor 2", where it used to be the region id
