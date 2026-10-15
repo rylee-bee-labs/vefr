@@ -19,6 +19,10 @@ loaded through the world-pack contract.
 | release/validation truth | current CI/gates and runtime evidence |
 | historical experiments/handoffs | dated docs + Git history |
 
+## Owner direction is authoritative
+
+When Rylee and ChatGPT jointly refine a gameplay requirement and Rylee accepts it, agents must treat it as **approved direction**, not a draft or proposal. Follow [AGENTS.md](../AGENTS.md#owner-confirmed-design-direction); separate requirements from implementation/testing and preserve canon approval boundaries. This rule applies to Cottage 1.0 and reusable VEFR work.
+
 ## Current release-linked engine work (2026-10-14)
 
 A four-Section browser-first game has an owner-approved 1.0 finish line; the pack's release epic is Cottage #170. VEFR's role is **limited, reusable engine work**, not a duplicate game plan or a new engine framework. [VEFR #489](https://github.com/rylee-bee-labs/vefr/issues/489) is the one linked dependency for checking existing loot/spell/omen/reaction/saving capabilities and proposing the smallest necessary gaps. Begin with a **Built / Partial / Missing / Unknown** source-grounded inventory; hand back tested PRs to the Cottage quality gates. Owner direction: **polish, not scope expansion**. Never mark a gameplay gate finished because a spec was written or code merged.
