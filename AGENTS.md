@@ -6,6 +6,12 @@ to this repo.
 
 **Standing principle (Rylee, 2026-10-04):** building a game here is how the engine gets built, and the next game comes after this one. When a game needs a script, format or repeated manual step, build it as a VEFR feature (data in the pack, a `vefr` tool, a check, a guide) and record the lesson in the same work. A game supplies data only.
 
+## Owner-confirmed design direction
+
+**Rylee's instruction (2026-10-14):** "If you and I work on something together in a chat and refine it it’s not a draft ok? It’s direction". A product/gameplay decision refined with ChatGPT and accepted by Rylee is **approved owner direction**, not merely a proposed idea awaiting another approval round. Implement against it unless superseded. Distinguish **approved direction**, **engineering implementation**, **tested behavior**, and **release/deployment**; none imply the next. Protect existing game-specific canon and textual approval boundaries. Unsettled implementation details should use narrow, compatible choices without growing a separate framework.
+
+For the active game release, see [Cottage 1.0 epic #170](https://github.com/rylee-bee-labs/cottage-of-the-breeze/issues/170) and [VEFR dependency #489](https://github.com/rylee-bee-labs/vefr/issues/489). Do not downgrade decisions to proposals, or use them as permission to add speculative features.
+
 ## Quick navigation
 
 | Want to... | Open this |
