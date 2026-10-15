@@ -6,6 +6,18 @@ to this repo.
 
 **Standing principle (Rylee, 2026-10-04):** building a game here is how the engine gets built, and the next game comes after this one. When a game needs a script, format or repeated manual step, build it as a VEFR feature (data in the pack, a `vefr` tool, a check, a guide) and record the lesson in the same work. A game supplies data only.
 
+## Owner-confirmed design direction
+
+**Rylee's instruction (2026-10-14):** "If you and I work on something together in a chat and refine it it’s not a draft ok? It’s direction". A product/gameplay decision refined with ChatGPT and accepted by Rylee is **approved owner direction**, not merely a proposed idea awaiting another approval round. Implement against it unless superseded. Distinguish **approved direction**, **engineering implementation**, **tested behavior**, and **release/deployment**; none imply the next. Protect existing game-specific canon and textual approval boundaries. Unsettled implementation details should use narrow, compatible choices without growing a separate framework.
+
+For the active game release, see [Cottage 1.0 epic #170](https://github.com/rylee-bee-labs/cottage-of-the-breeze/issues/170) and [VEFR dependency #489](https://github.com/rylee-bee-labs/vefr/issues/489). Do not downgrade decisions to proposals, or use them as permission to add speculative features.
+
+## Collaboration handoff: one approval, not three
+
+**Owner clarification (2026-10-14):** "If we submit to Claude it’s still us collaborating ok? I’m jsut saying when we do stuff I still have to approve it like 3 more times and that’s silly". A ChatGPT-to-Claude-to-VEFR-to-Project-Home handoff is a **continuation of the same owner-directed work**, not a new decision authority. A previously accepted design decision remains approved when submitted to a different model, relay, issue or mission.
+
+Send the **decision source, agreed scope, exclusions, granted implementation latitude and acceptance tests** with each handoff. Mark accepted requirements **OWNER-APPROVED DIRECTION**; do not mark them as unapproved drafts or solicit a fresh signature on the same choice. Engineering design details can be decided autonomously within scope, using the simplest working VEFR seam. Tests and reviews check correctness, **not renew conceptual approval**. Existing branch/CI/merge/deployment and protected-story gates still apply, and approval to design is not blanket consent for publication or new consequential actions. Request a new single owner decision **only when the work crosses an actual unapproved boundary**, such as a material scope change, incompatible owner decisions, protected canon, licensing/public exposure or security/irreversible impact. No manufactured approval loop.
+
 ## Quick navigation
 
 | Want to... | Open this |
@@ -225,12 +237,18 @@ with the rules for agents; `docs/guides/residents.md` names the residents.
 title picture, name and tagline, and a Begin button. The game fills the
 screen, with speech, choices and health drawn over it and a pause menu
 (`Esc`) for the journal. Everything the world needs is inside the file.
+Walking into an enemy is the attack, and the first fight of a game says
+so once ("Walk into an enemy to strike it."); a pack names its own words
+for it in `player_words`.
 In a region that declares fog, press `O` or tap **Explore** to walk to
 the nearest unexplored ground; the walk stops on its own when a monster
 comes into the light, the hero is wounded, or there is nothing left to
 see. A carried torch widens that circle for a few turns; a chalked map
 lays the whole place open. The dark is the pack's to set: press `V`, or
-use Display in the pause menu, to see the whole map. Models help while
+use Display in the pause menu, to see the whole map. In a fight, the
+verbs answer `1`, `2` and `3` (each prints its own digit), the focus
+stays on the verb you last used, and the result line says in one plain
+sentence what the action did. Models help while
 you make the game, in the studio; the finished file is complete on its own
 (`docs/adr/0003-models-in-the-studio.md`). A game can still offer players
 an optional model of their own for fresh lines.

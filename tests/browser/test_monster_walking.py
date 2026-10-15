@@ -167,7 +167,9 @@ def test_a_monster_walks_the_long_way_round_a_wall(page, woven):
     # And it is next to the hero, having hit them.
     assert walk_distance(monster(snap, "far-rat")["at"], snap["hero"]["at"]) == 1
     assert snap["hero"]["hp"] == 11
-    assert said(page) == "a far rat hits you for 1."
+    # The first landed blow of a game also teaches bump-to-strike (#464),
+    # on the same line, after the fight's own words.
+    assert said(page).startswith("a far rat hits you for 1."), said(page)
 
 
 def test_a_hurt_monster_runs_instead_of_closing(page, woven):

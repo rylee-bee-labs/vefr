@@ -386,7 +386,36 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # A desk's follow camera (display.desk_tile) and its one fading message line, 2026-10-13; measured twice in separate processes, readings equal:
 #   d8aa37fc38bdc1d17160232896b30791d9be64b68b49fc7c5ed29d0174597e56
 #   d8aa37fc38bdc1d17160232896b30791d9be64b68b49fc7c5ed29d0174597e56
-NO_SKIN_WEAVE_SHA256 = "d8aa37fc38bdc1d17160232896b30791d9be64b68b49fc7c5ed29d0174597e56"
+# Three settings in Display - larger text, reduced motion, volume (#473), 2026-10-14; measured twice in separate processes, readings equal:
+#   6ca8bb7e68c75e1ecf535e809ae6065b32f8f7bf295183e024c9939afc9e3501
+#   6ca8bb7e68c75e1ecf535e809ae6065b32f8f7bf295183e024c9939afc9e3501
+# Main merged into the #461 change, 2026-10-14; measured twice in separate processes, readings equal:
+#   5507922bae1d70f88fb2fbe16769683dfac028bf23e2a15f10662d50961d567d
+#   5507922bae1d70f88fb2fbe16769683dfac028bf23e2a15f10662d50961d567d
+# Main merged into the #466 change, 2026-10-14; measured twice in separate processes, readings equal:
+#   c311f714c37037836c37ff2e67a3226117b18001a4192cc6fb9884f5d31e4572
+#   c311f714c37037836c37ff2e67a3226117b18001a4192cc6fb9884f5d31e4572
+# Main merged into the #470 change, 2026-10-14; measured twice in separate processes, readings equal:
+#   8db8a3d84556d4b0e956de5e92cfaf0bc87ada0a47935105f7d558695a2124a6
+#   8db8a3d84556d4b0e956de5e92cfaf0bc87ada0a47935105f7d558695a2124a6
+# F everywhere, merged with Listen (#467), 2026-10-14; measured twice in separate processes, readings equal:
+#   793bbd72cacac799042960da5078c5d3e94b5ee8ba47c967fc1c3528f9848633
+#   793bbd72cacac799042960da5078c5d3e94b5ee8ba47c967fc1c3528f9848633
+# Main merged into the #463 change, 2026-10-14; measured twice in separate processes, readings equal:
+#   b8f182378ebd00890686415c17b9bfe61e116b9cd86696857cabc5dcbe94c8e5
+#   b8f182378ebd00890686415c17b9bfe61e116b9cd86696857cabc5dcbe94c8e5
+# Main merged into the #464 change, 2026-10-14; measured twice in separate processes, readings equal:
+#   05e94f97089c006bd4d8d7278028b35c6367773ca3fa7d21b8c8ca8f9ef3ee30
+#   05e94f97089c006bd4d8d7278028b35c6367773ca3fa7d21b8c8ca8f9ef3ee30
+# Main merged into the #465 change, 2026-10-14; measured twice in separate processes, readings equal:
+#   f512821602e4f0fc8fad40cdc1391cfd5e05693a633d59db8901fc5a7dc82373
+#   f512821602e4f0fc8fad40cdc1391cfd5e05693a633d59db8901fc5a7dc82373
+# Main merged into the #462 change, 2026-10-14; measured twice in separate processes, readings equal:
+#   6b241cdfee6f9efb43b3d30d0468403a717290659cb1750bdcd5e0dcbe096a91
+#   6b241cdfee6f9efb43b3d30d0468403a717290659cb1750bdcd5e0dcbe096a91
+# Clamp of short rooms under the top bar (#448), 2026-10-14; measured in CI on the PR head:
+#   698ee86e511cb6a6393d5478dfa9df160d7bbe437004b137856a22f910e42a51
+NO_SKIN_WEAVE_SHA256 = "698ee86e511cb6a6393d5478dfa9df160d7bbe437004b137856a22f910e42a51"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

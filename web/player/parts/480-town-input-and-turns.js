@@ -41,9 +41,13 @@
       ? window.performance.now() : Date.now();
   }
   // Read at move time, never cached, so a change of preference is felt.
+  // The OS's own setting and the player's Display > Reduced motion switch are
+  // the same question: either one asking for still motion gets still motion,
+  // and the sheet lays down the matching blanket in CSS (020-style.css).
   function reducedMotion() {
     return !!(window.matchMedia
-      && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+      || reducedMotionOn();
   }
   // Where the hero is DRAWN right now: the settled tile when no step is
   // running, else the tweened tile plus its offset. Never moves the
@@ -189,7 +193,7 @@
     var margin = onPhone ? PHONE_MARGIN * T : 0;
     var camX = mapW <= viewW ? (mapW - viewW) / 2
       : Math.min(Math.max(camHero[0] * T + T / 2 - viewW / 2, -margin), mapW - viewW + margin);
-    var camY = mapH <= viewH ? (mapH - viewH) / 2
+    var camY = mapH <= viewH ? shortMapY(mapH)   // a room shorter than the window: clamped under the top bar (issue #448)
       : Math.min(Math.max(camHero[1] * T + T / 2 - viewH / 2, -margin), mapH - viewH + margin);
     camX = snapPx(camX); camY = snapPx(camY);
     cameraAt.x = camX;
@@ -537,6 +541,19 @@
     return !((town.legend[row.charAt(x)] || {}).solid) && !propBlocked(x, y);
   }
 
+  // Whether the hero can step off (x, y) at all - any open neighbour,
+  // in a fixed order so the answer is the same everywhere. A stair
+  // landing is only set aside when there is somewhere to step to
+  // (vefr#465): a tile the hero can never leave is never a landing, or
+  // the way back would be gone as well.
+  function stepOffExists(x, y) {
+    var steps = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+    for (var i = 0; i < steps.length; i++) {
+      if (tileOpen(x + steps[i][0], y + steps[i][1])) return true;
+    }
+    return false;
+  }
+
   // The floor tile nearest `[x, y]` by Manhattan distance, scanning
   // row-major so a tie keeps the first tile found: the answer is the same
   // on every machine and in both languages.
@@ -569,9 +586,13 @@
     if (moved) saveFloor();
   }
 
-  // Enter another region through a door: swap the current map,
-  // speakers, and hero, then resize, draw, and refresh the POI line.
-  function enterRegion(name, at) {
+  // Enter another region through a door or a stair: swap the current
+  // map, speakers, and hero, then resize, draw, and refresh the POI
+  // line. `via` is the kind of transition the hero came by ('door',
+  // 'stairs', or nothing for a wake and for the New-descent control),
+  // and it only decides one thing: whether the tile they land on is set
+  // aside as a landing (below).
+  function enterRegion(name, at, via) {
     // The virtual region (slice E1): a floor that was never baked at
     // weave time is drawn and inserted here, before the player is asked
     // for it, so every path below - the map, the monsters, the stairs,
@@ -586,6 +607,7 @@
     var changed = where !== name;
     fireRule('enters', { place: name });   // one `enters` per arrival
     regionName = name;
+    nameTheCanvas(name);   // the canvas is named for where the hero is (vefr#461)
     town = regionTown(where);
     legend = town.legend;
     pois = town.pois;
@@ -611,6 +633,20 @@
     // other region arrives exactly as it did.
     arrivalNote = (window.VEFR_DESCENT && typeof window.VEFR_DESCENT.arrival === 'function')
       ? window.VEFR_DESCENT.arrival(name, hero) : null;
+    // The tile a stair drops the hero on is a landing, not the way back
+    // (vefr#465). The hero stands exactly where the transition wrote -
+    // the floor's up anchor, which the geometry and the elevator rule
+    // are built on - but the stair on that tile stays set aside until
+    // they have stepped off it, so the prompt cannot flip from "Go down
+    // the stairs" to "Go up the stairs" on the very next press. Only a
+    // stair arrival sets it aside: a door opens both ways and means the
+    // same thing from either side, a wake is not an arrival at all, and
+    // a tile the hero can never step off of is not a landing.
+    // Any arrival by a transition (`via` is the kind used: a door into the
+    // descent drops the hero on a floor's stair just as a stair does) sets
+    // the tile aside; whether a stair is on it is asked when the button is
+    // drawn, because a generated floor wires its stairs on arrival.
+    landing = (via && stepOffExists(hero[0], hero[1])) ? [hero[0], hero[1]] : null;
     resize();
     draw();
     refreshPoi();
@@ -858,20 +894,34 @@
       candidates.push({ kind: 'book', id: b.id, name: b.title || 'the note',
                         at: [b.at[0], b.at[1]] });
     });
-    // Just arrived on a labelled floor (vefr#362): the tile the hero
-    // stands on is the floor itself, not the stair under them, until they
-    // step off or read it. The stair is only set aside for that moment.
+    // Just arrived (vefr#362, #465): the tile the hero stands on is where
+    // they arrived, not the stair under them. On a labelled floor it is
+    // the floor itself, read as a note; on any other stair landing it is
+    // nothing at all until they step off. The stair is set aside for
+    // exactly that moment, and no longer.
     var arrived = arrivalHere();
     if (arrived) {
       candidates.push({ kind: 'place', id: ARRIVAL_ID, name: arrivalNote.name,
                         at: [hero[0], hero[1]] });
     }
-    function onArrival(x, y) { return arrived && x === hero[0] && y === hero[1]; }
+    function onLanding(x, y) {
+      return landingHere() && x === landing[0] && y === landing[1];
+    }
+    function onArrival(x, y) {
+      // The tile the hero stands on when they arrive: the note above
+      // where there is one, else the landing itself (vefr#465) - while
+      // they are still on it.
+      return (arrived && x === hero[0] && y === hero[1]) || onLanding(x, y);
+    }
     transitions().forEach(function (tr) {
       if (!tr || tr.from !== regionName || !Array.isArray(tr.at)) return;
       if (typeof tr.at[0] !== 'number' || typeof tr.at[1] !== 'number') return;
-      if (onArrival(tr.at[0], tr.at[1])) return;
-      candidates.push(transitionCandidate(tr));
+      var c = transitionCandidate(tr);
+      if (arrived && tr.at[0] === hero[0] && tr.at[1] === hero[1]) return;
+      // A stair on the landing waits for the first step; a door on it
+      // opens both ways and means the same from either side, so it stays.
+      if (onLanding(tr.at[0], tr.at[1]) && c.kind === 'stairs') return;
+      candidates.push(c);
     });
     var texts = town.poi_text || {};
     Object.keys(texts).forEach(function (key) {
@@ -890,6 +940,43 @@
     });
     return { hero: [hero[0], hero[1]], facing: heroFacing,
              candidates: candidates };
+  }
+
+  // ---- one plain sentence per action (#463) ------------------------
+  //
+  // The result line used to name the action ("last action: console
+  // (dusk)"), which says nothing about what the action did. Each verb
+  // now speaks one sentence that reads as a sentence, and that
+  // sentence is what the line shows.
+  //
+  // The wording is the engine's, so it stays neutral: nothing here
+  // names a pack's creature, and `{what}` is filled from the pack's own
+  // name for the thing acted on. A pack replaces any of these the way
+  // it replaces every other player word - `player_words` in world.json,
+  // key `combat.<verb>` - through the one reader, so the pack's own
+  // sentence wins and this stays the default. The rows are joined onto
+  // the one message table (part 340) rather than kept beside it, and
+  // outside its markers, so the two tables keep their own key sets.
+  var VEFR_COMBAT_WORDS = {
+    attack: 'You hit {what} for {damage}.',
+    console: '{what} quiets a little.',
+    hurl: '{what} does not care for that.',
+    other: 'You say it anyway. Nothing answers.',
+    none: 'There is nothing here to answer that.'
+  };
+  Object.keys(VEFR_COMBAT_WORDS).forEach(function (verb) {
+    VEFR_PLAYER_WORDS['combat.' + verb] = VEFR_COMBAT_WORDS[verb];
+  });
+  // One reader: the verb's own row when the verb - or the pack - has
+  // one, else the catch-all for any verb a pack names, else the line
+  // for a verb pressed with nothing to act on.
+  function verbWord(verb, slots) {
+    var words = (window.VEFR_WORLD && window.VEFR_WORLD.player_words) || {};
+    var key = 'combat.' + verb;
+    if (VEFR_PLAYER_WORDS[key] || typeof words[key] === 'string') {
+      return playerWord(key, slots);
+    }
+    return playerWord('combat.other', slots);
   }
 
   // Task 3: fight through the one verb. The row is the same #verb-row
@@ -917,7 +1004,11 @@
   function applyVerb(verb, label, enemy) {
     if (!enemy) return false;
     if (verb === 'attack') return heroAttack(enemy);
-    var said = 'You use ' + label + ' on ' + (enemy.name || 'it') + '.';
+    // The plain sentence, not "You use Console on it": what the verb
+    // DID is the line a player reads (#463). `label` is kept in the
+    // signature because the row's word is what the button says, but it
+    // is no longer spelled into the sentence.
+    var said = verbWord(verb, { what: (enemy && enemy.name) || 'it' });
     // The other verbs are words only, but a practice spec can learn from
     // them. The default verbs are `console`/`hurl`; any other name
     // counts toward nothing.
@@ -926,6 +1017,27 @@
     if (kind) sayGrowth(practiceSuffix(growBump(kind)));
     combatSay(said);
     return true;
+  }
+  // One verb, acted on and journalled, in that order: the sentence the
+  // verb spoke is the sentence the journal keeps, and it is read before
+  // the monsters take their turn, so their answer cannot be what got
+  // written down. Both call sites go through here, so a verb can never
+  // be journalled without saying what it did.
+  function takeVerb(verb, label, foe) {
+    if (!foe) {
+      // Pressed with nothing named to act on: nothing happens, and the
+      // line says so in a sentence rather than naming the verb.
+      recordVerb(verb, verbWord('none'));
+      return false;
+    }
+    // The live line is emptied first so that what is on it afterwards is
+    // exactly what this verb said - nothing to tell a quiet verb from a
+    // loud one, and nothing left over from the last turn to be mistaken
+    // for this one's sentence.
+    combatSay('');
+    var done = applyVerb(verb, label, foe);
+    recordVerb(verb, combatText());
+    return done;
   }
 
   // A locked door or stair (design/gates-and-guardians.md, step 1).
@@ -989,7 +1101,7 @@
           makeNoise('door');
         }
         fireRule('opens', { what: trans.to });
-        enterRegion(trans.to, trans.to_at);
+        enterRegion(trans.to, trans.to_at, t.kind);
       } else if (t.kind === 'chest') {
         var books = libraryBooks(), book = null;
         for (var i = 0; i < books.length; i++) {
@@ -1040,8 +1152,9 @@
         if (!speakers[t.id]) throw new Error('speaker gone');
         talkToSpeaker({ key: t.id, spec: speakers[t.id], dist: t.dist });
       } else if (t.kind === 'place' && t.id === ARRIVAL_ID) {
-        // The floor, read: its name and the way on. Once read, the tile
-        // is the stair again, so the next press offers the way back up.
+        // The floor, read: its name and the way on. Reading it spends the
+        // note; the landing stays set aside until the hero steps off the
+        // tile, so the stair never answers the press that read (vefr#465).
         showSpeech(arrivalNote.name, arrivalNote.line, '');
         arrivalNote = null;
       } else if (t.kind === 'place') {
@@ -1058,8 +1171,7 @@
           // One verb: act at once, no menu - but the turn still runs,
           // unless the verb was refused (a warden that cannot be
           // struck), which changes nothing and therefore costs nothing.
-          recordVerb(verbs[0][0]);
-          if (applyVerb(verbs[0][0], verbs[0][1], foe)) {
+          if (takeVerb(verbs[0][0], verbs[0][1], foe)) {
             lightTick();
             enemyTurn();
           }
@@ -1119,6 +1231,15 @@
   var arrivalNote = null;
   function arrivalHere() {
     return !!(arrivalNote && hero[0] === arrivalNote.at[0] && hero[1] === arrivalNote.at[1]);
+  }
+  // The stair tile an arrival dropped the hero on (vefr#465): `[x, y]`
+  // while they are still standing on it, else null. The stair on that
+  // tile is no Interact target until they step off - the first step
+  // clears this, exactly as it clears the note above - so a stair never
+  // answers the press that took it, in the other direction, at once.
+  var landing = null;
+  function landingHere() {
+    return !!(landing && hero[0] === landing[0] && hero[1] === landing[1]);
   }
 
   // The named place the hero now stands on, written to the POI line.
@@ -1204,6 +1325,7 @@
     }
     hero = [nx, ny];
     arrivalNote = null;   // the arrival is over at the first step
+    landing = null;       // and so is the set-aside: the stair is a stair
     quietTutorial();
     // Draw-only: start the hop now, but the game state above is already
     // settled and the turn below is never gated on the animation.
@@ -1274,10 +1396,11 @@
   }
 
   // One speaker's line - the talk path itself, shared by the Talk
-  // button, the canvas click, the old E key, and Interact's resident
-  // pick. The line is the pack's own: straight from the model when
-  // one answers, else from the woven pool, else spliced from this
-  // character's fragments, else the speaker's seeded line in turn.
+  // button, the canvas click, the F key (E is its unadvertised alias),
+  // and Interact's resident pick. The line is the pack's own: straight
+  // from the model when one answers, else from the woven pool, else
+  // spliced from this character's fragments, else the speaker's seeded
+  // line in turn.
   function talkToSpeaker(nearest) {
     var ph = phase();
     libraryFromSpeaker(nearest.key);

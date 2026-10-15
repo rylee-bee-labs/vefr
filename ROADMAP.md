@@ -9,7 +9,7 @@
 
 > **Principle:** Cottage of the Breeze is how VEFR is built. Every lesson from it lands in the engine so the next game is easier to make.
 
-> **Studio product vision (2026-10-12, proposed):** VEFR is also a game about **learning to make games**, designed first for people with imagination and no technical background. A resident-led visual workshop should guide a creator from their own idea through visible experiments to a tiny playable, explainable, shareable slice. The [twelve owner decisions, one-round research, built-vs-proposed inventory, and phased Studio plan](docs/plans/studio-creative-learning-vision.md) are a **product-direction proposal**, not permission to interrupt Cottage, current epics, or the evidence-led game -> gameplay feature -> core rule.
+shell half stays on vefr#457 (owner decision 2026-10-15)
 
 Cottage of the Breeze **Release 1** (a complete, polished Act 1, built through VEFR over one night) turned this roadmap from "make a game possible" into "make the next game easier". Acts 2 and 3 are part of the larger three-act direction and were left for later by Rylee's decision; that is a scoping choice, not an engine limit. This board is built from what the run proved and from the ranked discovery record, [`docs/research/cottage-release-1-learnings.md`](docs/research/cottage-release-1-learnings.md) (ten findings, each with evidence). The long list below stays as the history. Tags: **[engine]** capability, **[authoring]** developer experience, **[QA]** validation and checks, **[player]** what the player sees, **[Cottage]** content that lives in the game's repo.
 
@@ -58,7 +58,7 @@ gameplay features over new core machinery.
   `cellar-0-2`, whose id, floor key and save keys are unchanged; a Section with no label reads as before (#363).
 - [player] Arriving on a floor of a labelled Section names the floor, not the stair back up: the POI line and the
   button say "the Cellar, floor 2", and reading it points to the stair down. The up-stair is still drawn and
-  walkable, and a Section with no label arrives exactly as before (#362).
+  walkable, and the stair a hero lands on is set aside until they step off it (#362, #465).
 - [authoring] The Storybook design system and its art bible (Cottage's look, kept as a worked example; every game
   chooses its own), and the guide to making a VEFR game look and feel good (#415).
 
@@ -84,6 +84,43 @@ gameplay features over new core machinery.
 - [player] A desk follows the hero too (`display.desk_tile`, 32 to 96): the stage is the window, and messages are
   the phone's one fading line (#446).
 - [engine] A Section can dress its generated floors with decor (#442, #443).
+- [player] One name for the interact key: every hint, label and key letter says F, and E stays an
+  unadvertised alias that still reaches the same verb, combat included (#467).
+
+### LANDED 2026-10-14
+- [player] **Whisper is now Listen** (#470): the button, its tooltip and the touch label say "Listen (Q)", and the
+  rumor reads as overheard ("You overhear <the speaker>"), so it no longer looks like a whisper to whoever is
+  standing next to you. How to play names it. The engine keeps its own name for the feature; the Journal's
+  "Listen for a whisper" is unchanged.
+### LANDED 2026-10-14 (the title screen takes the game's own keys)
+- [player] `F`, `E` and `Space` start the game from the title screen, next to Begin and `Enter`, and `Tab` keeps the
+  focus on Begin: it used to walk the focus onto the BODY, an invisible stop that swallowed the next `Enter` (#466).
+  In run-001 that cost 29 of 50 decisions; 7 of 16 runs pressed `F` first on this screen. Tests:
+  `tests/browser/test_title_screen_keys.py`.
+### LANDED 2026-10-14
+- [player] The game canvas is named for the place the hero is standing in (#461): the fixed "The town, seen from
+  above" follows every region change, so a screen reader says "The cottage kitchen, seen from above" indoors and
+  a descent floor answers with its Section's own label. Tests: `tests/test_canvas_place_label.py`.
+
+### LANDED 2026-10-14 (the fight, from the keyboard)
+- [player] The combat row keeps the focus on the verb you last used, so a fight no longer costs eight Tabs a turn back to the buttons; the verbs answer `1`, `2` and `3` and print their digit (#463).
+- [player] The result line is one plain sentence per action - what Strike, Console and Hurl did - instead of naming the action (`last action: console (dusk)`). The wording is the engine's and stays game-name-neutral, and a pack replaces it through `player_words` (`combat.<verb>`; `vefr check` does not know those keys yet - see the known gap in [rulesets.md](docs/guides/rulesets.md)).
+
+### LANDED 2026-10-14 (the keyboard stays in the box)
+- [player] Tab stays inside an open dialog and closing it hands the focus back to the control that opened it (#462).
+  Every `role="dialog"` in the woven player - the pause menu, a book, a line of speech, a trade, the identify list, the
+  two end cards - is one rule in `web/player/parts/045-dialog-focus.js`, so a new dialog gets it for free. Tests:
+  `tests/test_dialog_focus.py` (jsdom) and `tests/browser/test_dialog_focus.py` (Chromium).
+### LANDED 2026-10-14 (the stair bounce)
+- [engine] Arriving by a stair lands the hero on the tile the transition names - usually the stair back up - and
+  the very next Interact press offered "Go up the stairs", so the prompt flipped between the way down and the way
+  back up with no step in between (seen in the Haiku and DeepSeek runs, apl-2 and apl-4). The landing tile is now
+  set aside: the stair on it is not an Interact target until the hero has stepped off, and the stair answers again
+  as soon as they step off and back onto it. The hero still lands where the transition wrote - a generated floor's
+  up anchor, which the geometry and the elevator rule are built on - a door landing is untouched (a door opens both
+  ways), and a wake is not an arrival at all. A labelled floor's own arrival note (#362) reads as before and does
+  not hand the stair back when it is read. Issue #465; tests: `tests/test_stair_landing.py` and
+  `tests/test_descent_arrival.py`; player guide: "Arriving by stairs" in `docs/guides/playing.md`.
 
 ### IN PROGRESS (decided by Rylee on 2026-10-04; refreshed 2026-10-12)
 - **The endless dungeon** (epic [#273](https://github.com/rylee-bee-labs/vefr/issues/273); design `docs/plans/endless-dungeon/DESIGN.md`, build plan `docs/plans/endless-dungeon/PLAN.md`, research `docs/research/big-generated-maps.md`): floors generated while you play from `seed + depth`, cut into sections of 8 to 11 floors; each ends in a key warden whose key opens a vault with a lore note; acts change the town only; elites, linked groups, hand-painted stamps and much bigger maps (up to 128x96, kept cheap for phones); an endless mode after the story.
@@ -128,10 +165,11 @@ gameplay features over new core machinery.
 - [authoring] `vefr where|explain|map` development questions (finding 10, new).
 - [authoring + QA] **Independent overnight game trials**: rotate capable models, give each the public creator surface and a blank game, forbid engine edits unless the game truly cannot be expressed, and record complete / gameplay-feature change / core change / workaround / docs gap. Repeated friction across unrelated games is evidence; one strange game is not.
 - [QA] **1.0 readiness signal**: use ten consecutive independent overnight runs as a working window. Aim for at least eight complete playable games, at least seven with no core change, and no repeated unresolved creator-surface failure. This is a product signal, not a compatibility promise.
-- [release] **Burrito Journalism composition pass**: the launch game may use many short chapters with different play styles; add or combine gameplay features before adding genre-specific core code.
 - [player] Music; a second skin; per-run guardians and weighted tables; `stakes` as a real mechanic; optional Ink conversations (#143); richer floors (#145); save compatibility across content changes.
 
 ## Landed
+
+- [x] **The game says that walking into an enemy is the attack, once** (2026-10-14, [#464](https://github.com/rylee-bee-labs/vefr/issues/464)): bump-to-attack was the one rule a player could only learn by accident - run-002 step 48 reads "You hit a nest of moths for 2. a nest of moths falls." and the explorer's note was "I only moved, yet the moths fell." The line gave the result away, never the rule. The first landed blow of a game now says one plain sentence, "Walk into an enemy to strike it.", held to the end of that turn beside the growth lines so a counter-blow cannot wipe it off the screen before the player has read it, and after the fight's own words so a phone - which draws one message line - draws it too. It is said once per world (`vefr-strike-hint-<world>` in the player's storage, so a reload does not bring it back and Start over clears it with the rest), and a pack names its own words for it in `player_words` as `combat.walk_to_strike`, the table's first row with no `{place}` to fill and so the first `sentence` kind on the schema table. No pack contract change beyond that one optional key, and a pack that names none plays the engine's line byte for byte. Guide: [`docs/guides/rulesets.md`](docs/guides/rulesets.md) (Bump to attack; Player words); tests: `tests/test_strike_hint.py`, `tests/test_player_words.py`.
 
 - [x] **A deep landing's up-stair is the way home during play too** (2026-10-12, [#366](https://github.com/rylee-bee-labs/vefr/issues/366)): floors generated during play now follow the elevator rule that `delve --section` already bakes. A floor whose pattern slot is `entry` or `landing` climbs straight to `descent.entry.region` at `descent.entry.at`. It no longer climbs one floor at a time. Each landing the hero reaches is kept in the save's `flags.landing`, so it stays after a reload. Floor 1 is unchanged. If a Section's pattern has neither slot, its stairs climb floor by floor as before. No key was added. A new run also drops the previous run's stairs home from generated floors, so an old tile cannot be a hidden stair to town. Guide: `docs/guides/rulesets.md` (Landings). Tests: `tests/test_descent_landings.py`, `tests/browser/test_landing_home.py`.
 - [x] **The touch controls are built for real: a floating joystick, one contextual action button, a Bag button, quickslots, and Settings** (2026-10-12, P3TOUCH): on a touch screen the player drags a floating joystick anywhere on the left of the map to walk, with the same step rhythm the prototype was accepted with, and the lower-right cluster holds the smart button (it says what it will do: Read, Talk, Open, Fight, Go down) with the Bag button above it. Health sits top left with two quickslots for usable bag items; the Menu button sits top right. The old D-pad and action row stay hidden on touch unless Display chooses the D-pad. Display gains the move-style choice (joystick or D-pad), Control size from 75% to 150%, and Left-handed, all kept across reloads. Keyboard and gamepad are unchanged. The layer's logic is in `515-touch-controls.js`, its styles in the coarse-pointer block of the style sheet, and its checks in `tests/browser/test_touch_controls.py`.
@@ -2639,143 +2677,16 @@ gameplay features over new core machinery.
       `docs/guides/accessibility-contract.md` flagged for separate
       review.)
 
-## Next
+## Owner-open and to-file (2026-10-15)
 
-*(Older detail. The board at the top of this file, "Where VEFR stands", is the current order.)*
-
-- [ ] **Language architecture: the disposition read** (gate, owner). The proof
-      pass ran and the research packet landed on 2026-10-03
-      ([PR #242](https://github.com/Rylee-Bee/vefr/issues/242),
-      `docs/research/language-architecture/`): **GO WITH CONSTRAINTS**. The
-      packet authorizes nothing until Rylee has read it
-      (`11-open-decisions.md` item 6) and says go. The Blueprint is the
-      earned first slice and it is already built; the kernel, the dialect
-      layer and pack migration are explicitly not earned and wait for a
-      second real consumer. Floors phase 2, the album and equipment are
-      informed by that disposition, not blocked by it.
-
-- [ ] **Random floors, phase 2** (`design/random-floors.md`): the `descent` block, run seed,
-      depth tables, **weights on table rows** (decided 2026-10-03, so the tables answer "which
-      one" as well as "how many"; the guardian and the last room stay placed, not rolled, so the
-      ending is reachable on every seed), the Journal line and the New descent button. **Next in
-      order** — self-contained, and it unblocks #215.
-- [ ] **Damage types, status effects and resistances**
-      (`design/elemental-and-status-effects.md`, scope approved 2026-10-03): the full triangle.
-      A **campaign, not a slice** — it needs a damage resolver (the two damage paths are
-      asymmetric today), a status store on the `lightTick` turn pattern, a player resistance
-      surface, and an ADR amendment because a new enemy field must also pass the **closed**
-      Blueprint key sets. Four decisions are owed before any code.
-- [ ] **Gates and guardians, the rest** (`design/gates-and-guardians.md`): the `requires`
-      lock landed (see Landed). Still to build: the key-carrying guardians and the generated
-      ladder ending in the act's boss, and the boss's seal opening a treasure room. Decided
-      by Rylee (2026-10-02): the first lock is the stair from floor 3 to floor 4, the key is
-      an actual key, and the guardians are stat variants of existing monsters, named from
-      their art and abilities.
-- [ ] **The album** (`design/album.md`): one record of what you have met, a sticker album
-      first, bestiary, items and map as views later.
-- [ ] **Equipment, the rest** (`design/equipment.md`): the pack fields
-      and the pure engine landed (Landed above). Still to build: the Bag
-      "You" section, the Equip/Take off buttons and the live line, the
-      `localStorage` persistence (`vefr-equipped-<world>`), the hero
-      wiring, the glossary, and the Cottage demo.
-- [ ] **A real act 2** (ADR 0006): only the first act plays today.
-- [ ] **Rules, remaining** (`design/rules-when-then.md`): `add_rule` edits and a `grows` event.
-- [ ] **A second tiny skin** (`design/ui-skin.md` step 6), to prove skins swap.
-- [ ] **A text-input surface** for the player (so a "when a word is said" event can exist): later.
-
-### Enhancement wave 1 (2026-09-30 packet)
-
-From `docs/research/2026-09-30-enhancement-packet.md`. Six small,
-low-risk moves that compound; each has its own issue.
-
-- [ ] **Grammar-constrained output** so any local model returns valid JSON
-      (#128): a GBNF grammar for llama.cpp and/or Outlines /
-      lm-format-enforcer for backends that ignore `response_format`.
-- [ ] **An embedded vector index for the Lorekeeper** (#129): SQLite +
-      `sqlite-vec`, with `facts.jsonl` still authoritative and `rebuild`
-      still able to recreate the index from facts alone.
-- [ ] **Gate hardening** (#130): vulture (dead code), deptry (deps),
-      lychee (links), guidepup (screen readers).
-- [ ] **Property tests** (#131) for delve determinism, reachability, and
-      fog - same seed gives the same floor; no orphaned rooms; no seeing
-      through a wall.
-- [ ] **Dependency freshness** (#132): dependabot misses npm; evaluate
-      Renovate and cover the workflow pins.
-- [ ] **Vale** (#133) to enforce the house voice in docs.
-
-### Enhancement wave 2 (2026-09-30 packet; owner-picked)
-
-- [ ] **Autoexplore + Dijkstra-map AI** (#141): one key rolls toward the
-      unexplored; monsters use desire-weighted maps. Movement, accessibility,
-      and AI from one technique.
-- [ ] **Tracery-style deterministic text** (#142): rumours, names, weather -
-      seedable, offline, no model call.
-- [ ] **Optional Ink conversations** (#143): richer per-speaker dialogue, with
-      `inkjs` in the single-file player.
-- [ ] **Audio pairing** (#144): every sound paired with a visual event; silence
-      stays a fully playable mode.
-- [ ] **Richer floors** (#145): wave-function-collapse ideas for deeper floors
-      and outdoor regions.
-
-- [ ] **Name a landmark in the Map Room** (from `studio-lessons.md`,
-      2026-09-29): a square can be marked today, but a `pois` entry - a
-      *named* place - still needs a route the Map Room does not have. The
-      map commission's first rule wanted it and had to settle for a mark.
-- [ ] **Interview template** (from `docs/guides/studio-lessons.md`): residents
-      ask one question per turn, keep the author's words verbatim, recap before
-      saving. First users: the Desk (the brief) and the Folks (a character).
-- [ ] **Keep / Refine / Redo with pick-from-three** for every picture and draft;
-      refine takes plain words; unpicked options go to a spare parts shelf.
-- [ ] **Begin a new world starts blank**: placeholders marked "yours to write",
-      not another world's tagline, map and keeper.
-- [ ] **Say why when slow**: the status pill names a busy brain and offers the
-      no-model path.
 - (2026-09-16) `feat/dev-board` (123-commit orphan branch, dev-board UI
       chrome: repo header, file-tree, 4-col grid, drag-rank, right-rail
       stub) is **preserved on origin, unmerged** — assessment pending,
       do not discard without a bundle backup.
-- [ ] **interactive chat helper**: inline conversational assistant in
-      the builder UI answering world-building questions and adjusting pack data.
-      Acceptance: persistent 6-turn chat in Builder tab successfully calls
-      `/api/builder/chat` with pack context.
-      (Existing machinery: `chat.py`, `/api/builder/chat`).
-- [ ] **formatted ebook export**: single-document narrative exporter
-      formatting playthroughs with chapter headings, character wiki, and
-      collected relics. Acceptance: `/api/export` generates clean e-reader
-      compatible EPUB/Markdown artifact with full metadata.
-      (Existing machinery: `export.py`, deterministic preface templating).
-- [ ] **engine + world full git scaffold**: standalone repository exporter
-      packaging engine bones and author pack into an independent git project.
-      Acceptance: `ratatoskr ferry scaffold --full` creates functional standalone
-      repo with passing offline test suite.
-      (Existing machinery: `cmd_scaffold`, pack contract loader).
-- [ ] **Tiled map importer** (parked after the surface-UI work):
-      `norns import-tiled map.json --pack X` reads Tiled's JSON
-      export - visual map authoring, the storyteller-critical gap -
-      and writes `map.md` + contract points through
-      `maplab.build_map` + `maplab.validate()`. Thin and optional;
-      text authoring stays canonical, no Tiled dependency. Tiled
-      1.10's JS scripting API could later host a one-click "export
-      as vefr pack" from inside the editor. See
-      `docs/guides/companion-resources.md`.
-- [ ] **more lore packs**: worlds/lore/<new-flavor>/ directories.
-      Adding one is data-only (mkdir + four markdown files); the
-      engine discovers it. Future flavors: homeric, east-asian-
-      folklore, jewish-diaspora, contemporary-urban. Each one is
-      a literary mood-board for fiction, licensed CC BY-SA 4.0.
-- [ ] **the marketplace**: a community place to share, search, and
-      rate engine add-ons - world packs, lore packs, sprites, map
-      recipes, and model settings ("local LLM packs": someone's
-      perfect llama.cpp + gpt-oss configuration for their exact
-      hardware, shareable as data). The distribution path already
-      exists (`ferry fetch --pull`, the Builder tab's import by
-      owner/name), so v1 is an index over plain git repos, not new
-      infrastructure - ratings live with the community, and
-      discovery may grow a `norns market` command. The always-
-      layer's "private until it isn't" made social.
-- [ ] **accessible controls and audio-pairing**: the keybinds remap
-      (GAG Basic, localStorage config) and audio-pairing hooks for
-      visual event pairing when sound effects land.
+      OWNER-OPEN 2026-10-15: bundling and deleting the branch is destructive,
+      so it comes back to Rylee — should `feat/dev-board` be bundled and
+      deleted?
+- OPEN, to file: always-layer keybinds (#144 keybinds half)
 
 ## The always-layer
 

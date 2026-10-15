@@ -45,7 +45,7 @@ She played the built layout on a phone and at a desk, and these override the sec
 - **Smaller and quieter.** Phone text, the message line and the panels are smaller than the tables below
   ("go more towards a smaller interface for words and such"). The world gets the screen.
 - **Two buttons only:** the smart button and Bag ("I'd prefer if there were only two buttons"). B appears only
-  while a panel is open. Whisper and Explore are not drawn on a phone; they keep their keys (Q, O), and the Journal
+  while a panel is open. Listen and Explore are not drawn on a phone; they keep their keys (Q, O), and the Journal
   can "Listen for a whisper".
 - **No light parchment by default** ("do away with the light parchment background"). Dark stays dark even on a
   phone in light mode. Parchment is still a choice in Display.

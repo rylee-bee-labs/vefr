@@ -15,6 +15,7 @@
                  for byte what the player read before the table existed
                  (vefr #259's "To reach floor-1, go north-west")
      override  - a pack that names its own word for two of the four
+                 where-next lines and for the strike hint
      unusable  - a pack whose words are not words (blank, not a
                  string): the engine's line stands in
 
@@ -58,9 +59,11 @@ function pin(name, actual, expected) {
   report[name] = actual;
 }
 
-/* The table is the four action-critical lines, and only those. */
+/* The table is the action-critical lines, and only those: the four
+   where-next hints and the strike hint (vefr #464). */
 pin('tableKeys', Object.keys(table).sort(), [
-  'where_next.goal', 'where_next.here', 'where_next.no_way', 'where_next.reach',
+  'combat.walk_to_strike', 'where_next.goal', 'where_next.here',
+  'where_next.no_way', 'where_next.reach',
 ]);
 
 if (which === 'silent') {
@@ -73,12 +76,17 @@ if (which === 'silent') {
     'The way to floor-1 is right here.');
   pin('noWay', playerWord('where_next.no_way', { place: 'floor-1' }),
     'No way to floor-1 is declared from here.');
+  /* The one row with no slot to fill: the engine's own sentence. */
+  pin('strike', playerWord('combat.walk_to_strike'),
+    'Walk into an enemy to strike it.');
 } else if (which === 'override') {
   pin('reach', playerWord('where_next.reach',
     { place: 'the stair down', direction: 'north-west' }),
     'To get to the stair down, head north-west.');
   pin('goal', playerWord('where_next.goal', { place: 'the stair down' }),
     'The way on is the stair down.');
+  pin('strike', playerWord('combat.walk_to_strike'),
+    'Walk into a monster to hit it.');
   /* Only the keys the pack named change: its neighbours keep the
      engine's words. */
   pin('here', playerWord('where_next.here', { place: 'floor-1' }),
@@ -91,6 +99,8 @@ if (which === 'silent') {
   pin('notAString', playerWord('where_next.reach',
     { place: 'floor-1', direction: 'north-west' }),
     'To reach floor-1, go north-west.');
+  pin('blankHint', playerWord('combat.walk_to_strike'),
+    'Walk into an enemy to strike it.');
 } else {
   throw new Error('unknown case: ' + which);
 }

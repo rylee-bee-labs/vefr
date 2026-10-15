@@ -14,6 +14,15 @@ Before planning, researching, modifying, reviewing, merging, or releasing:
 
 **Repository truth outranks inference. Unknown is a valid state. Make honesty cheaper than fabrication.**
 
+## Approval continuity through agent delegation
+
+When the owner and ChatGPT have refined an idea and the owner has accepted it, the result is **approved project direction**. Passing it to Claude, a coding agent, GitHub PR, Project Home mission or another tool **does not invalidate that approval**. There is one owner and a shared instruction chain, not one approver per tool.
+
+- Handoffs must carry a link or quotation to the actual owner decision, approved requirements, scope/exclusions, permitted autonomous implementation and measurable acceptance criteria. Do not reinterpret accepted direction as a draft requiring another approval.
+- Work out ordinary technical choices, run tests, document evidence and prepare/advance PRs within the granted scope under existing repo governance. Code review is a verification step, not another decision about whether the owner meant what they said. Do not invent manual approval gates that are not part of the established permissions.
+- **Escalate a new decision**, with a concise reason, only for a material change to scope/intent, contradictory owner instructions, protected canon or authored text, public release/licensing, security-sensitive or irreversible action, or activity outside prior delegation. Ask once for the actual outstanding boundary rather than seeking serial reapproval.
+- Preserve the distinction between **direction approved**, **implemented**, **verified**, **merged/deployed**, and **owner-approved release**. Do not bypass required CI, branch restrictions, secrets handling or existing explicit approval gates.
+
 ## VEFR design rule
 
 Prefer the dumbest useful implementation with the fewest moving parts.
