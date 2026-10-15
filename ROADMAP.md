@@ -9,7 +9,7 @@
 
 > **Principle:** Cottage of the Breeze is how VEFR is built. Every lesson from it lands in the engine so the next game is easier to make.
 
-> **Studio product vision (2026-10-12, proposed):** VEFR is also a game about **learning to make games**, designed first for people with imagination and no technical background. A resident-led visual workshop should guide a creator from their own idea through visible experiments to a tiny playable, explainable, shareable slice. The [twelve owner decisions, one-round research, built-vs-proposed inventory, and phased Studio plan](docs/plans/studio-creative-learning-vision.md) are a **product-direction proposal**, not permission to interrupt Cottage, current epics, or the evidence-led game -> gameplay feature -> core rule.
+shell half stays on vefr#457 (owner decision 2026-10-15)
 
 Cottage of the Breeze **Release 1** (a complete, polished Act 1, built through VEFR over one night) turned this roadmap from "make a game possible" into "make the next game easier". Acts 2 and 3 are part of the larger three-act direction and were left for later by Rylee's decision; that is a scoping choice, not an engine limit. This board is built from what the run proved and from the ranked discovery record, [`docs/research/cottage-release-1-learnings.md`](docs/research/cottage-release-1-learnings.md) (ten findings, each with evidence). The long list below stays as the history. Tags: **[engine]** capability, **[authoring]** developer experience, **[QA]** validation and checks, **[player]** what the player sees, **[Cottage]** content that lives in the game's repo.
 
@@ -165,7 +165,6 @@ gameplay features over new core machinery.
 - [authoring] `vefr where|explain|map` development questions (finding 10, new).
 - [authoring + QA] **Independent overnight game trials**: rotate capable models, give each the public creator surface and a blank game, forbid engine edits unless the game truly cannot be expressed, and record complete / gameplay-feature change / core change / workaround / docs gap. Repeated friction across unrelated games is evidence; one strange game is not.
 - [QA] **1.0 readiness signal**: use ten consecutive independent overnight runs as a working window. Aim for at least eight complete playable games, at least seven with no core change, and no repeated unresolved creator-surface failure. This is a product signal, not a compatibility promise.
-- [release] **Burrito Journalism composition pass**: the launch game may use many short chapters with different play styles; add or combine gameplay features before adding genre-specific core code.
 - [player] Music; a second skin; per-run guardians and weighted tables; `stakes` as a real mechanic; optional Ink conversations (#143); richer floors (#145); save compatibility across content changes.
 
 ## Landed
@@ -2678,143 +2677,16 @@ gameplay features over new core machinery.
       `docs/guides/accessibility-contract.md` flagged for separate
       review.)
 
-## Next
+## Owner-open and to-file (2026-10-15)
 
-*(Older detail. The board at the top of this file, "Where VEFR stands", is the current order.)*
-
-- [ ] **Language architecture: the disposition read** (gate, owner). The proof
-      pass ran and the research packet landed on 2026-10-03
-      ([PR #242](https://github.com/Rylee-Bee/vefr/issues/242),
-      `docs/research/language-architecture/`): **GO WITH CONSTRAINTS**. The
-      packet authorizes nothing until Rylee has read it
-      (`11-open-decisions.md` item 6) and says go. The Blueprint is the
-      earned first slice and it is already built; the kernel, the dialect
-      layer and pack migration are explicitly not earned and wait for a
-      second real consumer. Floors phase 2, the album and equipment are
-      informed by that disposition, not blocked by it.
-
-- [ ] **Random floors, phase 2** (`design/random-floors.md`): the `descent` block, run seed,
-      depth tables, **weights on table rows** (decided 2026-10-03, so the tables answer "which
-      one" as well as "how many"; the guardian and the last room stay placed, not rolled, so the
-      ending is reachable on every seed), the Journal line and the New descent button. **Next in
-      order** — self-contained, and it unblocks #215.
-- [ ] **Damage types, status effects and resistances**
-      (`design/elemental-and-status-effects.md`, scope approved 2026-10-03): the full triangle.
-      A **campaign, not a slice** — it needs a damage resolver (the two damage paths are
-      asymmetric today), a status store on the `lightTick` turn pattern, a player resistance
-      surface, and an ADR amendment because a new enemy field must also pass the **closed**
-      Blueprint key sets. Four decisions are owed before any code.
-- [ ] **Gates and guardians, the rest** (`design/gates-and-guardians.md`): the `requires`
-      lock landed (see Landed). Still to build: the key-carrying guardians and the generated
-      ladder ending in the act's boss, and the boss's seal opening a treasure room. Decided
-      by Rylee (2026-10-02): the first lock is the stair from floor 3 to floor 4, the key is
-      an actual key, and the guardians are stat variants of existing monsters, named from
-      their art and abilities.
-- [ ] **The album** (`design/album.md`): one record of what you have met, a sticker album
-      first, bestiary, items and map as views later.
-- [ ] **Equipment, the rest** (`design/equipment.md`): the pack fields
-      and the pure engine landed (Landed above). Still to build: the Bag
-      "You" section, the Equip/Take off buttons and the live line, the
-      `localStorage` persistence (`vefr-equipped-<world>`), the hero
-      wiring, the glossary, and the Cottage demo.
-- [ ] **A real act 2** (ADR 0006): only the first act plays today.
-- [ ] **Rules, remaining** (`design/rules-when-then.md`): `add_rule` edits and a `grows` event.
-- [ ] **A second tiny skin** (`design/ui-skin.md` step 6), to prove skins swap.
-- [ ] **A text-input surface** for the player (so a "when a word is said" event can exist): later.
-
-### Enhancement wave 1 (2026-09-30 packet)
-
-From `docs/research/2026-09-30-enhancement-packet.md`. Six small,
-low-risk moves that compound; each has its own issue.
-
-- [ ] **Grammar-constrained output** so any local model returns valid JSON
-      (#128): a GBNF grammar for llama.cpp and/or Outlines /
-      lm-format-enforcer for backends that ignore `response_format`.
-- [ ] **An embedded vector index for the Lorekeeper** (#129): SQLite +
-      `sqlite-vec`, with `facts.jsonl` still authoritative and `rebuild`
-      still able to recreate the index from facts alone.
-- [ ] **Gate hardening** (#130): vulture (dead code), deptry (deps),
-      lychee (links), guidepup (screen readers).
-- [ ] **Property tests** (#131) for delve determinism, reachability, and
-      fog - same seed gives the same floor; no orphaned rooms; no seeing
-      through a wall.
-- [ ] **Dependency freshness** (#132): dependabot misses npm; evaluate
-      Renovate and cover the workflow pins.
-- [ ] **Vale** (#133) to enforce the house voice in docs.
-
-### Enhancement wave 2 (2026-09-30 packet; owner-picked)
-
-- [ ] **Autoexplore + Dijkstra-map AI** (#141): one key rolls toward the
-      unexplored; monsters use desire-weighted maps. Movement, accessibility,
-      and AI from one technique.
-- [ ] **Tracery-style deterministic text** (#142): rumours, names, weather -
-      seedable, offline, no model call.
-- [ ] **Optional Ink conversations** (#143): richer per-speaker dialogue, with
-      `inkjs` in the single-file player.
-- [ ] **Audio pairing** (#144): every sound paired with a visual event; silence
-      stays a fully playable mode.
-- [ ] **Richer floors** (#145): wave-function-collapse ideas for deeper floors
-      and outdoor regions.
-
-- [ ] **Name a landmark in the Map Room** (from `studio-lessons.md`,
-      2026-09-29): a square can be marked today, but a `pois` entry - a
-      *named* place - still needs a route the Map Room does not have. The
-      map commission's first rule wanted it and had to settle for a mark.
-- [ ] **Interview template** (from `docs/guides/studio-lessons.md`): residents
-      ask one question per turn, keep the author's words verbatim, recap before
-      saving. First users: the Desk (the brief) and the Folks (a character).
-- [ ] **Keep / Refine / Redo with pick-from-three** for every picture and draft;
-      refine takes plain words; unpicked options go to a spare parts shelf.
-- [ ] **Begin a new world starts blank**: placeholders marked "yours to write",
-      not another world's tagline, map and keeper.
-- [ ] **Say why when slow**: the status pill names a busy brain and offers the
-      no-model path.
 - (2026-09-16) `feat/dev-board` (123-commit orphan branch, dev-board UI
       chrome: repo header, file-tree, 4-col grid, drag-rank, right-rail
       stub) is **preserved on origin, unmerged** — assessment pending,
       do not discard without a bundle backup.
-- [ ] **interactive chat helper**: inline conversational assistant in
-      the builder UI answering world-building questions and adjusting pack data.
-      Acceptance: persistent 6-turn chat in Builder tab successfully calls
-      `/api/builder/chat` with pack context.
-      (Existing machinery: `chat.py`, `/api/builder/chat`).
-- [ ] **formatted ebook export**: single-document narrative exporter
-      formatting playthroughs with chapter headings, character wiki, and
-      collected relics. Acceptance: `/api/export` generates clean e-reader
-      compatible EPUB/Markdown artifact with full metadata.
-      (Existing machinery: `export.py`, deterministic preface templating).
-- [ ] **engine + world full git scaffold**: standalone repository exporter
-      packaging engine bones and author pack into an independent git project.
-      Acceptance: `ratatoskr ferry scaffold --full` creates functional standalone
-      repo with passing offline test suite.
-      (Existing machinery: `cmd_scaffold`, pack contract loader).
-- [ ] **Tiled map importer** (parked after the surface-UI work):
-      `norns import-tiled map.json --pack X` reads Tiled's JSON
-      export - visual map authoring, the storyteller-critical gap -
-      and writes `map.md` + contract points through
-      `maplab.build_map` + `maplab.validate()`. Thin and optional;
-      text authoring stays canonical, no Tiled dependency. Tiled
-      1.10's JS scripting API could later host a one-click "export
-      as vefr pack" from inside the editor. See
-      `docs/guides/companion-resources.md`.
-- [ ] **more lore packs**: worlds/lore/<new-flavor>/ directories.
-      Adding one is data-only (mkdir + four markdown files); the
-      engine discovers it. Future flavors: homeric, east-asian-
-      folklore, jewish-diaspora, contemporary-urban. Each one is
-      a literary mood-board for fiction, licensed CC BY-SA 4.0.
-- [ ] **the marketplace**: a community place to share, search, and
-      rate engine add-ons - world packs, lore packs, sprites, map
-      recipes, and model settings ("local LLM packs": someone's
-      perfect llama.cpp + gpt-oss configuration for their exact
-      hardware, shareable as data). The distribution path already
-      exists (`ferry fetch --pull`, the Builder tab's import by
-      owner/name), so v1 is an index over plain git repos, not new
-      infrastructure - ratings live with the community, and
-      discovery may grow a `norns market` command. The always-
-      layer's "private until it isn't" made social.
-- [ ] **accessible controls and audio-pairing**: the keybinds remap
-      (GAG Basic, localStorage config) and audio-pairing hooks for
-      visual event pairing when sound effects land.
+      OWNER-OPEN 2026-10-15: bundling and deleting the branch is destructive,
+      so it comes back to Rylee — should `feat/dev-board` be bundled and
+      deleted?
+- OPEN, to file: always-layer keybinds (#144 keybinds half)
 
 ## The always-layer
 
