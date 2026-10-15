@@ -6,6 +6,18 @@ to this repo.
 
 **Standing principle (Rylee, 2026-10-04):** building a game here is how the engine gets built, and the next game comes after this one. When a game needs a script, format or repeated manual step, build it as a VEFR feature (data in the pack, a `vefr` tool, a check, a guide) and record the lesson in the same work. A game supplies data only.
 
+## Owner-confirmed design direction
+
+**Rylee's instruction (2026-10-14):** "If you and I work on something together in a chat and refine it it’s not a draft ok? It’s direction". A product/gameplay decision refined with ChatGPT and accepted by Rylee is **approved owner direction**, not merely a proposed idea awaiting another approval round. Implement against it unless superseded. Distinguish **approved direction**, **engineering implementation**, **tested behavior**, and **release/deployment**; none imply the next. Protect existing game-specific canon and textual approval boundaries. Unsettled implementation details should use narrow, compatible choices without growing a separate framework.
+
+For the active game release, see [Cottage 1.0 epic #170](https://github.com/rylee-bee-labs/cottage-of-the-breeze/issues/170) and [VEFR dependency #489](https://github.com/rylee-bee-labs/vefr/issues/489). Do not downgrade decisions to proposals, or use them as permission to add speculative features.
+
+## Collaboration handoff: one approval, not three
+
+**Owner clarification (2026-10-14):** "If we submit to Claude it’s still us collaborating ok? I’m jsut saying when we do stuff I still have to approve it like 3 more times and that’s silly". A ChatGPT-to-Claude-to-VEFR-to-Project-Home handoff is a **continuation of the same owner-directed work**, not a new decision authority. A previously accepted design decision remains approved when submitted to a different model, relay, issue or mission.
+
+Send the **decision source, agreed scope, exclusions, granted implementation latitude and acceptance tests** with each handoff. Mark accepted requirements **OWNER-APPROVED DIRECTION**; do not mark them as unapproved drafts or solicit a fresh signature on the same choice. Engineering design details can be decided autonomously within scope, using the simplest working VEFR seam. Tests and reviews check correctness, **not renew conceptual approval**. Existing branch/CI/merge/deployment and protected-story gates still apply, and approval to design is not blanket consent for publication or new consequential actions. Request a new single owner decision **only when the work crosses an actual unapproved boundary**, such as a material scope change, incompatible owner decisions, protected canon, licensing/public exposure or security/irreversible impact. No manufactured approval loop.
+
 ## Quick navigation
 
 | Want to... | Open this |
