@@ -790,13 +790,17 @@ def main(argv=None):
     report = {"mission": MISSION, "pack": str(args.pack), "milestones": list(MILESTONES),
               "recorded": datetime.now().isoformat(timespec="seconds"), "sizes": {}}
     for size in sizes:
-        walk = runs.get(size.name) or {}
+        walk = runs.get(size.name)
+        # A size that recorded hands back its Walk; one that blew up hands back the error as a
+        # dict. Read both as one shape, the way the exit code below does.
+        run = ({"failed": None, "stops": walk.stops, "errors": walk.errors}
+               if isinstance(walk, Walk) else (walk or {}))
         report["sizes"][size.name] = {
             "out": str(args.out / size.name),
-            "video": str(args.out / size.name / VIDEO) if not walk.get("failed") else None,
-            "stills": [s["milestone"] for s in walk.get("stops", [])],
-            "page_errors": walk.get("errors", []),
-            "failed": walk.get("failed"),
+            "video": str(args.out / size.name / VIDEO) if not run.get("failed") else None,
+            "stills": [s["milestone"] for s in run.get("stops", [])],
+            "page_errors": run.get("errors", []),
+            "failed": run.get("failed"),
         }
     (args.out / "run.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     print(f"\nreport: {args.out / 'run.json'}")
