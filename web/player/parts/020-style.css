@@ -257,7 +257,11 @@
   .reader-page { margin: 0 0 10px; font-size: 1.05rem; line-height: 1.55;
                  white-space: pre-wrap; color: var(--glass-ink); }
   #reader .status, #trade .status, #identify .status { color: rgba(244, 238, 221, 0.75); }
-  .reader-controls { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  /* a long note scrolls inside the card; the controls stay pinned to its
+     foot so Read on is never pushed under the overflow fold (#165) */
+  .reader-controls { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; position: sticky;
+                     bottom: -16px; padding: 10px 0 16px; margin-bottom: -16px;
+                     background: rgba(21, 24, 29, 0.97); }
   .reader-controls .cta { color: var(--glass-ink); border-color: rgba(242, 236, 221, 0.5); }
   #reader #reader-close, #trade #trade-close, #identify #identify-close { background: transparent; color: #E2BC6E; border-color: rgba(216, 170, 78, 0.5); }
   /* the shop's Trade panel: sell what you carry, buy what the shop keeps */
