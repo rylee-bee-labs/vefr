@@ -1,5 +1,11 @@
 # vefr backlog
 
+> **HISTORICAL SNAPSHOT, NOT AN ACTIVE WORK QUEUE** (captured 2026-10-07; rechecked 2026-10-16). These paragraphs preserve what was parked then, *not* present issue state, permission to begin work, or proof that features are missing. Some items were later reopened. As of the 2026-10-16 audit, historical entries #317 (Player Driver) and #295 (monster-turn benchmark) are **open again**. Follow those GitHub issues for current acceptance. Optional feature explorations now live in [the Feature Lab](research/2026-10-16-feature-lab.md), with exact [source briefs](research/2026-10-16-feature-lab-archive.md).
+>
+> **Current work source:** [open GitHub issues](https://github.com/rylee-bee-labs/vefr/issues), current PRs and mission/Project Home truth. Do **not** delete these archival entries when reopening or closing an issue; keep historic decisions and source links intact. No issue is automatically closed by this banner.
+>
+> **Reading note:** the original introduction below says to delete an old entry when reopening an issue. That was the 2026-10-07 practice being archived, **not current guidance**; preserve the dated narrative and use the live issue for active state.
+
 This file is the tracking doc for work that was open in GitHub Issues and was closed as not planned on 2026-10-07, so the queue could reach zero.
 The issue bodies are not edited; each summary below is ours, written from the body at close time.
 To restart an item, reopen the linked issue or open a new one and delete its section here.
