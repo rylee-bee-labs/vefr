@@ -23,6 +23,7 @@ order `vefr --help` prints them in, too.
 | `vefr delve` | generate dungeon floors from a seed, or a whole Section, and wire the stairs | `norns delve` |
 | `vefr check` | validate the pack - geometry, item locks, Sections and stamped rooms (see below); `--release` lists every draft word (`--strict` to fail on one); `--live URL` validates a running deployment | `norns validate` / `norns verify` |
 | `vefr weave` | package a world into one self-contained HTML file | `ratatoskr weave` |
+| `vefr archive` | write a world as one portable `.vefr` game file (with the shared Player that opens it), or `--inspect FILE` | new |
 | `vefr handbok` | write the mechanics manual from real play | `norns handbok` |
 | `vefr spark` | the resident small brain: `install`, `status`, `smoke`, `task` | `ratatoskr spark` |
 | `vefr test` | the pytest suite; extra args pass through, e.g. `-k chat` | `ratatoskr test` |
@@ -229,6 +230,34 @@ uv run vefr features --pack worlds/sample-world
 drift gate: it prints every catalog error and exits `1` if the catalog
 has drifted from the repo, otherwise it prints `catalog ok` and exits
 `0`.
+
+## `vefr archive`
+
+`vefr archive --pack PACK [--out dist/NAME.vefr]` writes a VEFR game as
+one portable file: the pack's content, its pictures and sounds, and a
+versioned manifest. Beside it (unless `--no-player`) it writes the shared
+Player that opens it. `vefr weave` is untouched - the self-contained HTML
+is still woven, and the archive is written next to that idea, not instead
+of it.
+
+```sh
+uv run vefr archive --pack worlds/sample-world
+uv run vefr archive --pack worlds/sample-world --out dist/emberfield.vefr
+```
+
+Open the two files together in any browser and play offline. Open the
+Player alone and drop a `.vefr` anywhere on it. `--pool N` bakes real
+model output in as the offline fallback pool, exactly as `vefr weave
+--pool` does.
+
+`vefr archive --inspect FILE.vefr` reads an archive back: it validates
+every name, size, digest, URL and version before printing one line per
+entry, and refuses in one plain sentence when something is wrong (`--json`
+prints the manifest). Reading never unpacks anything to disk.
+
+An archive is an ordinary ZIP - `unzip -l`, `unzip -p`, `jq` all read it.
+The format, the compatibility policy and every refusal sentence are in
+[ADR 0019](../adr/0019-vefr-archive-format.md).
 
 ## `vefr normalize`
 

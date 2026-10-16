@@ -430,7 +430,11 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # twice in separate processes, readings equal:
 #   e51fb64aa887744155f1b02dfd4947970f77a2362d820e27d20df7b63ad1f01e
 #   e51fb64aa887744155f1b02dfd4947970f77a2362d820e27d20df7b63ad1f01e
-NO_SKIN_WEAVE_SHA256 = "e51fb64aa887744155f1b02dfd4947970f77a2362d820e27d20df7b63ad1f01e"
+# The archive loader (vefr#455/#519) on top of the keybinds (#517), 2026-10-16; measured twice on the host in
+# separate processes after merging main, readings equal:
+#   df53bf59d89d3ee6afe1289fe04e317714379fa9d1b994197d55f0c19ec47782
+#   df53bf59d89d3ee6afe1289fe04e317714379fa9d1b994197d55f0c19ec47782
+NO_SKIN_WEAVE_SHA256 = "df53bf59d89d3ee6afe1289fe04e317714379fa9d1b994197d55f0c19ec47782"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

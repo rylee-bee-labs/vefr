@@ -4,6 +4,7 @@
  "030-shell.html",
  "040-script-open.html",
  "045-dialog-focus.js",
+ "046-vefr-archive-loader.js",
  "050-inlined-world-pack.js",
  "060-minimal-state.js",
  "065-store.js",
