@@ -55,7 +55,7 @@ function renderCombatLog(log) {
 function combatSay(msg, notOnPage) {
   var el = document.getElementById('combat-live');
   if (el) el.textContent = msg || '';
-  if (msg && !notOnPage) journalSay(msg);
+  if (msg && !notOnPage && typeof journalSay === 'function') journalSay(msg);
 }
 
 // The live line as it stands, so a caller can see what an action added

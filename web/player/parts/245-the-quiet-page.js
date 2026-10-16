@@ -14,6 +14,7 @@
 // Computed per call and never cached, like the player's own settings
 // keys: a world that arrives late still finds its own key, and a reader
 // sees one place where the name is spelled.
+var PAGE_KEEP = 200;
 function pageKey() {
   return 'vefr-page-' + ((window.VEFR_WORLD && window.VEFR_WORLD.name) || 'world');
 }
@@ -25,7 +26,11 @@ function journalSay(line, who) {
   var text = String(line || '').trim();
   if (!text) return;
   var log = store.getJSON(pageKey(), []);
-  log.push({ line: text, who: who || '', at: new Date().toISOString() });
+  // No clock in the saved line: the page shows the words and who said them, and a value that
+  // changes every run would make the frozen save contract (tests/test_store_keys.py) unreadable.
+  log.push({ line: text, who: who || '' });
+  // The newest PAGE_KEEP lines only: a long play must not grow the save without end.
+  if (log.length > PAGE_KEEP) log = log.slice(log.length - PAGE_KEEP);
   store.setJSON(pageKey(), log);
   renderJournalPage(log);
 }
