@@ -421,7 +421,11 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # Bag (#485, ee74312c: player CSS), 2026-10-16; measured twice on the host in separate processes, readings equal:
 #   f4b52eef534b79029f087c9f9b38d1ce711ab61b79e81fdbda9d02ae3fcfde50
 #   f4b52eef534b79029f087c9f9b38d1ce711ab61b79e81fdbda9d02ae3fcfde50
-NO_SKIN_WEAVE_SHA256 = "f4b52eef534b79029f087c9f9b38d1ce711ab61b79e81fdbda9d02ae3fcfde50"
+# One compact HUD on desk and phone (#449, rolling-interview decision 2026-10-16): the follow-camera top bar
+# rules in 020-style.css changed, 2026-10-16; measured twice on the host in separate processes, readings equal:
+#   3456e77a0ae5e9d4df33cfc70297aaf8eb1c642f3274be207a6d4134a4db9f23
+#   3456e77a0ae5e9d4df33cfc70297aaf8eb1c642f3274be207a6d4134a4db9f23
+NO_SKIN_WEAVE_SHA256 = "3456e77a0ae5e9d4df33cfc70297aaf8eb1c642f3274be207a6d4134a4db9f23"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():
