@@ -288,6 +288,6 @@ def test_the_glow_alpha_is_a_pure_function_of_the_clock(page, woven):
         "() => { const out = []; for (let t = 0; t < 2400; t += 200) "
         "out.push(window.VEFR_TARGET_GLOW(t)); return out; }")
     assert min(seen) < max(seen), f"the glow never breathes: {seen}"
-    assert min(seen) >= 0.0 and max(seen) <= 1.0
-    assert max(seen) - min(seen) < 0.5, (
-        f"a soft glow, not a flash: {min(seen)}..{max(seen)}")
+    # The player's own range is 0.08..0.30 (TARGET_GLOW_MIN/MAX in part 480): a soft glow, never a flash.
+    assert min(seen) >= 0.08 - 1e-6 and max(seen) <= 0.30 + 1e-6, (
+        f"the glow left its soft range: {min(seen)}..{max(seen)}")
