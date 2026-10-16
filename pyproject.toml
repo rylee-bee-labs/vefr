@@ -78,6 +78,9 @@ known_first_party = ["vefr"]
 DEP002 = ["uvicorn"]
 # playwright ships in the `test` group; scripts/ is dev tooling.
 DEP004 = ["playwright"]
+# hatchling is the build backend ([build-system] requires); only hatch_build.py, the build hook,
+# imports it, at build time, never at runtime (vefr#523).
+DEP001 = ["hatchling"]
 
 [tool.hatch.build.hooks.custom]
 # web/packaged.html is generated from web/player/parts/ and is never
