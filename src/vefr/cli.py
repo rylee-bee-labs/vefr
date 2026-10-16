@@ -1281,15 +1281,23 @@ def cmd_stamp_check(args) -> int:
 def _template_candidates() -> list[Path]:
     """Where web/packaged.html may live, in preference order.
 
-    A source checkout has it at the repo root. A pip-installed wheel
-    ships it as package data (hatch force-include: vefr/web/), which
-    is what a pack author's repo sees when it runs `ratatoskr weave`
-    against an installed engine. Container installs keep it under
-    VEFR_HOME. Try all three and prefer whichever actually exists.
+    web/packaged.html is generated from web/player/parts/ and is never
+    committed, so a source checkout builds it here (vefr.player_build)
+    before anyone reads the path. A pip-installed wheel ships it as
+    package data (hatch force-include: vefr/web/), which is what a
+    pack author's repo sees when it runs `ratatoskr weave` against an
+    installed engine. Container installs keep it under VEFR_HOME. Try
+    all three and prefer whichever actually exists.
     """
     from .paths import app_home
+    from .player_build import PlayerBuildError, write_if_parts
 
     here = Path(__file__).resolve()
+    try:
+        write_if_parts(here.parents[2])     # a checkout: build the file it is about to read
+    except PlayerBuildError as exc:
+        # A plain message, not a traceback: the parts on disk do not build (orphan or missing part).
+        raise SystemExit(f'vefr: web/player/parts does not build:\n{exc}') from None
     return [
         here.parents[2] / 'web' / 'packaged.html',   # source checkout
         here.parent / 'web' / 'packaged.html',        # wheel package data

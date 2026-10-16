@@ -32,10 +32,15 @@ RUN apt-get update \
 
 COPY pyproject.toml ./
 COPY src ./src
-# web/ must land BEFORE the install: the wheel force-includes
-# web/packaged.html as package data (weave's template), so the
-# metadata step needs it present. (Latent since the force-include
-# landed; buildx cache hid it until an src change busted the layer.)
+# hatch_build.py is the hatch build hook: it joins web/player/parts/ into
+# web/packaged.html before packaging, because that file is generated and
+# never committed (vefr#523) and the wheel force-includes it as package data
+# (weave's template). It has to be in the build context for `pip install .`.
+COPY hatch_build.py ./hatch_build.py
+# web/ must land BEFORE the install, and the hook reads the parts under it:
+# the wheel force-includes the generated web/packaged.html, so the install
+# needs web/player/ on disk. (Latent since the force-include landed; buildx
+# cache hid it until an src change busted the layer.)
 COPY web ./web
 RUN pip install --no-cache-dir .
 COPY worlds ./worlds-template

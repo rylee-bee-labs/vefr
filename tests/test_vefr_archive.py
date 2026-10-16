@@ -517,7 +517,7 @@ def test_the_loader_runs_before_the_baked_block():
     assert loader < manifest.index("448-asset-loaders.js")
 
 
-def test_the_committed_player_is_the_parts_on_disk():
+def test_the_player_builds_from_the_parts_on_disk():
     """`scripts/build_player.py --check` is the contract; run it here."""
     run = subprocess.run([sys.executable, str(ROOT / "scripts" / "build_player.py"), "--check"],
                          capture_output=True, text=True, timeout=120)

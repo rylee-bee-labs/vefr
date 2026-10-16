@@ -3,6 +3,7 @@ import shutil
 from pathlib import Path
 
 import pytest
+from vefr import player_build
 from vefr import world as world_mod
 
 # The pack resolves before any ratatoskr ferry fetch: whatever the
@@ -20,6 +21,25 @@ os.environ.setdefault('VEFR_WORLD', 'sample-world')
 # rather than from a tests/browser/conftest.py, so that the order of file
 # arguments cannot hide them; see tests/browser/fixtures.py and issue #425.
 pytest_plugins = ["browser.fixtures"]
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+@pytest.fixture(scope='session', autouse=True)
+def packaged_player():
+    """Build web/packaged.html once for the whole session.
+
+    The woven player is generated from web/player/parts/ and is not committed
+    (vefr#523), so a fresh clone has no such file. Every test that reads it
+    wants the same bytes, so build it before the first one and leave it alone.
+    """
+    return player_build.write(ROOT)
+
+
+# conftest is imported before test modules are collected, and a few of them
+# read the woven file at import time, so the build cannot wait for the fixture
+# above. Both go through the same idempotent call: the second one is a read.
+player_build.write(ROOT)
 
 
 @pytest.fixture
