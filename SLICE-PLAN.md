@@ -14,8 +14,8 @@ coordinator runs the gate outside your sandbox and reports what it sees.
 - Repo: VEFR (`Rylee-Bee/vefr`), a game ENGINE, MPL-2.0, Python 3.11+ under `src/vefr/`,
   the woven player under `web/`, tests under `tests/`. Read `AGENTS.md` in the repo root
   first; it is short and it is the boundary.
-- `web/packaged.html` is GENERATED. Edit the parts under `web/player/parts/`, then run
-  `uv run python scripts/build_player.py`. Never hand-edit `packaged.html`.
+- `web/packaged.html` is GENERATED and never committed. Edit the parts under
+  `web/player/parts/`; the file is rebuilt where it is read. Never hand-edit or commit it.
 - The engine must never name a game. `tests/test_pack_neutrality.py` enforces it.
 - No model calls in deterministic surfaces: `export.py`, `weave.py`, `maplab.py`, `journal.py`,
   `blueprint.py`, `generator.py`, `delve.py`.
@@ -151,14 +151,14 @@ get wrong.
 **`tests/run.sh` weaves the sample world over the GENERATED `web/packaged.html`, not over
 `web/player/parts/`.** It does not read your parts. So:
 
-- After you edit a part under `web/player/parts/`, run `uv run python scripts/build_player.py`
-  **before** you run any test that exercises the player, or the test measures the previous
-  build and reports a failure you already fixed.
-- `web/packaged.html` is generated: never hand-edit it, and never resolve a conflict in it
-  by hand. Rebuild it.
-- `uv run python scripts/build_player.py --check` must be clean at the end. There is a test
-  (`tests/test_player_build.py::test_the_committed_player_is_exactly_its_parts`) that
-  enforces it.
+- `web/packaged.html` is generated and, since vefr#523, never committed: the test session
+  rebuilds it from the parts before the first test reads it, so an edited part is what gets
+  measured. Anything you run outside pytest that reads the file - a weave by hand - wants
+  `uv run python scripts/build_player.py` first.
+- Never hand-edit `web/packaged.html`, and never commit it.
+- `uv run python scripts/build_player.py --check` must be clean at the end: it asks whether
+  the parts build (every listed part exists, none orphaned). `tests/test_player_build.py`
+  enforces the same thing.
 
 This is not a theoretical warning: slice E3 lost two full passes to exactly this, fixing the
 part correctly and then measuring a stale `packaged.html`. The generated file was the only

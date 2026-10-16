@@ -725,3 +725,23 @@ Rylee asked for a full optimization pass: smaller but more flexible, using langu
 - **Commit every passing step.** Foreman plans now say so, after a timeout earlier the same day left a finished slice scattered across four uncommitted clones.
 - **One harness.** Every worker tier now runs through Claude Code with the provider swapped in (cheaper models keep their reasoning across tool calls there); opencode remains a fallback.
 - **The rule for slices that touch frozen tests still holds:** B1 stopped and asked before changing the four artifacts that said "format 2 does not exist", and the owner said yes.
+
+## 2026-10-16: the generated player is built, never committed (vefr#523)
+
+This reverses the "stays committed" half of the 2026-10-04 player-split decision above, on Rylee's
+measurement: `web/packaged.html` was one generated 755 KB file that 43 of the last 74 commits touched,
+so any two PRs editing player code collided on it and each had to merge `main`, rebuild and re-measure
+before it could land. That, not the three-open-PR cap, was the estate's biggest blocker. The parts and
+`web/player/manifest.json` are the only source.
+
+- The join moved from `scripts/build_player.py` into `vefr.player_build`, so the weaver, the tests and
+  the wheel all use one build; `scripts/build_player.py` is the command line over it.
+- Built where it is read: `cli._template_candidates()` builds it in a source checkout, `tests/conftest.py`
+  builds it once per session (and at conftest import, for tests that read the file as their module is
+  imported), and `hatch_build.py` builds it before packaging, so the wheel still force-includes
+  `vefr/web/packaged.html` for `pip install vefr @ git+...`.
+- `scripts/build_player.py --check` changed meaning: it asks whether the parts build cleanly (every listed
+  part exists, none orphaned, none listed twice), not whether a committed file is stale.
+- The woven bytes did not change; `scripts/weave_digest.py` prints the same digests.
+- **Rule for agents and foremen: edit a part, never `web/packaged.html`, and never commit it.**
+  Rylee's order: this first, then raise the VEFR open-PR cap to 5.

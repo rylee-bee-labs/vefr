@@ -59,7 +59,7 @@ Send the **decision source, agreed scope, exclusions, granted implementation lat
 | Path | Purpose |
 |---|---|
 | `src/vefr/` | The engine. `world.py` is the only seam between engine + story |
-| `web/` | The studio workshop (`app.html`, `studio.css`, `app.js`; `state.js` is the one client state), the woven player (`packaged.html`, GENERATED from `web/player/parts/`: edit a part, run `uv run python scripts/build_player.py`; a test fails if they disagree), art (`web/art/`), the studio shelf (`web/library/`) |
+| `web/` | The studio workshop (`app.html`, `studio.css`, `app.js`; `state.js` is the one client state), the woven player (`packaged.html`, GENERATED from `web/player/parts/` and never committed: edit a part; the file is built where it is read - the weaver, `tests/conftest.py`, the hatch build hook for the wheel - or by `uv run python scripts/build_player.py`), art (`web/art/`), the studio shelf (`web/library/`) |
 | `worlds/sample-world/` | Playable demo pack, acts shape, validates green |
 | `worlds/lore/` | Three lore packs (norse, historical-event, norse-runes) |
 | `tests/` | pytest suite, incl. node-vm harnesses for shipped JS |
@@ -110,7 +110,8 @@ worlds/lore/<flavor>/ data-only mood boards: norse, historical-event,
 
 web/                the studio workshop (app.html + studio.css + app.js),
                     the woven player (packaged.html, GENERATED from
-                    web/player/parts/ by scripts/build_player.py), studio
+                    web/player/parts/ and never committed - built where it
+                    is read by vefr.player_build), studio
                     art (web/art/), the studio's own Library shelf
                     (web/library/)
 tests/              pytest - pack contract, schemas, fallbacks; browser
@@ -385,9 +386,11 @@ uv run vefr --help        # the front door: every verb, journey order
 uv run ratatoskr --help   # the old ops CLI, still an alias
 uv run norns --help       # the old craft CLI, still an alias
 
-# The player: web/packaged.html is GENERATED. Edit a part in web/player/parts/, then rebuild
-# (tests/test_player_build.py fails if it is stale); weave_digest.py proves byte-equality
+# The player: web/packaged.html is GENERATED from web/player/parts/ and never committed
+# (vefr#523). Edit a part; the file is built where it is read - the weaver, tests/conftest.py,
+# the wheel - and --check says whether the parts build. weave_digest.py proves byte-equality
 uv run python scripts/build_player.py
+uv run python scripts/build_player.py --check
 uv run python scripts/weave_digest.py
 
 # Validate a world pack
