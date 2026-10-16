@@ -305,6 +305,21 @@
       "tests": [
         "tests/test_walk_sheets.py"
       ]
+    },
+    {
+      "id": "vefr-archive",
+      "name": "One portable .vefr file for a game",
+      "what": "`vefr archive` writes a game as one ZIP: the pack's content, its pictures and sounds, and a versioned manifest with a digest per file. The shared Player opens it offline (open the two files together, or drop the .vefr on the Player); `vefr weave`'s self-contained HTML is unchanged beside it. Every load validates names, sizes, digests, URLs and the manifest schema before a byte of the game reaches the player.",
+      "status": "partial",
+      "detect": "none",
+      "docs": [
+        "docs/adr/0019-vefr-archive-format.md",
+        "docs/guides/vefr-command.md"
+      ],
+      "design": null,
+      "tests": [
+        "tests/test_vefr_archive.py"
+      ]
     }
   ]
 }

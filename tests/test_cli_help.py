@@ -56,7 +56,7 @@ REQUIRED_VERBS = {
     "test", "ferry", "handbok", "skipa", "norns", "ratatoskr",
 }
 VEFR_VERBS = REQUIRED_VERBS | {"find", "publish", "look", "probe", "features", "normalize", "art", "stamp",
-                               "where", "explain"}
+                               "where", "explain", "archive"}
 
 
 # ------------------------------------------------------------- harness
@@ -290,6 +290,7 @@ EXPECTED_BOUND = {
     "delve": ("cmd_delve",),
     "stamp": ("cmd_stamp_check",),
     "weave": ("cmd_build_web",),
+    "archive": ("cmd_archive",),
     "spark": ("cmd_spark_install", "cmd_spark_status",
               "cmd_spark_task", "cmd_spark_smoke"),
     "test": ("cmd_test",),
@@ -366,6 +367,7 @@ DISPATCH_ARGV = {
               "--from-at", "1,2"],
     "stamp": ["stamp", "check", "--pack", "p", "--seeds", "1"],
     "weave": ["weave"],
+    "archive": ["archive", "--pack", "p", "--inspect", "x.vefr"],
     "spark": ["spark", "status"],
     "test": ["test"],
     "ferry": ["ferry", "deploy"],
