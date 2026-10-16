@@ -438,7 +438,12 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # 2026-10-16; measured twice on the host in separate processes after merging main, readings equal:
 #   6234996f734f57e47389b63ea6c181b3b54a8e6a0ee36ab761c4397f1bac7886
 #   6234996f734f57e47389b63ea6c181b3b54a8e6a0ee36ab761c4397f1bac7886
-NO_SKIN_WEAVE_SHA256 = "6234996f734f57e47389b63ea6c181b3b54a8e6a0ee36ab761c4397f1bac7886"
+# The target cue on the smart action's tile (vefr#486: the glow and the corner marks in
+# 480-town-input-and-turns.js), 2026-10-16; measured twice on the host in separate processes
+# after merging main, readings equal:
+#   545f51327267a4b63fb3412687e4a86a97515b218d0d5e67eec8b23837558e50
+#   545f51327267a4b63fb3412687e4a86a97515b218d0d5e67eec8b23837558e50
+NO_SKIN_WEAVE_SHA256 = "545f51327267a4b63fb3412687e4a86a97515b218d0d5e67eec8b23837558e50"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():
