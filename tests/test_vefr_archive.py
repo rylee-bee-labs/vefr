@@ -224,6 +224,31 @@ def test_a_manifest_that_demands_a_newer_player_is_refused(tmp_path):
     assert "needs a newer Player" in str(refusal.value)
 
 
+@pytest.mark.parametrize("version", [1.5, "1", True, None, float("nan"), float("inf")])
+def test_a_schema_version_that_is_not_a_whole_number_is_refused(tmp_path, version):
+    """The version is a whole number or the archive is not one: `1.5`, a
+    quoted `"1"`, a boolean, `NaN` and `Infinity` are shapes no schema has
+    ever named. The Player's reader says the same sentence (vefr#455 fix
+    round), so an archive cannot be read one way on the command line and
+    another way in a browser."""
+    archive = _rewritten(tmp_path, {"schema_version": version})
+    with pytest.raises(vefrfile.ArchiveRefusal) as refusal:
+        vefrfile.load_archive(archive)
+    assert str(refusal.value) == "the manifest's schema_version is not a whole number"
+
+
+def test_a_runtime_floor_that_is_not_a_whole_number_is_ignored(tmp_path):
+    """The floor the manifest asks the Player to meet is a whole number or
+    it is no floor at all: a `1.5` cannot smuggle a gate past either reader."""
+    files = {vefrfile.GLOBALS_NAME: json.dumps({"globals": GOOD_GLOBALS, "doc": {}}).encode()}
+    files[vefrfile.MANIFEST_NAME] = _manifest_bytes(
+        files, runtime={"player_contract": vefrfile.PLAYER_CONTRACT,
+                        "min_schema_version": 1.5})
+    archive = _zip(tmp_path / "half-floor.vefr", files)
+    assert vefrfile.load_archive(archive).globals == GOOD_GLOBALS, \
+        "a floor no exporter writes is ignored, not obeyed and not fatal"
+
+
 def test_a_file_that_is_not_an_archive_is_refused(tmp_path):
     path = tmp_path / "notes.txt"
     path.write_text("just some notes", encoding="utf-8")
@@ -264,6 +289,36 @@ def test_a_global_that_is_not_a_global_is_refused(tmp_path):
 
 
 # ---- untrusted content: names, sizes, methods, bytes ----
+
+def _two_of_one(path: Path, name: str, first: bytes, second: bytes) -> Path:
+    """A ZIP that names the same path twice - legal, and ambiguous."""
+    payload = _payload()
+    files = {vefrfile.GLOBALS_NAME: payload}
+    files[vefrfile.MANIFEST_NAME] = _manifest_bytes(files)
+    with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as zf:
+        for entry, data in ((vefrfile.MANIFEST_NAME, files[vefrfile.MANIFEST_NAME]),
+                            (name, first), (name, second)):
+            info = zipfile.ZipInfo(entry, date_time=(1980, 1, 1, 0, 0, 0))
+            info.compress_type = zipfile.ZIP_DEFLATED
+            zf.writestr(info, data)
+    return path
+
+
+@pytest.mark.parametrize("name", [vefrfile.GLOBALS_NAME, "content/world.json"])
+def test_a_path_the_archive_names_twice_is_refused(tmp_path, name):
+    """One file, one entry: a ZIP may repeat a path, and then two readers
+    disagree about which of the two is the game. The Player's reader refuses
+    the same archive for the same reason (vefr#455 fix round)."""
+    payload = _payload()
+    first = payload if name == vefrfile.GLOBALS_NAME else b'{"title": "one"}'
+    second = _payload({"VEFR_WORLD": {"title": "smuggled"}}) \
+        if name == vefrfile.GLOBALS_NAME else b'{"title": "two"}'
+    archive = _two_of_one(tmp_path / "twice.vefr", name, first, second)
+    with pytest.raises(vefrfile.ArchiveRefusal) as refusal:
+        vefrfile.load_archive(archive)
+    assert str(refusal.value) == (
+        f'refusing "{name}": the archive names it twice; one file, one entry')
+
 
 def test_a_name_that_leaves_the_archive_is_refused(tmp_path):
     archive = _valid(tmp_path, extra={"content/../../escape.md": b"gotcha"})

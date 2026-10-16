@@ -126,7 +126,10 @@ cannot read.
 ### 4. Compatibility policy
 
 * **A manifest names one `schema_version`.** A Player reads the version it
-  was built with and every earlier one it still understands.
+  was built with and every earlier one it still understands. The number is
+  a whole number or the archive is refused: `1.5`, `NaN`, `Infinity` and a
+  quoted `"1"` are shapes no schema has ever named, and both readers refuse
+  them in the same words.
 * **Newer than the Player reads** → refuse, naming both numbers. An old
   engine must never guess at a format it has not seen.
 * **Older** → read it, provided the payload shape still fits the Player's
@@ -148,6 +151,7 @@ in this order:
 
 ```
 this file is not a .vefr archive: a .vefr is a ZIP file
+refusing "data/globals.json": the archive names it twice; one file, one entry
 refusing the entry "content/../../etc/passwd": the path leaves the archive
 refusing the entry "/etc/passwd": archive paths are relative
 refusing "content/run.py": an archive carries data and pictures, never anything that could run
@@ -156,6 +160,7 @@ refusing "assets/floor.png": it expands 1000x, past the 200x a picture ever need
 refusing "assets/floor.png": it expands past 67108864 bytes
 this .vefr holds 5000 entries; an archive may hold at most 4096
 this .vefr has no manifest.json: it is not a .vefr archive
+the manifest's schema_version is not a whole number
 this .vefr uses manifest schema 3; this vefr reads schema 1 - update the engine to play it
 this .vefr needs a newer Player: it asks for schema 2 at least, this Player reads schema 1
 "content/world.json" does not match its manifest digest
@@ -215,6 +220,21 @@ about 3.5 MB. A larger game says so in one sentence and points at
 
 In a woven file the whole block is dormant: `window.VEFR_ARCHIVE_URL` is
 empty, nothing is fetched, and the title screen is untouched.
+
+Install never parses an archive string as markup. The four `doc` values
+are set as data: `title`, `tagline` and `fonts_css` are text, and the
+title picture is the one exception worth spelling out, because it is the
+only one the weave writes as a tag. `cli._player_title_art` writes exactly
+one shape - `<img class="ts-art" src="data:image/..." alt="">`, plus at
+most a `<style>` carrying the pack's two accent colours - so the loader
+accepts exactly that shape and nothing else. The `src` is lifted as a
+string, it has to be an inline picture of a type an archive may carry, and
+the element it lands in is one the browser builds; the accent becomes two
+custom properties on `documentElement`. Markup that is not the exporter's
+- an `onerror`, a `javascript:` src, a second tag - is simply not
+installed. The same promise holds for the whole archive: a ZIP that names
+one path twice is refused rather than read as whichever of the two this
+reader happened to meet first.
 
 ### 7. Determinism
 

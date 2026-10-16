@@ -24,15 +24,15 @@ Three rules hold the shape together:
   wall-clock and no machine paths in the manifest.
 * **Untrusted on the way in.** Every load validates before a byte of the
   payload reaches the player: entry names (no traversal, no absolute
-  paths, no symlinks), entry count and size caps against decompression
-  bombs, the compression method, the file suffixes (data and pictures
-  only - never a script), the manifest schema and runtime floor, every
-  file's digest, and every URL the payload carries. A refusal is one
-  plain sentence naming what was wrong.
+  paths, no symlinks, and no path named twice), entry count and size caps
+  against decompression bombs, the compression method, the file suffixes
+  (data and pictures only - never a script), the manifest schema and
+  runtime floor, every file's digest, and every URL the payload carries.
+  A refusal is one plain sentence naming what was wrong.
 
 Load is a read-only inspection (`vefr archive --inspect`, the tests);
 nothing is ever unpacked to disk. The Player's own reader is the mirror
-of `load_archive` in `web/player/parts/045-vefr-archive-loader.js`.
+of `load_archive` in `web/player/parts/046-vefr-archive-loader.js`.
 """
 
 from __future__ import annotations
@@ -436,7 +436,7 @@ def _check_manifest(manifest: object) -> dict:
                 f"{manifest.get('format')!r}, expected {FORMAT!r}")
     version = manifest.get("schema_version")
     if not isinstance(version, int) or isinstance(version, bool):
-        _refuse("the manifest's schema_version is not a number")
+        _refuse("the manifest's schema_version is not a whole number")
     if version > SCHEMA_VERSION:
         _refuse(f"this .vefr uses manifest schema {version}; this vefr reads "
                 f"schema {SCHEMA_VERSION} - update the engine to play it")
@@ -533,10 +533,19 @@ def load_archive(path) -> Loaded:
         if total > MAX_TOTAL_BYTES:
             _refuse(f"{path.name} expands to {total} bytes; an archive may "
                     f"expand to at most {MAX_TOTAL_BYTES}")
+        # One file, one entry. A ZIP may name the same path twice, and two
+        # readers then disagree about which of the two is the game; the
+        # Player's reader refuses the same archive for the same reason.
+        counts: dict[str, int] = {}
+        for info in infos:
+            counts[info.filename] = counts.get(info.filename, 0) + 1
+        for name, times in counts.items():
+            if times > 1:
+                _refuse(f'refusing "{name}": the archive names it twice; one file, one entry')
         for info in infos:
             _safe_entry_name(info.filename)
             _check_suffix(info.filename)
-        names = {info.filename for info in infos}
+        names = set(counts)
         if MANIFEST_NAME not in names:
             _refuse(f"{path.name} has no {MANIFEST_NAME}: it is not a .vefr archive")
         if GLOBALS_NAME not in names:

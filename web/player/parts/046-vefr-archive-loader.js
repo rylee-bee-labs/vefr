@@ -25,9 +25,10 @@ window.vefrArchiveUrl = window.vefrArchiveUrl || '';
 //
 // Validation mirrors src/vefr/vefrfile.py - the same refusals, in the
 // same words, so a bad archive is refused the same way in a browser and
-// on the command line. Nothing here ever runs archive content: the only
-// things written into the page are the manifest's own game data and the
-// four `doc` strings the engine itself baked.
+// on the command line. Nothing here ever runs archive content, and no
+// archive string is ever parsed as markup: the only things written into
+// the page are the manifest's own game data and the `doc` values, each
+// one set as data (text, a style sheet's text, or an element built here).
 var vefrArchive = (function () {
   'use strict';
 
@@ -55,6 +56,14 @@ var vefrArchive = (function () {
   var GLOBAL_KEY = /^VEFR_[A-Z0-9_]+$/;
   var URL_RE = /https?:\/\/[^\s"'<>)\\]+/g;
   var DATA_RE = /data:([a-zA-Z0-9.+/-]+)[;,]/g;
+  // The title picture, as the exporter writes it (cli's `_player_title_art`)
+  // and as nothing else: an `<img>` carrying one inline picture, and at most
+  // the pack's own two accent colours. The archive's own markup is never
+  // parsed - see `titleArt`.
+  var DATA_IMAGE_RE = /^data:image\/(?:png|jpeg|gif|webp|svg\+xml|bmp);base64,[A-Za-z0-9+/]*={0,2}$/;
+  var ART_TAG = '<img class="ts-art" src="([^"]*)" alt="">';
+  var ACCENT_TAG = '<style>html:root \\{ --accent: (#[0-9a-fA-F]{6}); --accent-on: (#[0-9a-fA-F]{6}); \\}</style>';
+  var TITLE_ART_RE = new RegExp('^(?:' + ART_TAG + ')?(?:' + ACCENT_TAG + ')?$');
 
   function refuse(sentence) {
     throw new Error(sentence);
@@ -209,14 +218,18 @@ var vefrArchive = (function () {
              ', expected ' + JSON.stringify(FORMAT));
     }
     var version = manifest.schema_version;
-    if (typeof version !== 'number') refuse('the manifest\'s schema_version is not a number');
+    // A whole number, or nothing: `1.5`, `NaN`, `Infinity` and `"1"` are all
+    // shapes no exporter writes and no schema has ever named. The Python
+    // reader says the same (vefrfile._check_manifest), so an archive is
+    // read the same way in a browser and on the command line.
+    if (!Number.isInteger(version)) refuse("the manifest's schema_version is not a whole number");
     if (version > SCHEMA_VERSION) {
       refuse('this .vefr uses manifest schema ' + version + '; this vefr reads schema ' +
              SCHEMA_VERSION + ' - update the engine to play it');
     }
     var runtime = manifest.runtime || {};
     var floor = runtime.min_schema_version;
-    if (typeof floor === 'number' && floor > SCHEMA_VERSION) {
+    if (Number.isInteger(floor) && floor > SCHEMA_VERSION) {
       refuse('this .vefr needs a newer Player: it asks for schema ' + floor +
              ' at least, this Player reads schema ' + SCHEMA_VERSION);
     }
@@ -279,7 +292,17 @@ var vefrArchive = (function () {
 
   function openArchive(buffer) {
     var entries = zipEntries(new Uint8Array(buffer));
-    entries.forEach(function (entry) { safeName(entry.name); });
+    // One file, one entry. A ZIP may name the same path twice, and two
+    // readers then disagree about which of them is the game; the Python
+    // reader refuses the same archive for the same reason.
+    var seen = Object.create(null);
+    entries.forEach(function (entry) {
+      if (seen[entry.name]) {
+        refuse('refusing "' + entry.name + '": the archive names it twice; one file, one entry');
+      }
+      seen[entry.name] = true;
+      safeName(entry.name);
+    });
     var manifestEntry = find(entries, MANIFEST);
     var globalsEntry = find(entries, GLOBALS);
     if (!manifestEntry) refuse('this archive has no ' + MANIFEST + ': it is not a .vefr archive');
@@ -356,7 +379,7 @@ var vefrArchive = (function () {
     }
     if (doc.title_art_img) {
       var screen = document.getElementById('title-screen');
-      if (screen) screen.insertAdjacentHTML('afterbegin', doc.title_art_img);
+      if (screen) titleArt(doc.title_art_img, screen);
     }
     if (doc.fonts_css) {
       var style = document.createElement('style');
@@ -367,6 +390,35 @@ var vefrArchive = (function () {
     // What a test or the console asks after a load: which manifest is in
     // play, and where it came from.
     vefrArchive.installed = { manifest: manifest, source: opened.source || 'archive' };
+  }
+
+  // The title picture, without ever handing the archive's string to an HTML
+  // parser. The exporter writes one fixed shape (cli's `_player_title_art`),
+  // so this accepts that shape and nothing else: the `src` is lifted as a
+  // string, it has to be an inline picture of a type an archive may carry,
+  // and the element it ends up in is one the browser builds here. Markup
+  // that is not the exporter's - an `onerror`, an `<svg>`, a second tag - is
+  // simply not installed; nothing an archive carries ever runs.
+  function titleArt(markup, screen) {
+    var parts = TITLE_ART_RE.exec(markup);
+    if (!parts) return null;
+    var src = parts[1];
+    var img = null;
+    if (src && DATA_IMAGE_RE.test(src)) {
+      img = document.createElement('img');
+      img.className = 'ts-art';
+      img.alt = '';
+      img.src = src;
+      screen.insertBefore(img, screen.firstChild);
+    }
+    // The pack's own accent colour, when it named one: two hex values, set
+    // as the two custom properties the exporter's stylesheet reads. No
+    // element is added for it.
+    if (parts[2]) {
+      document.documentElement.style.setProperty('--accent', parts[2]);
+      document.documentElement.style.setProperty('--accent-on', parts[3]);
+    }
+    return img;
   }
 
   function setText(selector, text) {
