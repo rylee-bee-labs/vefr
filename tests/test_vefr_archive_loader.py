@@ -272,7 +272,7 @@ def test_both_readers_refuse_in_the_same_words():
         assert words in python, words
 
 
-def test_the_committed_player_carries_this_part():
+def test_the_built_player_carries_this_part():
     """`scripts/build_player.py --check` is the contract; run it here."""
     run = subprocess.run([sys.executable, str(ROOT / "scripts" / "build_player.py"), "--check"],
                          capture_output=True, text=True, timeout=120)
