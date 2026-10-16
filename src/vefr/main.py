@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from .replies import (CommissionsReply, DeferReply, EventReply, GotItReply, LibraryReply,
                       ModeReply, StickerBook, TeachReply, TeachState)
 
+import html
 import json
 import os
 import re
@@ -1254,6 +1255,27 @@ def _woven_file(name: str) -> Path:
     return target
 
 
+_WOVEN_TITLE_RE = re.compile(r"<title>(.*?)</title>", re.DOTALL)
+
+
+def _woven_title(path: Path) -> str:
+    """The game's own title, as its weave baked it into <title>.
+
+    The launcher lists each game under the name the game carries
+    itself - the identity is the game's, never the shell's. The title
+    sits in the woven file's head, so only the first block is read; a
+    file without one (or one that cannot be read) falls back to its
+    file name, never to a made-up label.
+    """
+    try:
+        with path.open("rb") as fh:
+            head = fh.read(8192).decode("utf-8", errors="replace")
+    except OSError:
+        return path.stem
+    m = _WOVEN_TITLE_RE.search(head)
+    return html.unescape(m.group(1)).strip() if m else path.stem
+
+
 @app.get("/api/builder/weave/file/{name}")
 def builder_weave_file(name: str):
     """Download a woven file as an attachment.
@@ -1266,6 +1288,27 @@ def builder_weave_file(name: str):
     return FileResponse(target, media_type="text/html", filename=target.name)
 
 
+def _serve_woven_playback(target: Path) -> FileResponse:
+    """A woven game, inline, behind the sandbox CSP.
+
+    The one way a woven page is served around people: inline (never an
+    attachment) so a frame renders it, plus a sandbox CSP with no
+    allow-same-origin, so a woven page (which may come from an imported
+    pack) can never reach the page around it. The studio pane and the
+    launcher both serve through this builder, so the two doors to a
+    game cannot drift apart.
+    """
+    return FileResponse(
+        target,
+        media_type="text/html",
+        content_disposition_type="inline",
+        filename=target.name,
+        # NOTE: the SAME strict sandbox as the pane's iframe (no allow-same-origin), so opening this URL directly
+        # in a tab cannot give a woven page (which may come from an imported pack) the surrounding origin.
+        headers={"Content-Security-Policy": "sandbox allow-scripts"},
+    )
+
+
 @app.get("/api/builder/weave/play/{name}")
 def builder_weave_play(name: str):
     """Serve a woven file inline so the studio can play it in a pane.
@@ -1274,16 +1317,57 @@ def builder_weave_play(name: str):
     inline` (never an attachment) so an iframe renders it, plus a
     sandbox CSP so the woven player can never reach the studio page.
     """
-    target = _woven_file(name)
-    return FileResponse(
-        target,
-        media_type="text/html",
-        content_disposition_type="inline",
-        filename=target.name,
-        # NOTE: the SAME strict sandbox as the pane's iframe (no allow-same-origin), so opening this URL directly
-        # in a tab cannot give a woven page (which may come from an imported pack) the studio's own origin.
-        headers={"Content-Security-Policy": "sandbox allow-scripts"},
-    )
+    return _serve_woven_playback(_woven_file(name))
+
+
+# ── the game-neutral launcher (vefr#454) ───────────────────────────────
+# A SMALL shared shell around the existing woven Player (Rylee's
+# 2026-10-16 decision): the launcher lists games and opens each one
+# whole; it owns no title screen, no controls, no game logic, and it
+# is separate from the studio's authoring interface.
+
+
+@app.get("/api/launcher/games")
+def launcher_games():
+    """The woven games this server holds, for the game-neutral launcher.
+
+    The launcher's whole listing, first step: every file the server has
+    woven, newest first, each under the title the game itself baked
+    into its <title> - the identity is the game's, never the shell's.
+    The list walks the same glob `_woven_file()` looks a name up in,
+    so the list and the door can never disagree about what exists.
+    A pack that was never woven is not listed: the launcher opens
+    games, it does not make them (weave-on-demand is a later step).
+    """
+    out_dir = _weave_output_dir()
+    found: list[tuple[float, str, str]] = []
+    if out_dir.is_dir():
+        for p in out_dir.glob("*.html"):
+            if not p.is_file():
+                continue
+            found.append((p.stat().st_mtime, p.name, _woven_title(p)))
+    # Newest weave first, then by name; the launcher shows a pack's
+    # latest build at the top of the shelf.
+    found.sort(key=lambda entry: (-entry[0], entry[1]))
+    return {
+        "games": [
+            {"name": name, "title": title, "play_url": f"/api/launcher/play/{name}"}
+            for _, name, title in found
+        ]
+    }
+
+
+@app.get("/api/launcher/play/{name}")
+def launcher_play(name: str):
+    """Open a woven game in the existing Player.
+
+    The same strict name lookup as every woven-file route - matched
+    against `_WEAVE_NAME_RE`, then found among the files the server
+    wrote; the request string is never joined onto a path - and the
+    same sandboxed serving as the studio pane. The game arrives whole:
+    its own title screen, skin and rules, untouched by the shell.
+    """
+    return _serve_woven_playback(_woven_file(name))
 
 
 @app.get("/api/starred")
@@ -2250,3 +2334,17 @@ def index():
     if idx.is_file():
         return FileResponse(idx, headers={"Cache-Control": "no-cache"})
     return PlainTextResponse("vefr engine running (web UI unbundled)", status_code=200)
+
+
+@app.get("/launcher")
+def launcher_page():
+    # The game-neutral launcher (vefr#454): a door of its own, beside
+    # the studio. The studio is the authoring house; this page is the
+    # one a player walks through - it lists the woven games
+    # (GET /api/launcher/games) and opens each in the existing Player
+    # (GET /api/launcher/play/{name}). The page owns no game chrome;
+    # each game keeps its own face inside the frame.
+    page = WEB / "launcher.html"
+    if page.is_file():
+        return FileResponse(page, headers={"Cache-Control": "no-cache"})
+    return PlainTextResponse("vefr launcher running (web UI unbundled)", status_code=200)
