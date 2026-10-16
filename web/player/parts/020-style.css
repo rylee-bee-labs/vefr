@@ -443,6 +443,13 @@
   #menu .pm button[aria-current="true"] { background: rgba(216, 170, 78, 0.16); color: var(--accent); }
   #menu-panel h2 { margin: 4px 0 8px; font: 700 1.2rem var(--display); letter-spacing: 0.04em; }
   #menu-panel ul { margin: 0; padding-left: 1.1rem; }
+  /* the Controls rows: a label, the keys as they stand, and the button
+     that changes them - the panel is built from the one keybinds table
+     (076-keybinds.js), so the rows keep the 44px targets the menu's own
+     buttons have and read at the same sizes. */
+  #menu-panel .keybind-group { margin: 14px 0 0; font: 700 0.82rem var(--display); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-dim); }
+  #menu-panel .keybind-row { display: flex; align-items: center; gap: 10px; margin: 6px 0; }
+  #menu-panel .keybind-row .keybind-keys { color: var(--ink-dim); font-size: 0.9rem; }
   @media (max-width: 700px) { #menu { grid-template-columns: 1fr; } }
 
   /* the kitchen and the desk: page surfaces, in carved panels */

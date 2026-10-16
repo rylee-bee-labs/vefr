@@ -94,12 +94,22 @@ def test_no_part_and_no_built_player_advertises_e():
 
 def test_the_keys_still_accept_e_and_f():
     """The keydown handler routes both letters to the one verb, so E is an
-    alias on that same path, not a second older one."""
+    alias on that same path, not a second older one.
+
+    Since vefr#508 (Rylee, 2026-10-16) Interact's key is a row in the one
+    keybinds table (076-keybinds.js): its default is F - the one name the
+    words half above still pins - and a player's own choice replaces that
+    default. E is not in the table, never shown, and never replaced: it
+    rides the same Interact check on every surface.
+    """
     handler = KEYS.read_text(encoding="utf-8")
     assert "else if (e.key === 'e' || e.key === 'E') doInteract();" in handler
-    assert "else if (e.key === 'f' || e.key === 'F') doInteract();" in handler
-    # The panels Interact opens are closed by the same two letters.
-    both = "e.key === 'e' || e.key === 'E' || e.key === 'f' || e.key === 'F'"
+    # Interact's default binding in the table is F (the advertised name).
+    binds = (PARTS / "076-keybinds.js").read_text(encoding="utf-8")
+    assert "id: 'interact'" in binds and "keys: ['f']" in binds
+    # E rides the one Interact check on every surface: the walking keys,
+    # and the panels Interact opens are closed by, the same road.
+    both = "keybindOn('interact', e.key) || e.key === 'e' || e.key === 'E'"
     assert handler.count(both) >= 3
 
 
