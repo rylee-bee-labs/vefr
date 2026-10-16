@@ -425,7 +425,11 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # rules in 020-style.css changed, 2026-10-16; measured twice on the host in separate processes, readings equal:
 #   3456e77a0ae5e9d4df33cfc70297aaf8eb1c642f3274be207a6d4134a4db9f23
 #   3456e77a0ae5e9d4df33cfc70297aaf8eb1c642f3274be207a6d4134a4db9f23
-NO_SKIN_WEAVE_SHA256 = "3456e77a0ae5e9d4df33cfc70297aaf8eb1c642f3274be207a6d4134a4db9f23"
+# The .vefr archive loader (vefr#455, ADR 0019): a new player part, 046-vefr-archive-loader.js, is woven
+# into every pack, 2026-10-16; measured twice on the host in separate processes, readings equal:
+#   7331f6447755196a9db2df8d467211892da99894a8ec9db461108f9e340e5463
+#   7331f6447755196a9db2df8d467211892da99894a8ec9db461108f9e340e5463
+NO_SKIN_WEAVE_SHA256 = "7331f6447755196a9db2df8d467211892da99894a8ec9db461108f9e340e5463"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():
