@@ -12,11 +12,14 @@ You cannot get anything wrong here; the game tells you what it is doing as you g
 | `F`, `Space`, `Enter` | Interact. All three keys do the same one thing. |
 | `Q` | Hear a rumor: what people are saying right now. |
 | `B` | Open the bag. |
+| `J` | Open the Journal. |
 | `O` | Walk the unexplored dark. Press it again to stop. |
 | `V` | Turn the dark off and on. |
 | `Escape` | Open the pause menu. Press it again to close it. |
 
 On the title screen, **Begin** has the focus and takes `Enter`, `Space` and `F`, so any of them starts the game. `Tab` keeps the focus on **Begin** instead of walking it off the screen.
+
+Any of the keys above can be changed: open the Menu and choose **Controls**. Pick the action, press **Change**, then press the key you want it to answer to. The keys that already answer for something else are refused with the reason why, and one button puts every key back the way it came.
 
 One big button, **Interact**, sits at the bottom right and says what it will do. On a computer, beside it are
 four small icon buttons: Talk (`F`), Listen (`Q`), Bag (`B`) and Explore (`O`). Each keeps its word for a screen

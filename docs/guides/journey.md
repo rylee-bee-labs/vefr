@@ -48,6 +48,7 @@ story stays yours.
 | 7 | **Walk it** (the player) | How it feels: movement, doors, light, the dark | `norns validate`, then a real build you can open and play | A build that moves |
 | 8 | **The Chronicle** | Nothing: you read what happened | Urðr keeps the record in words | A journal of your own play |
 | 9 | **Weave** | Whether it is ready to send | The Desk's **Make shareable file** button, or `ratatoskr weave` | One self-contained file for a friend |
+| 9b | **Archive** | Carrying it, and keeping it | `vefr archive --pack worlds/<name>` | One `.vefr` a shared Player opens - see [ADR 0019](../adr/0019-vefr-archive-format.md) |
 
 Two things hold across every stop:
 

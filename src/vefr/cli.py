@@ -2579,7 +2579,8 @@ def _baked_skin(pack: Path, world: dict) -> dict | None:
 MIND_KEYS = ('group', 'leader', 'leash', 'elite', 'warden')
 
 
-def weave_html(pack: Path, *, pool: dict | None = None) -> str:
+def weave_html(pack: Path, *, pool: dict | None = None,
+               template: str | None = None, doc: dict | None = None) -> str:
     """Weave a pack into the single shareable HTML document.
 
     The packaging core behind `ratatoskr weave` and the served
@@ -2588,6 +2589,15 @@ def weave_html(pack: Path, *, pool: dict | None = None) -> str:
     through), folds it over web/packaged.html, and returns the finished
     document as a string. No writes and no model calls - `pool`, when
     present, is caller-supplied already-generated content.
+
+    `template` folds the same substitutions over a different template -
+    the `.vefr` exporter (ADR 0019) hands a JSON skeleton whose values
+    are the very same baked ones, so an archive and a woven HTML of one
+    pack are one game. `doc`, when a dict is passed, is filled with the
+    four page-level values the template folds in around the data
+    (`title`, `tagline`, `title_art_img`, `fonts_css`) so a Player that
+    loads an archive wears the same face. Both are additive: with neither
+    argument this weaves exactly what it always wove.
     """
     # A pack that carries a Blueprint refuses to weave when its
     # generated output is stale or invalid, with the same sentence
@@ -2860,16 +2870,23 @@ def weave_html(pack: Path, *, pool: dict | None = None) -> str:
     template_candidates = _template_candidates()
     template_path = next(
         (p for p in template_candidates if p.exists()), template_candidates[0])
-    template = template_path.read_text(encoding='utf-8')
+    if template is None:
+        template = template_path.read_text(encoding='utf-8')
 
     tagline = world.get('creed') or 'the loom is strung; the world provides the thread.'
     out_html = template
     # Read once: the skin decides which families the woven file carries, and
     # the same object is what window.VEFR_SKIN gets below.
     skin = _baked_skin(pack, world)
-    out_html = out_html.replace('{{fonts_css}}', _player_fonts_css(
-        template_path.parent, (skin or {}).get('fonts') or {}))
-    out_html = out_html.replace('{{title_art_img}}', _player_title_art(pack, world, template_path.parent))
+    fonts_css = _player_fonts_css(template_path.parent, (skin or {}).get('fonts') or {})
+    title_art_img = _player_title_art(pack, world, template_path.parent)
+    # The archive Player's page-level values, kept beside the ones folded
+    # into the template: same four values, one read (ADR 0019).
+    if doc is not None:
+        doc.update({'title': title, 'tagline': tagline,
+                    'title_art_img': title_art_img, 'fonts_css': fonts_css})
+    out_html = out_html.replace('{{fonts_css}}', fonts_css)
+    out_html = out_html.replace('{{title_art_img}}', title_art_img)
     out_html = out_html.replace('{{title}}', title)
     out_html = out_html.replace('{{tagline}}', tagline)
     out_html = out_html.replace('{{world_json}}', _json.dumps(world, ensure_ascii=False))
@@ -3060,6 +3077,124 @@ def build_web(pack: Path, out_dir: Path, *, out_name: str | None = None,
     return out_path
 
 
+def _resolve_pack(value) -> Path:
+    """Where a `--pack NAME` or `--pack PATH` argument points.
+
+    A bare name resolves under `worlds/`; anything path-shaped is made
+    absolute, so `load_world` finds an out-of-root pack instead of
+    joining a relative path under `worlds/` (which dropped acts). Shared
+    by every verb that weaves or archives a pack, so they all name the
+    same pack the same way.
+    """
+    if value is None:
+        return pack_root() / 'worlds' / world_name()
+    p = Path(value)
+    if p.is_absolute() or '/' in str(value):
+        return (p if p.is_dir() else p.parent).resolve()
+    return pack_root() / 'worlds' / p
+
+
+def _woven_pool(pack: Path, pool_n: int) -> dict:
+    """Real generations to bake in as the offline fallback pool.
+
+    Zero by default - the pool costs real generation time at weave - and
+    `pack` is restored afterwards: weaving is a visitor in this world.
+    """
+    if not pool_n:
+        return {}
+    import os as _os
+
+    from . import pool as pool_mod
+
+    old_world_env = _os.environ.get('VEFR_WORLD')
+    pool_mod.ensure_current_world(pack.name)
+    try:
+        print(f'weaving the pool: ~{pool_n} real generations per '
+              'combination - this takes a few minutes against the '
+              'live model...')
+        pool = pool_mod.build_pool(
+            samples=pool_n,
+            pack_name=pack,
+            progress=lambda combo, count: print(f'  {combo}: {count}'),
+        )
+    finally:
+        if old_world_env is None:
+            _os.environ.pop('VEFR_WORLD', None)
+        else:
+            _os.environ['VEFR_WORLD'] = old_world_env
+    total = sum(len(v) for v in pool.values())
+    print(f'pool woven: {total} lines across {len(pool)} combinations')
+    return pool
+
+
+def cmd_archive(args) -> int:
+    """`vefr archive` - carry a world as one portable `.vefr` file (vefr#455).
+
+    Two jobs behind one door (ADR 0019):
+
+      vefr archive --pack NAME           write dist/<name>.vefr and the
+                                         shared Player that opens it
+      vefr archive --inspect FILE.vefr   validate one and print its manifest
+
+    `vefr weave` is untouched: the self-contained HTML is still woven,
+    and the archive is written beside it rather than instead of it. A
+    pack that would refuse the weave - a stale Blueprint - refuses the
+    archive with the same sentence, because the archive is woven by the
+    same code.
+    """
+    from . import vefrfile
+
+    if args.inspect:
+        try:
+            loaded = vefrfile.load_archive(args.inspect)
+        except vefrfile.ArchiveRefusal as exc:
+            print(f'refusing {args.inspect}: {exc}')
+            return 1
+        manifest = loaded.manifest
+        if args.json:
+            print(json.dumps(manifest, ensure_ascii=False, indent=1))
+            return 0
+        game, runtime = manifest['game'], manifest['runtime']
+        print(f"{game['title']} ({game['id']})")
+        print(f"  manifest schema {manifest['schema_version']}, written by "
+              f"vefr {manifest['engine_version']}, "
+              f"player contract {runtime['player_contract']}")
+        print(f"  {len(loaded.globals)} game globals, "
+              f"{len(manifest.get('capabilities') or [])} capabilities, "
+              f"network {manifest.get('network', {}).get('policy')}")
+        print(f"  licence: {manifest.get('provenance', {}).get('license')}")
+        print('  digest    bytes  path')
+        for row in manifest['files']:
+            print(f"  {row['sha256'][:12]}  {row['bytes']:>8}  {row['path']}")
+        return 0
+
+    pack = _resolve_pack(args.pack)
+    if not (pack / 'world.json').exists():
+        print(f'pack not found at {pack}; pass --pack NAME or set VEFR_WORLD')
+        return 1
+
+    pool = _woven_pool(pack, getattr(args, 'pool', 0) or 0)
+    out = Path(args.out) if args.out else Path('dist') / f'{pack.name}.vefr'
+    player = None if args.no_player else Path(
+        args.player or out.with_name(out.stem + '.player.html'))
+    try:
+        manifest = vefrfile.build_archive(pack, out, pool=pool, player=player)
+    except vefrfile.ArchiveRefusal as exc:
+        print(str(exc))
+        return 1
+
+    size_kb = out.stat().st_size / 1024
+    print(f'wrote {out} ({size_kb:.1f} KB)')
+    if player is not None:
+        print(f'wrote {player} (the shared Player; it opens {out.name})')
+        print('  open them together from any browser, or open the Player '
+              'alone and drop the .vefr on it.')
+    for line in (manifest.get('provenance', {}).get('not_carried') or []):
+        print(f'  not carried: {line}')
+    print(f"inspect it any time: vefr archive --inspect {out}")
+    return 0
+
+
 def cmd_build_web(args) -> int:
     """Bundle worlds/<name>/ + web/packaged.html into one self-contained file.
 
@@ -3075,17 +3210,10 @@ def cmd_build_web(args) -> int:
     builder shares one implementation; this wrapper keeps the CLI's
     flags, output paths, and console lines unchanged.
     """
-    if args.pack is None:
-        pack = pack_root() / 'worlds' / world_name()
-    else:
-        # Bare name -> resolve under worlds/; any path -> made absolute,
-        # so load_world below finds an out-of-root pack instead of
-        # joining a relative path under worlds/ (which dropped acts).
-        p = Path(args.pack)
-        if p.is_absolute() or '/' in str(args.pack):
-            pack = (p if p.is_dir() else p.parent).resolve()
-        else:
-            pack = pack_root() / 'worlds' / p
+    # Bare name -> resolve under worlds/; any path -> made absolute,
+    # so load_world below finds an out-of-root pack instead of
+    # joining a relative path under worlds/ (which dropped acts).
+    pack = _resolve_pack(args.pack)
 
     if not (pack / 'world.json').exists():
         print(f'pack not found at {pack}; pass --pack NAME or set VEFR_WORLD')
@@ -3094,33 +3222,7 @@ def cmd_build_web(args) -> int:
     # The woven pool: real generations baked into the file, so a
     # player with no LLM endpoint still hears the world. Zero by
     # default - the pool costs real generation time at weave.
-    pool = {}
-    pool_n = getattr(args, 'pool', 0) or 0
-    if pool_n:
-        import os as _os
-
-        from . import pool as pool_mod
-
-        old_world_env = _os.environ.get('VEFR_WORLD')
-        pool_mod.ensure_current_world(pack.name)
-        try:
-            print(f'weaving the pool: ~{pool_n} real generations per '
-                  'combination - this takes a few minutes against the '
-                  'live model...')
-            pool = pool_mod.build_pool(
-                samples=pool_n,
-                pack_name=pack,
-                progress=lambda combo, count: print(f'  {combo}: {count}'),
-            )
-        finally:
-            # The weave is a visitor in this world - put back whichever
-            # world the author had selected before it started.
-            if old_world_env is None:
-                _os.environ.pop('VEFR_WORLD', None)
-            else:
-                _os.environ['VEFR_WORLD'] = old_world_env
-        total = sum(len(v) for v in pool.values())
-        print(f'pool woven: {total} lines across {len(pool)} combinations')
+    pool = _woven_pool(pack, getattr(args, 'pool', 0) or 0)
 
     if args.out:
         out_path = Path(args.out)
@@ -3725,6 +3827,38 @@ def _add_weave_parser(sub, **kw) -> None:
     pw.add_argument('--from-live', default=None,
                     help='pull vault+journal from a live deployment URL')
     pw.set_defaults(fn=cmd_build_web)
+
+
+def _add_archive_parser(sub, **kw) -> None:
+    """`archive` - carry a world as one portable `.vefr` file (vefr#455).
+
+    Beside `weave`, not instead of it: the woven HTML is still the
+    self-contained file, and this is the versioned, inspectable archive
+    the shared Player opens (ADR 0019).
+    """
+    ar = sub.add_parser(
+        'archive',
+        help='write a world as one portable .vefr game file',
+        **kw
+    )
+    ar.add_argument('--pack', default=None,
+                    help='world to archive (default: the resolved world)')
+    ar.add_argument('--out', default=None,
+                    help='output .vefr path (default: dist/<name>.vefr)')
+    ar.add_argument('--player', default=None, metavar='PATH',
+                    help='where to write the shared Player that opens it '
+                         '(default: <archive>.player.html beside the archive)')
+    ar.add_argument('--no-player', action='store_true',
+                    help='write only the .vefr, no Player build')
+    ar.add_argument('--pool', type=int, default=0, metavar='N',
+                    help='bake N real outputs per mechanic/phase/speaker '
+                         'combination into the archive as the offline '
+                         'fallback pool (needs a live model)')
+    ar.add_argument('--inspect', default=None, metavar='FILE',
+                    help='validate an existing .vefr and print its manifest')
+    ar.add_argument('--json', action='store_true',
+                    help='print the manifest as JSON (with --inspect)')
+    ar.set_defaults(fn=cmd_archive)
 
 
 def _add_ferry_verbs(ferry_sub) -> None:
@@ -5508,6 +5642,8 @@ VEFR_EPILOG = """the journey, in the order an author walks it:
             see: docs/guides/journey.md, docs/guides/world-creation.md
   weave     the shareable file: one self-contained HTML
             see: docs/guides/journey.md, docs/guides/world-creation.md
+  archive   the portable game file: one .vefr, opened by the shared Player
+            see: docs/adr/0019-vefr-archive-format.md
   handbok   the mechanics, counted from real play
   ferry     carry the world between the boxes
   doctor    session-start health: the whole estate, asked once
@@ -5784,6 +5920,17 @@ def vefr_main() -> int:
         sub,
         description='package a world into one self-contained HTML file',
         epilog='see: docs/guides/journey.md, docs/guides/world-creation.md',
+    )
+
+    # `archive` is weave's .vefr sibling (vefr#455, ADR 0019): the
+    # versioned, inspectable game archive the shared Player opens. It
+    # lives in the new door only - there is no `ratatoskr` spelling for
+    # a verb the archives never had.
+    _add_archive_parser(
+        sub,
+        description='write a world as one portable .vefr game file, or '
+                    'inspect one',
+        epilog='see: docs/adr/0019-vefr-archive-format.md',
     )
 
     sk = sub.add_parser(

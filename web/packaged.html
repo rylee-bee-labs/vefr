@@ -450,6 +450,13 @@
   #menu .pm button[aria-current="true"] { background: rgba(216, 170, 78, 0.16); color: var(--accent); }
   #menu-panel h2 { margin: 4px 0 8px; font: 700 1.2rem var(--display); letter-spacing: 0.04em; }
   #menu-panel ul { margin: 0; padding-left: 1.1rem; }
+  /* the Controls rows: a label, the keys as they stand, and the button
+     that changes them - the panel is built from the one keybinds table
+     (076-keybinds.js), so the rows keep the 44px targets the menu's own
+     buttons have and read at the same sizes. */
+  #menu-panel .keybind-group { margin: 14px 0 0; font: 700 0.82rem var(--display); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-dim); }
+  #menu-panel .keybind-row { display: flex; align-items: center; gap: 10px; margin: 6px 0; }
+  #menu-panel .keybind-row .keybind-keys { color: var(--ink-dim); font-size: 0.9rem; }
   @media (max-width: 700px) { #menu { grid-template-columns: 1fr; } }
 
   /* the kitchen and the desk: page surfaces, in carved panels */
@@ -777,6 +784,7 @@
       <li><button type="button" data-panel="help">How to play</button></li>
       <li><button type="button" data-panel="model">Model settings</button></li>
       <li><button type="button" data-panel="display">Display</button></li>
+      <li><button type="button" data-panel="controls">Controls</button></li>
       <li id="menu-library-row" hidden><a id="menu-library">Back to the library</a></li>
       <li id="menu-descent-row" hidden><button type="button" id="menu-descent" data-panel="descent">Descent</button></li>
       <li><button type="button" data-panel="startover">Start over</button></li>
@@ -836,7 +844,9 @@
         <li>Open your bag with <kbd>B</kbd> or the Bag button.</li>
         <li>Walk the unexplored dark with <kbd>O</kbd> or the Explore button.</li>
         <li>Turn the dark off with <kbd>V</kbd>, or in Display. Dusk and Dawn are in Display too, under Time of day.</li>
+        <li>Open your Journal with <kbd>J</kbd>.</li>
         <li>Open and close this menu with <kbd>Esc</kbd>.</li>
+        <li>Any of these keys can be changed, under Controls in this menu, and put back the way they came with one button.</li>
       </ul>
     </div>
     <div data-panel-body="model" hidden>
@@ -876,6 +886,13 @@
       <h2 class="menu-sub">Time of day</h2>
       <p>The world's mood. What people say changes with it.</p>
       <div class="phase-rail" id="phase" role="group" aria-label="The world's mood"></div>
+    </div>
+    <div data-panel-body="controls" hidden>
+      <h2>Controls</h2>
+      <p class="status">The keys this game answers to. Press Change, then press the key you want; Esc cancels and Tab keeps moving the focus. Space and Enter answer for Interact too.</p>
+      <div id="keybind-list"></div>
+      <p class="status" id="keybind-live" role="status" aria-live="polite"></p>
+      <button type="button" id="keybind-reset" class="cta">Reset all keys</button>
     </div>
     <div data-panel-body="descent" id="descent-body" hidden>
       <h2>The descent</h2>
@@ -1062,6 +1079,580 @@ function bindDialogFocus() {
   }
 }
 bindDialogFocus();
+// ---- .vefr archive loader (ADR 0019, vefr#455) ----
+//
+// The shared Player's other front door. A woven file carries its game
+// in the block that comes after this one (050); an archive carries it in
+// a `.vefr` ZIP, and this block puts it in place. It runs BEFORE every
+// part that reads a `window.VEFR_*` global while the page is still
+// parsing, because several of those reads happen once, at parse time,
+// and a game that arrives late would save to the wrong keys and draw no
+// ground at all.
+//
+// The order is therefore: read what is already in this tab's cache
+// (sessionStorage, synchronous, so the whole page sees a finished game),
+// or fetch the archive, validate it, cache it, and reload once. The
+// reload is the honest way to be early rather than late: a Player is
+// built without the baked block (see `vefr archive`), so nothing may
+// read a global before the game is installed.
+//
+// Dormant by default. A woven file folds its game into the block right
+// after this one and leaves `vefrArchiveUrl` empty, so every line here is
+// a no-op in one: only `vefr archive`'s Player build (or an explicit
+// `?vefr=` on any build) ever wakes it. The handle is deliberately not a
+// `window.VEFR_*` name: that namespace is the pack's baked data, and the
+// loader is the engine, not a pack.
+window.vefrArchiveUrl = window.vefrArchiveUrl || '';
+//
+// Validation mirrors src/vefr/vefrfile.py - the same refusals, in the
+// same words, so a bad archive is refused the same way in a browser and
+// on the command line. Nothing here ever runs archive content, and no
+// archive string is ever parsed as markup: the only things written into
+// the page are the manifest's own game data and the `doc` values, each
+// one set as data (text, a style sheet's text, or an element built here).
+var vefrArchive = (function () {
+  'use strict';
+
+  var MANIFEST = 'manifest.json';
+  var GLOBALS = 'data/globals.json';
+  var FORMAT = 'vefr-archive';
+  var SCHEMA_VERSION = 1;
+  var MAX_ENTRIES = 4096;
+  var MAX_ENTRY_BYTES = 64 * 1024 * 1024;
+  var MAX_TOTAL_BYTES = 256 * 1024 * 1024;
+  var MAX_RATIO = 200;
+  // sessionStorage is about 5 MB in most browsers; the fast path stays
+  // well under it. A bigger game is a `vefr weave` today, and moves to
+  // assets-as-files when the format grows a version (see the ADR).
+  var MAX_CACHE_BYTES = 3500000;
+  var SAFE_DATA_TYPES = {
+    'image/png': 1, 'image/jpeg': 1, 'image/gif': 1, 'image/webp': 1,
+    'image/svg+xml': 1, 'image/bmp': 1, 'audio/mpeg': 1, 'audio/ogg': 1,
+    'audio/wav': 1, 'audio/webm': 1, 'font/woff': 1, 'font/woff2': 1
+  };
+  var TEXT = /\.(md|json|txt|yaml|yml|toml|cfg|ini)$/i;
+  var ASSET = /\.(png|webp|jpe?g|gif|svg|bmp|ico|mp3|ogg|wav|m4a|aac|flac|woff2?|ttf|otf)$/i;
+
+  var CACHE_KEY = 'vefr-archive:last';
+  var GLOBAL_KEY = /^VEFR_[A-Z0-9_]+$/;
+  var URL_RE = /https?:\/\/[^\s"'<>)\\]+/g;
+  var DATA_RE = /data:([a-zA-Z0-9.+/-]+)[;,]/g;
+  // The title picture, as the exporter writes it (cli's `_player_title_art`)
+  // and as nothing else: an `<img>` carrying one inline picture, and at most
+  // the pack's own two accent colours. The archive's own markup is never
+  // parsed - see `titleArt`.
+  var DATA_IMAGE_RE = /^data:image\/(?:png|jpeg|gif|webp|svg\+xml|bmp);base64,[A-Za-z0-9+/]*={0,2}$/;
+  var ART_TAG = '<img class="ts-art" src="([^"]*)" alt="">';
+  var ACCENT_TAG = '<style>html:root \\{ --accent: (#[0-9a-fA-F]{6}); --accent-on: (#[0-9a-fA-F]{6}); \\}</style>';
+  var TITLE_ART_RE = new RegExp('^(?:' + ART_TAG + ')?(?:' + ACCENT_TAG + ')?$');
+
+  function refuse(sentence) {
+    throw new Error(sentence);
+  }
+
+  // ---- the ZIP, read by hand: a central directory and two methods ----
+
+  function zipEntries(bytes) {
+    // a DataView takes an ArrayBuffer, never a Uint8Array: view the bytes' own buffer at their own offset
+    var view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    // The end-of-central-directory record is the last one, after a
+    // comment of up to 64 KB.
+    if (bytes.length < 22) refuse('this file is not a .vefr archive: a .vefr is a ZIP file');
+    var start = Math.max(0, bytes.length - 65558);
+    var eocd = -1;
+    for (var i = bytes.length - 22; i >= start; i--) {
+      if (view.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+    }
+    if (eocd < 0) refuse('this file is not a .vefr archive: a .vefr is a ZIP file');
+    var count = view.getUint16(eocd + 10, true);
+    var offset = view.getUint32(eocd + 16, true);
+    if (count === 0xffff || offset === 0xffffffff) {
+      refuse('this .vefr is a ZIP64 archive; this Player reads the plain ZIP form');
+    }
+    if (count > MAX_ENTRIES) {
+      refuse('this .vefr holds ' + count + ' entries; an archive may hold at most ' + MAX_ENTRIES);
+    }
+    var entries = [];
+    var at = offset;
+    var total = 0;
+    for (var n = 0; n < count; n++) {
+      if (at < 0 || at + 46 > bytes.length || view.getUint32(at, true) !== 0x02014b50) {
+        refuse('this .vefr has a broken ZIP directory');
+      }
+      var method = view.getUint16(at + 10, true);
+      var compressed = view.getUint32(at + 20, true);
+      var size = view.getUint32(at + 24, true);
+      var nameLen = view.getUint16(at + 28, true);
+      var extraLen = view.getUint16(at + 30, true);
+      var commentLen = view.getUint16(at + 32, true);
+      var local = view.getUint32(at + 42, true);
+      var name = utf8(bytes.subarray(at + 46, at + 46 + nameLen));
+      entries.push({ name: name, method: method, compressed: compressed,
+                     size: size, local: local, bytes: bytes, view: view });
+      at += 46 + nameLen + extraLen + commentLen;
+      total += size;
+    }
+    if (total > MAX_TOTAL_BYTES) {
+      refuse('this .vefr expands to ' + total + ' bytes; an archive may expand to at most ' + MAX_TOTAL_BYTES);
+    }
+    return entries;
+  }
+
+  function utf8(chunk) {
+    if (typeof TextDecoder === 'function') return new TextDecoder('utf-8').decode(chunk);
+    var out = '';
+    for (var i = 0; i < chunk.length; i++) out += String.fromCharCode(chunk[i]);
+    return out;
+  }
+
+  function entryBytes(entry) {
+    if (entry.size > MAX_ENTRY_BYTES) {
+      refuse('refusing "' + entry.name + '": the archive declares ' + entry.size +
+             ' bytes; an entry may be at most ' + MAX_ENTRY_BYTES);
+    }
+    if (entry.compressed && entry.size / entry.compressed > MAX_RATIO) {
+      refuse('refusing "' + entry.name + '": it expands ' +
+             Math.floor(entry.size / entry.compressed) + 'x, past the ' + MAX_RATIO +
+             'x a picture ever needs');
+    }
+    var head = entry.local;
+    if (head < 0 || head + 30 > entry.bytes.length ||
+        entry.view.getUint32(head, true) !== 0x04034b50) {
+      refuse('refusing "' + entry.name + '": its ZIP entry is broken');
+    }
+    var start = head + 30 + entry.view.getUint16(head + 26, true) +
+                entry.view.getUint16(head + 28, true);
+    var raw = entry.bytes.subarray(start, start + entry.compressed);
+    if (entry.method === 0) {
+      if (raw.length !== entry.size) refuse('refusing "' + entry.name + '": it is shorter than it declares');
+      return Promise.resolve(raw);
+    }
+    if (entry.method !== 8) {
+      refuse('refusing "' + entry.name + '": the archive uses a compression this Player does not read');
+    }
+    return inflate(raw, entry.size, entry.name);
+  }
+
+  // deflate-raw through the platform's own stream, counted as it lands.
+  function inflate(raw, limit, name) {
+    if (typeof DecompressionStream !== 'function') {
+      refuse('this browser cannot open a .vefr: it has no DecompressionStream. Play this game from a woven HTML file instead.');
+    }
+    var stream = new Blob([raw]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+    var reader = stream.getReader();
+    var chunks = [];
+    var total = 0;
+    function step() {
+      return reader.read().then(function (part) {
+        if (part.done) return new Uint8Array(chunks.reduce(function (a, c) { return a + c.length; }, 0));
+        total += part.value.length;
+        if (total > limit) {
+          reader.cancel();
+          refuse('refusing "' + name + '": it expands past ' + limit + ' bytes');
+        }
+        chunks.push(part.value);
+        return step();
+      });
+    }
+    return step();
+  }
+
+  // ---- what an archive may be ----
+
+  function allowed(name) {
+    // No suffix at all is content: a pack's LICENSE and README travel.
+    var base = name.slice(name.lastIndexOf('/') + 1);
+    return base.indexOf('.') < 0 || TEXT.test(name) || ASSET.test(name);
+  }
+
+  function safeName(name) {
+    if (!name || name.trim() !== name) refuse('refusing the entry "' + name + '": an archive name may not be padded');
+    if (name.indexOf('\\') >= 0) refuse('refusing the entry "' + name + '": archive names use "/"');
+    if (name.charAt(0) === '/' || /^[A-Za-z]:/.test(name)) {
+      refuse('refusing the entry "' + name + '": archive paths are relative');
+    }
+    var parts = name.split('/');
+    for (var i = 0; i < parts.length; i++) {
+      if (parts[i] === '' || parts[i] === '.' || parts[i] === '..') {
+        refuse('refusing the entry "' + name + '": the path leaves the archive');
+      }
+    }
+    if (name !== MANIFEST && name !== GLOBALS && name.indexOf('content/') !== 0 &&
+        name.indexOf('assets/') !== 0) {
+      refuse('refusing the entry "' + name + '": an archive holds a manifest, content/, assets/ and the game data - nothing else');
+    }
+    if (name !== MANIFEST && name !== GLOBALS && !allowed(name)) {
+      refuse('refusing "' + name + '": an archive carries data and pictures, never anything that could run');
+    }
+  }
+
+  function find(entries, name) {
+    for (var i = 0; i < entries.length; i++) {
+      if (entries[i].name === name) return entries[i];
+    }
+    return null;
+  }
+
+  function checkManifest(manifest) {
+    if (!manifest || typeof manifest !== 'object') refuse(MANIFEST + ' is not a JSON object');
+    if (manifest.format !== FORMAT) {
+      refuse('this file is not a .vefr archive: manifest format ' + JSON.stringify(manifest.format) +
+             ', expected ' + JSON.stringify(FORMAT));
+    }
+    var version = manifest.schema_version;
+    // A whole number, or nothing: `1.5`, `NaN`, `Infinity` and `"1"` are all
+    // shapes no exporter writes and no schema has ever named. The Python
+    // reader says the same (vefrfile._check_manifest), so an archive is
+    // read the same way in a browser and on the command line.
+    if (!Number.isInteger(version)) refuse("the manifest's schema_version is not a whole number");
+    if (version > SCHEMA_VERSION) {
+      refuse('this .vefr uses manifest schema ' + version + '; this vefr reads schema ' +
+             SCHEMA_VERSION + ' - update the engine to play it');
+    }
+    var runtime = manifest.runtime || {};
+    var floor = runtime.min_schema_version;
+    if (Number.isInteger(floor) && floor > SCHEMA_VERSION) {
+      refuse('this .vefr needs a newer Player: it asks for schema ' + floor +
+             ' at least, this Player reads schema ' + SCHEMA_VERSION);
+    }
+    if (!manifest.game || !manifest.game.id) refuse('the manifest names no game id');
+    if (!Array.isArray(manifest.files)) refuse('the manifest lists no files');
+    return manifest;
+  }
+
+  function walk(value, out) {
+    if (typeof value === 'string') out.push(value);
+    else if (Array.isArray(value)) value.forEach(function (v) { walk(v, out); });
+    else if (value && typeof value === 'object') {
+      Object.keys(value).forEach(function (key) {
+        out.push(key);
+        walk(value[key], out);
+      });
+    }
+    return out;
+  }
+
+  function checkUrls(value, manifest) {
+    var declared = ((manifest.network && manifest.network.allowed_urls) || []);
+    var texts = walk(value, []);
+    for (var i = 0; i < texts.length; i++) {
+      var found = texts[i].match(URL_RE) || [];
+      for (var j = 0; j < found.length; j++) {
+        var ok = false;
+        for (var k = 0; k < declared.length; k++) {
+          if (found[j] === declared[k] ||
+              found[j].indexOf(declared[k].replace(/\/$/, '') + '/') === 0) ok = true;
+        }
+        if (!ok) {
+          refuse('the game data points at ' + found[j] + ', which its manifest does not declare - an archive reaches no network');
+        }
+      }
+      var data = texts[i].match(DATA_RE) || [];
+      for (var d = 0; d < data.length; d++) {
+        if (!SAFE_DATA_TYPES[data[d].toLowerCase()]) {
+          refuse('the game data carries a data:' + data[d] + ' URI; an archive carries pictures, sounds and fonts');
+        }
+      }
+    }
+  }
+
+  function checkPayload(payload, manifest) {
+    if (!payload || typeof payload !== 'object') refuse(GLOBALS + ' is not a JSON object');
+    var globals = payload.globals;
+    if (!globals || typeof globals !== 'object') refuse(GLOBALS + ' carries no "globals" object');
+    Object.keys(globals).forEach(function (key) {
+      if (!GLOBAL_KEY.test(key)) {
+        refuse(GLOBALS + ' names "' + key + '": the game data is only window.VEFR_* globals');
+      }
+    });
+    checkUrls(globals, manifest);
+    checkUrls(payload.doc || {}, manifest);
+    return payload;
+  }
+
+  // ---- the whole check, entry by entry, then install ----
+
+  function openArchive(buffer) {
+    var entries = zipEntries(new Uint8Array(buffer));
+    // One file, one entry. A ZIP may name the same path twice, and two
+    // readers then disagree about which of them is the game; the Python
+    // reader refuses the same archive for the same reason.
+    var seen = Object.create(null);
+    entries.forEach(function (entry) {
+      if (seen[entry.name]) {
+        refuse('refusing "' + entry.name + '": the archive names it twice; one file, one entry');
+      }
+      seen[entry.name] = true;
+      safeName(entry.name);
+    });
+    var manifestEntry = find(entries, MANIFEST);
+    var globalsEntry = find(entries, GLOBALS);
+    if (!manifestEntry) refuse('this archive has no ' + MANIFEST + ': it is not a .vefr archive');
+    if (!globalsEntry) refuse('this archive has no ' + GLOBALS + ': it carries no game to play');
+    var declared = {};
+    return entryBytes(manifestEntry)
+      .then(function (raw) { return JSON.parse(utf8(raw)); })
+      .then(function (manifest) {
+        checkManifest(manifest);
+        manifest.files.forEach(function (row) {
+          if (row && typeof row.path === 'string') declared[row.path] = row;
+        });
+        return entryBytes(globalsEntry)
+          .then(function (raw) { return JSON.parse(utf8(raw)); })
+          .then(function (payload) {
+            var named = entries.filter(function (entry) { return entry.name !== MANIFEST; });
+            return named.reduce(function (chain, entry) {
+              return chain.then(function () {
+                var row = declared[entry.name];
+                if (!row) refuse('"' + entry.name + '" is in the archive but not in its manifest');
+                return entryBytes(entry)
+                  .then(function (raw) {
+                    if (raw.length !== row.bytes) {
+                      refuse('"' + entry.name + '" is ' + raw.length + ' bytes; its manifest says ' + row.bytes);
+                    }
+                    return matches(raw, row.sha256);
+                  })
+                  .then(function (same) {
+                    if (!same) refuse('"' + entry.name + '" does not match its manifest digest');
+                  });
+              });
+            }, Promise.resolve())
+            .then(function () {
+              Object.keys(declared).forEach(function (path) {
+                if (!find(entries, path)) refuse('"' + path + '" is in the manifest but not in the archive');
+              });
+            })
+            .then(function () { return { manifest: manifest, payload: checkPayload(payload, manifest) }; });
+          });
+      });
+  }
+
+  // The same SHA-256 as the manifest was written with, through the
+  // platform's own digest - one implementation of SHA-256 in the world,
+  // and it is the browser's. An insecure origin (a page opened from
+  // file://) offers no digest at all, so there the byte length is the
+  // only check; every other refusal above still holds.
+  function matches(bytes, hex) {
+    if (!hex || !/^[0-9a-f]{64}$/.test(hex)) refuse('the manifest does not give this file a sha256 digest');
+    if (typeof crypto === 'undefined' || !crypto.subtle || !crypto.subtle.digest) return true;
+    return crypto.subtle.digest('SHA-256', bytes).then(function (buffer) {
+      var got = '';
+      new Uint8Array(buffer).forEach(function (b) { got += ('0' + b.toString(16)).slice(-2); });
+      if (got !== hex) return false;
+      return true;
+    });
+  }
+
+  // ---- install ----
+
+  function install(opened) {
+    var manifest = opened.manifest;
+    var globals = opened.payload.globals;
+    Object.keys(globals).forEach(function (key) { window[key] = globals[key]; });
+    var doc = opened.payload.doc || {};
+    if (doc.title) {
+      document.title = doc.title;
+      setText('#ts-title', doc.title);
+      setText('.game-head h1', doc.title);
+    }
+    if (doc.tagline) {
+      setText('.title-tagline', doc.tagline);
+      setText('.game-head .tagline', doc.tagline);
+    }
+    if (doc.title_art_img) {
+      var screen = document.getElementById('title-screen');
+      if (screen) titleArt(doc.title_art_img, screen);
+    }
+    if (doc.fonts_css) {
+      var style = document.createElement('style');
+      style.id = 'vefr-archive-fonts';
+      style.textContent = doc.fonts_css;
+      document.head.appendChild(style);
+    }
+    // What a test or the console asks after a load: which manifest is in
+    // play, and where it came from.
+    vefrArchive.installed = { manifest: manifest, source: opened.source || 'archive' };
+  }
+
+  // The title picture, without ever handing the archive's string to an HTML
+  // parser. The exporter writes one fixed shape (cli's `_player_title_art`),
+  // so this accepts that shape and nothing else: the `src` is lifted as a
+  // string, it has to be an inline picture of a type an archive may carry,
+  // and the element it ends up in is one the browser builds here. Markup
+  // that is not the exporter's - an `onerror`, an `<svg>`, a second tag - is
+  // simply not installed; nothing an archive carries ever runs.
+  function titleArt(markup, screen) {
+    var parts = TITLE_ART_RE.exec(markup);
+    if (!parts) return null;
+    var src = parts[1];
+    var img = null;
+    if (src && DATA_IMAGE_RE.test(src)) {
+      img = document.createElement('img');
+      img.className = 'ts-art';
+      img.alt = '';
+      img.src = src;
+      screen.insertBefore(img, screen.firstChild);
+    }
+    // The pack's own accent colour, when it named one: two hex values, set
+    // as the two custom properties the exporter's stylesheet reads. No
+    // element is added for it.
+    if (parts[2]) {
+      document.documentElement.style.setProperty('--accent', parts[2]);
+      document.documentElement.style.setProperty('--accent-on', parts[3]);
+    }
+    return img;
+  }
+
+  function setText(selector, text) {
+    var el = document.querySelector(selector);
+    if (el) el.textContent = text;
+  }
+
+  // ---- the two doors: a sibling URL, or a dropped file ----
+
+  function cached(url) {
+    try {
+      var raw = sessionStorage.getItem(CACHE_KEY);
+      if (!raw) return null;
+      var held = JSON.parse(raw);
+      // A different archive is a different game: never install one tab's
+      // game into another's page.
+      return held && (held.url || '') === url ? held.opened : null;
+    } catch (err) {
+      return null;
+    }
+  }
+
+  function remember(url, opened) {
+    var text = JSON.stringify({ url: url, opened: opened });
+    if (text.length > MAX_CACHE_BYTES) {
+      return 'this .vefr is ' + Math.round(text.length / 100000) + ' KB; this Player opens archives up to about ' +
+             Math.round(MAX_CACHE_BYTES / 100000) + ' KB in the browser. Play this game from a woven HTML file instead.';
+    }
+    try {
+      sessionStorage.setItem(CACHE_KEY, text);
+      return null;
+    } catch (err) {
+      return 'this browser refused to hold the game in its session store; play this game from a woven HTML file instead.';
+    }
+  }
+
+  function waiting(message) {
+    var enter = document.getElementById('ts-enter');
+    if (enter) enter.disabled = true;
+    var tagline = document.querySelector('.title-tagline');
+    if (tagline) tagline.textContent = message;
+    // Begin answers a key as well as its button, so the keys wait too.
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter' || event.key === ' ' || event.key === 'f' ||
+          event.key === 'F' || event.key === 'e' || event.key === 'E') {
+        event.stopImmediatePropagation();
+        event.preventDefault();
+      }
+    }, true);
+  }
+
+  function reload() {
+    window.location.reload();
+  }
+
+  function loadBuffer(url, buffer, source) {
+    return openArchive(buffer).then(function (opened) {
+      opened.source = source;
+      var complaint = remember(url, opened);
+      if (complaint) {
+        waiting(complaint);
+        return;
+      }
+      reload();
+    }).catch(function (err) {
+      waiting(String(err && err.message ? err.message : err));
+    });
+  }
+
+  function fromUrl(url) {
+    waiting('opening the game…');
+    return fetch(url).then(function (response) {
+      if (!response.ok) throw new Error('the archive at ' + url + ' answered ' + response.status);
+      return response.arrayBuffer();
+    }).then(function (buffer) {
+      return loadBuffer(url, buffer, 'network');
+    }).catch(function (err) {
+      waiting(String(err && err.message ? err.message : err));
+      listenForDrops();
+    });
+  }
+
+  function fromDrop(file) {
+    if (!/\.vefr$/i.test(file.name)) {
+      waiting('that is not a .vefr archive');
+      return;
+    }
+    waiting('opening the game…');
+    file.arrayBuffer().then(function (buffer) {
+      // The cache is keyed by what this page asks for, so the game that
+      // was just dropped is the one the reload installs.
+      return loadBuffer(window.vefrArchiveUrl || '', buffer, 'file');
+    }).catch(function (err) {
+      waiting(String(err && err.message ? err.message : err));
+    });
+  }
+
+  function listenForDrops() {
+    var screen = document.getElementById('title-screen');
+    if (screen && !document.getElementById('vefr-archive-drop')) {
+      var hint = document.createElement('p');
+      hint.id = 'vefr-archive-drop';
+      hint.className = 'ts-byline';
+      hint.textContent = 'or drop a .vefr archive anywhere on this page';
+      screen.appendChild(hint);
+    }
+    window.addEventListener('dragover', function (event) { event.preventDefault(); });
+    window.addEventListener('drop', function (event) {
+      event.preventDefault();
+      var files = event.dataTransfer && event.dataTransfer.files;
+      if (files && files.length) fromDrop(files[0]);
+    });
+  }
+
+  function start() {
+    var params = new URLSearchParams(window.location.search);
+    // An explicit `?vefr=` wins over the archive this build was written
+    // beside, so one Player file can open any archive you point it at.
+    var url = params.get('vefr') || window.vefrArchiveUrl || '';
+    var held = cached(url);
+    if (held) {
+      // The fast path: the game is already in this tab, so every part
+      // below sees a finished world as it parses.
+      install(held);
+      return held;
+    }
+    if (url) {
+      fromUrl(url);
+    } else if (window.vefrArchiveUrl) {
+      listenForDrops();
+    }
+    return null;
+  }
+
+  return {
+    installed: null,
+    openArchive: openArchive,
+    install: install,
+    cached: cached,
+    start: start,
+    waiting: waiting,
+    schemaVersion: SCHEMA_VERSION
+  };
+})();
+
+// Started outside, because `install` records what it installed on this
+// object and the object only exists once the closure has returned.
+try {
+  vefrArchive.start();
+} catch (err) {
+  vefrArchive.waiting(String(err && err.message ? err.message : err));
+}
 // ---- inlined world pack ----
 window.VEFR_WORLD = {{world_json}};
 // Ground tiles, keyed by map symbol: the same picture tiles the
@@ -1297,7 +1888,356 @@ function wirePlayerSettings() {
 
 applyPlayerSettings();
 wirePlayerSettings();
-// ---- endpoint join + post ----
+// ---- keybinds: the one table every named surface's keys come from ----
+// Rylee's decision on vefr#508 (2026-10-16): the keys for gameplay,
+// reading, the Journal, the menu and the keys that mean the same thing
+// on every surface (the always-layer) are the player's to change. This
+// part is the table, and the Controls panel that edits it; the one
+// keydown handler the player already has (510-rules-closure-surfaces.js)
+// asks the table, so there is no second input system - a key the player
+// chooses travels the same road the default always did.
+//
+// The defaults are the keys the game shipped with, and they are the
+// answer until the player changes one. A change replaces its action's
+// keys, and Reset puts every default back. The save is the DELTA from
+// the defaults - only the actions the player actually changed - so a
+// save written before this part existed loads as itself (no row, so
+// the defaults), and a row some other version wrote that this one does
+// know nothing about is kept but never read.
+//
+// Three keys are not the table's to give, and the panel says so
+// plainly when someone reaches for one: E keeps answering for Interact
+// on every surface as the unadvertised alias (Rylee, 2026-10-14, the
+// one decision tests/test_interact_key_name.py keeps); Space and Enter
+// stay the browser's own button keys, which every focused control
+// answers to first; and the digits stay on the fight verbs that print
+// them (#463).
+//
+// One keybinds save, not one per world: the reading and sound keys
+// carry each world's own answer, but the keys are the player's hands,
+// and the hands play every world the same way.
+var KEYBIND_KEY = 'vefr-keybinds';
+
+// The contexts the player reads in the Controls panel, in the order
+// their rows appear. `always` is the always-layer: the keys that mean
+// the same thing on every surface.
+var KEYBIND_CONTEXTS = [
+  { id: 'always', name: 'Everywhere' },
+  { id: 'gameplay', name: 'Gameplay' },
+  { id: 'reading', name: 'Reading' },
+  { id: 'journal', name: 'Journal' },
+  { id: 'menu', name: 'Menu' }
+];
+
+// Which surfaces a context's keys are live on. Two actions collide when
+// their contexts share a surface: the walking keys (gameplay, the
+// Journal, the menu, and always) are all pressed on the same map, the
+// reading keys and the menu key are pressed with a note open. Gameplay
+// and reading share nothing, which is why A can move left on the map
+// and turn the page back in a note, as it always has.
+var KEYBIND_SURFACES = {
+  always: ['walk', 'read'],
+  gameplay: ['walk'],
+  reading: ['read'],
+  journal: ['walk'],
+  menu: ['walk', 'read']
+};
+
+// The one list of actions. `keys` are the defaults, the keys the game
+// shipped with; a player's choice replaces the whole row for that one
+// action. The labels are the player's own words, the same words the
+// How-to-play panel and the buttons use.
+var KEYBIND_ACTIONS = [
+  { id: 'interact', context: 'always', label: 'Use what is near you',
+    keys: ['f'] },
+  { id: 'up', context: 'gameplay', label: 'Move up',
+    keys: ['ArrowUp', 'w'] },
+  { id: 'down', context: 'gameplay', label: 'Move down',
+    keys: ['ArrowDown', 's'] },
+  { id: 'left', context: 'gameplay', label: 'Move left',
+    keys: ['ArrowLeft', 'a'] },
+  { id: 'right', context: 'gameplay', label: 'Move right',
+    keys: ['ArrowRight', 'd'] },
+  { id: 'whisper', context: 'gameplay', label: 'Listen for a rumor',
+    keys: ['q'] },
+  { id: 'bag', context: 'gameplay', label: 'Open the bag',
+    keys: ['b'] },
+  { id: 'explore', context: 'gameplay', label: 'Walk the unexplored dark',
+    keys: ['o'] },
+  { id: 'fog', context: 'gameplay', label: 'Turn the dark on and off',
+    keys: ['v'] },
+  { id: 'pageBack', context: 'reading', label: 'Turn the page back',
+    keys: ['ArrowLeft', 'a'] },
+  { id: 'pageForward', context: 'reading', label: 'Turn the page forward',
+    keys: ['ArrowRight', 'd'] },
+  { id: 'journal', context: 'journal', label: 'Open the Journal',
+    keys: ['j'] },
+  { id: 'menu', context: 'menu', label: 'Open the menu, and close what is open',
+    keys: ['Escape'] }
+];
+
+function keybindAction(id) {
+  for (var i = 0; i < KEYBIND_ACTIONS.length; i++) {
+    if (KEYBIND_ACTIONS[i].id === id) return KEYBIND_ACTIONS[i];
+  }
+  return null;
+}
+
+function keybindSharesSurface(a, b) {
+  var mine = KEYBIND_SURFACES[a] || [], theirs = KEYBIND_SURFACES[b] || [];
+  for (var i = 0; i < mine.length; i++) {
+    if (theirs.indexOf(mine[i]) !== -1) return true;
+  }
+  return false;
+}
+
+// A single letter answers to both its cases, exactly as the spelled-out
+// checks always did ('f' and 'F', 'w' and 'W'); anything longer is the
+// name the browser gives it ('ArrowUp', 'Escape') and matches exactly.
+function keybindNormalize(key) {
+  return (key && key.length === 1) ? key.toLowerCase() : key;
+}
+
+// The saved delta, read fresh every call and never cached, like the
+// reading keys: a save that arrives late must still be found. A save
+// that is not an object (blocked storage, a corrupted blob) reads as
+// empty and every action keeps its defaults.
+function keybindSaved() {
+  var saved = store.getJSON(KEYBIND_KEY, {});
+  if (!saved || typeof saved !== 'object' || Array.isArray(saved)) return {};
+  return saved;
+}
+
+// This sitting's choices, kept beside the save so a change is felt at
+// once and the save is only written when a change is made.
+var keybindChosen = {};
+
+// The keys one action answers to right now: the player's choice, else
+// the saved row, else the defaults. A row that is not a list of strings
+// is not a row, and the defaults answer.
+function keybindKeys(id) {
+  var a = keybindAction(id);
+  if (!a) return [];
+  var own = keybindChosen[id] || keybindSaved()[id];
+  if (Array.isArray(own) && own.length) {
+    var keys = own.filter(function (k) { return typeof k === 'string' && k; });
+    if (keys.length) return keys;
+  }
+  return a.keys.slice();
+}
+
+// Does `key` answer for `action` right now? The question the one
+// keydown handler asks; nothing else decides what a press does.
+function keybindOn(action, key) {
+  if (typeof key !== 'string' || !key) return false;
+  var want = keybindNormalize(key);
+  var keys = keybindKeys(action);
+  for (var i = 0; i < keys.length; i++) {
+    if (keybindNormalize(keys[i]) === want) return true;
+  }
+  return false;
+}
+
+// Write the delta: every action whose keys are not its defaults, and
+// every row another version saved that this one does not know (kept as
+// it came - not this version's place to erase it). Nothing changed
+// means nothing saved, so a player who never opens the panel never
+// writes a key.
+function keybindApply() {
+  var saved = keybindSaved();
+  var delta = {};
+  Object.keys(saved).forEach(function (id) {
+    if (!keybindAction(id) && Array.isArray(saved[id])) delta[id] = saved[id];
+  });
+  KEYBIND_ACTIONS.forEach(function (a) {
+    var now = keybindKeys(a.id);
+    if (JSON.stringify(now) !== JSON.stringify(a.keys)) delta[a.id] = now;
+  });
+  if (Object.keys(delta).length) store.setJSON(KEYBIND_KEY, delta);
+  else store.remove(KEYBIND_KEY);
+}
+
+// The words a key reads as, on the panel and on the buttons' own key
+// letters. Single letters read uppercase, the way the shipped key
+// letters always have.
+function keybindKeyName(key) {
+  if (key === ' ') return 'Space';
+  if (key === 'ArrowUp') return 'Up arrow';
+  if (key === 'ArrowDown') return 'Down arrow';
+  if (key === 'ArrowLeft') return 'Left arrow';
+  if (key === 'ArrowRight') return 'Right arrow';
+  return key.length === 1 ? key.toUpperCase() : key;
+}
+
+// Why a key cannot be given to an action, in one plain sentence, or
+// null when it can. The three reserved answers first (E, Space and
+// Enter, the digits), then a key another action already answers to on
+// a surface this one shares - the collision warning, with the way out
+// in the same breath: choose a different key.
+function keybindRefused(id, key) {
+  var norm = keybindNormalize(key);
+  if (norm === 'e') return 'That key is kept for Interact. Choose a different key.';
+  if (norm === ' ' || norm === 'Enter')
+    return 'Space and Enter always answer for Interact too. Choose a different key.';
+  if (/^[1-9]$/.test(norm))
+    return 'The number keys stay on the fight verbs printed on them. Choose a different key.';
+  var mine = keybindAction(id);
+  if (!mine) return 'That action is not one this game knows.';
+  for (var i = 0; i < KEYBIND_ACTIONS.length; i++) {
+    var other = KEYBIND_ACTIONS[i];
+    if (other.id === id) continue;
+    if (!keybindSharesSurface(mine.context, other.context)) continue;
+    if (keybindOn(other.id, key)) {
+      return keybindKeyName(key) + ' already answers for ' + other.label
+        + '. Choose a different key.';
+    }
+  }
+  return null;
+}
+
+// The buttons' key letters follow the table, so what a player chose is
+// what the screen says (the shipped letters are the defaults, so
+// nothing moves until something is changed).
+function updateKeyLetters() {
+  function letter(id) {
+    var keys = keybindKeys(id);
+    return keys.length ? keybindKeyName(keys[0]) : '';
+  }
+  function set(btnId, action, tip) {
+    var btn = document.getElementById(btnId);
+    if (!btn) return;
+    var name = letter(action);
+    if (!name) return;
+    var kbd = btn.querySelector('kbd');
+    if (kbd) kbd.textContent = name;
+    if (tip) btn.title = tip + ' (' + name + ')';
+  }
+  set('interact', 'interact', null);
+  set('talk', 'interact', 'Talk');
+  set('whisper', 'whisper', 'Listen');
+  set('bagbtn', 'bag', 'Bag');
+  set('explore', 'explore', 'Explore');
+}
+
+function keybindSay(msg) {
+  var el = document.getElementById('keybind-live');
+  if (el) el.textContent = msg;
+}
+
+function keybindRefreshRows() {
+  var rows = document.querySelectorAll('[data-keybind-keys]');
+  for (var i = 0; i < rows.length; i++) {
+    var keys = keybindKeys(rows[i].getAttribute('data-keybind-keys'));
+    rows[i].textContent = keys.map(keybindKeyName).join(' or ');
+  }
+}
+
+// ---- the Controls panel ----
+// The rows are built from the one table, so the panel can never list an
+// action the keydown handler does not ask about. Changing a key is one
+// press: the Change button listens for the next keydown itself, on the
+// capture side of the document so the game's own handler never sees the
+// key that is being offered. Esc stands the capture down and changes
+// nothing; Tab stands it down too and keeps moving the focus.
+var keybindCapturing = null;   // {id: action id, btn: the Change button}
+
+function keybindEndCapture() {
+  if (!keybindCapturing) return;
+  keybindCapturing.btn.textContent = 'Change';
+  keybindCapturing = null;
+}
+
+function keybindBegin(id, btn) {
+  keybindEndCapture();
+  keybindCapturing = { id: id, btn: btn };
+  btn.textContent = 'Press a new key';
+  var a = keybindAction(id);
+  keybindSay('Press a new key for ' + (a ? a.label : id) + '. Esc cancels.');
+}
+
+document.addEventListener('keydown', function (e) {
+  if (!keybindCapturing) return;
+  if (e.key === 'Tab') { keybindEndCapture(); return; }
+  e.preventDefault();
+  e.stopPropagation();
+  var id = keybindCapturing.id;
+  var a = keybindAction(id);
+  if (e.key === 'Escape') {
+    keybindEndCapture();
+    keybindSay('Cancelled. Nothing was changed.');
+    return;
+  }
+  // A modifier on its own is half a press; the capture keeps waiting.
+  if (e.key === 'Shift' || e.key === 'Control' || e.key === 'Alt'
+      || e.key === 'Meta' || e.key === 'Dead') return;
+  var why = keybindRefused(id, e.key);
+  if (why) {
+    keybindEndCapture();
+    keybindSay(why);
+    return;
+  }
+  keybindChosen[id] = [keybindNormalize(e.key)];
+  keybindApply();
+  keybindEndCapture();
+  keybindRefreshRows();
+  updateKeyLetters();
+  keybindSay((a ? a.label : id) + ' now answers to ' + keybindKeyName(e.key) + '.');
+}, true);
+
+function wireKeybinds() {
+  var list = document.getElementById('keybind-list');
+  if (!list) return;
+  KEYBIND_CONTEXTS.forEach(function (ctx) {
+    var head = document.createElement('h3');
+    head.className = 'keybind-group';
+    head.textContent = ctx.name;
+    list.appendChild(head);
+    KEYBIND_ACTIONS.forEach(function (a) {
+      if (a.context !== ctx.id) return;
+      var row = document.createElement('div');
+      row.className = 'keybind-row';
+      var label = document.createElement('span');
+      label.className = 'keybind-label';
+      label.textContent = a.label;
+      var keys = document.createElement('span');
+      keys.className = 'keybind-keys';
+      keys.setAttribute('data-keybind-keys', a.id);
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'cta keybind-change';
+      btn.setAttribute('data-keybind', a.id);
+      btn.setAttribute('aria-label', 'Change the key for ' + a.label);
+      btn.textContent = 'Change';
+      btn.addEventListener('click', function () { keybindBegin(a.id, btn); });
+      row.appendChild(label);
+      row.appendChild(keys);
+      row.appendChild(btn);
+      list.appendChild(row);
+    });
+  });
+  keybindRefreshRows();
+  var reset = document.getElementById('keybind-reset');
+  if (reset) reset.addEventListener('click', function () {
+    keybindChosen = {};
+    store.remove(KEYBIND_KEY);
+    keybindRefreshRows();
+    updateKeyLetters();
+    keybindSay('Every key is back the way it came.');
+    reset.focus();
+  });
+}
+
+// A harness-readable snapshot of the table as it stands, read-only (the
+// precedent of window.VEFR_COMBAT): what each action answers to right
+// now, without pressing anything.
+window.VEFR_KEYBINDS = function () {
+  var out = {};
+  KEYBIND_ACTIONS.forEach(function (a) { out[a.id] = keybindKeys(a.id).slice(); });
+  return out;
+};
+
+wireKeybinds();
+updateKeyLetters();// ---- endpoint join + post ----
 // The config URL is player-entered: it may or may not end in /v1 (the
 // placeholder shows one), may carry trailing slashes. Join once, here,
 // so no caller can ever produce /v1/v1 again.
@@ -14439,32 +15379,39 @@ function setupTown() {
   document.addEventListener('keydown', function (e) {
     if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
     // Any key but the toggle itself halts an autoexplore walk.
-    if (exploring() && e.key !== 'o' && e.key !== 'O') exploreStop('Stopped.');
-    // F is the one name for Interact (vefr#467); E answers to it too, so
-    // a player who learned the old key is never stuck, but no hint, label
-    // or key letter names it.
+    if (exploring() && !keybindOn('explore', e.key)) exploreStop('Stopped.');
+    // Interact's keys come from the one keybinds table (076-keybinds.js,
+    // vefr#508): the player's own choice for it, which is F until they
+    // make one. E keeps answering to Interact on every surface as the
+    // unadvertised alias (Rylee, 2026-10-14 - F is the one name on
+    // screen and in the docs, and a player who learned the old key is
+    // never stuck). Space and Enter ride along because every focused
+    // button answers to them first.
     // The Interact keys keep the loop going: while a note or a speech box
     // is up they CONTINUE it (next page, then close) instead of needing a
     // click. A focused button handles its own Enter and Space, and a held
     // key never carries on into the next thing.
-    var interactKey = e.key === 'e' || e.key === 'E' || e.key === 'f' || e.key === 'F'
+    var interactKey = keybindOn('interact', e.key) || e.key === 'e' || e.key === 'E'
       || e.key === ' ' || e.key === 'Enter';
     var nativeClick = e.target && e.target.tagName === 'BUTTON'
       && (e.key === ' ' || e.key === 'Enter');
-    // The end card (complete-act) wins over everything: Interact and Escape
-    // continue the game; the buttons handle their own Enter and Space.
+    // The end card (complete-act) wins over everything: Interact and the
+    // menu key continue the game; the buttons handle their own Enter and
+    // Space.
     var actEndCard = document.getElementById('act-end');
     if (actEndCard && !actEndCard.hidden) {
-      if (e.key === 'Escape' || (interactKey && !nativeClick)) {
+      if (keybindOn('menu', e.key) || (interactKey && !nativeClick)) {
         e.preventDefault();
         if (!e.repeat) closeActEnd();
       }
       return;
     }
-    // While the reader is open, its keys win and movement stops.
+    // While the reader is open, its keys win and movement stops: the
+    // pages answer to the reading keys, and Interact and the menu key
+    // continue and close.
     var readerOpen = !document.getElementById('reader').hidden;
     if (readerOpen) {
-      if (e.key === 'Escape') { e.preventDefault(); closeReader(); }
+      if (keybindOn('menu', e.key)) { e.preventDefault(); closeReader(); }
       else if (interactKey && !nativeClick) {
         e.preventDefault();
         if (!e.repeat) {
@@ -14472,15 +15419,16 @@ function setupTown() {
           document.getElementById(nextBtn.disabled ? 'reader-close' : 'reader-next').click();
         }
       }
-      else if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') { e.preventDefault(); readerTurn(-1); }
-      else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') { e.preventDefault(); readerTurn(1); }
+      else if (keybindOn('pageBack', e.key)) { e.preventDefault(); readerTurn(-1); }
+      else if (keybindOn('pageForward', e.key)) { e.preventDefault(); readerTurn(1); }
       return;
     }
-    // While the Trade panel is open, Escape closes it and movement stops.
+    // While the Trade panel is open, the menu key and Interact close it
+    // and movement stops.
     var tradeOpen = !document.getElementById('trade').hidden;
     if (tradeOpen) {
-      if (e.key === 'Escape') { e.preventDefault(); closeTrade(); }
-      else if ((e.key === 'e' || e.key === 'E' || e.key === 'f' || e.key === 'F') && !e.repeat) {
+      if (keybindOn('menu', e.key)) { e.preventDefault(); closeTrade(); }
+      else if ((keybindOn('interact', e.key) || e.key === 'e' || e.key === 'E') && !e.repeat) {
         e.preventDefault(); closeTrade();
       }
       return;
@@ -14489,14 +15437,14 @@ function setupTown() {
     // movement stops, exactly as they do for the Trade panel above.
     var identifyOpen = !document.getElementById('identify').hidden;
     if (identifyOpen) {
-      if (e.key === 'Escape') { e.preventDefault(); closeIdentify(); }
-      else if ((e.key === 'e' || e.key === 'E' || e.key === 'f' || e.key === 'F') && !e.repeat) {
+      if (keybindOn('menu', e.key)) { e.preventDefault(); closeIdentify(); }
+      else if ((keybindOn('interact', e.key) || e.key === 'e' || e.key === 'E') && !e.repeat) {
         e.preventDefault(); closeIdentify();
       }
       return;
     }
     var menuOpen = !document.getElementById('menu').hidden;
-    if (e.key === 'Escape') {
+    if (keybindOn('menu', e.key)) {
       closeEnemyVerbs();
       var soBody = document.getElementById('startover-body');
       if (menuOpen && soBody && !soBody.hidden) {
@@ -14517,20 +15465,22 @@ function setupTown() {
     if (interactKey && e.repeat) return;
     // A focused button handles its own Enter and Space.
     var onButton = e.target && e.target.tagName === 'BUTTON';
-    if (e.key === 'ArrowUp') { e.preventDefault(); move(0, -1); }
-    else if (e.key === 'ArrowDown') { e.preventDefault(); move(0, 1); }
-    else if (e.key === 'ArrowLeft') { e.preventDefault(); move(-1, 0); }
-    else if (e.key === 'ArrowRight') { e.preventDefault(); move(1, 0); }
-    else if (e.key === 'w' || e.key === 'W') { e.preventDefault(); move(0, -1); }
-    else if (e.key === 's' || e.key === 'S') { e.preventDefault(); move(0, 1); }
-    else if (e.key === 'a' || e.key === 'A') { e.preventDefault(); move(-1, 0); }
-    else if (e.key === 'd' || e.key === 'D') { e.preventDefault(); move(1, 0); }
+    // The walking keys, each through the one table: the keys the player
+    // chose for the action (Menu > Controls, vefr#508), which are the
+    // defaults the game shipped with until they choose. A choice replaces
+    // its action's keys; E stays on Interact's row as the unadvertised
+    // alias, so both its letters still reach the one verb.
+    if (keybindOn('up', e.key)) { e.preventDefault(); move(0, -1); }
+    else if (keybindOn('down', e.key)) { e.preventDefault(); move(0, 1); }
+    else if (keybindOn('left', e.key)) { e.preventDefault(); move(-1, 0); }
+    else if (keybindOn('right', e.key)) { e.preventDefault(); move(1, 0); }
     else if (e.key === 'e' || e.key === 'E') doInteract();
-    else if (e.key === 'f' || e.key === 'F') doInteract();
-    else if (e.key === 'q' || e.key === 'Q') document.getElementById('whisper').click();
-    else if (e.key === 'b' || e.key === 'B') { if (window.openBag) window.openBag(); }
-    else if (e.key === 'o' || e.key === 'O') startExplore();
-    else if (e.key === 'v' || e.key === 'V') toggleFog();
+    else if (keybindOn('interact', e.key)) doInteract();
+    else if (keybindOn('whisper', e.key)) document.getElementById('whisper').click();
+    else if (keybindOn('bag', e.key)) { if (window.openBag) window.openBag(); }
+    else if (keybindOn('explore', e.key)) startExplore();
+    else if (keybindOn('fog', e.key)) toggleFog();
+    else if (keybindOn('journal', e.key)) window.openMenu();
     // The fight verbs answer 1, 2, 3 - the digits printed on them
     // (#463). The row's own order is the key's, and a surface with no
     // row shown has no verb to press, so the keys do nothing there.

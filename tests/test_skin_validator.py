@@ -425,7 +425,16 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # rules in 020-style.css changed, 2026-10-16; measured twice on the host in separate processes, readings equal:
 #   3456e77a0ae5e9d4df33cfc70297aaf8eb1c642f3274be207a6d4134a4db9f23
 #   3456e77a0ae5e9d4df33cfc70297aaf8eb1c642f3274be207a6d4134a4db9f23
-NO_SKIN_WEAVE_SHA256 = "3456e77a0ae5e9d4df33cfc70297aaf8eb1c642f3274be207a6d4134a4db9f23"
+# The player's own keys for every named surface (vefr#508): the new part 076-keybinds.js, plus the
+# 510-rules-closure-surfaces.js keybind block, 030-shell.html and 020-style.css, 2026-10-16; measured
+# twice in separate processes, readings equal:
+#   e51fb64aa887744155f1b02dfd4947970f77a2362d820e27d20df7b63ad1f01e
+#   e51fb64aa887744155f1b02dfd4947970f77a2362d820e27d20df7b63ad1f01e
+# The archive loader (vefr#455/#519) on top of the keybinds (#517), 2026-10-16; measured twice on the host in
+# separate processes after merging main, readings equal:
+#   df53bf59d89d3ee6afe1289fe04e317714379fa9d1b994197d55f0c19ec47782
+#   df53bf59d89d3ee6afe1289fe04e317714379fa9d1b994197d55f0c19ec47782
+NO_SKIN_WEAVE_SHA256 = "df53bf59d89d3ee6afe1289fe04e317714379fa9d1b994197d55f0c19ec47782"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():
