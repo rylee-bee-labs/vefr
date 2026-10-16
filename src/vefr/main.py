@@ -1343,7 +1343,8 @@ def launcher_games():
     found: list[tuple[float, str, str]] = []
     if out_dir.is_dir():
         for p in out_dir.glob("*.html"):
-            if not p.is_file():
+            # The same name rule the door applies (_woven_file), so nothing is listed that would 404.
+            if not p.is_file() or not _WEAVE_NAME_RE.fullmatch(p.name):
                 continue
             found.append((p.stat().st_mtime, p.name, _woven_title(p)))
     # Newest weave first, then by name; the launcher shows a pack's

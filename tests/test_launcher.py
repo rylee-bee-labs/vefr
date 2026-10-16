@@ -200,3 +200,12 @@ def test_the_launcher_and_the_studio_pane_open_the_same_way(woven):
     for header in ("content-disposition", "content-security-policy"):
         assert launcher.headers[header] == studio.headers[header], header
     assert launcher.content == studio.content
+
+def test_the_list_never_offers_a_file_the_door_refuses(tmp_path, monkeypatch):
+    """A file in the weave dir whose name the strict lookup refuses is not listed (#525 review)."""
+    import vefr.main as m
+    monkeypatch.setattr(m, "_weave_output_dir", lambda: tmp_path)
+    (tmp_path / ".hidden.html").write_text("<title>Hidden</title>", encoding="utf-8")
+    client = TestClient(app)
+    names = [g["name"] for g in client.get("/api/launcher/games").json()["games"]]
+    assert ".hidden.html" not in names
