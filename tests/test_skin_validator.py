@@ -438,7 +438,14 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # 2026-10-16; measured twice on the host in separate processes after merging main, readings equal:
 #   6234996f734f57e47389b63ea6c181b3b54a8e6a0ee36ab761c4397f1bac7886
 #   6234996f734f57e47389b63ea6c181b3b54a8e6a0ee36ab761c4397f1bac7886
-NO_SKIN_WEAVE_SHA256 = "6234996f734f57e47389b63ea6c181b3b54a8e6a0ee36ab761c4397f1bac7886"
+# Damage types, resistances and burning (vefr#497, slice 1) on top of the ending tile (#520): the new part
+# 425-the-elements.js, plus 410/430/480/510, 030-shell.html and 020-style.css. The sample declares no
+# resist, no immune and no typed hazard, so its BAKE is byte-for-byte what it was - measured at
+# 6234996f... after the engine half alone - and only the player's own source moved; 2026-10-16; measured
+# twice in separate processes, readings equal:
+#   78635fd8140a1f9823fb0f07b5438f3ae8a15bc576340cc86afe37ca079fd339
+#   78635fd8140a1f9823fb0f07b5438f3ae8a15bc576340cc86afe37ca079fd339
+NO_SKIN_WEAVE_SHA256 = "78635fd8140a1f9823fb0f07b5438f3ae8a15bc576340cc86afe37ca079fd339"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

@@ -623,6 +623,7 @@
     fogOn = fogEnabled();
     fogRadius = (town.fog && town.fog.radius) || 6;
     resetLight();
+    resetStatuses();   // a burn does not travel either (vefr#497)
     loadTiles();
     loadFog();
     seeNow();
@@ -1173,7 +1174,10 @@
           // struck), which changes nothing and therefore costs nothing.
           if (takeVerb(verbs[0][0], verbs[0][1], foe)) {
             lightTick();
-            enemyTurn();
+            // A burn that finished the hero is a death, and it ends the turn
+            // there: the monsters do not take a second turn on a hero who
+            // has already woken elsewhere (vefr#497).
+            if (!statusTurn()) enemyTurn();
           }
         } else {
           openEnemyVerbs(foe);
@@ -1301,7 +1305,10 @@
       closeEnemyVerbs();   // a bump closes any open enemy menu
       if (struck !== false) {
         lightTick();
-        enemyTurn();
+        // A burn that finished the hero is a death, and it ends the turn
+        // there: the monsters do not take a second turn on a hero who
+        // has already woken elsewhere (vefr#497).
+        if (!statusTurn()) enemyTurn();
       }
       heroSettleSoon();
       return;
@@ -1341,7 +1348,10 @@
     seeNow();
     updateUse();
     lightTick();
-    enemyTurn();
+    // A burn that finished the hero is a death, and it ends the turn
+    // there: the monsters do not take a second turn on a hero who
+    // has already woken elsewhere (vefr#497).
+    if (!statusTurn()) enemyTurn();
     updateVerbRow();   // the monsters moved: the fight buttons follow
   }
 

@@ -131,7 +131,10 @@
     if (VERB_TARGET) {
       if (takeVerb(b.dataset.verb, b.dataset.label, VERB_TARGET) !== false) {
         lightTick();
-        enemyTurn();
+        // A burn that finished the hero is a death, and it ends the turn
+        // there: the monsters do not take a second turn on a hero who
+        // has already woken elsewhere (vefr#497).
+        if (!statusTurn()) enemyTurn();
       }
       closeEnemyVerbs();
       updateUse();
