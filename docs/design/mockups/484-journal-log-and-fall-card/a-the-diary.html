@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>vefr#484 mockup A — The Diary</title>
+<style>
+  /* Self-contained: no network, no scripts, no images. Storybook tokens
+     (docs/design/storybook/tokens.css), Georgia standing in for the game fonts. */
+  :root {
+    --bg: #14110f; --board: #0f0d0b;
+    --surface: #1f1a16; --surface-2: #2a231d;
+    --fg: #efe6d6; --fg-2: #d8c9b0; --muted: #b9ab95;
+    --border: rgba(216, 170, 78, 0.28); --border-soft: rgba(239, 230, 214, 0.12);
+    --accent: #d8aa4e; --accent-on: #1b1206; --health: #d0704f;
+    --serif: Georgia, 'Times New Roman', serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--board); color: var(--fg);
+         font: 16px/1.5 var(--serif); }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 20px 80px; }
+  .kicker { font: 700 13px var(--serif); letter-spacing: 0.14em;
+            text-transform: uppercase; color: var(--accent); margin: 0 0 6px; }
+  h1 { font: 400 30px var(--serif); margin: 0 0 10px; }
+  .intro { max-width: 68ch; color: var(--fg-2); margin: 0 0 8px; }
+  .intro strong { color: var(--fg); font-weight: 700; }
+  nav.jump { margin: 14px 0 34px; font-size: 14px; color: var(--muted); }
+  nav.jump a { color: var(--accent); }
+  h2 { font: 700 19px var(--serif); letter-spacing: 0.03em; margin: 44px 0 6px; }
+  .caption { max-width: 72ch; font-size: 14px; color: var(--muted); margin: 10px 0 0; }
+  .caption strong { color: var(--fg-2); }
+  /* ---- screens ---- */
+  .frame { position: relative; overflow: hidden; background: var(--bg);
+           border: 2px solid #000; box-shadow: 0 24px 60px rgba(0,0,0,0.55); }
+  .phone { width: 390px; height: 844px; border-radius: 34px; }
+  .dt { width: 1000px; height: 640px; border-radius: 10px; }
+  /* a stand-in for the painted world: warm ground, a tile grid, a few props */
+  .world { position: absolute; inset: 0; background-color: #241d14;
+    background-image:
+      linear-gradient(rgba(0,0,0,0.16) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,0,0,0.16) 1px, transparent 1px);
+    background-size: 52px 52px; }
+  .prop { position: absolute; border-radius: 3px; }
+  .prop.roof { background: #993f22; box-shadow: inset 0 -6px 0 #73301a; }
+  .prop.wall { background: #5f4f39; }
+  .prop.pond { background: #3f4a44; border-radius: 50%; }
+  .prop.tree { background: #7f7944; border-radius: 50% 50% 40% 40%; }
+  .prop.stair { background: #402c20; }
+  .hero { position: absolute; width: 14px; height: 20px; background: #e19747;
+          border: 1px solid #2b2118; border-radius: 3px; }
+  .dim { position: absolute; inset: 0; background: rgba(6,7,9,0.66); }
+  /* HUD, in the approved storybook layout */
+  .hud { position: absolute; inset: 0; }
+  .hp { position: absolute; left: 12px; top: 12px; background: rgba(17,19,23,0.86);
+        border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px;
+        font: 700 13px var(--serif); letter-spacing: 0.08em; text-transform: uppercase; }
+  .hp b { font-size: 16px; letter-spacing: 0; }
+  .menu-btn { position: absolute; right: 12px; top: 12px; min-width: 48px; min-height: 48px;
+        background: rgba(17,19,23,0.86); border: 1px solid var(--border); color: var(--fg);
+        border-radius: 4px; font: 700 13px var(--serif); letter-spacing: 0.08em;
+        text-transform: uppercase; display: flex; align-items: center; justify-content: center; }
+  .msgline { position: absolute; left: 50%; top: 74px; transform: translateX(-50%);
+        background: rgba(17,19,23,0.86); border: 1px solid var(--border-soft);
+        border-radius: 999px; padding: 4px 14px; font-size: 16px; color: var(--fg);
+        white-space: nowrap; }
+  .joy { position: absolute; left: 30px; bottom: 120px; width: 96px; height: 96px;
+         border: 2px solid rgba(239,230,214,0.18); border-radius: 50%; }
+  .cluster { position: absolute; right: 14px; bottom: 16px; display: grid;
+             grid-template-columns: 72px 56px; gap: 10px; justify-items: center; }
+  .cluster .smart { grid-column: 1; width: 72px; height: 72px; border-radius: 50%;
+      background: var(--accent); color: var(--accent-on); display: flex;
+      flex-direction: column; align-items: center; justify-content: center;
+      font: 700 15px var(--serif); }
+  .cluster .smart small { font: 700 11px var(--serif); opacity: 0.8; }
+  .cluster .bag, .cluster .b { width: 56px; height: 56px; border-radius: 50%;
+      background: rgba(17,19,23,0.86); border: 1px solid var(--border); color: var(--fg);
+      display: flex; align-items: center; justify-content: center;
+      font: 700 13px var(--serif); }
+  .bag { grid-column: 2; grid-row: 1; }
+  .b { grid-column: 2; grid-row: 2; }
+  /* carved panels */
+  .carved { background: var(--surface); border: 1px solid var(--border-soft);
+            border-radius: 6px; box-shadow: inset 0 0 0 5px var(--surface),
+            inset 0 0 0 6px rgba(239,230,214,0.10); }
+  .cta { min-height: 48px; display: inline-flex; align-items: center; justify-content: center;
+         padding: 8px 18px; border-radius: 4px; border: 1px solid var(--border-soft);
+         background: transparent; color: var(--fg); font: 700 14px var(--serif);
+         letter-spacing: 0.08em; text-transform: uppercase; }
+  .cta--gold { background: var(--accent); color: var(--accent-on); border-color: transparent; }
+  .cta:focus-visible, .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  /* ---- the Journal sheet (variant A: a diary, newest place first) ---- */
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; top: 130px;
+           border-radius: 18px 18px 0 0; padding: 16px 16px 14px; display: flex;
+           flex-direction: column; gap: 10px; }
+  .sheet-head { display: flex; align-items: center; justify-content: space-between; }
+  .sheet-head h3 { font: 400 22px var(--serif); margin: 0; }
+  .sheet-close { min-width: 48px; min-height: 48px; background: var(--surface-2);
+                 border: 1px solid var(--border-soft); border-radius: 4px;
+                 color: var(--fg); font: 700 13px var(--serif); letter-spacing: 0.08em;
+                 text-transform: uppercase; }
+  .listen { align-self: flex-start; }
+  .diary { margin: 0; padding: 0; list-style: none; overflow-y: auto; flex: 1; }
+  .diary .place-head { font: 700 13px var(--serif); letter-spacing: 0.12em;
+        text-transform: uppercase; color: var(--accent); margin: 14px 0 4px; }
+  .diary .place-head span { color: var(--muted); text-transform: none; letter-spacing: 0; }
+  .diary li { font-size: 16px; line-height: 1.45; padding: 5px 0; color: var(--fg);
+              border-bottom: 1px solid var(--border-soft); }
+  .diary li.fall { color: var(--fg-2); }
+  .diary li.fall b { color: var(--fg); }
+  .diary .who { font: 700 14px var(--serif); color: var(--fg-2); display: block; }
+  .diary q { font-style: italic; }
+  /* ---- the fall card (variant A: a centered reader card, world dimmed) ---- */
+  .fallwrap { position: absolute; inset: 0; display: flex; align-items: center;
+              justify-content: center; }
+  .fcard { width: 300px; padding: 26px 22px 18px; border: 2px solid var(--accent);
+           border-radius: 6px; background: rgba(21,24,29,0.96); color: var(--fg);
+           position: relative; }
+  .fcard .tag { position: absolute; top: -13px; left: 16px; background: var(--accent);
+                color: var(--accent-on); font: 700 12px var(--serif);
+                letter-spacing: 0.1em; text-transform: uppercase;
+                padding: 3px 10px; border-radius: 3px; }
+  .fcard .line { margin: 2px 0 8px; font-size: 17px; line-height: 1.45; }
+  .fcard .note { margin: 0 0 14px; font-size: 13px; line-height: 1.45; color: var(--fg-2); }
+  .fcard .controls { display: flex; flex-wrap: wrap; gap: 8px; }
+  /* desktop: the same Journal, opened over the world as the built panels do */
+  .dt .sheet { top: 90px; left: auto; right: 60px; bottom: 60px; width: 560px; height: auto;
+               border-radius: 6px; }
+  /* accessible state: Display > Larger text (+20%) and a visible focus ring */
+  .a11y .sheet, .a11y .fcard { font-size: 19.2px; }
+  .a11y .diary li { font-size: 19.2px; }
+  .a11y .diary .place-head { font-size: 16px; }
+  .a11y .fcard .line { font-size: 20.4px; }
+  .a11y .fcard .note { font-size: 15.6px; }
+  .a11y .cta--gold { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .a11y .sheet-close, .a11y .listen { outline: none; }
+  .screens { display: flex; gap: 28px; flex-wrap: wrap; align-items: flex-start; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="kicker">vefr#484 &middot; the Journal message log + the calm fall card &middot; mockup A of 3</p>
+  <h1>A &mdash; The Diary</h1>
+  <p class="intro">The Journal keeps the whispers it has, and above them it keeps
+     <strong>a diary of what the world said</strong>: the lines that today fade one at a time
+     over the world (the messages stack) are written into the Journal as they happen, grouped
+     under the place where they were said, the newest place first. The fading line over the
+     world stays exactly as approved &mdash; this is only where the words can be read again.</p>
+  <p class="intro">Falling shows <strong>a centered calm card</strong>, in the same family as the
+     reader and act-end cards, over a dimmed world. It never touches the fight verbs.</p>
+  <nav class="jump">Compare: <a href="b-the-ledger.html">B &mdash; The Ledger</a> &middot;
+     <a href="c-the-quiet-page.html">C &mdash; The Quiet Page</a> &middot;
+     <a href="README.md">README</a></nav>
+
+  <h2>Phone &mdash; the Journal open on the diary</h2>
+  <div class="screens">
+    <div>
+      <div class="frame phone">
+        <div class="world">
+          <div class="prop roof" style="left:40px;top:150px;width:104px;height:64px"></div>
+          <div class="prop wall" style="left:52px;top:214px;width:80px;height:26px"></div>
+          <div class="prop tree" style="left:280px;top:210px;width:44px;height:44px"></div>
+          <div class="prop pond" style="left:250px;top:420px;width:70px;height:44px"></div>
+          <div class="prop stair" style="left:120px;top:520px;width:40px;height:40px"></div>
+          <div class="hero" style="left:186px;top:476px"></div>
+        </div>
+        <div class="hud">
+          <span class="hp">Health <b>18/18</b></span>
+          <span class="menu-btn">Menu</span>
+          <span class="msgline">You found a copper key.</span>
+          <span class="joy" aria-hidden="true"></span>
+        </div>
+        <div class="sheet carved">
+          <div class="sheet-head">
+            <h3>Journal</h3>
+            <button type="button" class="sheet-close">Close</button>
+          </div>
+          <button type="button" class="cta listen">Listen for a whisper</button>
+          <ol class="diary">
+            <li>
+              <p class="place-head">The square <span>&middot; dusk</span></p>
+              You woke in the square. The day settles; the tone is quiet and watchful.
+            </li>
+            <li class="fall"><b>You fell.</b> You wake in the temple. You lost nothing that mattered.</li>
+            <li>
+              <span class="who">You overhear the woman by the well</span>
+              <q>The western gate is broken, and no one mends it.</q>
+            </li>
+            <li>No one is close enough to talk to.</li>
+            <li>
+              <p class="place-head">The cellar <span>&middot; dusk</span></p>
+              The door opens onto the cellar.
+            </li>
+            <li>You hit the cellar rat for 3.</li>
+            <li>The cellar rat falls.</li>
+            <li>You found a copper key.</li>
+          </ol>
+        </div>
+      </div>
+      <p class="caption"><strong>The diary opens with the Journal</strong>, the same panel, the
+         same one Close &mdash; the failure of the earlier attempt (a log that never opened behind
+         the menu) cannot recur: there is nothing behind the menu to open. The world keeps its
+         one fading line. A fall is kept like any other line, marked plainly, never in red.</p>
+    </div>
+  </div>
+
+  <h2>Phone &mdash; the calm fall card</h2>
+  <div class="screens">
+    <div>
+      <div class="frame phone">
+        <div class="world">
+          <div class="prop roof" style="left:40px;top:150px;width:104px;height:64px"></div>
+          <div class="prop wall" style="left:52px;top:214px;width:80px;height:26px"></div>
+          <div class="prop tree" style="left:280px;top:210px;width:44px;height:44px"></div>
+          <div class="hero" style="left:186px;top:476px"></div>
+        </div>
+        <div class="dim"></div>
+        <div class="hud">
+          <span class="hp">Health <b>18/18</b></span>
+          <span class="menu-btn">Menu</span>
+        </div>
+        <div class="fallwrap">
+          <div class="fcard">
+            <span class="tag">You fell</span>
+            <p class="line">You wake in the temple. You lost nothing that mattered.</p>
+            <p class="note">Your health is whole again. Your bag, your gold and the ground
+               you have walked are as you left them.</p>
+            <div class="controls">
+              <button type="button" class="cta cta--gold">Keep exploring</button>
+              <button type="button" class="cta">Read the Journal</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="caption"><strong>Calm, not alarming:</strong> no red, no shake, no flash &mdash;
+         the words the game already says, given a quiet place to be read. The fight row is closed
+         the moment the hero falls, so <strong>Strike is never under the card</strong>; when the
+         card closes, the verbs return as they were. One gold button continues; the second is a
+         link to the diary entry the fall just wrote. The card waits for the player &mdash; no
+         timer. Under reduced motion it appears at once, no fade.</p>
+    </div>
+  </div>
+
+  <h2>Desktop &mdash; the same Journal over the world</h2>
+  <div class="screens">
+    <div>
+      <div class="frame dt">
+        <div class="world">
+          <div class="prop roof" style="left:80px;top:120px;width:200px;height:120px"></div>
+          <div class="prop wall" style="left:104px;top:240px;width:152px;height:48px"></div>
+          <div class="prop tree" style="left:560px;top:380px;width:90px;height:90px"></div>
+          <div class="prop pond" style="left:700px;top:150px;width:140px;height:90px"></div>
+          <div class="hero" style="left:366px;top:330px"></div>
+        </div>
+        <div class="hud">
+          <span class="hp">Health <b>18/18</b></span>
+          <span class="menu-btn" style="right:20px;top:20px">Menu</span>
+          <span class="msgline" style="top:84px">You found a copper key.</span>
+        </div>
+        <div class="sheet carved">
+          <div class="sheet-head">
+            <h3>Journal</h3>
+            <button type="button" class="sheet-close">Close</button>
+          </div>
+          <button type="button" class="cta listen">Listen for a whisper</button>
+          <ol class="diary">
+            <li>
+              <p class="place-head">The square <span>&middot; dusk</span></p>
+              You woke in the square. The day settles; the tone is quiet and watchful.
+            </li>
+            <li class="fall"><b>You fell.</b> You wake in the temple. You lost nothing that mattered.</li>
+            <li>
+              <span class="who">You overhear the woman by the well</span>
+              <q>The western gate is broken, and no one mends it.</q>
+            </li>
+            <li>
+              <p class="place-head">The cellar <span>&middot; dusk</span></p>
+              The door opens onto the cellar.
+            </li>
+            <li>You hit the cellar rat for 3.</li>
+            <li>The cellar rat falls.</li>
+            <li>You found a copper key.</li>
+          </ol>
+        </div>
+      </div>
+      <p class="caption">On a desk the Journal opens as the game's panels do, over the world,
+         with the same diary inside. Wide enough to read a whole day without scrolling
+         &mdash; the roomy-overlay treatment the approved layout gives the Bag in landscape.</p>
+    </div>
+  </div>
+
+  <h2>Accessible &mdash; larger text, focus kept visible</h2>
+  <div class="screens">
+    <div>
+      <div class="frame phone a11y">
+        <div class="world">
+          <div class="hero" style="left:186px;top:476px"></div>
+        </div>
+        <div class="dim"></div>
+        <div class="fallwrap">
+          <div class="fcard">
+            <span class="tag">You fell</span>
+            <p class="line">You wake in the temple. You lost nothing that mattered.</p>
+            <p class="note">Your health is whole again. Your bag, your gold and the ground
+               you have walked are as you left them.</p>
+            <div class="controls">
+              <button type="button" class="cta cta--gold">Keep exploring</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="caption">The Display &gt; Larger text setting (+20%) scales the diary and the
+         card with everything else. The gold <strong>focus ring stays visible</strong> on every
+         control. Targets are 48px and up. Ink on every surface keeps at least 4.5:1. Reduced
+         motion swaps every fade for an instant change. To a screen reader the diary is one
+         ordered list, read newest first, and the fall card is a dialog that says itself aloud.</p>
+    </div>
+    <div>
+      <div class="frame phone a11y">
+        <div class="world">
+          <div class="prop roof" style="left:40px;top:150px;width:104px;height:64px"></div>
+          <div class="prop tree" style="left:280px;top:210px;width:44px;height:44px"></div>
+          <div class="hero" style="left:186px;top:476px"></div>
+        </div>
+        <div class="sheet carved">
+          <div class="sheet-head">
+            <h3>Journal</h3>
+            <button type="button" class="sheet-close">Close</button>
+          </div>
+          <button type="button" class="cta listen">Listen for a whisper</button>
+          <ol class="diary">
+            <li>
+              <p class="place-head">The square <span>&middot; dusk</span></p>
+              You woke in the square. The day settles; the tone is quiet and watchful.
+            </li>
+            <li class="fall"><b>You fell.</b> You wake in the temple. You lost nothing that mattered.</li>
+            <li>
+              <span class="who">You overhear the woman by the well</span>
+              <q>The western gate is broken, and no one mends it.</q>
+            </li>
+          </ol>
+        </div>
+      </div>
+      <p class="caption">The diary at +20%: the same sheet, nothing clipped, the close target
+         still 48px. Places and phases stay captions, never decoration alone.</p>
+    </div>
+  </div>
+</div>
+</body>
+</html>
