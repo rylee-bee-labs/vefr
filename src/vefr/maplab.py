@@ -1566,13 +1566,50 @@ def display_errors(w: dict) -> list[str]:
     map is too big to fit: a whole number from 32 to 72. `pixel_art` names
     the art's native tile size, a whole number from 8 to
     64: the engine then draws every picture at a whole-number scale of it,
-    with no smoothing (docs/guides/world-creation.md, "Pixel art"). A pack
+    with no smoothing (docs/guides/world-creation.md, "Pixel art").
+    `ending_tile` is the tile the ending room is drawn at while the end
+    card is up (`complete-act`, cottage-of-the-breeze#166): a whole
+    multiple of `pixel_art.native_tile`, checked here because it reads
+    one key against another, which the table cannot. A pack
     that declares no `display` gets no output at all.
     """
     if 'display' not in w:
         return []
-    return _shape_sentences(
-        'world.json', shapes.check(shapes.BLOCKS['display'], w['display']))
+    problems = shapes.check(shapes.BLOCKS['display'], w['display'])
+    return (_shape_sentences('world.json', problems)
+            + _ending_tile_sentences(w['display'], problems))
+
+
+def _ending_tile_sentences(display, problems=()) -> list[str]:
+    """The one `display` check that spans keys: `ending_tile` steps in whole
+    multiples of the art's own native tile, so the ending room scales in
+    whole-number pixel steps with crisp art (cottage-of-the-breeze#166).
+
+    Spoken here and not in `shapes`, because the table bounds one value at
+    a time and this reads `ending_tile` against `pixel_art.native_tile`
+    beside it. A pack that names no `ending_tile` is never asked about,
+    and a value the table already refused (a wrong type, a number out of
+    range) is left to that sentence rather than answered twice; a
+    `native_tile` the table already refused is not stepped against.
+    """
+    if not isinstance(display, dict) or 'ending_tile' not in display:
+        return []
+    refused = {p.pointer for p in problems}
+    if '/display/ending_tile' in refused:
+        return []          # the table's own sentence about the value spoke
+    art = display.get('pixel_art')
+    native = art.get('native_tile') if isinstance(art, dict) else None
+    if '/display/pixel_art/native_tile' in refused:
+        return []          # the table's own sentence about the art spoke
+    if not isinstance(native, int) or isinstance(native, bool):
+        return ['world.json: /display/ending_tile display.ending_tile must be'
+                ' a whole multiple of display.pixel_art.native_tile, and'
+                ' this display declares no pixel_art']
+    if display['ending_tile'] % native:
+        return ['world.json: /display/ending_tile display.ending_tile must be'
+                ' a whole multiple of display.pixel_art.native_tile, such'
+                f' as {2 * native} for a native_tile of {native}']
+    return []
 
 
 def descent_errors(w: dict, pack_dir=None) -> list[str]:
