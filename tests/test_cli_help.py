@@ -264,7 +264,7 @@ SANCTIONED_FNS = {
         "cmd_where", "cmd_explain",
         "cmd_publish", "cmd_look", "cmd_probe", "cmd_features", "cmd_normalize",
         "cmd_art_check", "cmd_art_credits", "cmd_art_kit",
-        "cmd_stamp_check",
+        "cmd_stamp_check", "cmd_archive",
     )
 }
 
