@@ -15,6 +15,8 @@ Never edit web/packaged.html by hand: edit a part, then build.
   uv run python scripts/build_player.py --check    exit 1 if the parts do not build cleanly
 """
 import json
+import os
+import tempfile
 from pathlib import Path
 
 # Where the source lives, relative to a repository root. The parts are the only
@@ -60,7 +62,18 @@ def write(root: Path) -> Path:
         raise PlayerBuildError('\n'.join(problems))
     target = root / TARGET
     if not (target.is_file() and target.read_bytes() == data):
-        target.write_bytes(data)
+        # Atomic: write a sibling temp file, then os.replace it over the target. Parallel builders
+        # (pytest-xdist workers each importing tests/conftest.py, two weaves at once) then only ever
+        # see the old file or the whole new one, never a truncated or half-written player.
+        fd, tmp = tempfile.mkstemp(prefix='.packaged.', suffix='.tmp', dir=target.parent)
+        try:
+            with os.fdopen(fd, 'wb') as fh:
+                fh.write(data)
+            os.chmod(tmp, 0o644)
+            os.replace(tmp, target)
+        except BaseException:
+            Path(tmp).unlink(missing_ok=True)
+            raise
     return target
 
 

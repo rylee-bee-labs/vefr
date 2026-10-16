@@ -138,3 +138,47 @@ def test_a_missing_part_is_refused(tmp_path):
     (repo / "web" / "player" / "parts" / manifest[0]).unlink()
     r = run("--check", root=repo)
     assert r.returncode == 1 and manifest[0] in (r.stdout + r.stderr)
+
+
+def test_parallel_builds_never_expose_a_partial_file(tmp_path):
+    """Many builders at once (pytest-xdist workers, two weaves): a reader only ever sees the whole player."""
+    import threading
+
+    root = tmp_path / 'repo'
+    shutil.copytree(ROOT / 'web' / 'player', root / 'web' / 'player')
+    expected, problems = player_build.build(root)
+    assert not problems
+    target = root / player_build.TARGET
+    target.write_bytes(b'stale')          # force every builder to actually write
+    seen, stop = [], threading.Event()
+
+    def reader():
+        while not stop.is_set():
+            if target.exists():
+                data = target.read_bytes()
+                if data != b'stale':
+                    seen.append(len(data))
+
+    def make_stale(n):
+        # Swapped in whole, like the build: an in-place truncation here would be the test's own race.
+        tmp = target.with_name(f'.stale.{n}')
+        tmp.write_bytes(b'stale')
+        tmp.replace(target)
+
+    def builder(n):
+        for i in range(5):
+            player_build.write(root)
+            make_stale(f'{n}.{i}')
+
+    r = threading.Thread(target=reader)
+    r.start()
+    builders = [threading.Thread(target=builder, args=(n,)) for n in range(6)]
+    for b in builders:
+        b.start()
+    for b in builders:
+        b.join()
+    stop.set()
+    r.join()
+    assert seen, 'the reader never saw a build'
+    assert set(seen) == {len(expected)}, f'a reader saw a partial player: sizes {sorted(set(seen))}'
+    assert not list((root / 'web').glob('.packaged.*.tmp')), 'a temp file was left behind'

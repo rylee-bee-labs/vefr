@@ -8,6 +8,7 @@ committed file is stale.
 
   uv run python scripts/build_player.py            rewrite web/packaged.html from the parts
   uv run python scripts/build_player.py --check    exit 1 if the parts do not build cleanly
+  (It imports the vefr package, so run it with `uv run` or with vefr installed; a bare `python` fails.)
   --root DIR                                       use DIR instead of the repository (tests)
 """
 import argparse

@@ -1290,10 +1290,14 @@ def _template_candidates() -> list[Path]:
     all three and prefer whichever actually exists.
     """
     from .paths import app_home
-    from .player_build import write_if_parts
+    from .player_build import PlayerBuildError, write_if_parts
 
     here = Path(__file__).resolve()
-    write_if_parts(here.parents[2])     # a checkout: build the file it is about to read
+    try:
+        write_if_parts(here.parents[2])     # a checkout: build the file it is about to read
+    except PlayerBuildError as exc:
+        # A plain message, not a traceback: the parts on disk do not build (orphan or missing part).
+        raise SystemExit(f'vefr: web/player/parts does not build:\n{exc}') from None
     return [
         here.parents[2] / 'web' / 'packaged.html',   # source checkout
         here.parent / 'web' / 'packaged.html',        # wheel package data
