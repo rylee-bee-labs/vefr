@@ -18,6 +18,14 @@ import sys
 import time
 import urllib.request
 from pathlib import Path
+from types import SimpleNamespace
+
+def _ns(value):
+    """window.VEFR_STAGE comes back as plain dicts; read it with attributes, as the assertions do."""
+    if isinstance(value, dict):
+        return SimpleNamespace(**{k: _ns(v) for k, v in value.items()})
+    return value
+
 
 import pytest
 
@@ -94,7 +102,7 @@ def _open(browser, url, width, height):
 def test_the_ending_room_reads_at_its_own_tile_on_a_desktop(browser, woven):
     ctx, page = _open(browser, woven["end"], 1280, 720)
     try:
-        stage = page.evaluate("window.VEFR_STAGE")
+        stage = _ns(page.evaluate("window.VEFR_STAGE"))
         assert stage.tile == ENDING, f"the card's room reads at ending_tile, got {stage.tile} px"
         assert stage.pixel.k * NATIVE == ENDING   # crisp: two screen pixels per art pixel
         assert stage.map.w == COLS * ENDING and stage.map.h == ROWS * ENDING
@@ -106,7 +114,7 @@ def test_the_ending_room_reads_at_its_own_tile_on_a_desktop(browser, woven):
 def test_the_ending_room_steps_down_to_the_largest_multiple_that_fits_a_phone(browser, woven):
     ctx, page = _open(browser, woven["end"], 390, 844)
     try:
-        stage = page.evaluate("window.VEFR_STAGE")
+        stage = _ns(page.evaluate("window.VEFR_STAGE"))
         asked = COLS * ENDING
         assert asked > 390, "the fixture must ask for a room too wide for the phone"
         assert stage.tile == NATIVE, f"64 px does not fit, so the room steps down to 32, got {stage.tile} px"
@@ -120,7 +128,7 @@ def test_closing_the_card_returns_the_room_to_its_ordinary_tile(browser, woven):
     try:
         assert page.evaluate("window.VEFR_STAGE.tile") == ENDING
         page.keyboard.press("e")   # Interact continues the game (510-rules-closure-surfaces.js)
-        page.wait_for_function("!document.getElementById('act-end').hidden")
+        page.wait_for_function("document.getElementById('act-end').hidden")   # the card closed
         assert page.evaluate("window.VEFR_STAGE.tile") == NATIVE
         assert page.evaluate("window.VEFR_STAGE.map.w") == COLS * NATIVE
     finally:
@@ -130,7 +138,7 @@ def test_closing_the_card_returns_the_room_to_its_ordinary_tile(browser, woven):
 def test_a_pack_without_ending_tile_keeps_its_ordinary_tile_with_the_card_up(browser, woven):
     ctx, page = _open(browser, woven["plain"], 1280, 720)
     try:
-        stage = page.evaluate("window.VEFR_STAGE")
+        stage = _ns(page.evaluate("window.VEFR_STAGE"))
         assert stage.tile == NATIVE   # the room's ordinary whole fit, card or no card
         assert stage.map.w == COLS * NATIVE
     finally:
