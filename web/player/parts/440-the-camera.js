@@ -75,7 +75,36 @@
     pixelK = Math.max(1, fits ? Math.floor(k) : Math.round(k));
     return pixelK * pixelNative / d;
   }
+  // display.ending_tile: the one room a pack may scale up itself - the ending
+  // room, drawn while the end card of a `complete-act` rule is up
+  // (cottage-of-the-breeze#166). The key is the drawn tile in CSS pixels and
+  // a whole multiple of the art's own native tile, so the room scales in
+  // whole-number steps and stays crisp. A room that would not fit the
+  // window steps down to the largest whole multiple that does, so the whole
+  // room always reads: never cropped, never scrolled. Nothing else changes -
+  // the gameplay framing (phone_tile, desk_tile, the fit camera) is exactly
+  // what it was - and a pack without the key never enters here at all.
+  var ENDING_TILE = (world.display && world.display.ending_tile) || 0;
+  var endingUp = false;   // the end card is up
+  function endingZoom() {
+    var step = pixelNative || 1;   // whole art pixels one tile scales in
+    var k = Math.max(1, Math.floor(ENDING_TILE / step));
+    while (k > 1 && (cols * k * step > viewW || rows * k * step > viewH)) k--;
+    return k * step / town.tile;
+  }
+  // The card itself lives outside this closure (110-the-library.js), so it
+  // tells the camera it is up through this one hook and the room is redrawn
+  // at its ending tile, and back to the ordinary camera when it closes.
+  // Precedent: window.VEFR_REDRAW.
+  window.VEFR_ENDING_ROOM = function (up) {
+    if (!ENDING_TILE || up === endingUp) return;
+    endingUp = up;
+    resize();
+    draw();
+  };
   function fitZoom() {
+    // The ending room reads at its own tile while the card is up.
+    if (endingUp && ENDING_TILE) return endingZoom();
     // The phone camera follows the hero at the pack's tile on every map, the
     // small ones too: a room shrunk to fit a tall screen left the world a strip
     // between empty bands (a pack played on a phone, 2026-10-13). A map smaller than
