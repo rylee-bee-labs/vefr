@@ -9,6 +9,7 @@
  "065-store.js",
  "070-config-persistence.js",
  "075-player-settings.js",
+ "076-keybinds.js",
  "080-endpoint-join-post.js",
  "090-first-run-setup-vs-play.js",
  "100-speech-box.js",

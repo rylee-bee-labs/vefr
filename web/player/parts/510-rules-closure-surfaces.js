@@ -159,32 +159,39 @@
   document.addEventListener('keydown', function (e) {
     if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
     // Any key but the toggle itself halts an autoexplore walk.
-    if (exploring() && e.key !== 'o' && e.key !== 'O') exploreStop('Stopped.');
-    // F is the one name for Interact (vefr#467); E answers to it too, so
-    // a player who learned the old key is never stuck, but no hint, label
-    // or key letter names it.
+    if (exploring() && !keybindOn('explore', e.key)) exploreStop('Stopped.');
+    // Interact's keys come from the one keybinds table (076-keybinds.js,
+    // vefr#508): the player's own choice for it, which is F until they
+    // make one. E keeps answering to Interact on every surface as the
+    // unadvertised alias (Rylee, 2026-10-14 - F is the one name on
+    // screen and in the docs, and a player who learned the old key is
+    // never stuck). Space and Enter ride along because every focused
+    // button answers to them first.
     // The Interact keys keep the loop going: while a note or a speech box
     // is up they CONTINUE it (next page, then close) instead of needing a
     // click. A focused button handles its own Enter and Space, and a held
     // key never carries on into the next thing.
-    var interactKey = e.key === 'e' || e.key === 'E' || e.key === 'f' || e.key === 'F'
+    var interactKey = keybindOn('interact', e.key) || e.key === 'e' || e.key === 'E'
       || e.key === ' ' || e.key === 'Enter';
     var nativeClick = e.target && e.target.tagName === 'BUTTON'
       && (e.key === ' ' || e.key === 'Enter');
-    // The end card (complete-act) wins over everything: Interact and Escape
-    // continue the game; the buttons handle their own Enter and Space.
+    // The end card (complete-act) wins over everything: Interact and the
+    // menu key continue the game; the buttons handle their own Enter and
+    // Space.
     var actEndCard = document.getElementById('act-end');
     if (actEndCard && !actEndCard.hidden) {
-      if (e.key === 'Escape' || (interactKey && !nativeClick)) {
+      if (keybindOn('menu', e.key) || (interactKey && !nativeClick)) {
         e.preventDefault();
         if (!e.repeat) closeActEnd();
       }
       return;
     }
-    // While the reader is open, its keys win and movement stops.
+    // While the reader is open, its keys win and movement stops: the
+    // pages answer to the reading keys, and Interact and the menu key
+    // continue and close.
     var readerOpen = !document.getElementById('reader').hidden;
     if (readerOpen) {
-      if (e.key === 'Escape') { e.preventDefault(); closeReader(); }
+      if (keybindOn('menu', e.key)) { e.preventDefault(); closeReader(); }
       else if (interactKey && !nativeClick) {
         e.preventDefault();
         if (!e.repeat) {
@@ -192,15 +199,16 @@
           document.getElementById(nextBtn.disabled ? 'reader-close' : 'reader-next').click();
         }
       }
-      else if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') { e.preventDefault(); readerTurn(-1); }
-      else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') { e.preventDefault(); readerTurn(1); }
+      else if (keybindOn('pageBack', e.key)) { e.preventDefault(); readerTurn(-1); }
+      else if (keybindOn('pageForward', e.key)) { e.preventDefault(); readerTurn(1); }
       return;
     }
-    // While the Trade panel is open, Escape closes it and movement stops.
+    // While the Trade panel is open, the menu key and Interact close it
+    // and movement stops.
     var tradeOpen = !document.getElementById('trade').hidden;
     if (tradeOpen) {
-      if (e.key === 'Escape') { e.preventDefault(); closeTrade(); }
-      else if ((e.key === 'e' || e.key === 'E' || e.key === 'f' || e.key === 'F') && !e.repeat) {
+      if (keybindOn('menu', e.key)) { e.preventDefault(); closeTrade(); }
+      else if ((keybindOn('interact', e.key) || e.key === 'e' || e.key === 'E') && !e.repeat) {
         e.preventDefault(); closeTrade();
       }
       return;
@@ -209,14 +217,14 @@
     // movement stops, exactly as they do for the Trade panel above.
     var identifyOpen = !document.getElementById('identify').hidden;
     if (identifyOpen) {
-      if (e.key === 'Escape') { e.preventDefault(); closeIdentify(); }
-      else if ((e.key === 'e' || e.key === 'E' || e.key === 'f' || e.key === 'F') && !e.repeat) {
+      if (keybindOn('menu', e.key)) { e.preventDefault(); closeIdentify(); }
+      else if ((keybindOn('interact', e.key) || e.key === 'e' || e.key === 'E') && !e.repeat) {
         e.preventDefault(); closeIdentify();
       }
       return;
     }
     var menuOpen = !document.getElementById('menu').hidden;
-    if (e.key === 'Escape') {
+    if (keybindOn('menu', e.key)) {
       closeEnemyVerbs();
       var soBody = document.getElementById('startover-body');
       if (menuOpen && soBody && !soBody.hidden) {
@@ -237,20 +245,22 @@
     if (interactKey && e.repeat) return;
     // A focused button handles its own Enter and Space.
     var onButton = e.target && e.target.tagName === 'BUTTON';
-    if (e.key === 'ArrowUp') { e.preventDefault(); move(0, -1); }
-    else if (e.key === 'ArrowDown') { e.preventDefault(); move(0, 1); }
-    else if (e.key === 'ArrowLeft') { e.preventDefault(); move(-1, 0); }
-    else if (e.key === 'ArrowRight') { e.preventDefault(); move(1, 0); }
-    else if (e.key === 'w' || e.key === 'W') { e.preventDefault(); move(0, -1); }
-    else if (e.key === 's' || e.key === 'S') { e.preventDefault(); move(0, 1); }
-    else if (e.key === 'a' || e.key === 'A') { e.preventDefault(); move(-1, 0); }
-    else if (e.key === 'd' || e.key === 'D') { e.preventDefault(); move(1, 0); }
+    // The walking keys, each through the one table: the keys the player
+    // chose for the action (Menu > Controls, vefr#508), which are the
+    // defaults the game shipped with until they choose. A choice replaces
+    // its action's keys; E stays on Interact's row as the unadvertised
+    // alias, so both its letters still reach the one verb.
+    if (keybindOn('up', e.key)) { e.preventDefault(); move(0, -1); }
+    else if (keybindOn('down', e.key)) { e.preventDefault(); move(0, 1); }
+    else if (keybindOn('left', e.key)) { e.preventDefault(); move(-1, 0); }
+    else if (keybindOn('right', e.key)) { e.preventDefault(); move(1, 0); }
     else if (e.key === 'e' || e.key === 'E') doInteract();
-    else if (e.key === 'f' || e.key === 'F') doInteract();
-    else if (e.key === 'q' || e.key === 'Q') document.getElementById('whisper').click();
-    else if (e.key === 'b' || e.key === 'B') { if (window.openBag) window.openBag(); }
-    else if (e.key === 'o' || e.key === 'O') startExplore();
-    else if (e.key === 'v' || e.key === 'V') toggleFog();
+    else if (keybindOn('interact', e.key)) doInteract();
+    else if (keybindOn('whisper', e.key)) document.getElementById('whisper').click();
+    else if (keybindOn('bag', e.key)) { if (window.openBag) window.openBag(); }
+    else if (keybindOn('explore', e.key)) startExplore();
+    else if (keybindOn('fog', e.key)) toggleFog();
+    else if (keybindOn('journal', e.key)) window.openMenu();
     // The fight verbs answer 1, 2, 3 - the digits printed on them
     // (#463). The row's own order is the key's, and a surface with no
     // row shown has no verb to press, so the keys do nothing there.
