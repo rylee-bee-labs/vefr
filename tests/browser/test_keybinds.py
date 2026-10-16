@@ -270,7 +270,7 @@ def test_the_interact_key_works_on_every_surface_after_replacing_f(page, woven):
         "F still answered for Interact after being replaced"
     page.keyboard.press("g")
     page.locator("#npc-box").wait_for(state="visible")
-    assert page.locator("#npc-name").inner_text() == "the porter"
+    assert page.locator("#npc-name").inner_text() == "THE PORTER"
     # The same chosen key continues the speech: it means the same thing
     # on the panel as it did on the map.
     page.keyboard.press("g")
@@ -278,7 +278,7 @@ def test_the_interact_key_works_on_every_surface_after_replacing_f(page, woven):
     # And E, never in the table and never advertised, still answers.
     page.keyboard.press("e")
     page.locator("#npc-box").wait_for(state="visible")
-    assert page.locator("#npc-name").inner_text() == "the porter"
+    assert page.locator("#npc-name").inner_text() == "THE PORTER"
 
 
 # ---- collision ----
@@ -342,7 +342,18 @@ def test_reset_puts_every_default_back(page, woven):
 # keybinds blob from a version that knew a row this one does not.
 OLD_SAVES = """() => {
   localStorage.setItem('vefr-hp-interact-test', '2');
-  localStorage.setItem('vefr-slain-interact-test-town', '["storeroom-rat"]');
+  // The player remembers a kill as `id#signature` (name|at|hp|atk|drops),
+  // so a bare id is no save at all; write it the way the game does.
+  var rat = window.VEFR_ENEMIES.town.filter(function (e) {
+    return e.id === 'storeroom-rat';
+  })[0];
+  var sig = [rat.name, rat.at.join(','), rat.hp, rat.atk,
+             (rat.drops || []).map(function (d) {
+               return typeof d === 'string' ? d
+                 : (d.item || '') + ':' + (d.rarity || '');
+             }).join(',')].join('|');
+  localStorage.setItem('vefr-slain-interact-test-town',
+                       JSON.stringify([rat.id + '#' + sig]));
   localStorage.setItem('vefr-tutorial-interact-test', '1');
   localStorage.setItem('vefr-keybinds',
                        '{"a-row-from-a-newer-version": ["z"]}');
