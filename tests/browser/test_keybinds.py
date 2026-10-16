@@ -373,7 +373,8 @@ def test_an_old_save_loads_as_itself(page, woven):
     page.wait_for_function("window.VEFR_COMBAT && window.VEFR_COMBAT.region")
     # The old save's own keys are honored exactly as before.
     assert hero(page)["hp"] == 2
-    assert page.evaluate("() => window.VEFR_COMBAT.enemies") == [], \
+    # VEFR_COMBAT.enemies keeps the dead on the roster (alive: false); the save is honored when none is alive
+    assert page.evaluate("() => window.VEFR_COMBAT.enemies.filter(e => e.alive)") == [], \
         "the slain rat from the old save came back"
     assert page.locator("#status").get_attribute("data-tutorial") is None, \
         "the one-time lesson the old save already took is being taught again"
