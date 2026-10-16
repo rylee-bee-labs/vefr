@@ -51,7 +51,8 @@ She played the built layout on a phone and at a desk, and these override the sec
   phone in light mode. Parchment is still a choice in Display.
 - **Less bounce:** a hero with a walk sheet has no lean or landing squash ("a little less... bounce").
 - **A desk follows the hero too** (`display.desk_tile`; Cottage uses 48), and its messages are the same one fading
-  line ("I can't see my character at all and I can't make the notes disappear").
+  line ("I can't see my character at all and I can't make the notes disappear"). Its top bar is the same slim one
+  (issue #449, 2026-10-16): health and quickslots up top, and the level and gold read in the Bag.
 
 ## Layout (portrait 390 x 844, safe areas respected)
 - **Top left:** health pill (label 13 px caps, number 16 px bold), then 1 or 2 quickslots (48 px) with count badges.

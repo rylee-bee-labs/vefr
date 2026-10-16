@@ -165,9 +165,10 @@ tiles past the map's edge, so the hero is never under the corner buttons;
 the ground past the edge takes the region's backdrop, or the dark.
 
 A screen with a mouse fits a map whole unless the pack names a tile for
-it too. With `desk_tile` it follows the hero the same way, and its
-messages read like a phone's: one line, the newest, folding by itself
-after a few seconds (Messages brings it back):
+it too. With `desk_tile` it follows the hero the same way, and it reads
+like a phone: its messages are one line, the newest, folding by itself
+after a few seconds (Messages brings it back), and its top bar keeps
+health (and quickslots) only - the level and gold read in the Bag:
 
 ```json
 "display": {
