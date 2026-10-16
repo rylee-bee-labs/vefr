@@ -305,9 +305,10 @@ def _hero(html: str) -> dict:
 def test_a_pack_that_names_a_library_gets_a_way_back(tmp_path):
     """#488: `player.library_url`, when the pack names an http(s) shelf,
     rides the hero payload the weave already bakes - no new `VEFR_*`
-    line, so a pack that names none weaves the bytes it always did - and
-    the pause menu (the engine half, in every weave) grows its 'Back to
-    the library' row from it. A scheme that is not a link is not baked
+    line, and a pack that names none bakes no library_url (the row and
+    its code are engine bytes in every weave, so the no-skin weave digest
+    did move once, with this change) - and the pause menu grows its 'Back
+    to the library' row from it. A scheme that is not a link is not baked
     at all, rather than baked and left for a browser to interpret."""
     from vefr import cli
 
@@ -315,7 +316,7 @@ def test_a_pack_that_names_a_library_gets_a_way_back(tmp_path):
     assert "library_url" not in _hero(sample)
     # The row and the code that fills it are the engine's, in every pack.
     assert 'id="menu-library-row"' in sample
-    assert "menu-library-row" in sample
+    assert "document.getElementById('menu-library-row')" in sample
     assert "Back to the library" in sample
 
     pack = tmp_path / "pack"
