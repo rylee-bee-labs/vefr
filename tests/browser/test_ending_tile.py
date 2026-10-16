@@ -83,10 +83,12 @@ def woven(tmp_path_factory):
             time.sleep(0.25)
     else:
         proc.terminate()
+        log.close()
         pytest.fail(f"the woven file never came up; see {home / 'server.log'}")
     yield {"end": f"{base}/end.html", "plain": f"{base}/plain.html"}
     proc.terminate()
     proc.wait(timeout=10)
+    log.close()
 
 
 def _open(browser, url, width, height):
