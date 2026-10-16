@@ -443,7 +443,11 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # Nothing about this pack's own bytes moved: woven against this commit's packaged.html and against
 # the previous one, this pack's 38 baked `window.VEFR_*` values are byte-identical, and
 # `worlds/sample-world` declares no skin, so `window.VEFR_SKIN` lands the literal null either way.
-NO_SKIN_WEAVE_SHA256 = "25a7bd492b9ed3f720663fd691eb09e06386c4e45b4b5d11fa88d177f03f45a1"
+# The archive loader's ZIP reader views its bytes through their own buffer (vefr#519 host fix), 2026-10-16;
+# measured twice on the host in separate processes, readings equal:
+#   753fcacefc2b760f63f0f3b4ebda0f33fecb60eb1b740975604848c57aa063bd
+#   753fcacefc2b760f63f0f3b4ebda0f33fecb60eb1b740975604848c57aa063bd
+NO_SKIN_WEAVE_SHA256 = "753fcacefc2b760f63f0f3b4ebda0f33fecb60eb1b740975604848c57aa063bd"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

@@ -1,6 +1,6 @@
 /* .vefr archive loader harness: drives the REAL loader part in jsdom.
 
-   usage: node vefr_archive_loader_harness.mjs <046-vefr-archive-loader.js> '<spec json>'
+   usage: node vefr_archive_loader_harness.mjs <046-vefr-archive-loader.js> < spec.json
 
    spec:
      art:      [{name, markup}]  doc.title_art_img values handed to install()
@@ -20,7 +20,8 @@ import fs from 'node:fs';
 import { JSDOM } from 'jsdom';
 
 const source = fs.readFileSync(process.argv[2], 'utf8');
-const spec = JSON.parse(process.argv[3] || '{}');
+// The spec arrives on stdin: it carries whole archives, and one argv string is capped near 128 KB on Linux.
+const spec = JSON.parse(fs.readFileSync(0, 'utf8') || '{}');
 
 const dom = new JSDOM(
   '<!doctype html><html><head></head><body><div id="title-screen"></div></body></html>',
@@ -65,7 +66,10 @@ function install(markup) {
 // ---- openArchive(): refused, or the manifest and globals it installed ----
 async function open(entry) {
   const bytes = Buffer.from(entry.zip, 'base64');
-  const ab = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+  // the buffer must come from the page's own realm, as a browser's File.arrayBuffer() would hand it over:
+  // jsdom's DataView refuses an ArrayBuffer made in Node's realm
+  const ab = new w.ArrayBuffer(bytes.byteLength);
+  new w.Uint8Array(ab).set(bytes);
   try {
     const opened = await loader.openArchive(ab);
     return {
@@ -83,8 +87,9 @@ async function main() {
   const art = (spec.art || []).map((caseIn) => Object.assign({ name: caseIn.name }, install(caseIn.markup)));
   const archives = [];
   for (const entry of spec.archives || []) archives.push(await open(entry));
-  console.log(JSON.stringify({ art, archives }));
-  process.exit(0);
+  // write, then exit only once the pipe has the whole result: process.exit() right after console.log cut
+  // a large result short when stdout is a pipe (the test read half a JSON document)
+  process.stdout.write(JSON.stringify({ art, archives }) + '\n', () => process.exit(0));
 }
 
 main();

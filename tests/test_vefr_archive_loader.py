@@ -155,7 +155,7 @@ def read():
         pytest.skip("node not installed")
     spec = {"art": [{"name": name, "markup": markup} for name, markup in ART_CASES],
             "archives": [{"name": name, "zip": blob} for name, blob in ARCHIVE_CASES.items()]}
-    run = subprocess.run(["node", str(HARNESS), str(PART), json.dumps(spec)],
+    run = subprocess.run(["node", str(HARNESS), str(PART)], input=json.dumps(spec),
                          capture_output=True, text=True, timeout=240)
     assert run.returncode == 0, run.stderr + run.stdout
     result = json.loads(run.stdout)

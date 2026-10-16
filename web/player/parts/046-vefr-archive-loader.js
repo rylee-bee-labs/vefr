@@ -72,7 +72,8 @@ var vefrArchive = (function () {
   // ---- the ZIP, read by hand: a central directory and two methods ----
 
   function zipEntries(bytes) {
-    var view = new DataView(bytes);
+    // a DataView takes an ArrayBuffer, never a Uint8Array: view the bytes' own buffer at their own offset
+    var view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     // The end-of-central-directory record is the last one, after a
     // comment of up to 64 KB.
     if (bytes.length < 22) refuse('this file is not a .vefr archive: a .vefr is a ZIP file');
