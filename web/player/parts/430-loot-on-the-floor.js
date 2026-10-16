@@ -584,6 +584,13 @@
           return out;
         })
     };
+    // The hero's status effects (part 425, vefr#497), only when there is one, so a pack with
+    // no statuses reads the snapshot it always read. In memory only, like the store itself.
+    if (typeof heroStatuses !== 'undefined' && heroStatuses.length) {
+      window.VEFR_COMBAT.statuses = heroStatuses.map(function (st) {
+        return { effect: st.effect, type: st.type, turns: st.turns, tick: st.tick };
+      });
+    }
     return window.VEFR_COMBAT;
   }
   // The bag and gold code lives outside this closure; give it a way to

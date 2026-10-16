@@ -1564,8 +1564,8 @@ def element_errors(w: dict) -> list[str]:
     if resist is not None:
         if not isinstance(resist, dict) or isinstance(resist, bool):
             errors.append(
-                f"world.json: player.resist must be an object of damage "
-                f"types to a whole number, such as {{\"fire\": 2}}")
+                "world.json: player.resist must be an object of damage "
+                "types to a whole number, such as {\"fire\": 2}")
         else:
             for key, value in resist.items():
                 name = elements.normal_type(key)
@@ -1583,8 +1583,8 @@ def element_errors(w: dict) -> list[str]:
     if immune is not None:
         if not isinstance(immune, list):
             errors.append(
-                f"world.json: player.immune must be a list of damage types, "
-                f"such as [\"cold\"]")
+                "world.json: player.immune must be a list of damage types, "
+                "such as [\"cold\"]")
         else:
             for value in immune:
                 if elements.normal_type(value) is None:

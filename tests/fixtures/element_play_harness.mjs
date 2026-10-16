@@ -59,7 +59,10 @@ const press = (dir) => {
   if (!b) throw new Error('no dpad button ' + dir);
   b.click();
 };
-const hero = () => (w.enemies || []).find((e) => e && e.id === 'ember-hound');
+// The published fight snapshot (window.VEFR_COMBAT), refreshed every turn: the player's own
+// variables live inside setupTown and are not on window.
+const combat = () => (w.refreshCombatSnapshot ? w.refreshCombatSnapshot() : w.VEFR_COMBAT) || {};
+const hero = () => (combat().enemies || []).find((e) => e && e.id === 'ember-hound');
 
 const snap = () => {
   const line = d.getElementById('hud-state');
@@ -70,7 +73,7 @@ const snap = () => {
     live: (d.getElementById('combat-live') || {}).textContent || '',
     state: line ? line.textContent || '' : null,
     stateOn: line ? !line.hidden : null,
-    statuses: JSON.parse(JSON.stringify(w.heroStatuses || [])),
+    statuses: JSON.parse(JSON.stringify(combat().statuses || [])),
     saved: Object.keys(w.localStorage).sort(),
     foe: foe ? foe.hp : null,
   };
