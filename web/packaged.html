@@ -57,8 +57,11 @@
   [hidden] { display: none !important; }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-  /* buttons: one family */
-  .cta, button.primary, .verb-row button, #kitchen button, #desk button, .dpad button, .gbtn {
+  /* buttons: one family. The quiet page's Listen rides it by id: the
+     Journal's own button is the one button the menu keeps byte for byte
+     (tests/test_listen_button.py), so it takes no class. */
+  .cta, button.primary, .verb-row button, #kitchen button, #desk button, .dpad button, .gbtn,
+  #journal-whisper {
     min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
     padding: 8px 18px; border-radius: 4px; cursor: pointer;
     font: 700 0.82rem/1.25 var(--display); letter-spacing: 0.1em; text-transform: uppercase;
@@ -459,6 +462,48 @@
   #menu-panel .keybind-row .keybind-keys { color: var(--ink-dim); font-size: 0.9rem; }
   @media (max-width: 700px) { #menu { grid-template-columns: 1fr; } }
 
+  /* ---- the Journal's quiet page (vefr#484, mockup C: The Quiet Page) ----
+     One page of every line the world said, newest at the top, older lines a
+     little quieter and never lighter than the contrast floor: --ink-dim on
+     --card is 7:1 in the dark scheme and 6.7:1 in the light one. The panel
+     is the one the menu has always opened; the page inside it reads like a
+     letter someone kept - no tabs, no chips, no grouping. */
+  #menu-panel [data-panel-body="journal"] { display: flex; flex-direction: column; gap: 10px; }
+  .sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .sheet-head h2 { margin: 0; font: 400 1.375rem/1.3 var(--display); letter-spacing: 0.02em; }
+  .sheet-close { min-width: 48px; min-height: 48px; padding: 8px 14px; }
+  #journal-whisper { align-self: flex-start; min-height: 48px; min-width: 48px; }
+  /* The page itself scrolls inside the panel, so its head and Close stay:
+     a whole afternoon of play reads in one scroll. */
+  #journal-page { margin: 0; padding: 0; list-style: none; overflow-y: auto;
+    min-height: 9em; max-height: min(66vh, 540px); }
+  #journal-page li { font-size: 1.0625rem; line-height: 1.5; padding: 7px 0; color: var(--ink-dim);
+    border-bottom: 1px solid rgba(239, 230, 214, 0.07); overflow-wrap: anywhere; }
+  #journal-page li.newest { color: var(--ink); }
+  #journal-page li q { font-style: italic; quotes: '\201C' '\201D'; }
+  #journal-page li .who { display: block; font-size: 0.8125rem; color: var(--ink-dim); }
+  #journal-page li.empty { font-style: italic; border-bottom: 0; }
+
+  /* ---- the fall, as a warm hush (vefr#484, mockup C) ----
+     The world dims deep and one small quiet card waits near the bottom,
+     clear of the fight verbs at the foot; any key, tap or button
+     continues. Nothing is red and nothing moves: the dim fades in over
+     a moment, and the reduced-motion blankets (the OS query and the
+     player's own switch) make it instant. */
+  #fall { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end;
+    justify-content: center; padding: 0 24px calc(150px + var(--sai-bottom));
+    background: rgba(6, 7, 9, 0.78);
+    animation: fall-dim 240ms ease-out; }
+  @keyframes fall-dim { from { background: rgba(6, 7, 9, 0); } to { background: rgba(6, 7, 9, 0.78); } }
+  .fcard { width: 100%; max-width: 300px; padding: 18px 18px 14px; border-radius: 12px;
+    background: var(--card); border: 1px solid var(--card-edge); color: var(--ink); }
+  .fcard .fall-line { margin: 0 0 4px; font-size: 1.0625rem; line-height: 1.45; overflow-wrap: anywhere; }
+  .fcard .fall-rule { width: 42px; height: 2px; margin: 0 0 10px; border: 0;
+    background: var(--accent); opacity: 0.7; }
+  .fcard .fall-note { margin: 0 0 14px; font-size: 0.8125rem; line-height: 1.45; color: var(--ink-dim); }
+  .fall-controls { display: flex; flex-wrap: wrap; gap: 8px; }
+  .fall-controls .cta { min-height: 48px; min-width: 48px; }
+
   /* the kitchen and the desk: page surfaces, in carved panels */
   #kitchen, #desk { max-width: 760px; margin: 0 auto; padding: 24px 16px 48px; }
   #kitchen h2, #desk h2 { font: 700 1rem var(--display); letter-spacing: 0.06em; color: var(--ink); margin: 1.6rem 0 0.5rem; }
@@ -729,6 +774,21 @@
           </div>
         </div>
       </div>
+      <!-- The fall, as a warm hush (vefr#484, mockup C): the world dims
+           deep, one small quiet card near the bottom holds the words the
+           game already says, and any key, tap or button continues. -->
+      <div id="fall" role="dialog" aria-modal="true"
+           aria-labelledby="fall-line" tabindex="-1" hidden>
+        <div class="fcard">
+          <p class="fall-line" id="fall-line"></p>
+          <hr class="fall-rule">
+          <p class="fall-note">Your health is whole again. Your bag, your gold
+             and the ground you have walked are as you left them.</p>
+          <div class="fall-controls">
+            <button type="button" id="fall-keep" class="cta cta--gold">Keep exploring</button>
+          </div>
+        </div>
+      </div>
       <p class="glass" id="combat-log" aria-live="polite"></p>
     </div>
     <section id="kitchen" hidden>
@@ -793,11 +853,18 @@
   </div>
   <div class="carved" id="menu-panel">
     <div data-panel-body="journal">
-      <h2>Journal</h2>
-      <p><button type="button" id="journal-whisper">Listen for a whisper</button></p>
-      <section id="feed" aria-live="polite">
-        <p class="empty">Nothing yet. Listen for a whisper to hear what people are saying.</p>
-      </section>
+      <!-- The quiet page (vefr#484, mockup C): one page of every line the
+           world said, newest at the top, whispers and falls plain lines
+           among them - no tabs, no chips, no grouping. One Close at the
+           top, the way the panel has always opened. -->
+      <div class="sheet-head">
+        <h2>Journal</h2>
+        <button type="button" id="journal-close" class="sheet-close">Close</button>
+      </div>
+      <button type="button" id="journal-whisper">Listen for a whisper</button>
+      <ol class="page" id="journal-page" aria-live="polite">
+        <li class="empty">Nothing yet. Listen for a whisper to hear what people are saying.</li>
+      </ol>
     </div>
     <div data-panel-body="books" hidden>
       <h2>Books</h2>
@@ -2382,6 +2449,12 @@ function showSpeech(speaker, line, note, shownAs) {
   document.getElementById('npc-line').textContent = line || '';
   var n = document.getElementById('npc-note');
   n.textContent = note || ''; n.hidden = !note;
+  // Whoever is talking, their line lands on the Journal's quiet page
+  // (vefr#484) with its own name as the caption - a whisper reads
+  // "You overhear <the speaker>", the way the box itself prints it.
+  // The note stays in the box: it says where the line came from, not
+  // something the world said.
+  journalSay(line, shownAs || speaker || '');
   document.getElementById('npc-box').hidden = false;
   document.getElementById('npc-close').focus();
 }
@@ -4712,9 +4785,14 @@ function renderCombatLog(log) {
 // The combat line: one plain sentence for the eye and the screen
 // reader. A hit is said, never shown by colour alone. It rides the
 // same aria-live idiom as #library-live.
-function combatSay(msg) {
+//
+// Every sentence the world says lands on the Journal's quiet page
+// (vefr#484) at the moment it is said; a caller that keeps its own
+// line on the page itself passes true, so it is not kept twice.
+function combatSay(msg, notOnPage) {
   var el = document.getElementById('combat-live');
   if (el) el.textContent = msg || '';
+  if (msg && !notOnPage) journalSay(msg);
 }
 
 // The live line as it stands, so a caller can see what an action added
@@ -4724,7 +4802,123 @@ function combatText() {
   return el ? (el.textContent || '') : '';
 }
 
-// ---- phase rail ----
+// ---- the quiet page and the calm fall card (vefr#484, mockup C) ----
+// The Journal is one quiet page: every line the world said, in order,
+// newest at the top, older lines a little quieter (never lighter than
+// the contrast floor), whispers and falls interleaved as plain lines
+// among them. No tabs, no chips, no grouping - the page reads like a
+// letter someone kept.
+//
+// The page is written at the two seams where the world says words:
+// `combatSay`, the one plain sentence the fight and the finds speak
+// with, and `showSpeech`, whoever is talking. A line lands on the page
+// at the moment it is said, so nowhere else needs to know the page
+// exists - and the fading line over the world is exactly what it was.
+//
+// Computed per call and never cached, like the player's own settings
+// keys: a world that arrives late still finds its own key, and a reader
+// sees one place where the name is spelled.
+function pageKey() {
+  return 'vefr-page-' + ((window.VEFR_WORLD && window.VEFR_WORLD.name) || 'world');
+}
+
+// One line on the page. `who` is the caption a spoken line carries -
+// the whisper's "You overhear <the speaker>", a resident's own name -
+// and a line with no speaker is a plain line, as the fight's are.
+function journalSay(line, who) {
+  var text = String(line || '').trim();
+  if (!text) return;
+  var log = store.getJSON(pageKey(), []);
+  log.push({ line: text, who: who || '', at: new Date().toISOString() });
+  store.setJSON(pageKey(), log);
+  renderJournalPage(log);
+}
+
+// The page itself, newest first: the newest line is full ink and the
+// older ones step down to the quieter ink, one list read top to bottom.
+function renderJournalPage(log) {
+  var page = document.getElementById('journal-page');
+  if (!page) return;
+  log = log || store.getJSON(pageKey(), []);
+  page.textContent = '';
+  if (!log.length) {
+    var empty = document.createElement('li');
+    empty.className = 'empty';
+    empty.textContent = 'Nothing yet. Listen for a whisper to hear what people are saying.';
+    page.appendChild(empty);
+    return;
+  }
+  for (var i = log.length - 1; i >= 0; i--) {
+    var entry = log[i] || {};
+    var li = document.createElement('li');
+    if (i === log.length - 1) li.className = 'newest';
+    if (entry.who) {
+      var who = document.createElement('span');
+      who.className = 'who';
+      who.textContent = entry.who;
+      li.appendChild(who);
+      var q = document.createElement('q');
+      q.textContent = entry.line;
+      li.appendChild(q);
+    } else {
+      li.textContent = entry.line;
+    }
+    page.appendChild(li);
+  }
+}
+
+// The panel's own Close, at the top of the page: the Journal is the
+// panel it always was, opened the way the Bag opens, and one Close
+// closes the whole menu, as Resume does.
+(function () {
+  var close = document.getElementById('journal-close');
+  if (close) close.addEventListener('click', function () {
+    if (window.closeMenu) window.closeMenu();
+  });
+})();
+renderJournalPage();
+
+// ---- the fall, as a warm hush ----
+// The world dims deep and one small quiet card waits near the bottom,
+// holding the words the game already says. Nothing is asked of the
+// player: no timer, no flash, no shake, and any key, tap or button
+// continues. The focus moves onto the card and comes back to the
+// control that had it (045-dialog-focus.js keeps the Tab inside it);
+// the dim fades in over a moment, and the reduced-motion blankets -
+// the OS's own query and the player's switch - make it instant, the
+// same answer every other motion reads.
+var fallOpener = null;
+function showFallCard(line) {
+  var card = document.getElementById('fall');
+  if (!card || !card.hidden) return;
+  document.getElementById('fall-line').textContent = line || '';
+  // The words are kept on the quiet page the moment they are said.
+  journalSay(line);
+  fallOpener = document.activeElement;
+  card.hidden = false;
+  var keep = document.getElementById('fall-keep');
+  if (keep) keep.focus();
+}
+function closeFall() {
+  var card = document.getElementById('fall');
+  if (!card || card.hidden) return;
+  card.hidden = true;
+  var back = fallOpener;
+  fallOpener = null;
+  try {
+    if (back && back !== document.body && back !== document.documentElement
+        && back.isConnected && back.focus) back.focus();
+    else document.getElementById('menu-open').focus();
+  } catch (e) { /* gone */ }
+}
+(function () {
+  var card = document.getElementById('fall');
+  if (!card) return;
+  document.getElementById('fall-keep').addEventListener('click', closeFall);
+  // A tap anywhere on the hush continues it: the dim is the card's own
+  // waiting room, and the one button is another way to say go on.
+  card.addEventListener('click', closeFall);
+})();// ---- phase rail ----
 function buildPhaseRail() {
   var rail = document.getElementById('phase');
   rail.innerHTML = '';
@@ -4762,10 +4956,11 @@ function overheardName(speaker) {
 function bindWhisper() {
   var btn = document.getElementById('whisper');
   var status = document.getElementById('status');
-  var feed = document.getElementById('feed');
-  // The Journal keeps the whispers, so it can ask for one too: a phone draws
-  // no Whisper button over the world. The menu closes first, so the whisper's
-  // speech box opens over the game, as it does from the button.
+  // The Journal keeps the whispers - as plain lines on its quiet page
+  // (vefr#484), written by showSpeech when the box opens - so it can ask
+  // for one too: a phone draws no Whisper button over the world. The menu
+  // closes first, so the whisper's speech box opens over the game, as it
+  // does from the button.
   var fromJournal = document.getElementById('journal-whisper');
   if (fromJournal) fromJournal.addEventListener('click', function () {
     if (window.closeMenu) window.closeMenu();
@@ -4804,13 +4999,6 @@ function bindWhisper() {
       if (!r.ok) throw new Error('LLM ' + r.status);
       var j = await r.json();
       var card = JSON.parse(j.choices[0].message.content);
-      var empty = feed.querySelector('.empty'); if (empty) empty.remove();
-      var div = document.createElement('div');
-      div.className = 'card';
-      div.innerHTML = '<div class="speaker">' + esc(card.speaker) + '</div>'
-        + '<p class="whisper">&ldquo;' + esc(card.whisper) + '&rdquo;</p>'
-        + (card.is_true ? '' : '<p class="status">A lie, or close enough.</p>');
-      feed.insertBefore(div, feed.firstChild);
       status.textContent = '';
       showSpeech(card.speaker, '\u201C' + card.whisper + '\u201D', card.is_true ? '' : 'A lie, or close enough.',
         overheardName(card.speaker));
@@ -4830,13 +5018,6 @@ function bindWhisper() {
       if (!card) { card = whisperFromFragments(); fromFragments = true; }
       if (!card) { card = whisperFromGrammar(); fromGrammar = true; }
       if (card) {
-        var pempty = feed.querySelector('.empty'); if (pempty) pempty.remove();
-        var pdiv = document.createElement('div');
-        pdiv.className = 'card';
-        pdiv.innerHTML = '<div class="speaker">' + esc(card.speaker) + '</div>'
-          + '<p class="whisper">&ldquo;' + esc(card.whisper) + '&rdquo;</p>'
-          + (card.is_true ? '' : '<p class="status">A lie, or close enough.</p>');
-        feed.insertBefore(pdiv, feed.firstChild);
         status.textContent = '';
         showSpeech(card.speaker, '\u201C' + card.whisper + '\u201D',
           (pooled ? "From the game's saved lines."
@@ -4851,12 +5032,6 @@ function bindWhisper() {
     } finally {
       btn.disabled = false;
     }
-  });
-}
-
-function esc(s) {
-  return String(s).replace(/[&<>"']/g, function (ch) {
-    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
   });
 }
 
@@ -12055,7 +12230,11 @@ function setupTown() {
     var D = window.VEFR_DESCENT;
     var back = (D && typeof D.deathResume === 'function')
       ? D.deathResume(regionName) : null;
-    combatSay(back ? STAIR_DEATH_LINE : DEATH_LINE);
+    var said = back ? STAIR_DEATH_LINE : DEATH_LINE;
+    // The fading line over the world keeps its own words; the second
+    // argument keeps them off the quiet page once (vefr#484), because
+    // the card below says them there with their "You fell."
+    combatSay(said, true);
     fireRule('falls', { what: (killer && killer.id) || '',
                         where: regionName });
     HERO_HP = heroMax();
@@ -12075,6 +12254,15 @@ function setupTown() {
     }
     fireRule('wakes', { where: woke });
     combatSnapshot();
+    // A warm hush (vefr#484, mockup C): the fight is over, so the verb
+    // row is closed, and the hero already stands at the wake point
+    // behind the dim - one small quiet card near the bottom waits for
+    // any key, tap or button. The row comes back on the next turn's
+    // own rule, as it always did.
+    closeEnemyVerbs();
+    var vrow = document.getElementById('verb-row');
+    if (vrow) vrow.hidden = true;
+    showFallCard('You fell. ' + said);
   }
   // The mind state of every monster, in the same order as `enemies` and
   // carrying the same `id`: whether it is on its feet, which group it
@@ -15403,6 +15591,17 @@ function setupTown() {
       if (keybindOn('menu', e.key) || (interactKey && !nativeClick)) {
         e.preventDefault();
         if (!e.repeat) closeActEnd();
+      }
+      return;
+    }
+    // The fall card (vefr#484): a warm hush - any key continues, and
+    // nothing else is answered while it waits. Tab is the one exception,
+    // so the focus can still move inside the card (045-dialog-focus.js).
+    var fallOpen = !document.getElementById('fall').hidden;
+    if (fallOpen) {
+      if (e.key !== 'Tab') {
+        e.preventDefault();
+        if (!e.repeat) closeFall();
       }
       return;
     }

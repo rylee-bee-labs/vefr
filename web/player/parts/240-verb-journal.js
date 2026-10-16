@@ -48,9 +48,14 @@ function renderCombatLog(log) {
 // The combat line: one plain sentence for the eye and the screen
 // reader. A hit is said, never shown by colour alone. It rides the
 // same aria-live idiom as #library-live.
-function combatSay(msg) {
+//
+// Every sentence the world says lands on the Journal's quiet page
+// (vefr#484) at the moment it is said; a caller that keeps its own
+// line on the page itself passes true, so it is not kept twice.
+function combatSay(msg, notOnPage) {
   var el = document.getElementById('combat-live');
   if (el) el.textContent = msg || '';
+  if (msg && !notOnPage) journalSay(msg);
 }
 
 // The live line as it stands, so a caller can see what an action added

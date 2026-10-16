@@ -10,10 +10,11 @@ function overheardName(speaker) {
 function bindWhisper() {
   var btn = document.getElementById('whisper');
   var status = document.getElementById('status');
-  var feed = document.getElementById('feed');
-  // The Journal keeps the whispers, so it can ask for one too: a phone draws
-  // no Whisper button over the world. The menu closes first, so the whisper's
-  // speech box opens over the game, as it does from the button.
+  // The Journal keeps the whispers - as plain lines on its quiet page
+  // (vefr#484), written by showSpeech when the box opens - so it can ask
+  // for one too: a phone draws no Whisper button over the world. The menu
+  // closes first, so the whisper's speech box opens over the game, as it
+  // does from the button.
   var fromJournal = document.getElementById('journal-whisper');
   if (fromJournal) fromJournal.addEventListener('click', function () {
     if (window.closeMenu) window.closeMenu();
@@ -52,13 +53,6 @@ function bindWhisper() {
       if (!r.ok) throw new Error('LLM ' + r.status);
       var j = await r.json();
       var card = JSON.parse(j.choices[0].message.content);
-      var empty = feed.querySelector('.empty'); if (empty) empty.remove();
-      var div = document.createElement('div');
-      div.className = 'card';
-      div.innerHTML = '<div class="speaker">' + esc(card.speaker) + '</div>'
-        + '<p class="whisper">&ldquo;' + esc(card.whisper) + '&rdquo;</p>'
-        + (card.is_true ? '' : '<p class="status">A lie, or close enough.</p>');
-      feed.insertBefore(div, feed.firstChild);
       status.textContent = '';
       showSpeech(card.speaker, '\u201C' + card.whisper + '\u201D', card.is_true ? '' : 'A lie, or close enough.',
         overheardName(card.speaker));
@@ -78,13 +72,6 @@ function bindWhisper() {
       if (!card) { card = whisperFromFragments(); fromFragments = true; }
       if (!card) { card = whisperFromGrammar(); fromGrammar = true; }
       if (card) {
-        var pempty = feed.querySelector('.empty'); if (pempty) pempty.remove();
-        var pdiv = document.createElement('div');
-        pdiv.className = 'card';
-        pdiv.innerHTML = '<div class="speaker">' + esc(card.speaker) + '</div>'
-          + '<p class="whisper">&ldquo;' + esc(card.whisper) + '&rdquo;</p>'
-          + (card.is_true ? '' : '<p class="status">A lie, or close enough.</p>');
-        feed.insertBefore(pdiv, feed.firstChild);
         status.textContent = '';
         showSpeech(card.speaker, '\u201C' + card.whisper + '\u201D',
           (pooled ? "From the game's saved lines."
@@ -99,12 +86,6 @@ function bindWhisper() {
     } finally {
       btn.disabled = false;
     }
-  });
-}
-
-function esc(s) {
-  return String(s).replace(/[&<>"']/g, function (ch) {
-    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
   });
 }
 
