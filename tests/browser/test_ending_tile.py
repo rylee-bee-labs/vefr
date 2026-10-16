@@ -20,16 +20,16 @@ import urllib.request
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
+from vefr import cli
+
 def _ns(value):
     """window.VEFR_STAGE comes back as plain dicts; read it with attributes, as the assertions do."""
     if isinstance(value, dict):
         return SimpleNamespace(**{k: _ns(v) for k, v in value.items()})
     return value
 
-
-import pytest
-
-from vefr import cli
 
 ROOT = Path(__file__).resolve().parents[2]
 SAMPLE = ROOT / "worlds" / "sample-world"
