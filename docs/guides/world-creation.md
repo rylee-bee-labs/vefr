@@ -271,6 +271,14 @@ With `native_tile` set, the rule for the art is:
   tall, because 48 = 1.5 x 32. Their size comes from the art, not from `sprite_scale`.
 - Never resize pixel art in the pack. The engine scales it.
 
+A pack can also scale one room itself: the ending room, drawn while the end card of a
+`complete-act` rule is up. `"ending_tile": 64` in the same `display` block draws that room at
+64 px a tile instead of its ordinary size - a whole multiple of `native_tile`, so the art stays
+crisp - and at no other time; play framing (`phone_tile`, `desk_tile`, the fit camera) is
+untouched. A room that would not fit the window steps down to the largest whole multiple that
+fits, so it is never cropped or scrolled. A pack without the key draws the card's room exactly
+as before.
+
 ### Things on the map (props)
 
 A prop is a picture drawn over the ground: a rock, a bush, a well. Its

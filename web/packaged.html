@@ -1566,7 +1566,9 @@ function openReader(book) {
 // the same overlay surface as a note: "Keep exploring" (what Interact
 // does) or "Start over" (which asks first, in the menu). It never
 // advances to another act. window.VEFR_ACT_COMPLETE is the harness
-// snapshot, like VEFR_COMBAT.
+// snapshot, like VEFR_COMBAT. While the card is up, a pack that names
+// display.ending_tile has the room under it drawn at that tile
+// (the camera's half of it: window.VEFR_ENDING_ROOM, 440-the-camera.js).
 var actEndOpener = null;
 function openActEnd(actId) {
   var card = document.getElementById('act-end');
@@ -1579,6 +1581,7 @@ function openActEnd(actId) {
   actEndOpener = document.activeElement;
   card.hidden = false;
   window.VEFR_ACT_COMPLETE = { act: String(actId), shown: true };
+  if (window.VEFR_ENDING_ROOM) window.VEFR_ENDING_ROOM(true);
   // A `starts` rule can fire before the play area is shown, when a focus
   // call lands nowhere: ask again once the screen has settled.
   var keepBtn = document.getElementById('act-end-keep');
@@ -1589,6 +1592,7 @@ function closeActEnd() {
   var card = document.getElementById('act-end');
   if (!card || card.hidden) return;
   card.hidden = true;
+  if (window.VEFR_ENDING_ROOM) window.VEFR_ENDING_ROOM(false);
   if (window.VEFR_ACT_COMPLETE) window.VEFR_ACT_COMPLETE.shown = false;
   var back = actEndOpener;
   actEndOpener = null;
@@ -11269,7 +11273,36 @@ function setupTown() {
     pixelK = Math.max(1, fits ? Math.floor(k) : Math.round(k));
     return pixelK * pixelNative / d;
   }
+  // display.ending_tile: the one room a pack may scale up itself - the ending
+  // room, drawn while the end card of a `complete-act` rule is up
+  // (cottage-of-the-breeze#166). The key is the drawn tile in CSS pixels and
+  // a whole multiple of the art's own native tile, so the room scales in
+  // whole-number steps and stays crisp. A room that would not fit the
+  // window steps down to the largest whole multiple that does, so the whole
+  // room always reads: never cropped, never scrolled. Nothing else changes -
+  // the gameplay framing (phone_tile, desk_tile, the fit camera) is exactly
+  // what it was - and a pack without the key never enters here at all.
+  var ENDING_TILE = (world.display && world.display.ending_tile) || 0;
+  var endingUp = false;   // the end card is up
+  function endingZoom() {
+    var step = pixelNative || 1;   // whole art pixels one tile scales in
+    var k = Math.max(1, Math.floor(ENDING_TILE / step));
+    while (k > 1 && (cols * k * step > viewW || rows * k * step > viewH)) k--;
+    return k * step / town.tile;
+  }
+  // The card itself lives outside this closure (110-the-library.js), so it
+  // tells the camera it is up through this one hook and the room is redrawn
+  // at its ending tile, and back to the ordinary camera when it closes.
+  // Precedent: window.VEFR_REDRAW.
+  window.VEFR_ENDING_ROOM = function (up) {
+    if (!ENDING_TILE || up === endingUp) return;
+    endingUp = up;
+    resize();
+    draw();
+  };
   function fitZoom() {
+    // The ending room reads at its own tile while the card is up.
+    if (endingUp && ENDING_TILE) return endingZoom();
     // The phone camera follows the hero at the pack's tile on every map, the
     // small ones too: a room shrunk to fit a tall screen left the world a strip
     // between empty bands (a pack played on a phone, 2026-10-13). A map smaller than

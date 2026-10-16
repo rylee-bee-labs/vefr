@@ -748,6 +748,14 @@ DISPLAY = Block(
         Key('pixel_art', 'obj', sub=PIXEL_ART),
         # The look a skinned pack starts on; the player's pick in Display wins.
         Key('look', 'enum', choices=('plain', 'skin')),
+        # The tile the ending room is drawn at while the end card is up
+        # (complete-act, cottage-of-the-breeze#166): a whole number of CSS
+        # pixels, and a whole multiple of `pixel_art.native_tile` - the one
+        # check `shapes` cannot speak for itself, because it reads one key
+        # against another, so `maplab.display_errors` says it.
+        Key('ending_tile', 'int', lo=8, hi=512, say={
+            'wrong-type': '{path} must be a whole number of CSS pixels, such as 64',
+            'out-of-range': '{path} must be a whole number from 8 to 512'}),
     ),
 )
 

@@ -118,7 +118,9 @@ function openReader(book) {
 // the same overlay surface as a note: "Keep exploring" (what Interact
 // does) or "Start over" (which asks first, in the menu). It never
 // advances to another act. window.VEFR_ACT_COMPLETE is the harness
-// snapshot, like VEFR_COMBAT.
+// snapshot, like VEFR_COMBAT. While the card is up, a pack that names
+// display.ending_tile has the room under it drawn at that tile
+// (the camera's half of it: window.VEFR_ENDING_ROOM, 440-the-camera.js).
 var actEndOpener = null;
 function openActEnd(actId) {
   var card = document.getElementById('act-end');
@@ -131,6 +133,7 @@ function openActEnd(actId) {
   actEndOpener = document.activeElement;
   card.hidden = false;
   window.VEFR_ACT_COMPLETE = { act: String(actId), shown: true };
+  if (window.VEFR_ENDING_ROOM) window.VEFR_ENDING_ROOM(true);
   // A `starts` rule can fire before the play area is shown, when a focus
   // call lands nowhere: ask again once the screen has settled.
   var keepBtn = document.getElementById('act-end-keep');
@@ -141,6 +144,7 @@ function closeActEnd() {
   var card = document.getElementById('act-end');
   if (!card || card.hidden) return;
   card.hidden = true;
+  if (window.VEFR_ENDING_ROOM) window.VEFR_ENDING_ROOM(false);
   if (window.VEFR_ACT_COMPLETE) window.VEFR_ACT_COMPLETE.shown = false;
   var back = actEndOpener;
   actEndOpener = null;
