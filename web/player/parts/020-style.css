@@ -438,7 +438,8 @@
     grid-template-columns: minmax(200px, 240px) minmax(0, 560px); gap: 16px; align-content: start; justify-content: center;
     padding: calc(6vh + var(--sai-top)) calc(16px + var(--sai-right)) calc(6vh + var(--sai-bottom)) calc(16px + var(--sai-left)); overflow-y: auto; }
   #menu .pm { list-style: none; margin: 10px 0 14px; padding: 0; display: grid; gap: 2px; }
-  #menu .pm button { width: 100%; min-height: 44px; justify-content: flex-start; border: 0; background: transparent; color: var(--ink); text-transform: none; letter-spacing: 0.04em; font: 700 0.95rem var(--display); }
+  #menu .pm button, #menu .pm a { width: 100%; min-height: 44px; justify-content: flex-start; border: 0; background: transparent; color: var(--ink); text-transform: none; letter-spacing: 0.04em; font: 700 0.95rem var(--display); }
+  #menu .pm a { display: flex; align-items: center; text-decoration: none; }
   #menu .pm button[aria-current="true"] { background: rgba(216, 170, 78, 0.16); color: var(--accent); }
   #menu-panel h2 { margin: 4px 0 8px; font: 700 1.2rem var(--display); letter-spacing: 0.04em; }
   #menu-panel ul { margin: 0; padding-left: 1.1rem; }
@@ -514,8 +515,8 @@
     body.in-game .npc-note { font-size: 0.78rem; }
     #menu { padding-top: calc(12px + var(--sai-top)); padding-bottom: calc(12px + var(--sai-bottom)); gap: 10px; }
     #menu .pm { margin: 4px 0 8px; gap: 0 6px; grid-template-columns: 1fr 1fr; }
-    #menu .pm button { justify-content: center; padding: 0 6px; }
-    #menu .pm button { font-size: 0.8rem; }
+    #menu .pm button, #menu .pm a { justify-content: center; padding: 0 6px; }
+    #menu .pm button, #menu .pm a { font-size: 0.8rem; }
     #menu-panel { font-size: 0.9rem; }
     #menu-panel h2 { font-size: 1rem; margin: 2px 0 6px; }
   }

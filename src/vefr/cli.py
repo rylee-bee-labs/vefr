@@ -2802,6 +2802,16 @@ def weave_html(pack: Path, *, pool: dict | None = None) -> str:
         hero_gold = 0
     hero = {'hp': hero_hp, 'atk': hero_atk, 'gold': hero_gold,
             'wake': {'region': wake_region, 'at': wake_at}}
+    # The shelf this game came from, when the pack names one: the woven
+    # player is one offline file, but it keeps a way back to the library
+    # page it was published from. Only an http(s) URL is baked - the
+    # player draws it as a link, and a scheme it cannot follow is no link
+    # at all. A pack with no `library_url` bakes no key, so every
+    # existing pack's bytes are unchanged.
+    library_url = player.get('library_url')
+    if isinstance(library_url, str) and library_url.strip().lower().startswith(
+            ('http://', 'https://')):
+        hero['library_url'] = library_url.strip()
 
     transitions = first_act.get('transitions')
     if transitions is None:

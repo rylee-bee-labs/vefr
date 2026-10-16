@@ -293,3 +293,41 @@ def test_player_title_art_and_accent(tmp_path):
     assert "image/png" not in escaped and "--accent" not in escaped
 
     assert "font-family: 'Cinzel'" in _player_fonts_css(web)
+
+
+def _hero(html: str) -> dict:
+    """The baked `window.VEFR_HERO` as the player reads it."""
+    m = re.search(r"window\.VEFR_HERO = (.*?);\n", html)
+    assert m, "no VEFR_HERO line in the weave"
+    return json.loads(m.group(1))
+
+
+def test_a_pack_that_names_a_library_gets_a_way_back(tmp_path):
+    """#488: `player.library_url`, when the pack names an http(s) shelf,
+    rides the hero payload the weave already bakes - no new `VEFR_*`
+    line, so a pack that names none weaves the bytes it always did - and
+    the pause menu (the engine half, in every weave) grows its 'Back to
+    the library' row from it. A scheme that is not a link is not baked
+    at all, rather than baked and left for a browser to interpret."""
+    from vefr import cli
+
+    sample = cli.weave_html(ROOT / "worlds" / "sample-world")
+    assert "library_url" not in _hero(sample)
+    # The row and the code that fills it are the engine's, in every pack.
+    assert 'id="menu-library-row"' in sample
+    assert "menu-library-row" in sample
+    assert "Back to the library" in sample
+
+    pack = tmp_path / "pack"
+    shutil.copytree(ROOT / "worlds" / "sample-world", pack)
+    world = json.loads((pack / "world.json").read_text(encoding="utf-8"))
+    world.setdefault("player", {})["library_url"] = \
+        "https://library.example.com/vefr/sample-world"
+    (pack / "world.json").write_text(json.dumps(world), encoding="utf-8")
+    assert _hero(cli.weave_html(pack))["library_url"] == \
+        "https://library.example.com/vefr/sample-world"
+
+    for bad in ("javascript:alert(1)", "library.example.com", "  "):
+        world["player"]["library_url"] = bad
+        (pack / "world.json").write_text(json.dumps(world), encoding="utf-8")
+        assert "library_url" not in _hero(cli.weave_html(pack)), bad
