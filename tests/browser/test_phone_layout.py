@@ -6,6 +6,9 @@
   painted, as every skinned pack always has.
 - The top bar on a touch screen keeps health (and quickslots) only: the level line and
   gold are not drawn there, and the level reads in the Bag beside the gold.
+- One compact HUD policy holds at a desk too (issue #449, the owner's word 2026-10-16):
+  under the follow camera (`display.desk_tile`) a desk's top bar keeps health (and
+  quickslots) only, and the level reads in the Bag as on a phone.
 - The phone camera follows the hero at the pack's tile on a small map too, instead of
   blowing a small room up to fill the width.
 """
@@ -137,6 +140,31 @@ def test_a_phone_top_bar_keeps_health_and_the_level_reads_in_the_bag(browser, tm
         page = ctx.new_page()
         page.goto(html.as_uri())
         enter(page)
+        drawn = page.evaluate("""() => ['hud-hp', 'hud-level', 'hud-gold'].map(id =>
+          document.getElementById(id).getClientRects().length > 0)""")
+        assert drawn == [True, False, False], f"[health, level, gold] drawn on the top bar: {drawn}"
+        level = page.evaluate("document.getElementById('bag-level').textContent")
+        assert level.startswith("Level 1"), f"the Bag does not say the level: {level!r}"
+    finally:
+        ctx.close()
+
+
+def test_a_desk_top_bar_under_the_follow_camera_keeps_health_and_the_level_reads_in_the_bag(browser, tmp_path):
+    """Issue #449: under a desk's follow camera the top bar still drew the level line
+    and gold, so a desk and a phone read differently. The owner's decision (2026-10-16)
+    is one compact HUD policy on both: health (and quickslots) up top, and the level
+    and gold read in the Bag, which the keyboard opens with B. A desk that plays a
+    whole map (no `desk_tile`, or `?camera=desk`) keeps the top bar it always had."""
+    pack = play_kit.pack(tmp_path, "growth", {"world.json": {"display": {"desk_tile": 48}}},
+                         growth=play_kit.make_growth_pack.LEVELS)
+    html = play_kit.weave(pack, tmp_path)
+    ctx = browser.new_context(viewport={"width": 1280, "height": 800})
+    try:
+        page = ctx.new_page()
+        page.goto(html.as_uri())
+        enter(page)
+        stage = page.evaluate("window.VEFR_STAGE")
+        assert stage["phone"] is True, f"this pack's desk is not under the follow camera: {stage}"
         drawn = page.evaluate("""() => ['hud-hp', 'hud-level', 'hud-gold'].map(id =>
           document.getElementById(id).getClientRects().length > 0)""")
         assert drawn == [True, False, False], f"[health, level, gold] drawn on the top bar: {drawn}"

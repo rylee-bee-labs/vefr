@@ -528,9 +528,27 @@
       #bag-list > .bag-row { margin-top: 0; }
     }
   }
-  /* A desk under the follow camera (display.desk_tile) reads its messages the
-     phone's way: one small line, the newest, fading after a few seconds, so no
-     stack of old hints stands over the hero. Messages brings it back. */
+  /* A desk under the follow camera (display.desk_tile) reads the phone's way
+     (issue #449, the owner's word 2026-10-16: one compact HUD policy on a desk
+     and a phone alike). Its messages are one small line, the newest, fading
+     after a few seconds, so no stack of old hints stands over the hero
+     (Messages brings it back). And its top bar is the phone's slim one - health
+     and the quickslots, with Menu - so the level line, the gold and the bag
+     pips are not drawn there; they read in the Bag, which the keyboard opens
+     with B and a screen reader hears as its own panel, so nothing is lost to
+     the pointer that is gone from the bar. The phone keeps its own copy of
+     these rules above, for a pack that names no phone_tile and so never gains
+     this class; a phone that follows carries both, the same words twice. The
+     Menu keeps the desk's reading size: the policy shares what sits in the bar
+     and the bar's shapes, not the phone's smaller text. */
+  body.in-game.follow-camera #hud-level, body.in-game.follow-camera #hud-gold,
+  body.in-game.follow-camera #bag-strip, body.in-game.follow-camera .hud--tl .hud-mark { display: none !important; }
+  body.in-game.follow-camera .hud--tl { gap: 6px; flex-wrap: nowrap; align-items: center; }
+  body.in-game.follow-camera .hud-hp { padding: 0 10px; min-height: 30px; border-radius: 999px; gap: 6px; }
+  body.in-game.follow-camera .hud-hp-bar { width: 44px; height: 6px; }
+  body.in-game.follow-camera .hud-hp-value { font: 700 0.8rem var(--read); }
+  body.in-game.follow-camera .touch-quick:not([hidden]) { margin-top: 0; flex-wrap: nowrap; }
+  body.in-game.follow-camera #menu-open { min-height: 44px; padding: 0 12px; border-radius: 999px; }
   body.in-game.follow-camera .toasts { width: max-content; max-width: min(360px, 40%); }
   body.in-game.follow-camera .toasts p { font-size: 0.85rem; line-height: 1.3; padding: 4px 12px; border-radius: 14px; }
   body.in-game.follow-camera .toasts p:not(.is-newest) { position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0 !important;
