@@ -145,6 +145,10 @@ def test_a_phone_top_bar_keeps_health_and_the_level_reads_in_the_bag(browser, tm
         assert drawn == [True, False, False], f"[health, level, gold] drawn on the top bar: {drawn}"
         level = page.evaluate("document.getElementById('bag-level').textContent")
         assert level.startswith("Level 1"), f"the Bag does not say the level: {level!r}"
+        # gold moves to the Bag too (#449): when the pack pays gold, the Bag says how much is carried
+        gold = page.evaluate("""() => ({on: !document.getElementById('hud-gold').hidden,
+          bag: document.getElementById('bag-gold').textContent})""")
+        assert (not gold["on"]) or gold["bag"].startswith("You carry"), f"the Bag does not say the gold: {gold}"
     finally:
         ctx.close()
 
@@ -170,6 +174,10 @@ def test_a_desk_top_bar_under_the_follow_camera_keeps_health_and_the_level_reads
         assert drawn == [True, False, False], f"[health, level, gold] drawn on the top bar: {drawn}"
         level = page.evaluate("document.getElementById('bag-level').textContent")
         assert level.startswith("Level 1"), f"the Bag does not say the level: {level!r}"
+        # gold moves to the Bag too (#449): when the pack pays gold, the Bag says how much is carried
+        gold = page.evaluate("""() => ({on: !document.getElementById('hud-gold').hidden,
+          bag: document.getElementById('bag-gold').textContent})""")
+        assert (not gold["on"]) or gold["bag"].startswith("You carry"), f"the Bag does not say the gold: {gold}"
     finally:
         ctx.close()
 
