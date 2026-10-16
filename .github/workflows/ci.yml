@@ -25,7 +25,7 @@ jobs:
   # stated twice; the template verifies after checkout that the tree it fetched
   # really is this commit, and prints both.
   claims:
-    uses: rylee-bee-labs/ci-harness/.github/workflows/reusable-claims-policy.yml@85bbb32d5437b8e20caa465a6f4fb517823c6ec3
+    uses: rylee-bee-labs/ci-harness/.github/workflows/reusable-claims-policy.yml@1596539c1e7f0cf43c73bb41e8477cad2cc63d1b
     with:
       policy-revision: 85bbb32d5437b8e20caa465a6f4fb517823c6ec3
       runs-on: ${{ vars.CI_RUNNER_LIGHT || vars.CI_RUNNER || 'ubuntu-latest' }}
@@ -39,7 +39,7 @@ jobs:
   # the weekly schedule is the blocking heartbeat, and any push to the default
   # branch is strict too. Harness-owned mechanics, repo-owned manifest path.
   contract-freshness:
-    uses: rylee-bee-labs/ci-harness/.github/workflows/reusable-contract-freshness.yml@561b1daa2314f5e902c5b1e4e2a24802a9ecdfaf
+    uses: rylee-bee-labs/ci-harness/.github/workflows/reusable-contract-freshness.yml@1596539c1e7f0cf43c73bb41e8477cad2cc63d1b
     with:
       manifest-path: ".project/contracts/adoption.yaml"
       expect: ${{ github.event_name == 'pull_request' && 'warn' || 'current' }}
