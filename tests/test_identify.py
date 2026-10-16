@@ -43,8 +43,8 @@ PARTS = ROOT / "web" / "player" / "parts"
 # Both digests below are over the whole set of baked `window.VEFR_*` data
 # lines (every one of them, in file order) for their pack.
 #
-# SAMPLE_DATA_SHA is the one a pristine `main` prints, and it still is: the
-# sample world declares no descent, so nothing ADR 0017 slice 2 or the
+# SAMPLE_DATA_SHA is the one a pristine `main` printed, until 2026-10-16:
+# the sample world declares no descent, so nothing ADR 0017 slice 2 or the
 # Section-tiles work baked into it, and it is the half of this test that
 # says a pack naming no reader is untouched by the slice. It last moved on
 # 2026-10-12, when #416 (way pictures) added `VEFR_WAY_ICONS` and
@@ -66,8 +66,13 @@ PARTS = ROOT / "web" / "player" / "parts"
 # It moved again on 2026-10-12 for the props slice's empty `VEFR_PROP_PICS` line.
 # Both moved again on 2026-10-12 for #422's empty `window.VEFR_TILE_EDGES = {};`
 # line (measured twice); with that one line removed both pins are unchanged.
-SAMPLE_DATA_SHA = 'c1884e9aeb9459ed712a5afe321702cf2ef37dee0df33ffb474aefed56999420'
-ROLLED_DATA_SHA = '6bdb7b365995e5be96f96f2efdcf2e6fad78bea53952d4e7f4b426cbd9739793'
+# Both moved again on 2026-10-16 for vefr #508 (the player's own keys): the
+# closure-surfaces part bakes a `window.VEFR_KEYBINDS` block into every pack,
+# two lines each that the data-line regex reads here; measured twice in
+# separate processes, readings equal. With that one block removed both pins
+# are unchanged.
+SAMPLE_DATA_SHA = 'ecc6968e18d20aa851010f7e0ed1c4ffb47cf129a66684bbd3d486d56c8814e4'
+ROLLED_DATA_SHA = 'a88ccca088b926b6936133d2bebbc2a00a8bfc50acfbf11e99181572c8110ac6'
 
 
 def _data_blocks(html: str) -> str:

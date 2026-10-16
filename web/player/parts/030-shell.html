@@ -210,6 +210,7 @@
       <li><button type="button" data-panel="help">How to play</button></li>
       <li><button type="button" data-panel="model">Model settings</button></li>
       <li><button type="button" data-panel="display">Display</button></li>
+      <li><button type="button" data-panel="controls">Controls</button></li>
       <li id="menu-library-row" hidden><a id="menu-library">Back to the library</a></li>
       <li id="menu-descent-row" hidden><button type="button" id="menu-descent" data-panel="descent">Descent</button></li>
       <li><button type="button" data-panel="startover">Start over</button></li>
@@ -269,7 +270,9 @@
         <li>Open your bag with <kbd>B</kbd> or the Bag button.</li>
         <li>Walk the unexplored dark with <kbd>O</kbd> or the Explore button.</li>
         <li>Turn the dark off with <kbd>V</kbd>, or in Display. Dusk and Dawn are in Display too, under Time of day.</li>
+        <li>Open your Journal with <kbd>J</kbd>.</li>
         <li>Open and close this menu with <kbd>Esc</kbd>.</li>
+        <li>Any of these keys can be changed, under Controls in this menu, and put back the way they came with one button.</li>
       </ul>
     </div>
     <div data-panel-body="model" hidden>
@@ -309,6 +312,13 @@
       <h2 class="menu-sub">Time of day</h2>
       <p>The world's mood. What people say changes with it.</p>
       <div class="phase-rail" id="phase" role="group" aria-label="The world's mood"></div>
+    </div>
+    <div data-panel-body="controls" hidden>
+      <h2>Controls</h2>
+      <p class="status">The keys this game answers to. Press Change, then press the key you want; Esc cancels and Tab keeps moving the focus. Space and Enter answer for Interact too.</p>
+      <div id="keybind-list"></div>
+      <p class="status" id="keybind-live" role="status" aria-live="polite"></p>
+      <button type="button" id="keybind-reset" class="cta">Reset all keys</button>
     </div>
     <div data-panel-body="descent" id="descent-body" hidden>
       <h2>The descent</h2>

@@ -425,29 +425,16 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # rules in 020-style.css changed, 2026-10-16; measured twice on the host in separate processes, readings equal:
 #   3456e77a0ae5e9d4df33cfc70297aaf8eb1c642f3274be207a6d4134a4db9f23
 #   3456e77a0ae5e9d4df33cfc70297aaf8eb1c642f3274be207a6d4134a4db9f23
-# The .vefr archive loader (vefr#455, ADR 0019): a new player part, 046-vefr-archive-loader.js, is woven
-# into every pack, 2026-10-16; measured twice on the host in separate processes, readings equal:
-#   7331f6447755196a9db2df8d467211892da99894a8ec9db461108f9e340e5463
-#   7331f6447755196a9db2df8d467211892da99894a8ec9db461108f9e340e5463
-# The #455 fix round: the same part changed again - it now builds the title picture with
-# createElement instead of parsing the archive's own markup, refuses a ZIP that names one path twice,
-# and holds schema_version to a whole number - so every pack's woven player moves. Measured twice in
-# separate processes with the documented command above (as `PYTHONPATH=src python3 -c ...`, no uv and
-# no network in the sandbox), readings equal:
-#   cf26f06e6987a7811c222ce60fbf8764f6aa1093af32875ae61898ca3cef42db
-#   cf26f06e6987a7811c222ce60fbf8764f6aa1093af32875ae61898ca3cef42db
-# Re-measured once more after that fix round's last line moved (one refusal
-# sentence re-quoted so both readers hold the same bytes), readings equal again:
-#   25a7bd492b9ed3f720663fd691eb09e06386c4e45b4b5d11fa88d177f03f45a1
-#   25a7bd492b9ed3f720663fd691eb09e06386c4e45b4b5d11fa88d177f03f45a1
-# Nothing about this pack's own bytes moved: woven against this commit's packaged.html and against
-# the previous one, this pack's 38 baked `window.VEFR_*` values are byte-identical, and
-# `worlds/sample-world` declares no skin, so `window.VEFR_SKIN` lands the literal null either way.
-# The archive loader's ZIP reader views its bytes through their own buffer (vefr#519 host fix), 2026-10-16;
-# measured twice on the host in separate processes, readings equal:
-#   753fcacefc2b760f63f0f3b4ebda0f33fecb60eb1b740975604848c57aa063bd
-#   753fcacefc2b760f63f0f3b4ebda0f33fecb60eb1b740975604848c57aa063bd
-NO_SKIN_WEAVE_SHA256 = "753fcacefc2b760f63f0f3b4ebda0f33fecb60eb1b740975604848c57aa063bd"
+# The player's own keys for every named surface (vefr#508): the new part 076-keybinds.js, plus the
+# 510-rules-closure-surfaces.js keybind block, 030-shell.html and 020-style.css, 2026-10-16; measured
+# twice in separate processes, readings equal:
+#   e51fb64aa887744155f1b02dfd4947970f77a2362d820e27d20df7b63ad1f01e
+#   e51fb64aa887744155f1b02dfd4947970f77a2362d820e27d20df7b63ad1f01e
+# The archive loader (vefr#455/#519) on top of the keybinds (#517), 2026-10-16; measured twice on the host in
+# separate processes after merging main, readings equal:
+#   df53bf59d89d3ee6afe1289fe04e317714379fa9d1b994197d55f0c19ec47782
+#   df53bf59d89d3ee6afe1289fe04e317714379fa9d1b994197d55f0c19ec47782
+NO_SKIN_WEAVE_SHA256 = "df53bf59d89d3ee6afe1289fe04e317714379fa9d1b994197d55f0c19ec47782"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():
