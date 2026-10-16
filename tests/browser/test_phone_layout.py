@@ -146,6 +146,56 @@ def test_a_phone_top_bar_keeps_health_and_the_level_reads_in_the_bag(browser, tm
         ctx.close()
 
 
+def test_a_landscape_phone_bag_reads_in_two_columns(browser, tmp_path):
+    """Held sideways, the Bag is a roomy overlay, not a cramped side sheet
+    (docs/design/storybook/DESIGN.md): what the hero carries reads as two
+    columns. Upright it is the single column it always was - the same panel,
+    the same rows, one column instead of two."""
+    html = play_kit.weave(play_kit.pack(tmp_path, "skin"), tmp_path)
+
+    def bag(ctx):
+        page = ctx.new_page()
+        try:
+            page.goto(html.as_uri())
+            enter(page)
+            # Two things carried, and a third on top: enough for two columns
+            # and a second row, with no reliance on the pack's own opening bag.
+            page.evaluate("() => { bagAdd('torch'); bagAdd('chalked-map'); bagAdd('torch'); }")
+            page.click("#menu-open")
+            page.click('[data-panel="bag"]')
+            return page.evaluate("""() => {
+              const list = document.getElementById('bag-list');
+              const cs = getComputedStyle(list);
+              const rows = [...list.querySelectorAll(':scope > .bag-row')]
+                .map(r => r.getBoundingClientRect());
+              return {display: cs.display,
+                      tracks: cs.gridTemplateColumns.split(' ').filter(Boolean).length,
+                      rows: rows.map(r => [Math.round(r.top), Math.round(r.left)])};
+            }""")
+        finally:
+            page.close()
+
+    sideways = browser.new_context(viewport={"width": 844, "height": 390},
+                                   has_touch=True, is_mobile=True)
+    try:
+        seen = bag(sideways)
+    finally:
+        sideways.close()
+    assert seen["display"] == "grid", seen
+    assert seen["tracks"] == 2, seen
+    assert len(seen["rows"]) >= 2, seen
+    (top0, left0), (top1, left1) = seen["rows"][0], seen["rows"][1]
+    assert top0 == top1 and left1 > left0, (
+        f"the first two bag rows do not sit side by side: {seen['rows']}")
+
+    upright = phone(browser)
+    try:
+        seen = bag(upright)
+    finally:
+        upright.close()
+    assert seen["display"] != "grid", seen
+
+
 def test_a_small_map_on_a_phone_draws_at_the_pack_tile(browser, tmp_path):
     pack = play_kit.pack(tmp_path, "interact", {"world.json": {"display": {"phone_tile": 52}}})
     # The town cut down to a room five tiles across: before, a phone drew a map

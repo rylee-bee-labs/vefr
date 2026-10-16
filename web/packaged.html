@@ -526,6 +526,14 @@
     #menu .pm button, #menu .pm a { font-size: 0.8rem; }
     #menu-panel { font-size: 0.9rem; }
     #menu-panel h2 { font-size: 1rem; margin: 2px 0 6px; }
+    /* Held sideways the Bag is a roomy overlay, not a cramped side sheet
+       (docs/design/storybook/DESIGN.md): what the hero carries reads as two
+       columns instead of one long strip down a narrow panel. Upright keeps
+       the single column the panel has always had. */
+    @media (orientation: landscape) {
+      #bag-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 16px; align-content: start; }
+      #bag-list > .bag-row { margin-top: 0; }
+    }
   }
   /* A desk under the follow camera (display.desk_tile) reads its messages the
      phone's way: one small line, the newest, fading after a few seconds, so no
