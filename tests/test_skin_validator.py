@@ -417,7 +417,11 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 #   698ee86e511cb6a6393d5478dfa9df160d7bbe437004b137856a22f910e42a51
 # Note dialog keeps Read on in view (cottage#165, vefr#509): the player CSS changed, 2026-10-15; measured on the host:
 #   aeb96b67ec7e215962dbb4aed1f364a9feb72ebdf059877346b5652a086e873a
-NO_SKIN_WEAVE_SHA256 = "aeb96b67ec7e215962dbb4aed1f364a9feb72ebdf059877346b5652a086e873a"
+# Back-to-library link (#488, b166a35a: the player bakes player.library_url, null here) and the landscape two-column
+# Bag (#485, ee74312c: player CSS), 2026-10-16; measured twice on the host in separate processes, readings equal:
+#   f4b52eef534b79029f087c9f9b38d1ce711ab61b79e81fdbda9d02ae3fcfde50
+#   f4b52eef534b79029f087c9f9b38d1ce711ab61b79e81fdbda9d02ae3fcfde50
+NO_SKIN_WEAVE_SHA256 = "f4b52eef534b79029f087c9f9b38d1ce711ab61b79e81fdbda9d02ae3fcfde50"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():
