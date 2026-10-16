@@ -130,7 +130,8 @@ its buttons, in `world.json`:
 "player": {
   "title_art": "assets/title.webp",
   "accent": "#C98049",
-  "model": "optional"
+  "model": "optional",
+  "library_url": "https://library.example.com/vefr/sample-world"
 }
 ```
 
@@ -138,6 +139,13 @@ its buttons, in `world.json`:
 1400px wide keeps the file small). `accent` is a six-digit hex colour;
 the button text turns dark or light to stay readable on it. `model` is
 optional too; leave it out and the game offers no model at all.
+
+`library_url` is the shelf this game lives on - the page it was
+published from, usually a library site. Give one and the pause menu
+offers **Back to the library**, a way out of the single file; leave it
+out and the game shows no such row. It must be an `http://` or
+`https://` address; a value that is not a link is left out rather than
+followed.
 
 ### The phone's zoom
 

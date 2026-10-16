@@ -97,19 +97,20 @@ ALL_SKIN = {**SKIN, "parts": {**SKIN["parts"], **PARTS_SKIN}}
 ALL_FILES = {**FILES, **PARTS_SIZES}
 
 
-def colour_of(fname: str) -> tuple:
+def colour_of(fname: str, colours=None) -> tuple:
     """The solid colour a fixture picture is drawn in."""
-    return PARTS_COLOURS.get(fname, PARCHMENT)
+    return (colours or PARTS_COLOURS).get(fname, PARCHMENT)
 
 
-def picture_uri(fname: str) -> str:
+def picture_uri(fname: str, colours=None) -> str:
     """The data URI `cli._baked_skin` bakes for a fixture picture.
 
     The tests that pin "this rule carries THIS part's picture" compare against
     this string, so it is built from the same bytes the pack is written with.
+    `colours` picks another skin's palette; without it the parts palette is used.
     """
     size = ALL_FILES[fname]
-    blob = base64.b64encode(png(size[0], size[1], colour_of(fname))).decode("ascii")
+    blob = base64.b64encode(png(size[0], size[1], colour_of(fname, colours))).decode("ascii")
     return f"data:image/png;base64,{blob}"
 
 
@@ -135,6 +136,39 @@ def build_parts(dest: Path, name: str = "skin-parts") -> Path:
     """A pack carrying every part a skin may name: the four already drawn, plus
     the nine of interface slice 4."""
     return build(dest, skin=ALL_SKIN, files=ALL_FILES, name=name, colours=PARTS_COLOURS)
+
+
+# ---- a second synthetic skin: the swap proof (vefr#503) ----
+# Every field the bake carries differs from SKIN: the name, the credit, the ink
+# and the colour of every picture. Two packs wearing the two skins are the only
+# way to tell "this pack's own skin is drawn" from "the last skin is still
+# drawn", so a page wearing this one draws THIS pack's pictures and ink - and
+# the two woven files differ in the baked `window.VEFR_SKIN` line alone.
+# The pictures are dark on purpose: a button face is the picture, filled, and
+# the engine writes its words light, so a light button picture would be a skin
+# nobody could read (the same reason the soft-wood skin below is dark).
+DEEP_TEAL = (30, 74, 88)
+SECOND = {
+    "name": "test-skin-two",
+    "credit": "Rylee and Claude (a second synthetic test skin)",
+    "parts": {
+        "panel": {"file": "panel.png", "slice": 20},
+        "button": {"file": "button.png", "slice": 16, "hover": "button-hover.png",
+                   "pressed": "button-pressed.png", "disabled": "button-disabled.png"},
+        "bar": {"frame": "bar-frame.png", "fill": "bar-fill.png"},
+        "cursor": {"file": "cursor.png", "hotspot": [3, 3]},
+    },
+    "ink": {"on_panel": "#16202E", "on_panel_dim": "#46536A"},
+}
+SECOND_FILES = dict(FILES)
+SECOND_COLOURS = {fname: DEEP_TEAL for fname in FILES}
+
+
+def build_second(dest: Path, name: str = "skin-second") -> Path:
+    """A second pack wearing a second skin: the same four drawn parts as
+    `build`, in another colour, with another name, credit and ink."""
+    return build(dest, skin=SECOND, files=SECOND_FILES, name=name,
+                 colours=SECOND_COLOURS)
 
 
 # ---- a skin shaped like the soft-wood packs (Cottage's, and every pack that opts

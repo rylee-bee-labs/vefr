@@ -62,11 +62,14 @@ def ran(tmp_path_factory):
     # of interface slice 4.
     parts = home / "parts.html"
     parts.write_text(cli.weave_html(mk.build_parts(home)), encoding="utf-8")
+    # a second pack wearing a second skin (#503): the swap proof.
+    second = home / "second.html"
+    second.write_text(cli.weave_html(mk.build_second(home)), encoding="utf-8")
     run = subprocess.run(["node", str(ROOT / "tests/fixtures/skin_apply_harness.mjs"),
                           "skinned", str(skinned), "plain", str(plain),
                           "dressed", str(dressed), "contrast", str(contrast),
-                          "parts", str(parts)],
-                         capture_output=True, text=True, timeout=240)
+                          "parts", str(parts), "second", str(second)],
+                         capture_output=True, text=True, timeout=300)
     assert run.returncode == 0, run.stderr + run.stdout
     return json.loads(run.stdout)
 
@@ -822,3 +825,79 @@ def test_a_pack_with_no_skin_gains_no_element_of_any_kind(ran):
     assert plain["hud"]["bagChildren"] == 1
     assert plain["npcBox"]["withPortrait"]["children"] == [
         "p#npc-name", "p#npc-line", "p#npc-note", "button#npc-close"]
+
+
+# ===========================================================================
+# the swap proof (vefr#503): two packs, two skins, one engine
+#
+# Every skin test above proves one skin is drawn. None of them could tell a
+# page wearing THIS pack's skin from a page still wearing the last one, because
+# there was only ever one synthetic skin to wear. A second one - another name,
+# another credit, another ink, another colour on every picture - is the control
+# that makes the first one a measurement.
+# ===========================================================================
+
+def test_two_packs_wearing_two_skins_each_get_their_own_style_element(ran):
+    """Each woven game builds its one `<style id="vefr-skin-css">` from its OWN
+    pack's baked skin: the picture and the ink in the sheet are that skin's,
+    and the other skin's are not in it at all. The two sheets are not the same
+    string, so neither page is showing the other pack's skin."""
+    a, b = ran["skinned"], ran["second"]
+    assert a["hasStyle"] is True and b["hasStyle"] is True
+    assert "has-skin" in (a["bodyClass"] + " " + a["htmlClass"])
+    assert "has-skin" in (b["bodyClass"] + " " + b["htmlClass"])
+    assert a["css"] != b["css"]
+
+    panel_a = mk.picture_uri("panel.png")                       # the parchment panel
+    panel_b = mk.picture_uri("panel.png", mk.SECOND_COLOURS)    # the teal one
+    assert panel_a != panel_b
+    assert panel_a in a["css"] and panel_b not in a["css"]
+    assert panel_b in b["css"] and panel_a not in b["css"]
+
+    ink_a, ink_b = mk.SKIN["ink"]["on_panel"], mk.SECOND["ink"]["on_panel"]
+    assert ink_a != ink_b
+    assert ink_a in a["css"] and ink_b not in a["css"]
+    assert ink_b in b["css"] and ink_a not in b["css"]
+
+    # The rest of the sheet is the engine's, built the same way for both: the
+    # button face, the 44 px floor and the media guard are in both.
+    for css in (a["css"], b["css"]):
+        assert "background-color: #5F5043 !important" in css
+        assert "min-height: 44px" in css
+        assert GUARD in css
+
+
+def test_the_second_skins_ink_clears_four_and_a_half_on_the_panel_ground(ran):
+    """The second skin declares its own ink, and that ink reads on the flat
+    ground the loader falls back to under a panel - measured, like the first
+    skin's, on the colours the loader actually writes."""
+    css = ran["second"]["css"]
+    ink = mk.SECOND["ink"]["on_panel"]
+    ground = re.search(r"var\(--vefr-skin-ground,\s*(#[0-9A-Fa-f]{6})\)", css)
+    assert ground, "the second skin writes no panel ground"
+    got = contrast(ink, ground.group(1))
+    assert got >= 4.5, (
+        f"the second skin: ink {ink} on the panel ground {ground.group(1)} is {got:.2f}:1")
+
+
+def test_two_skins_swap_and_no_engine_byte_moves(tmp_path):
+    """A skin is DATA, and this is the proof: two packs with the same world and
+    the two skins weave to files that differ in the baked `window.VEFR_SKIN`
+    line alone. Swapping a pack's skin changes what is painted and nothing
+    else - no engine edit rides along with a skin."""
+    same = "skin-swap"
+    a = cli.weave_html(mk.build(tmp_path / "a", name=same))
+    b = cli.weave_html(mk.build_second(tmp_path / "b", name=same))
+    assert a != b
+
+    def skin_line(html):
+        m = re.search(r"window\.VEFR_SKIN = ([^\n]*);\n", html)
+        assert m, "no VEFR_SKIN line in the weave"
+        return m.group(1)
+
+    assert skin_line(a) != skin_line(b)
+
+    def engine(html):
+        return re.sub(r"window\.VEFR_SKIN = [^\n]*;\n", "window.VEFR_SKIN = <skin>;\n", html)
+
+    assert engine(a) == engine(b)

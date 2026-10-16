@@ -55,7 +55,8 @@ REQUIRED_VERBS = {
     "doctor", "check", "chat", "map", "delve", "weave", "spark",
     "test", "ferry", "handbok", "skipa", "norns", "ratatoskr",
 }
-VEFR_VERBS = REQUIRED_VERBS | {"find", "publish", "look", "probe", "features", "normalize", "art", "stamp"}
+VEFR_VERBS = REQUIRED_VERBS | {"find", "publish", "look", "probe", "features", "normalize", "art", "stamp",
+                               "where", "explain"}
 
 
 # ------------------------------------------------------------- harness
@@ -260,6 +261,7 @@ SANCTIONED_FNS = {
         "cmd_spark_smoke",
         "cmd_deploy", "cmd_backup", "cmd_import", "cmd_scaffold",
         "cmd_vefr_skipa", "cmd_vefr_doctor", "cmd_find",
+        "cmd_where", "cmd_explain",
         "cmd_publish", "cmd_look", "cmd_probe", "cmd_features", "cmd_normalize",
         "cmd_art_check", "cmd_art_credits", "cmd_art_kit",
         "cmd_stamp_check",
@@ -273,6 +275,8 @@ SANCTIONED_FNS = {
 # themselves (their thinness is proven in their own tests below).
 EXPECTED_BOUND = {
     "find": ("cmd_find",),
+    "where": ("cmd_where",),
+    "explain": ("cmd_explain",),
     "publish": ("cmd_publish",),
     "look": ("cmd_look",),
     "probe": ("cmd_probe",),
@@ -346,6 +350,8 @@ def _bound_subtree(monkeypatch, verb):
 # dispatches: they hand argv to norns_main/ratatoskr_main verbatim.
 DISPATCH_ARGV = {
     "find": ["find", "stone"],
+    "where": ["where", "keeper"],
+    "explain": ["explain", "saves"],
     "publish": ["publish", "--dry-run"],
     "look": ["look", "--html", "x.html"],
     "probe": ["probe", "--html", "x.html", "--fire", "reads:what=x"],

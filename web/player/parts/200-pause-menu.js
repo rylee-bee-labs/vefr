@@ -12,6 +12,17 @@ function bindMenu() {
     var albumItem = menu.querySelector('[data-panel="album"]');
     if (albumItem) albumItem.closest('li').remove();
   }
+  // Back to the library: the shelf the pack names for this game, when it
+  // names one. A pack with no `player.library_url` bakes no URL, and the
+  // row stays hidden rather than shown and refused - the same shape the
+  // album and descent rows keep.
+  var libraryRow = document.getElementById('menu-library-row');
+  var libraryUrl = (window.VEFR_HERO && window.VEFR_HERO.library_url) || '';
+  if (libraryRow && libraryUrl) {
+    var libraryLink = document.getElementById('menu-library');
+    if (libraryLink) libraryLink.setAttribute('href', libraryUrl);
+    libraryRow.hidden = false;
+  }
   function showPanel(name) {
     menu.querySelectorAll('[data-panel]').forEach(function (b) {
       b.setAttribute('aria-current', b.dataset.panel === name ? 'true' : 'false');

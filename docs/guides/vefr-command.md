@@ -29,6 +29,8 @@ order `vefr --help` prints them in, too.
 | `vefr ferry` | deploy, carry, fetch, scaffold | `ratatoskr ferry` |
 | `vefr skipa` | kept for now; prints one line saying it is part of `vefr doctor` | `ratatoskr skipa` |
 | `vefr find` | local read-only search of the pack's markdown and the journal | new |
+| `vefr where` | read-only: which act, region and map cell define a thing (a speaker, an enemy, a named place, an item) | new |
+| `vefr explain` | read-only: a resolved world.json block and the validator sentences it earns | new |
 | `vefr features` | the feature catalog: what VEFR can do, and what a pack uses | new |
 | `vefr normalize` | expand a Blueprint into its owned regions and refresh the lock | new |
 

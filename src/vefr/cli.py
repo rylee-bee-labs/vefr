@@ -2802,6 +2802,16 @@ def weave_html(pack: Path, *, pool: dict | None = None) -> str:
         hero_gold = 0
     hero = {'hp': hero_hp, 'atk': hero_atk, 'gold': hero_gold,
             'wake': {'region': wake_region, 'at': wake_at}}
+    # The shelf this game came from, when the pack names one: the woven
+    # player is one offline file, but it keeps a way back to the library
+    # page it was published from. Only an http(s) URL is baked - the
+    # player draws it as a link, and a scheme it cannot follow is no link
+    # at all. A pack with no `library_url` bakes no key, so every
+    # existing pack's bytes are unchanged.
+    library_url = player.get('library_url')
+    if isinstance(library_url, str) and library_url.strip().lower().startswith(
+            ('http://', 'https://')):
+        hero['library_url'] = library_url.strip()
 
     transitions = first_act.get('transitions')
     if transitions is None:
@@ -5156,6 +5166,159 @@ def cmd_find(args) -> int:
     return EXIT_OK
 
 
+def _authoring_pack(args) -> Path:
+    """Resolve --pack for the read-only authoring verbs (where, explain) the
+    same way cmd_find does: a bare name is worlds/<name>, a path spelling is
+    resolved against this run's cwd, and no --pack is the resolved world."""
+    if getattr(args, 'pack', None) is None:
+        return pack_root() / 'worlds' / world_name()
+    p = Path(args.pack)
+    if p.is_absolute() or '/' in str(args.pack):
+        return p.resolve()
+    return pack_root() / 'worlds' / p
+
+
+def _at_cell(xy) -> str:
+    """` at x,y` for a record that carries a tile, and nothing otherwise."""
+    if isinstance(xy, (list, tuple)) and len(xy) == 2 \
+            and all(isinstance(v, int) for v in xy):
+        return f' at {xy[0]},{xy[1]}'
+    return ''
+
+
+def where_hits(world: dict, thing_id: str) -> list[str]:
+    """Every place the pack defines `thing_id`, one line each, in a fixed
+    order: the act and region that hold it, and its map cell where the
+    record has one. Read-only - the pack is loaded and never written.
+
+    The records a thing id can name today: a speaker, an enemy, a named
+    point of interest (a map cell whose `pois` value is the thing), and an
+    item in the pack's catalog. A pack that names the thing nowhere gets [].
+    """
+    out: list[str] = []
+    act = world.get('_act_id') or ''
+    region = world.get('_region') or ''
+
+    def where(a, r):
+        return f'{a}/{r}' if a else (r or 'town')
+
+    spec = (world.get('speakers') or {}).get(thing_id)
+    if isinstance(spec, dict):
+        r = spec.get('region') or region
+        out.append(f'speaker {thing_id}: {where(act, r)}{_at_cell(spec.get("at"))}')
+    for a in (world.get('acts') or []):
+        aid = a.get('id') or act
+        for rname, rdata in (a.get('regions') or {}).items():
+            contract = (rdata or {}).get('contract') or {}
+            for e in (contract.get('enemies') or []):
+                if isinstance(e, dict) and e.get('id') == thing_id:
+                    out.append(f'enemy {thing_id}: {where(aid, rname)}{_at_cell(e.get("at"))}')
+            for cell, name in (contract.get('pois') or {}).items():
+                if name == thing_id:
+                    out.append(f'place {thing_id}: {where(aid, rname)} at {cell}')
+    # A flat pack keeps its ground in `town`; the acts shape above already
+    # covered the first region, so a duplicate line is dropped.
+    for cell, name in ((world.get('town') or {}).get('pois') or {}).items():
+        if name == thing_id:
+            line = f'place {thing_id}: {where(act, region)} at {cell}'
+            if line not in out:
+                out.append(line)
+    if thing_id in (world.get('items') or {}):
+        out.append(f'item {thing_id}: the pack catalog (world.json)')
+    return out
+
+
+def cmd_where(args) -> int:
+    """`vefr where <id>` - which act, region and map cell define a thing.
+
+    A read-only authoring answer, the same failure shapes as cmd_find: a
+    pack that is not there is refused (exit 1, named on its own line); an
+    id the pack defines nowhere did what it was asked, so UNKNOWN prints
+    and exit is 0.
+    """
+    from . import maplab
+
+    pack = _authoring_pack(args)
+    if not (pack / 'world.json').exists():
+        print(f'pack not found at {pack}; pass --pack NAME or a path')
+        return EXIT_ERROR
+    hits = where_hits(maplab.load_pack(pack), args.thing)
+    if not hits:
+        print('UNKNOWN')
+        return EXIT_OK
+    for line in hits:
+        print(line)
+    return EXIT_OK
+
+
+# The world.json blocks `vefr explain` knows, each with the validator
+# sentences that belong to it. A block the pack declares none of reads
+# as null and prints `ok` - declaring nothing is not a fault.
+def _explain_blocks() -> dict:
+    from . import maplab
+
+    def _items(w, _pack):
+        out: list[str] = []
+        key_ids = maplab._door_key_items(w)
+        spell_ids = maplab.spell_ids_of(w)
+        for iid, spec in (w.get('items') or {}).items():
+            if isinstance(spec, dict):
+                out.extend(maplab.item_light_errors(iid, spec))
+                out.extend(maplab.item_slot_errors(iid, spec, key_ids))
+                out.extend(maplab.item_roll_errors(iid, spec))
+                out.extend(maplab.item_spell_errors(iid, spec, spell_ids))
+        return out
+
+    return {
+        'album': lambda w, p: maplab.album_errors(w, p),
+        'bag': lambda w, p: maplab.bag_errors(w),
+        'descent': lambda w, p: maplab.descent_errors(w, p),
+        'display': lambda w, p: maplab.display_errors(w),
+        'grammars': lambda w, p: maplab.grammar_errors(w.get('grammars') or {}),
+        'growth': lambda w, p: maplab.growth_errors(w),
+        'identify': lambda w, p: maplab.identify_errors(w),
+        'items': _items,
+        'player_words': lambda w, p: maplab.player_words_errors(w),
+        'rules': lambda w, p: maplab.rules_errors(w, p),
+        'saves': lambda w, p: maplab.saves_errors(w),
+        'skin': lambda w, p: maplab.skin_errors(w, p),
+        'sound': lambda w, p: maplab.sound_errors(w),
+        'spells': lambda w, p: maplab.spells_errors(w),
+        'town_states': lambda w, p: maplab.town_states_errors(w),
+    }
+
+
+def cmd_explain(args) -> int:
+    """`vefr explain <block>` - the resolved block and its validation
+    sentences.
+
+    Prints the block exactly as the loader resolved it (null when the pack
+    declares none), then one line per sentence the validator writes about
+    that block, or `ok` when it writes none. Read-only. A block name the
+    front door does not know is refused (exit 1) with the list it does.
+    """
+    from . import maplab
+
+    pack = _authoring_pack(args)
+    if not (pack / 'world.json').exists():
+        print(f'pack not found at {pack}; pass --pack NAME or a path')
+        return EXIT_ERROR
+    blocks = _explain_blocks()
+    if args.block not in blocks:
+        print(f'no such block: {args.block}; try one of: '
+              + ', '.join(sorted(blocks)))
+        return EXIT_ERROR
+    world = maplab.load_pack(pack)
+    print(json.dumps(world.get(args.block), indent=2, ensure_ascii=False))
+    sentences = blocks[args.block](world, pack)
+    if sentences:
+        for sentence in sentences:
+            print(sentence)
+    else:
+        print('ok')
+    return EXIT_OK
+
+
 def cmd_publish(args) -> int:
     """`vefr publish` - weave the pack and hand it to the gallery.
 
@@ -5350,8 +5513,11 @@ VEFR_EPILOG = """the journey, in the order an author walks it:
   doctor    session-start health: the whole estate, asked once
   skipa     the seven questions, now part of: vefr doctor
 
-beside the journey: vefr-lore (see: docs/guides/lore.md) and the
-volume tools under `vefr ratatoskr volumes` (see: docs/guides/volumes.md).
+beside the journey: the read-only authoring answers `vefr where`
+(which act, region and cell define a thing) and `vefr explain` (a
+resolved block and its validator sentences); vefr-lore (see:
+docs/guides/lore.md) and the volume tools under
+`vefr ratatoskr volumes` (see: docs/guides/volumes.md).
 """
 
 
@@ -5382,6 +5548,35 @@ def vefr_main() -> int:
                     help='world pack: a worlds/ name or a path '
                          '(default: the resolved world)')
     fd.set_defaults(fn=cmd_find)
+
+    # `where` and `explain`: read-only authoring answers over the same
+    # pack the front door already resolves - which act/region/cell hold
+    # a thing, and what a resolved world.json block plus its validator
+    # sentences look like. No model call, no writes.
+    wh = sub.add_parser(
+        'where',
+        help='which act, region and map cell define a thing',
+        description='read-only: which act, region and map cell define a thing',
+        epilog='see: docs/guides/vefr-command.md',
+    )
+    wh.add_argument('thing', help='the id to locate: a speaker, an enemy, a place or an item')
+    wh.add_argument('--pack', default=None,
+                    help='world pack: a worlds/ name or a path '
+                         '(default: the resolved world)')
+    wh.set_defaults(fn=cmd_where)
+
+    ex = sub.add_parser(
+        'explain',
+        help='a resolved world.json block and the validator sentences it earns',
+        description='read-only: a resolved world.json block and the validator '
+                    'sentences it earns',
+        epilog='see: docs/guides/vefr-command.md',
+    )
+    ex.add_argument('block', help='the block to explain: growth, spells, skin, rules, ...')
+    ex.add_argument('--pack', default=None,
+                    help='world pack: a worlds/ name or a path '
+                         '(default: the resolved world)')
+    ex.set_defaults(fn=cmd_explain)
 
     pb = sub.add_parser(
         'publish',

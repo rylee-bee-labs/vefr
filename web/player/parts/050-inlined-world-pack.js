@@ -100,7 +100,9 @@ window.VEFR_CHEST_ICON = {{chest_json}};
 window.VEFR_ENEMIES = {{enemies_json}};
 // The hero's own numbers and wake point:
 // {"hp": 6, "atk": 2, "wake": {"region": "...", "at": [x, y]}}. Cozy
-// death restores the max and wakes the hero at `wake`.
+// death restores the max and wakes the hero at `wake`. A pack whose
+// `player.library_url` names an http(s) shelf carries it here too, and
+// the pause menu shows a way back; no key for a pack that names none.
 window.VEFR_HERO = {{hero_json}};
 window.VEFR_SKIN = {{skin_json}};
 window.VEFR_GROWTH = {{growth_json}};
