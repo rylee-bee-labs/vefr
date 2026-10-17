@@ -178,10 +178,9 @@ function rulesWhyRecord(fired) {
 //     is its own memory: the risk leaves the bag, so the carry check
 //     above stops asking on its own.
 //
-// What this one example does not have yet, said plainly rather than
-// hidden: nothing. The offer is asked as two on-screen buttons as well
-// as the two keys, so a phone can answer it either way (vefr#504, the
-// gap the accessibility contract names: a phone has no Y and no N).
+// The offer is asked as two on-screen buttons as well as the two keys,
+// so a phone can answer it either way (vefr#504; the accessibility
+// contract: a phone has no Y and no N).
 var STAKE_PENDING = null;   // the offer waiting for an answer, or null
 var STAKES_TAKEN = [];      // the ids the player has staked, in order
 
@@ -284,8 +283,14 @@ function stakeTake() {
   if (!s) return;
   STAKE_PENDING = null;
   stakesClose();
+  // The risk must still be in the bag at the moment of answering: the offer may have been open
+  // while the player used or dropped it. No risk put down, no reward, and the stake is not spent
+  // (#535 review: the reward was granted for free).
+  if (!bagRemoveOne(s.risk)) {
+    combatSay('You no longer carry ' + itemName(s.risk) + ', so there is nothing to stake.');
+    return;
+  }
   STAKES_TAKEN.push(s.id);
-  bagRemoveOne(s.risk);
   if (bagAdd(s.reward, null, true)) {
     combatSay('You put ' + itemName(s.risk) + ' down. You take '
       + itemName(s.reward) + '.');

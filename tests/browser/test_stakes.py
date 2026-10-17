@@ -397,3 +397,22 @@ def test_the_keys_still_answer_the_offer_on_a_desktop(browser, woven):
         assert said(page) == TAKEN, said(page)
         assert carried(page) == [MAP], carried(page)
         assert offered(page)["buttons"] == []
+
+
+def test_a_risk_dropped_while_the_offer_is_open_earns_nothing(browser, woven):
+    """#535 review: the offer can stay open while the torch leaves the bag some other way.
+    Answering Y then must not hand over the reward for free, and the stake is not spent."""
+    with playing(browser, woven) as page:
+        walk_to_the_toll(page)
+        assert stakes(page)["pending"] == "the-tolls-price"
+        # The torch leaves the bag behind the offer's back (as using or dropping it would).
+        page.evaluate("""() => {
+            const key = Object.keys(localStorage).find((k) => k.startsWith('vefr-bag-'));
+            const bag = JSON.parse(localStorage.getItem(key) || '[]');
+            localStorage.setItem(key, JSON.stringify(bag.filter((e) => (e && e.id ? e.id : e) !== 'torch')));
+        }""")
+        page.keyboard.press("y")
+        page.wait_for_timeout(250)
+        assert "no longer carry" in said(page), said(page)
+        assert MAP not in carried(page), f"the reward was granted for a risk no longer carried: {carried(page)}"
+        assert stakes(page)["taken"] == [], stakes(page)

@@ -556,7 +556,7 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # Stakes (vefr#504) merged onto main, 2026-10-16; measured twice on the host in separate processes, readings equal:
 #   2a6216c415fcafbed3f5a8271279e40e9f8bdfc27bdbd9a54cb1d1bccdedc8f5
 #   2a6216c415fcafbed3f5a8271279e40e9f8bdfc27bdbd9a54cb1d1bccdedc8f5
-NO_SKIN_WEAVE_SHA256 = "2a6216c415fcafbed3f5a8271279e40e9f8bdfc27bdbd9a54cb1d1bccdedc8f5"
+NO_SKIN_WEAVE_SHA256 = "d42518a195b180b240f76659e35a510e02af52db0b1b23efb6bc921eac990e38"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

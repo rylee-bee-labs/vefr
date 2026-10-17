@@ -124,9 +124,15 @@ def test_the_validator_tells_the_author_what_is_wrong_with_a_stake():
     """The player drops a stake it cannot offer; maplab.stakes_errors says why, naming the stake."""
     from vefr import maplab
     good = {"id": "wager", "when": {"enters": {"place": "dock"}},
-            "risk": "your lantern", "reward": "a map", "say": "Bet the lantern?"}
+            "risk": "lantern", "reward": "map", "say": "Bet the lantern?"}
+    items = {"lantern": {"name": "a lantern"}, "map": {"name": "a map"}}
     assert maplab.stakes_errors({}) == []
-    assert maplab.stakes_errors({"stakes": [good]}) == []
+    assert maplab.stakes_errors({"items": items, "stakes": [good]}) == []
+    # #535 review: risk and reward must be declared items, and the validator is as strict as the bake.
+    errs = maplab.stakes_errors({"items": items, "stakes": [dict(good, reward="mapp")]})
+    assert any("reward names unknown item 'mapp'" in e for e in errs), errs
+    errs = maplab.stakes_errors({"items": items, "stakes": [dict(good, when={"enters": {"place": ""}})]})
+    assert any("when must be one event" in e for e in errs), errs
     assert maplab.stakes_errors({"stakes": "nope"})[0].startswith("stakes must be a list")
     bad = dict(good, when={"bogus": {}}, extra=1)
     del bad["say"]
