@@ -1,0 +1,30 @@
+{
+  "label": "Buzzby editorial illustration (not a screenshot, not gameplay)",
+  "source": "design-system docs/characters/buzzby/reference/buzzby-reference-v5.png (Rylee approved the v5 sheet on 2026-10-17)",
+  "source_sha256": "b66e9f263ff7e4d6adaa474161b572d189d01fca30544f1b8b383e69fbe0639c",
+  "source_model": "codex (gpt-image-2)",
+  "derivation": "unchanged crops of two expression panels; no new art was generated",
+  "files": {
+    "buzzby-welcome.png": {
+      "panel": "DELIGHTED",
+      "crop_box": [
+        168,
+        352,
+        532,
+        592
+      ],
+      "sha256": "d67c965c07b0d9dc1c840c46cf4390d9c7cd59cf44090e38830135f85145d8cb"
+    },
+    "buzzby-trail-map.png": {
+      "panel": "CURIOUS",
+      "crop_box": [
+        590,
+        362,
+        920,
+        592
+      ],
+      "sha256": "6da86cbe4cba8893b9e51b5b4b7918ba29a666485096062c9053f7e42ad19169"
+    }
+  },
+  "license": "CC BY-SA 4.0 (see LICENSE.md in this folder); the name Buzzby is covered by TRADEMARKS.md"
+}
