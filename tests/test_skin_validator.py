@@ -438,7 +438,16 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # 2026-10-16; measured twice on the host in separate processes after merging main, readings equal:
 #   6234996f734f57e47389b63ea6c181b3b54a8e6a0ee36ab761c4397f1bac7886
 #   6234996f734f57e47389b63ea6c181b3b54a8e6a0ee36ab761c4397f1bac7886
-NO_SKIN_WEAVE_SHA256 = "6234996f734f57e47389b63ea6c181b3b54a8e6a0ee36ab761c4397f1bac7886"
+# The optional ambient music block (vefr#502) on top of the ending-only room scale, 2026-10-16; the player's
+# template grew one data line (window.VEFR_MUSIC_DEF, the literal null here), measured twice in separate
+# processes, readings equal:
+#   b09fdb1a32e51e1e63b866c6cda355e04a70e147285ecea8e76cbd91d0b23446
+#   b09fdb1a32e51e1e63b866c6cda355e04a70e147285ecea8e76cbd91d0b23446
+# The bed's own loop timer (vefr#502): one line in 120-sound.js lost its unused local, 2026-10-16; measured
+# twice in separate processes, readings equal:
+#   6805800bd454e092454e76b2ba7ff693579dae21407925ebbb831f24f8b9d161
+#   6805800bd454e092454e76b2ba7ff693579dae21407925ebbb831f24f8b9d161
+NO_SKIN_WEAVE_SHA256 = "6805800bd454e092454e76b2ba7ff693579dae21407925ebbb831f24f8b9d161"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

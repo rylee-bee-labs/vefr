@@ -180,3 +180,224 @@ if (window.VEFR_SOUND) {
   })();
 }
 
+// ---- music: one optional ambient bed the pack asked for (vefr #502) ----
+// The recorded owner decision: VEFR may offer a reusable, opt-in ambient
+// music capability; each pack owns its own musical identity and may take
+// it or leave it. A pack opts in with `"music": {"track": "shore"}` in
+// world.json (window.VEFR_MUSIC_DEF); a pack that does not leaves
+// window.VEFR_MUSIC undefined and Display gets no music row at all, and
+// its audio is byte for byte what it was.
+//
+// Three things are quiet on purpose. Music is OFF at boot: nothing
+// sounds until the player ticks the box, so there is never an
+// unexpected autoplay, and the first sound is always a gesture of the
+// player's own. The volume starts at MUSIC_DEFAULT (not at full). The
+// bed itself peaks lower than any cue (MUSIC_PEAK), so at full volume
+// music is still the quietest thing in the game. Like the cues, an
+// AudioContext is made lazily on the toggle and every step is wrapped:
+// jsdom has none, and a missing, suspended or throwing context must
+// never throw out of the toggle.
+var MUSIC_KEY = 'vefr-music-'
+  + ((window.VEFR_WORLD && window.VEFR_WORLD.name) || 'world');
+var MUSIC_VOLUME_KEY = MUSIC_KEY + '-volume';
+var MUSIC_DEFAULT = 40;
+// The player's own volume, 0-100, in the same shape as the sound
+// slider's key and read at every loop, so a slider moved mid-play is
+// heard at the next fade. Absent means the quiet default.
+function musicVolume() {
+  var n = parseInt(store.get(MUSIC_VOLUME_KEY), 10);
+  if (!(n >= 0 && n <= 100)) n = MUSIC_DEFAULT;
+  return n / 100;
+}
+if (window.VEFR_MUSIC_DEF && window.VEFR_MUSIC_DEF.track) {
+  // `on` is the player's remembered choice, read the same way the
+  // sound switch reads its own. It is NOT a promise to play: a boot
+  // that carried a choice over from last time still plays nothing
+  // until the player touches the page (see the one-shot listener in
+  // the Display block), so `playing` is false and `starts` is 0 in
+  // every case at boot.
+  window.VEFR_MUSIC = { track: window.VEFR_MUSIC_DEF.track,
+                        on: store.get(MUSIC_KEY) === 'on',
+                        playing: false, starts: 0 };
+  window.VEFR_MUSIC_VOLUME = musicVolume();
+}
+
+// One synthesized bed: [Hz, ms] pairs layered from the loop's start, so
+// a bed is a chord held long enough to sit under play rather than a
+// tune that asks for attention. `shore` is a low open fifth with the
+// fifth on top, one note at a time fading in over a second and out
+// over the last stretch of the loop, so the seam between loops is a
+// fade rather than a click. No audio files ship: nothing to license.
+var MUSIC_PEAK = 0.025;
+var MUSIC_BEDS = {
+  shore: { notes: [[110, 6000], [164.81, 6000], [220, 6000],
+                   [164.81, 6000], [110, 6000]] }
+};
+
+var MUSIC_CTX = null;
+// Bumped on every stop. A loop that is already in flight checks it
+// before arming the next one, so a mute mid-loop cannot leave the bed
+// quietly playing on after the switch says off.
+var MUSIC_GEN = 0;
+function musicContext() {
+  try {
+    if (MUSIC_CTX) return MUSIC_CTX;
+    var Ctor = window.AudioContext || window.webkitAudioContext;
+    if (!Ctor) return null;
+    MUSIC_CTX = new Ctor();
+    return MUSIC_CTX;
+  } catch (e) { return null; }
+}
+
+// One pass of the bed, scheduled from the context's clock. Each note is
+// an oscillator into its own gain, the whole pass peaking at
+// MUSIC_PEAK * the player's volume; `starts` counts the passes asked
+// for, so a harness can see that a boot played nothing.
+function musicPass(ctx, gen) {
+  var bed = MUSIC_BEDS[window.VEFR_MUSIC.track];
+  if (!bed) return;
+  var vol = musicVolume();
+  if (vol <= 0) return;
+  var at = ctx.currentTime + 0.05;
+  var loopMs = 0;
+  bed.notes.forEach(function (n) {
+    var dur = n[1] / 1000;
+    if (n[1] > loopMs) loopMs = n[1];
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(n[0], at);
+    var fadeIn = Math.min(1, dur / 2), fadeOut = Math.max(0, dur - 1.2);
+    gain.gain.setValueAtTime(0.0001, at);
+    gain.gain.linearRampToValueAtTime(MUSIC_PEAK * vol, at + fadeIn);
+    gain.gain.setValueAtTime(MUSIC_PEAK * vol, at + fadeOut);
+    gain.gain.linearRampToValueAtTime(0.0001, at + dur);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(at);
+    osc.stop(at + dur + 0.05);
+    osc.onended = function () {
+      try { osc.disconnect(); gain.disconnect(); } catch (e) {}
+    };
+  });
+  // The pass is over when the longest note is; arm the next one then,
+  // so no timer runs behind a closed page.
+  var wait = Math.max(0, (loopMs / 1000) - ctx.currentTime + at);
+  try {
+    setTimeout(function () {
+      if (gen !== MUSIC_GEN) return;
+      if (!window.VEFR_MUSIC.on || !window.VEFR_MUSIC.playing) return;
+      musicPass(ctx, gen);
+    }, wait * 1000);
+  } catch (e) {}
+  window.VEFR_MUSIC.starts++;
+}
+
+// Start: called only from the toggle's own change event, so the
+// AudioContext is made inside a gesture and the first note is the
+// player asking for it. Everything wrapped; a failure leaves the
+// switch where the player put it and the bed silent.
+function musicStart() {
+  var ctx = musicContext();
+  if (!ctx) return;
+  try {
+    if (ctx.state === 'suspended' && ctx.resume) {
+      var resuming = ctx.resume();
+      if (resuming && resuming.catch) resuming.catch(function () {});
+    }
+    var gen = ++MUSIC_GEN;
+    window.VEFR_MUSIC.playing = true;
+    musicPass(ctx, gen);
+  } catch (e) {}
+}
+
+// Stop: the switch's word. The generation bump disarms the loop, and
+// the nodes already scheduled are stopped where they are (their gains
+// are already fading out, so stopping early is a cut at the volume
+// slider's level and never a bang).
+function musicStop() {
+  MUSIC_GEN++;
+  try {
+    if (MUSIC_CTX) {
+      MUSIC_CTX.close().then(function () {}, function () {});
+      MUSIC_CTX = null;
+    }
+  } catch (e) {}
+  window.VEFR_MUSIC.playing = false;
+}
+
+// Display > Music, built at boot ONLY when the pack opted in, exactly
+// like the Sound rows: a real checkbox on a 44px row and one slider
+// for how loud the bed is. Off until it is ticked, and remembered in
+// this browser under the world's own name.
+if (window.VEFR_MUSIC) {
+  (function () {
+    var panel = document.querySelector('[data-panel-body="display"]');
+    if (!panel) return;
+    var row = document.createElement('p');
+    row.className = 'sound-row';
+    var label = document.createElement('label');
+    var box = document.createElement('input');
+    box.type = 'checkbox';
+    box.id = 'music-toggle';
+    box.checked = window.VEFR_MUSIC.on;
+    label.appendChild(box);
+    label.appendChild(document.createTextNode(' Music'));
+    row.appendChild(label);
+
+    var volRow = document.createElement('p');
+    volRow.className = 'sound-row';
+    var volLabel = document.createElement('label');
+    volLabel.htmlFor = 'music-volume';
+    volLabel.appendChild(document.createTextNode(' Music volume'));
+    var vol = document.createElement('input');
+    vol.type = 'range';
+    vol.id = 'music-volume';
+    vol.min = '0';
+    vol.max = '100';
+    vol.step = '5';
+    vol.value = String(Math.round(musicVolume() * 100));
+    var volOut = document.createElement('output');
+    volOut.id = 'music-volume-out';
+    volOut.setAttribute('for', 'music-volume');
+    volOut.textContent = vol.value + '%';
+    volLabel.appendChild(vol);
+    volLabel.appendChild(volOut);
+    volRow.appendChild(volLabel);
+
+    function setOn(on) {
+      window.VEFR_MUSIC.on = on;
+      store.set(MUSIC_KEY, on ? 'on' : 'off');
+      box.checked = on;
+      if (on) musicStart(); else musicStop();
+    }
+    box.addEventListener('change', function () { setOn(box.checked); });
+    vol.addEventListener('input', function () {
+      store.set(MUSIC_VOLUME_KEY, vol.value);
+      volOut.textContent = vol.value + '%';
+      window.VEFR_MUSIC_VOLUME = musicVolume();
+    });
+
+    // A choice carried over from last time waits for this boot's first
+    // touch - one listener, removed the moment it runs - so a reload
+    // resumes the bed the player asked for without a page that makes
+    // sound before anyone has touched it.
+    if (window.VEFR_MUSIC.on) {
+      var wake = function () {
+        document.removeEventListener('pointerdown', wake, true);
+        document.removeEventListener('keydown', wake, true);
+        try { musicStart(); } catch (e) {}
+      };
+      document.addEventListener('pointerdown', wake, true);
+      document.addEventListener('keydown', wake, true);
+    }
+
+    var subhead = null;
+    for (var i = 0; i < panel.children.length; i++) {
+      if (panel.children[i].matches('h2.menu-sub')) { subhead = panel.children[i]; break; }
+    }
+    panel.insertBefore(row, subhead);
+    panel.insertBefore(volRow, subhead);
+  })();
+}
+

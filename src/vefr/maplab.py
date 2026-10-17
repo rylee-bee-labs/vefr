@@ -218,6 +218,11 @@ def load_pack(pack_dir: Path) -> dict:
         # loads exactly as before, and the validator sees nothing new.
         if 'sound' in config:
             unified['sound'] = config['sound']
+        # The optional music block (vefr #502), carried through ONLY when
+        # the pack declares it: a pack with no music loads exactly as
+        # before, and the validator sees nothing new.
+        if 'music' in config:
+            unified['music'] = config['music']
         if 'display' in config:
             unified['display'] = config['display']
         # The optional bag block (bag capacity): carried through ONLY when
@@ -1521,6 +1526,22 @@ def sound_errors(w: dict) -> list[str]:
     if 'sound' not in w:
         return []
     return [p.sentence for p in shapes.check(shapes.BLOCKS['sound'], w['sound'])]
+
+
+def music_errors(w: dict) -> list[str]:
+    """Every problem with a pack's optional `music` block (empty = good).
+
+    Music is optional and additive, like sound: a pack that declares
+    none gets no output at all, exactly as before, and its audio
+    behaves byte for byte as it did. A pack that declares one holds
+    exactly one key, `track`, naming one of the engine's synthesized
+    ambient beds (`shore` is the only bed in this first slice, vefr
+    #502); every other shape is one plain sentence naming music. See
+    `docs/guides/rulesets.md`.
+    """
+    if 'music' not in w:
+        return []
+    return [p.sentence for p in shapes.check(shapes.BLOCKS['music'], w['music'])]
 
 
 def bag_errors(w: dict) -> list[str]:
@@ -3559,6 +3580,10 @@ def validate(w: dict, pack_dir: Path | None = None) -> list[str]:
     # checked beside the other optional catalogs. A pack that declares
     # none gets nothing here.
     errors.extend(sound_errors(w))
+    # The pack's optional music block (vefr #502), checked beside the
+    # other optional catalogs. A pack that declares none gets nothing
+    # here, and a pack that does changes nothing about its sound.
+    errors.extend(music_errors(w))
     errors.extend(display_errors(w))
     errors.extend(bag_errors(w))
     # The pack's optional player words (vefr #259): the pack's own

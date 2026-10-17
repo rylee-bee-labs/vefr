@@ -722,6 +722,22 @@ SOUND = Block(
     },
 )
 
+# `music`: the pack's optional ambient bed (vefr #502, option A). A pack
+# that declares none gets no music at all, exactly as before. A pack that
+# declares one names one track from the engine's synthesized beds; no audio
+# files ship, so there is nothing to license. `shore` is the only bed in
+# this first slice: one small, reversible demonstration of the capability.
+MUSIC = Block(
+    name='music',
+    example='{"track": "shore"}',
+    keys=(Key('track', 'enum', choices=('shore',), required=True),),
+    say={
+        'unknown-key': '{name} may only hold {keys}, not {key!r}',
+        'missing-key': '{name} must hold a {key}, such as {example}',
+        'not-in-choices': '{name} {key} must be the string {choices}',
+    },
+)
+
 # The drawn tile, in CSS pixels, a touch phone follows the hero at (docs/guides/world-creation.md).
 PHONE_TILE_LO, PHONE_TILE_HI = 32, 72
 # `display.pixel_art`: how the engine draws the pack's art. A pack
@@ -1601,6 +1617,7 @@ SPELLS = Block(
 BLOCKS = {
     'saves': SAVES,
     'sound': SOUND,
+    'music': MUSIC,
     'display': DISPLAY,
     'affix': AFFIX,
     'elites': ELITES,
