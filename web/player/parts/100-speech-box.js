@@ -14,6 +14,13 @@ function showSpeech(speaker, line, note, shownAs) {
   document.getElementById('npc-line').textContent = line || '';
   var n = document.getElementById('npc-note');
   n.textContent = note || ''; n.hidden = !note;
+  // Whoever is talking, their line lands on the Journal's quiet page
+  // (vefr#484) with its own name as the caption - a whisper reads
+  // "You overhear <the speaker>", the way the box itself prints it.
+  // The note stays in the box: it says where the line came from, not
+  // something the world said.
+  // The quiet page (part 245) may be absent from a partial build (skin and part-order harnesses).
+  if (typeof journalSay === 'function') journalSay(line, shownAs || speaker || '');
   document.getElementById('npc-box').hidden = false;
   document.getElementById('npc-close').focus();
 }
