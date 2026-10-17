@@ -1827,6 +1827,9 @@ def enemy_element_errors(where: str, e: dict) -> list[str]:
                 errors.append(
                     f"{where} burns may only hold turns and tick; not "
                     f"allowed: {', '.join(sorted(extra))}")
+    return errors
+
+
 def recipes_of(w: dict) -> list:
     """The pack's recipes: the record list as written, in order."""
     listed = w.get('recipes') if isinstance(w, dict) else None

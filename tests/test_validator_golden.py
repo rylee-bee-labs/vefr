@@ -37,7 +37,8 @@ unknown-event sentence now ends "uses-verb" because the table grew an event, exa
 for `falls` and `wakes` above. Four cases were ADDED (a refused verb and a missing key, for the
 rule and for the sticker validator); the accepted shape is pinned in tests/test_event_table.py
 GOOD, where a pack's own verb exists to name. No existing case's value, sentence or order moved -
-this capture's world is untouched, which is why the diff is that one line and the new cases."""
+this capture's world is untouched, which is why the diff is that one line and the new cases.
+
 E2 (mending) changed ONE captured sentence the same way the event table's own twin test was
 changed with it: the unknown-event sentence of the rules case '{"bogus": {}}' names every event
 the table holds, and `mends` is now one of them, appended LAST so every other name keeps its

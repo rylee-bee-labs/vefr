@@ -16,7 +16,8 @@ SAMPLE = ROOT / "worlds" / "sample-world"
 ITEMS = {
     "torn-net": {"name": "a torn net"},
     "loose-peg": {"name": "a loose peg"},
-    "whole-net": {"name": "a whole net"},
+    # The output grants a verb (vefr#531 item grants), so the preview has something to list.
+    "whole-net": {"name": "a whole net", "grants": [{"verb": "cast", "label": "Cast the net"}]},
     "dry-driftwood": {"name": "a piece of dry driftwood"},
 }
 

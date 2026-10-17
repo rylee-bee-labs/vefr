@@ -150,6 +150,8 @@ def test_a_valid_pair_previews_then_mends(page, woven):
     assert page.locator("#mend-preview").is_visible()
     assert page.text_content("#mend-preview").strip().startswith(
         f"Mending {TORN_NET} and {LOOSE_PEG} makes {WHOLE_NET}.")
+    # What the result will let the hero do, by the label the verb row will show (E1's grants shape).
+    assert "It grants: Cast the net." in page.text_content("#mend-preview")
     # Nothing is spent yet: the preview is a look, not a change.
     assert bag_saved(page) == ["torn-net", "loose-peg", "dry-driftwood"]
 
