@@ -507,7 +507,11 @@
     var D = window.VEFR_DESCENT;
     var back = (D && typeof D.deathResume === 'function')
       ? D.deathResume(regionName) : null;
-    combatSay(back ? STAIR_DEATH_LINE : DEATH_LINE);
+    var said = back ? STAIR_DEATH_LINE : DEATH_LINE;
+    // The fading line over the world keeps its own words; the second
+    // argument keeps them off the quiet page once (vefr#484), because
+    // the card below says them there with their "You fell."
+    combatSay(said, true);
     fireRule('falls', { what: (killer && killer.id) || '',
                         where: regionName });
     HERO_HP = heroMax();
@@ -530,6 +534,15 @@
     }
     fireRule('wakes', { where: woke });
     combatSnapshot();
+    // A warm hush (vefr#484, mockup C): the fight is over, so the verb
+    // row is closed, and the hero already stands at the wake point
+    // behind the dim - one small quiet card near the bottom waits for
+    // any key, tap or button. The row comes back on the next turn's
+    // own rule, as it always did.
+    closeEnemyVerbs();
+    var vrow = document.getElementById('verb-row');
+    if (vrow) vrow.hidden = true;
+    showFallCard('You fell. ' + said);
   }
   // The mind state of every monster, in the same order as `enemies` and
   // carrying the same `id`: whether it is on its feet, which group it

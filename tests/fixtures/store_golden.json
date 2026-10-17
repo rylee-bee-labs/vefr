@@ -14,6 +14,7 @@
  "interact": {
   "vefr-equipped-interact-test": "{}",
   "vefr-localgen-draws": "1",
+  "vefr-page-interact-test": "[{\"line\":\"Ask me again at dawn, when the lock is warm. The gate is heavy, but it opens for anyone who knocks.\",\"who\":\"the porter\"}]",
   "vefr-save-seed": "42",
   "vefr-tutorial-interact-test": "1"
  },

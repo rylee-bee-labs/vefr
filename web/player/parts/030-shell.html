@@ -161,6 +161,21 @@
           </div>
         </div>
       </div>
+      <!-- The fall, as a warm hush (vefr#484, mockup C): the world dims
+           deep, one small quiet card near the bottom holds the words the
+           game already says, and any key, tap or button continues. -->
+      <div id="fall" role="dialog" aria-modal="true"
+           aria-labelledby="fall-line" tabindex="-1" hidden>
+        <div class="fcard">
+          <p class="fall-line" id="fall-line"></p>
+          <hr class="fall-rule">
+          <p class="fall-note">Your health is whole again. Your bag, your gold
+             and the ground you have walked are as you left them.</p>
+          <div class="fall-controls">
+            <button type="button" id="fall-keep" class="cta cta--gold">Keep exploring</button>
+          </div>
+        </div>
+      </div>
       <p class="glass" id="combat-log" aria-live="polite"></p>
     </div>
     <section id="kitchen" hidden>
@@ -225,11 +240,18 @@
   </div>
   <div class="carved" id="menu-panel">
     <div data-panel-body="journal">
-      <h2>Journal</h2>
-      <p><button type="button" id="journal-whisper">Listen for a whisper</button></p>
-      <section id="feed" aria-live="polite">
-        <p class="empty">Nothing yet. Listen for a whisper to hear what people are saying.</p>
-      </section>
+      <!-- The quiet page (vefr#484, mockup C): one page of every line the
+           world said, newest at the top, whispers and falls plain lines
+           among them - no tabs, no chips, no grouping. One Close at the
+           top, the way the panel has always opened. -->
+      <div class="sheet-head">
+        <h2>Journal</h2>
+        <button type="button" id="journal-close" class="sheet-close">Close</button>
+      </div>
+      <button type="button" id="journal-whisper">Listen for a whisper</button>
+      <ol class="page" id="journal-page" aria-live="polite">
+        <li class="empty">Nothing yet. Listen for a whisper to hear what people are saying.</li>
+      </ol>
     </div>
     <div data-panel-body="books" hidden>
       <h2>Books</h2>

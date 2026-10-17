@@ -437,6 +437,12 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # The ending-only room scale (display.ending_tile, cottage-of-the-breeze#166) on top of the archive loader (#519),
 # 2026-10-16; measured twice on the host in separate processes after merging main, readings equal:
 #   6234996f734f57e47389b63ea6c181b3b54a8e6a0ee36ab761c4397f1bac7886
+# The quiet page and the calm fall card (vefr#484, mockup C): the new part
+# 245-the-quiet-page.js, plus 240, 260, 430, 510, 030-shell.html and
+# 020-style.css, 2026-10-16; measured twice on the host in separate
+# processes, readings equal:
+#   7f2070891f9abd9ca51017e4ebacfc356a92f540251abf6804d9839a9ce4fd53
+#   7f2070891f9abd9ca51017e4ebacfc356a92f540251abf6804d9839a9ce4fd53
 #   6234996f734f57e47389b63ea6c181b3b54a8e6a0ee36ab761c4397f1bac7886
 # Damage types, resistances and burning (vefr#497, slice 1) on top of the ending tile (#520): the new part
 # 425-the-elements.js, plus 410/430/480/510, 030-shell.html and 020-style.css. The sample declares no
@@ -454,7 +460,11 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # processes, readings equal:
 #   3af87a53314eea60f7d01588b202330af97d691cbde93139558ace24ddb83181
 #   3af87a53314eea60f7d01588b202330af97d691cbde93139558ace24ddb83181
-NO_SKIN_WEAVE_SHA256 = "3af87a53314eea60f7d01588b202330af97d691cbde93139558ace24ddb83181"
+# Damage types and burning merged onto main with Journal C (vefr#497 + #484), 2026-10-16; measured twice on the host
+# in separate processes, readings equal:
+#   78920d6d4a0574d85ad8e300a977dfe804a582daab1aa3b3dd5ff584c7a2fbe1
+#   78920d6d4a0574d85ad8e300a977dfe804a582daab1aa3b3dd5ff584c7a2fbe1
+NO_SKIN_WEAVE_SHA256 = "78920d6d4a0574d85ad8e300a977dfe804a582daab1aa3b3dd5ff584c7a2fbe1"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():
