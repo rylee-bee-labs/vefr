@@ -27,7 +27,7 @@ jobs:
   claims:
     uses: rylee-bee-labs/ci-harness/.github/workflows/reusable-claims-policy.yml@184a81393a1b26d8ca3d60eed4428cefa8ab1cc2
     with:
-      policy-revision: 85bbb32d5437b8e20caa465a6f4fb517823c6ec3
+      policy-revision: 184a81393a1b26d8ca3d60eed4428cefa8ab1cc2
       runs-on: ${{ vars.CI_RUNNER_LIGHT || vars.CI_RUNNER || 'ubuntu-latest' }}
 
   # Play-Nice contract currency — enforced, not decorative. This repo declared
