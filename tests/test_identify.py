@@ -259,11 +259,16 @@ def test_a_refactor_bakes_the_same_data_lines():
         "sample_data": _data_digest(ROOT / "worlds" / "sample-world"),
         "rolled_data": _data_digest(mi.build(Path(_scratch('guard')), reader=False)),
     }
+    # Every digest is tried before any skip, so a skip on one never hides a
+    # comparison the other could still make (review of vefr#538).
+    skipped = []
     for name, digest in digests.items():
         try:
             weave_digest.assert_unchanged_from_merge_base(name, digest)
         except weave_digest.NotMeasurable as why:
-            pytest.skip(str(why))
+            skipped.append(f"{name}: {why}")
+    if skipped:
+        pytest.skip("; ".join(skipped))
 
 
 def test_the_reader_needs_no_new_baked_block(tmp_path):
