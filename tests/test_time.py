@@ -169,7 +169,7 @@ def test_the_time_fixture_pack_validates_both_ways(tmp_path):
     # And the woven world carries the block for the pack that declared it,
     # and no such key for the pack that did not.
     def _baked_world(pack: Path) -> str:
-        line = next(l for l in cli.weave_html(pack).splitlines()
+        line = next(ln for ln in cli.weave_html(pack).splitlines()
                     if l.startswith("window.VEFR_WORLD = "))
         return line
     assert '"time"' in _baked_world(opted_in)
