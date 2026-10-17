@@ -38,7 +38,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from . import elements
-from .maplab import (SKIN_PICTURE_KEYS, item_rarity_of, item_roll_of,
+from .maplab import (SKIN_PICTURE_KEYS, item_changes_of, item_grants_of,
+                     item_rarity_of, item_roll_of,
                      item_slot_and_mods, item_traits_of, load_pack, prop_blocks,
                      validate)
 from .paths import world_name
@@ -2040,6 +2041,20 @@ def _player_items(world: dict) -> dict[str, dict]:
         taught = spec.get('spell')
         if isinstance(taught, str) and taught.strip():
             entry['spell'] = taught.strip()
+        # `grants` and `changes` (the item-grants slice): the verbs this
+        # thing hands the hero while it is carried or worn, and what it
+        # does to a verb it names. Both ride along only in the usable form
+        # `maplab.item_grants_of` / `item_changes_of` resolve, and only
+        # when the pack named them, so an item written before this slice
+        # bakes byte for byte what it always baked. The verb ids are
+        # checked by `maplab.item_grants_errors` and carried either way -
+        # a silent drop is worse than a sentence.
+        grants = item_grants_of(spec)
+        if grants:
+            entry['grants'] = grants
+        changes = item_changes_of(spec)
+        if changes:
+            entry['changes'] = changes
         out[key] = entry
     return out
 
@@ -5426,12 +5441,14 @@ def _explain_blocks() -> dict:
         out: list[str] = []
         key_ids = maplab._door_key_items(w)
         spell_ids = maplab.spell_ids_of(w)
+        verb_ids = maplab.pack_verbs(w)
         for iid, spec in (w.get('items') or {}).items():
             if isinstance(spec, dict):
                 out.extend(maplab.item_light_errors(iid, spec))
                 out.extend(maplab.item_slot_errors(iid, spec, key_ids))
                 out.extend(maplab.item_roll_errors(iid, spec))
                 out.extend(maplab.item_spell_errors(iid, spec, spell_ids))
+                out.extend(maplab.item_grants_errors(iid, spec, verb_ids))
         return out
 
     return {

@@ -476,7 +476,15 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # Damage types and burning (vefr#497) merged onto main, 2026-10-16; measured twice on the host in separate processes, readings equal:
 #   892ac967e19b32ca948bee7d50180b5a80d596a25759b79194daa6e3463f9e80
 #   892ac967e19b32ca948bee7d50180b5a80d596a25759b79194daa6e3463f9e80
-NO_SKIN_WEAVE_SHA256 = "892ac967e19b32ca948bee7d50180b5a80d596a25759b79194daa6e3463f9e80"
+# The item-grants slice (E1): the verb row moved out of 510 into 220-growth.js beside
+# surfaceVerbs(), and 445, 430 and 480 grew the `uses-verb` event and the blow a carried
+# thing adds to, 2026-10-16; measured twice in separate processes, readings equal:
+#   b687c8bcce99cc3ef3299fc414ded6c81ef6a48b2683aad379a821ca943d93e4
+#   b687c8bcce99cc3ef3299fc414ded6c81ef6a48b2683aad379a821ca943d93e4
+# Item-granted verbs merged onto main (Mending Shift E1), 2026-10-16; measured twice on the host in separate processes, readings equal:
+#   eb014ad9e78442a1c21b767622554e2a183eb0c8fba6ab6ee97e3c94f85bd206
+#   eb014ad9e78442a1c21b767622554e2a183eb0c8fba6ab6ee97e3c94f85bd206
+NO_SKIN_WEAVE_SHA256 = "0e8369a648d66d5592394724d2257ceeddb28aefc9a27baec667801c2af6a964"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

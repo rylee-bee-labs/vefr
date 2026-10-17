@@ -35,7 +35,12 @@
       'reads': { keys: ['what'], target: 'what' },
       'phase-changes': { keys: ['to'], target: 'to' },
       'falls': { keys: ['what', 'where'], target: 'what' },
-      'wakes': { keys: ['where'], target: 'where' }
+      'wakes': { keys: ['where'], target: 'where' },
+      // `uses-verb`: the hero pressed a verb on the verb row - the act's
+      // own vocabulary, or one a carried item granted (the item-grants
+      // slice). A pack authors what the press does here, the same way it
+      // authors anything else it notices.
+      'uses-verb': { keys: ['verb'], target: 'verb' }
     };
 
     function isObj(v) {
@@ -323,6 +328,8 @@
           + (data.what ? ' to ' + data.what : '');
       } else if (event === 'wakes') {
         phrase = 'the hero woke in ' + data.where;
+      } else if (event === 'uses-verb') {
+        phrase = 'the hero used ' + data.verb;
       } else {
         phrase = 'the hero used ' + data.item + ' with ' + data.with;
       }

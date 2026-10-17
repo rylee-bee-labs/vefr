@@ -693,7 +693,7 @@
    ]
   },
   "errors": [
-   "rule 'r1' when names unknown event 'bogus' - the events are starts, enters, comes-near, opens, picks-up, uses-with, defeats, buys, sells, reads, phase-changes, falls, wakes"
+   "rule 'r1' when names unknown event 'bogus' - the events are starts, enters, comes-near, opens, picks-up, uses-with, defeats, buys, sells, reads, phase-changes, falls, wakes, uses-verb"
   ]
  },
  {
@@ -3242,6 +3242,90 @@
   ]
  },
  {
+  "block": "rules",
+  "case": "{\"uses-verb\": {\"verb\": \"ghost\"}}",
+  "world": {
+   "regions": {
+    "town": {
+     "name": "Town"
+    }
+   },
+   "items": {
+    "torch": {
+     "name": "torch"
+    },
+    "chalked-map": {
+     "name": "map"
+    }
+   },
+   "phases": {
+    "dawn": "dawn"
+   },
+   "flags": {
+    "lit": "the torch burns"
+   },
+   "rules": [
+    {
+     "id": "r1",
+     "then": [
+      {
+       "set": "lit"
+      }
+     ],
+     "when": {
+      "uses-verb": {
+       "verb": "ghost"
+      }
+     }
+    }
+   ]
+  },
+  "errors": [
+   "rule 'r1' when 'uses-verb' names unknown verb 'ghost'"
+  ]
+ },
+ {
+  "block": "rules",
+  "case": "{\"uses-verb\": {}}",
+  "world": {
+   "regions": {
+    "town": {
+     "name": "Town"
+    }
+   },
+   "items": {
+    "torch": {
+     "name": "torch"
+    },
+    "chalked-map": {
+     "name": "map"
+    }
+   },
+   "phases": {
+    "dawn": "dawn"
+   },
+   "flags": {
+    "lit": "the torch burns"
+   },
+   "rules": [
+    {
+     "id": "r1",
+     "then": [
+      {
+       "set": "lit"
+      }
+     ],
+     "when": {
+      "uses-verb": {}
+     }
+    }
+   ]
+  },
+  "errors": [
+   "rule 'r1' when 'uses-verb' needs key 'verb'"
+  ]
+ },
+ {
   "block": "album",
   "case": "{\"wakes\": {\"where\": \"nowhere\"}}",
   "world": {
@@ -3279,6 +3363,84 @@
   },
   "errors": [
    "sticker 's1' when 'wakes' names unknown place 'nowhere'"
+  ]
+ },
+ {
+  "block": "album",
+  "case": "{\"uses-verb\": {\"verb\": \"ghost\"}}",
+  "world": {
+   "regions": {
+    "town": {
+     "name": "Town"
+    }
+   },
+   "items": {
+    "torch": {
+     "name": "torch"
+    },
+    "chalked-map": {
+     "name": "map"
+    }
+   },
+   "phases": {
+    "dawn": "dawn"
+   },
+   "flags": {
+    "lit": "the torch burns"
+   },
+   "album": [
+    {
+     "id": "s1",
+     "name": "A sticker",
+     "kind": "open",
+     "when": {
+      "uses-verb": {
+       "verb": "ghost"
+      }
+     }
+    }
+   ]
+  },
+  "errors": [
+   "sticker 's1' when 'uses-verb' names unknown verb 'ghost'"
+  ]
+ },
+ {
+  "block": "album",
+  "case": "{\"uses-verb\": {}}",
+  "world": {
+   "regions": {
+    "town": {
+     "name": "Town"
+    }
+   },
+   "items": {
+    "torch": {
+     "name": "torch"
+    },
+    "chalked-map": {
+     "name": "map"
+    }
+   },
+   "phases": {
+    "dawn": "dawn"
+   },
+   "flags": {
+    "lit": "the torch burns"
+   },
+   "album": [
+    {
+     "id": "s1",
+     "name": "A sticker",
+     "kind": "open",
+     "when": {
+      "uses-verb": {}
+     }
+    }
+   ]
+  },
+  "errors": [
+   "sticker 's1' when 'uses-verb' needs key 'verb'"
   ]
  },
  {
