@@ -321,6 +321,21 @@
         "tests/test_vefr_archive.py",
         "tests/test_vefr_archive_loader.py"
       ]
+    },
+    {
+      "id": "elements",
+      "name": "Damage types, resistances and burning",
+      "what": "A pack may opt in to typed damage: the hero's own resistances and immunities, and a hazard that deals a damage type and leaves the hero burning for a count of turns. A pack that declares none of it deals the same untyped blows as before (built for one status effect; hazards authored in a Blueprint, and resistances granted by worn gear, are still to come).",
+      "status": "partial",
+      "detect": "elements",
+      "docs": [
+        "docs/guides/elements.md"
+      ],
+      "design": "design/elemental-and-status-effects.md",
+      "tests": [
+        "tests/test_elements.py",
+        "tests/test_elements_play.py"
+      ]
     }
   ]
 }

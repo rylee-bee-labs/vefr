@@ -391,7 +391,7 @@ import vm from 'node:vm';
 const partsDir = process.argv[2];
 const spec = JSON.parse(process.argv[3]);
 const parts = ['410-the-living-hazards.js', '420-how-a-monster-thinks.js',
-               '430-loot-on-the-floor.js']
+               '425-the-elements.js', '430-loot-on-the-floor.js']   // 425: damage types (vefr#497)
   .map(n => fs.readFileSync(partsDir + '/' + n, 'utf8')).join('\\n');
 
 const size = spec.size;

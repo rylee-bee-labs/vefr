@@ -453,6 +453,29 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # processes, readings equal:
 #   38867f8932cf51e9131803df44deddb34fd69d1bb6dcc03f4830a6801b0ce518
 #   38867f8932cf51e9131803df44deddb34fd69d1bb6dcc03f4830a6801b0ce518
+# Damage types, resistances and burning (vefr#497, slice 1) on top of the ending tile (#520): the new part
+# 425-the-elements.js, plus 410/430/480/510, 030-shell.html and 020-style.css. The sample declares no
+# resist, no immune and no typed hazard, so its BAKE is byte-for-byte what it was - measured at
+# 6234996f... after the engine half alone - and only the player's own source moved; 2026-10-16; measured
+# twice in separate processes, readings equal:
+#   78635fd8140a1f9823fb0f07b5438f3ae8a15bc576340cc86afe37ca079fd339
+#   78635fd8140a1f9823fb0f07b5438f3ae8a15bc576340cc86afe37ca079fd339
+# The two review findings of vefr#528 on the slice above: #hud-state is no
+# longer hidden on the quiet surfaces (020-style.css) and the burn ticks after
+# the monsters' turn, keeping the turn's whole line (425-the-elements.js,
+# 480-town-input-and-turns.js, 510-rules-closure-surfaces.js). Player source
+# only; the sample still declares no resist, no immune and no typed hazard, so
+# its BAKE is byte-for-byte what it was; 2026-10-16; measured twice in separate
+# processes, readings equal:
+#   3af87a53314eea60f7d01588b202330af97d691cbde93139558ace24ddb83181
+#   3af87a53314eea60f7d01588b202330af97d691cbde93139558ace24ddb83181
+# Damage types and burning merged onto main with Journal C (vefr#497 + #484), 2026-10-16; measured twice on the host
+# in separate processes, readings equal:
+#   78920d6d4a0574d85ad8e300a977dfe804a582daab1aa3b3dd5ff584c7a2fbe1
+#   78920d6d4a0574d85ad8e300a977dfe804a582daab1aa3b3dd5ff584c7a2fbe1
+# Damage types and burning (vefr#497) merged onto main, 2026-10-16; measured twice on the host in separate processes, readings equal:
+#   892ac967e19b32ca948bee7d50180b5a80d596a25759b79194daa6e3463f9e80
+#   892ac967e19b32ca948bee7d50180b5a80d596a25759b79194daa6e3463f9e80
 # The optional ambient music block (vefr#502) on top of the ending-only room scale, 2026-10-16; the player's
 # template grew one data line (window.VEFR_MUSIC_DEF, the literal null here), measured twice in separate
 # processes, readings equal:
@@ -468,7 +491,10 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # Music bed (vefr#502) merged onto main, 2026-10-16; measured twice on the host in separate processes, readings equal:
 #   fe41b2ae5e25a60989b1e51968f284beb770522e8044301403bafa0e0aa32311
 #   fe41b2ae5e25a60989b1e51968f284beb770522e8044301403bafa0e0aa32311
-NO_SKIN_WEAVE_SHA256 = "22467754b17b906989162609f26155ece1ed284e0f748b344f805b403e88359c"
+# Music bed (vefr#502) merged onto main, 2026-10-16; measured twice on the host in separate processes, readings equal:
+#   f8d159180df1652256d925f0ae7e8051499703b1a38968c50fa4073093937851
+#   f8d159180df1652256d925f0ae7e8051499703b1a38968c50fa4073093937851
+NO_SKIN_WEAVE_SHA256 = "f8d159180df1652256d925f0ae7e8051499703b1a38968c50fa4073093937851"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():
