@@ -1220,7 +1220,11 @@
       var en = enemies[i];
       if (en.alive && Math.abs(en.at[0] - hero[0]) + Math.abs(en.at[1] - hero[1]) <= 4) near = true;
     }
-    vrow.hidden = !near;
+    // A pack that opted into Rest (vefr E3) keeps its one always-available
+    // verb on show: the row stays up with that button alone, so resting is
+    // one press whenever the player wants it. Every other pack hides the
+    // row exactly as before.
+    vrow.hidden = !near && !timeRestOn();
   }
 
   // The floor the hero has just arrived on (vefr#362), from

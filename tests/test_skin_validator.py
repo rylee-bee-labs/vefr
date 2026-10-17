@@ -443,7 +443,12 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # processes, readings equal:
 #   7f2070891f9abd9ca51017e4ebacfc356a92f540251abf6804d9839a9ce4fd53
 #   7f2070891f9abd9ca51017e4ebacfc356a92f540251abf6804d9839a9ce4fd53
-NO_SKIN_WEAVE_SHA256 = "990585f53f20d63f43457d0cda04b7765e4a2667e457eb5d801a969db26489ef"
+# Time that costs something (vefr E3): the new part 255-time-rest.js,
+# plus 076, 090, 250, 320, 445, 480 and 510, 2026-10-16; measured twice
+# on the host in separate processes, readings equal:
+#   8c741d0cf093438f0e5aa2c4801150d2201da198b89c7577412be6c664487709
+#   8c741d0cf093438f0e5aa2c4801150d2201da198b89c7577412be6c664487709
+NO_SKIN_WEAVE_SHA256 = "8c741d0cf093438f0e5aa2c4801150d2201da198b89c7577412be6c664487709"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

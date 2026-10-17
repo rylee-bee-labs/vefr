@@ -711,6 +711,28 @@ SAVES = Block(
     ),
 )
 
+# `time`: the pack's own answer to "what does waiting cost?". Opt-in
+# and additive - a pack that declares no `time` block has no Rest action,
+# a free phase rail, and a phase that lives only in memory, exactly as
+# before. `rest` puts a Rest verb in the action row (and R on the
+# keybind table) that turns the watch on by exactly one phase; `rail:
+# "locked"` takes away the free jump in the rail, so time moves only by
+# resting and by rules that change the phase; `persist` keeps the
+# standing phase across a reload under its own save key.
+TIME = Block(
+    name='time',
+    example='{"rest": true, "rail": "locked", "persist": true}',
+    keys=(
+        Key('rest', 'bool'),
+        Key('rail', 'enum', choices=('open', 'locked')),
+        Key('persist', 'bool'),
+    ),
+    say={
+        'unknown-key': '{name} may only hold {keys}, not {key!r}',
+        'not-in-choices': '{name} {key} must be the string {choices}',
+    },
+)
+
 SOUND = Block(
     name='sound',
     example='{"theme": "soft"}',
@@ -1601,6 +1623,7 @@ SPELLS = Block(
 BLOCKS = {
     'saves': SAVES,
     'sound': SOUND,
+    'time': TIME,
     'display': DISPLAY,
     'affix': AFFIX,
     'elites': ELITES,

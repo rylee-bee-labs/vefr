@@ -71,8 +71,13 @@ PARTS = ROOT / "web" / "player" / "parts"
 # two lines each that the data-line regex reads here; measured twice in
 # separate processes, readings equal. With that one block removed both pins
 # are unchanged.
-SAMPLE_DATA_SHA = 'ecc6968e18d20aa851010f7e0ed1c4ffb47cf129a66684bbd3d486d56c8814e4'
-ROLLED_DATA_SHA = 'a88ccca088b926b6936133d2bebbc2a00a8bfc50acfbf11e99181572c8110ac6'
+# Both moved again on 2026-10-16 for vefr E3 (time that costs something):
+# the new part 255-time-rest.js bakes a `window.VEFR_TIME` snapshot into
+# every pack - the standing phase and the pack's three opt-ins, whatever
+# it declared; measured twice in separate processes, readings equal. With
+# that one block removed both pins are unchanged.
+SAMPLE_DATA_SHA = 'ff2c49bf67a8fddc795deed05f13bf02c30cab5863096882f310506fe9ca97fe'
+ROLLED_DATA_SHA = '9bea2a9c27997ae887aaaa33e4e18b5cfdff2724935d0f6d16ed1d8e42779b9c'
 
 
 def _data_blocks(html: str) -> str:

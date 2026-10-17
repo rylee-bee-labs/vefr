@@ -76,6 +76,8 @@ var KEYBIND_ACTIONS = [
     keys: ['o'] },
   { id: 'fog', context: 'gameplay', label: 'Turn the dark on and off',
     keys: ['v'] },
+  { id: 'rest', context: 'gameplay', label: 'Rest until the watch turns',
+    keys: ['r'] },
   { id: 'pageBack', context: 'reading', label: 'Turn the page back',
     keys: ['ArrowLeft', 'a'] },
   { id: 'pageForward', context: 'reading', label: 'Turn the page forward',
@@ -91,6 +93,17 @@ function keybindAction(id) {
     if (KEYBIND_ACTIONS[i].id === id) return KEYBIND_ACTIONS[i];
   }
   return null;
+}
+
+// One action the panel does not list to a pack that has no use for it:
+// Rest exists only for a pack that declared `"time": {"rest": true}`
+// (255-time-rest.js). The row is in the table either way - so a key the
+// player already chose for it is still kept and still read - but a pack
+// with no Rest action is shown no Rest row, exactly as it was shown none
+// before this part existed.
+function keybindListed(a) {
+  if (a.id === 'rest') return timeRestOn();
+  return true;
 }
 
 function keybindSharesSurface(a, b) {
@@ -227,6 +240,9 @@ function updateKeyLetters() {
   set('whisper', 'whisper', 'Listen');
   set('bagbtn', 'bag', 'Bag');
   set('explore', 'explore', 'Explore');
+  // The Rest verb's own letter follows the table too, but only a pack
+  // that has a Rest verb has a button to set it on.
+  if (timeRestOn()) set('rest', 'rest', 'Rest');
 }
 
 function keybindSay(msg) {
@@ -303,7 +319,7 @@ function wireKeybinds() {
     head.textContent = ctx.name;
     list.appendChild(head);
     KEYBIND_ACTIONS.forEach(function (a) {
-      if (a.context !== ctx.id) return;
+      if (a.context !== ctx.id || !keybindListed(a)) return;
       var row = document.createElement('div');
       row.className = 'keybind-row';
       var label = document.createElement('span');

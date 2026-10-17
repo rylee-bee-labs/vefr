@@ -76,7 +76,7 @@ pack declares is nameable:
 | **POI labels** | the region contract's `pois` | `comes-near`, `uses-with` — the label *is* the id |
 | **book ids** | `library/<id>.md` file names | `opens` (a chest), `reads` |
 | **enemy ids** | the region contract's `enemies` | `defeats`, `falls`' `what` |
-| phase names | `world.json` `phases` | `phase-changes` |
+| phase names | `world.json` `phases` | `phase-changes`, the `phase` condition |
 | flags / claims | `world.json` `flags` / `claims` | `set`, `believes`… |
 
 The validator names anything else. There is no need to register a
@@ -87,7 +87,9 @@ fake item for a landmark: the place's own label is its id.
 Conditions (all must pass): `{"has": "<item>"}`,
 `{"flag": "<f>", "is": true|false}`,
 `{"believes"|"not-believes": {"who", "claim"}}`,
-`{"is-in": {"who", "place"}}`, `{"not": …}`, `{"all-of": [ … ]}`.
+`{"is-in": {"who", "place"}}`, **`{"phase": "<phase>"}`** (the standing
+phase, whatever the event was - see *Time that costs something* below),
+`{"not": …}`, `{"all-of": [ … ]}`.
 
 Actions: `say` (a narrator string, or `{"who", "line"}`),
 `show` / `hide` / `reveal` (a thing on the floor),
@@ -128,6 +130,50 @@ top-level `saves` block in `world.json`:
   a rule fired that did not fire.
 - `starts` fires once per save in persist mode, and again after Start
   over. In reset mode it fires on every load, as today.
+
+## Time that costs something
+
+Until a pack asks for it, time is free: the phase rail in **Menu >
+Display** jumps to any phase whenever the player likes, and the standing
+phase lives in memory only. A pack declares an optional top-level `time`
+block in `world.json` to change that:
+
+```json
+{ "time": { "rest": true, "rail": "locked", "persist": true } }
+```
+
+- `time.rest` puts a **Rest** verb in the action row (its key, `R` until
+  the player changes it under **Menu > Controls**, is on the same keybind
+  table as every other key). One press turns the watch on by exactly one
+  phase - the next in the order the pack wrote `phases`, and the first
+  again after the last - and fires the same `phase-changes` event the rail
+  fires. A held key is one press, not many. On a `plain` or `investigation`
+  surface the action row is not drawn at all (it is the fight row), so
+  there Rest is its key and nothing else.
+- `time.rail` is `"open"` or `"locked"`. `locked` hides the rail's free
+  jump, so time moves only by resting and by rules that change the phase.
+- `time.persist` keeps the standing phase across a reload, under its own
+  save key `vefr-time-<world>`; Start over clears it. No `persist`, no
+  key, no read and no write.
+
+A rule can read the **standing** phase, so a rule can be about the hour
+rather than about the thing that turned it:
+
+```json
+{ "id": "boats-may-come-in",
+  "when": { "comes-near": { "who": "keeper", "distance": 2 } },
+  "if": [{ "phase": "highwater" }],
+  "then": [{ "say": "The boats can come in now." }] }
+```
+
+The condition is checked against the phase the watch stands at while the
+event happens, whatever the event was, and it nests under `not` and
+`all-of` like every other condition. The phase must be one the pack
+declares in `phases`.
+
+A pack that declares no `time` block plays and saves exactly as it did
+before: no Rest verb, no Rest row in the Controls panel, a free rail, and
+not one extra byte written to storage.
 
 ## Items: usable is not consumable
 

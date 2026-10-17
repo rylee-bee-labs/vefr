@@ -83,6 +83,11 @@
         // wiring fills `where` as people move - `is-in` reads it.
         items: {},
         where: {},
+        // The phase the watch stands at while an event runs, put on by
+        // the wiring before every run (255-time-rest.js's `time`). A
+        // state with no phase (a bare engine run) has none, and a
+        // `phase` condition simply does not pass.
+        phase: null,
         // The baked pack, so run() needs no second argument.
         rules: Array.isArray(pack.rules) ? pack.rules : [],
         // Flag name -> the one line the pack declared (the why
@@ -164,6 +169,24 @@
         return {
           ok: wantIn,
           why: q.who + (wantIn ? ' was in ' : ' was not in ') + q.place
+        };
+      }
+      // The STANDING phase (vefr E3): the one the watch is at while the
+      // event happens, whatever the event was, so a rule can be about
+      // the hour rather than about the thing that turned it. The wiring
+      // puts the current phase on the state before every run; an engine
+      // run with no phase (the bare node harness) has none, and then
+      // the condition is simply not the one being asked about.
+      if (key === 'phase') {
+        if (typeof cond.phase !== 'string') return null;
+        var isPhase = typeof state.phase === 'string'
+          && state.phase === cond.phase;
+        var wantPhase = inv ? !isPhase : isPhase;
+        return {
+          ok: wantPhase,
+          why: wantPhase
+            ? "the watch stood at '" + cond.phase + "'"
+            : "the watch stood somewhere but '" + cond.phase + "'"
         };
       }
       if (key === 'not') {
