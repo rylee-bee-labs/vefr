@@ -71,8 +71,11 @@ PARTS = ROOT / "web" / "player" / "parts"
 # two lines each that the data-line regex reads here; measured twice in
 # separate processes, readings equal. With that one block removed both pins
 # are unchanged.
-SAMPLE_DATA_SHA = 'ecc6968e18d20aa851010f7e0ed1c4ffb47cf129a66684bbd3d486d56c8814e4'
-ROLLED_DATA_SHA = 'a88ccca088b926b6936133d2bebbc2a00a8bfc50acfbf11e99181572c8110ac6'
+# Both moved again on 2026-10-16 for vefr #502 (the opt-in music bed): every pack now bakes a
+# `window.VEFR_MUSIC_DEF` line (the literal `null` for a pack that names no music); measured twice in
+# separate processes, readings equal. With that one line removed both pins are unchanged.
+SAMPLE_DATA_SHA = '25a3a8ac88c102544fcc17d5204ac6c12f9458b513908572381f6a698cad6abe'
+ROLLED_DATA_SHA = '04ff16ba093a776cac746d82c3839f4c2f890dd9b240022abaab0cf10715de38'
 
 
 def _data_blocks(html: str) -> str:
