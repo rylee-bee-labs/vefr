@@ -4136,7 +4136,13 @@ def validate(w: dict, pack_dir: Path | None = None) -> list[str]:
         return False
 
     for key in town.get('pois', {}):
-        x, y = (int(v) for v in key.split(','))
+        try:
+            x, y = (int(v) for v in str(key).split(','))
+        except ValueError:
+            # A name-keyed poi ({"the shed": [3, 1]}) used to crash the whole check with a traceback.
+            errors.append(f'poi key {key!r} must be "x,y" with the label as its value, '
+                          f'such as {{"3,1": "the shed"}}')
+            continue
         if not near_open(x, y):
             errors.append(f'poi {key} ({town["pois"][key]}) has no reachable tile nearby')
 
