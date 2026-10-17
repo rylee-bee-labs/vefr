@@ -443,7 +443,12 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # processes, readings equal:
 #   7f2070891f9abd9ca51017e4ebacfc356a92f540251abf6804d9839a9ce4fd53
 #   7f2070891f9abd9ca51017e4ebacfc356a92f540251abf6804d9839a9ce4fd53
-NO_SKIN_WEAVE_SHA256 = "990585f53f20d63f43457d0cda04b7765e4a2667e457eb5d801a969db26489ef"
+# The item-grants slice (E1): the verb row moved out of 510 into 220-growth.js beside
+# surfaceVerbs(), and 445, 430 and 480 grew the `uses-verb` event and the blow a carried
+# thing adds to, 2026-10-16; measured twice in separate processes, readings equal:
+#   b687c8bcce99cc3ef3299fc414ded6c81ef6a48b2683aad379a821ca943d93e4
+#   b687c8bcce99cc3ef3299fc414ded6c81ef6a48b2683aad379a821ca943d93e4
+NO_SKIN_WEAVE_SHA256 = "b687c8bcce99cc3ef3299fc414ded6c81ef6a48b2683aad379a821ca943d93e4"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

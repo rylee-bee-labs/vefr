@@ -157,6 +157,9 @@ function bagAdd(id, roll, alwaysFits) {
   store.setJSON(BAG_KEY, ids);
   renderBagPanel();
   renderBagStrip();
+  // A thing that grants a verb brings that verb with it, and takes it
+  // back when it goes: the verb row is drawn from what is carried.
+  renderVerbRow();
   syncCombat();
   return true;
 }
@@ -177,6 +180,9 @@ function bagRemoveOne(id) {
   store.setJSON(BAG_KEY, ids);
   renderBagPanel();
   renderBagStrip();
+  // A thing that grants a verb brings that verb with it, and takes it
+  // back when it goes: the verb row is drawn from what is carried.
+  renderVerbRow();
   syncCombat();
   return true;
 }

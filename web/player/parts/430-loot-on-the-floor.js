@@ -135,7 +135,10 @@
   };
 
   // A hero bump: strike the enemy on the tile you tried to walk into.
-  function heroAttack(e) {
+  // `bonus` is what the hero is carrying adds to this one blow (the
+  // item-grants slice): the verb the blow came through decides it, and
+  // a plain bump carries none.
+  function heroAttack(e, bonus) {
     // ADR 0015 Amendment 1 §2: a warden with `"fightable": false` cannot
     // be attacked. The blow never lands, makes no noise and spends no
     // turn - there is no fight to have with it - and one plain line says
@@ -149,7 +152,9 @@
     // into an enemy is the attack (vefr #464). A warden that cannot be
     // struck returns above, because there was no fight to teach.
     hintStrikeOnce();
-    var dmg = heroAtk();
+    var dmg = heroAtk()
+      + ((typeof bonus === 'number' && isFinite(bonus) && bonus > 0)
+         ? Math.round(bonus) : 0);
     e.hp = Math.max(0, e.hp - dmg);
     playOneShot('hero', 'attack');
     playOneShot('enemy:' + e.id, 'hurt');
