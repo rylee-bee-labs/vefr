@@ -1353,6 +1353,55 @@ sweep) + `src/vefr/cli.py` (the bake) + `web/player/parts/225-spells.js`
 the bake and the player's reads held to one another) +
 `tests/fixtures/make_spell_pack.py`.
 
+## recipes (mending: two things become one)
+
+Mending is optional and additive: **a pack with no `recipes` key shows no
+Mend control anywhere and plays exactly as it did** - the whole feature
+hangs off the one key. A pack that declares them may name what two
+carried things make when they are mended together:
+
+```json
+"recipes": [
+  {"id": "mend-the-net", "inputs": ["torn-net", "driftwood-peg"],
+   "output": "mended-net", "say": "The net is whole again."}
+]
+```
+
+- `id` is the recipe's own name, unique in the pack, 1 to 40
+  characters. It is what the `mends` rules event carries, so a rule (or
+  a sticker) can react to the mend: `{"when": {"mends":
+  {"recipe": "mend-the-net"}}, "then": [{"say": "..."}]}`.
+- `inputs` names exactly two item ids, either way round - mending the
+  peg with the net is the same mend. A recipe may name the same item
+  twice, and then it needs two carried copies.
+- `output` names the item the mend makes, and `say` is the one line the
+  mend speaks (optional; without it the player reads "You mend a torn
+  net and a driftwood peg into a mended net.").
+
+In the Bag panel, a carried thing has a "Mend with..." button: pick one
+thing, pick the second, and a preview under the list names what the pair
+makes - and what the output grants, when the pack gave it a `grants` -
+before anything is spent. **Mend** consumes one copy of each input and
+adds the output (which always fits: two things became one); **Cancel**
+changes nothing; a pair no recipe names says plainly that nothing fits,
+and the first pick stays so another partner can be tried. The last mend
+is published on `window.VEFR_LAST_MEND` as
+`{recipe, inputs, output}` for the harness snapshots to read, and
+nothing is saved beyond the bag's own one key.
+
+**`vefr check` refuses six things,** one plain sentence each naming the
+recipe: a `recipes` that is not a list, a record that is not an object,
+a missing or unknown key, `inputs` that is not exactly two item ids,
+an input or an `output` the pack's `items` does not declare, and an id
+a second recipe already took.
+
+Code: `src/vefr/shapes.py` (`RECIPE`) + `src/vefr/maplab.py`
+(`recipes_errors`, the `mends` event) + `web/player/parts/186-the-mending.js`
+(the buttons, the preview, the mend) and `445-rules-engine.js` (the
+event's payload); tests: `tests/test_recipes.py` (the shape and the
+refusals) + `tests/browser/test_mending.py` (the play, in chromium) +
+`tests/fixtures/make_mending_pack.py`.
+
 ## equipment (the pack fields and the engine; the wearing is a later slice)
 
 Equipment is optional and additive: a pack whose items carry no `slot`

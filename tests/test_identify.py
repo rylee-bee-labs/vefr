@@ -71,8 +71,13 @@ PARTS = ROOT / "web" / "player" / "parts"
 # two lines each that the data-line regex reads here; measured twice in
 # separate processes, readings equal. With that one block removed both pins
 # are unchanged.
-SAMPLE_DATA_SHA = 'ecc6968e18d20aa851010f7e0ed1c4ffb47cf129a66684bbd3d486d56c8814e4'
-ROLLED_DATA_SHA = 'a88ccca088b926b6936133d2bebbc2a00a8bfc50acfbf11e99181572c8110ac6'
+# Both moved again on 2026-10-16 for mending (E2): the new player part's one
+# `window.VEFR_LAST_MEND = null;` line - the published snapshot the bag's
+# mending flow keeps, not a baked block - is a line the data-line regex
+# reads here; measured twice in separate processes, readings equal. With
+# that one line removed both pins are unchanged.
+SAMPLE_DATA_SHA = '5ecc078f79e358d66f55485548b51b53c2833f81c2b791f6ccb81721d7b38598'
+ROLLED_DATA_SHA = '359185629a57c6194c3e8d327c4d0ff7eecc38fd265fb8d2b86ca9370a127a3d'
 
 
 def _data_blocks(html: str) -> str:

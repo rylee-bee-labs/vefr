@@ -448,7 +448,12 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # processes, readings equal:
 #   9ddb0571e312a27be2d5ae2d4151da6122a55db51113907dfda7e166439f71ea
 #   9ddb0571e312a27be2d5ae2d4151da6122a55db51113907dfda7e166439f71ea
-NO_SKIN_WEAVE_SHA256 = "9ddb0571e312a27be2d5ae2d4151da6122a55db51113907dfda7e166439f71ea"
+# Mending recipes, player side (E2): the new part 186-the-mending.js,
+# plus 180-gold.js, 030-shell.html and the manifest, 2026-10-16;
+# measured twice in separate processes, readings equal:
+#   8413f7fd735cd33cc69c9d9c0e78cf1209b922e2352606a339c45835b6ba06ca
+#   8413f7fd735cd33cc69c9d9c0e78cf1209b922e2352606a339c45835b6ba06ca
+NO_SKIN_WEAVE_SHA256 = "8413f7fd735cd33cc69c9d9c0e78cf1209b922e2352606a339c45835b6ba06ca"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

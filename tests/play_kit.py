@@ -26,6 +26,7 @@ import make_interact_pack  # noqa: E402
 import make_kitchen_pack  # noqa: E402
 import make_library_pack  # noqa: E402
 import make_lock_pack  # noqa: E402
+import make_mending_pack  # noqa: E402
 import make_motion_pack  # noqa: E402
 import make_rules_pack  # noqa: E402
 import make_skin_pack  # noqa: E402
@@ -36,6 +37,7 @@ import make_wall_pack  # noqa: E402
 BASES = {
     "interact": make_interact_pack,
     "lock": make_lock_pack,
+    "mending": make_mending_pack,
     "events": make_events_pack,
     "combat": make_combat_pack,
     "growth": make_growth_pack,
