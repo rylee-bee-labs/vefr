@@ -443,7 +443,12 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # processes, readings equal:
 #   7f2070891f9abd9ca51017e4ebacfc356a92f540251abf6804d9839a9ce4fd53
 #   7f2070891f9abd9ca51017e4ebacfc356a92f540251abf6804d9839a9ce4fd53
-NO_SKIN_WEAVE_SHA256 = "990585f53f20d63f43457d0cda04b7765e4a2667e457eb5d801a969db26489ef"
+# Mending recipes (E2): the `mends` event in the rules engine's EVENTS
+# table (445-rules-engine.js), 2026-10-16; measured twice in separate
+# processes, readings equal:
+#   9ddb0571e312a27be2d5ae2d4151da6122a55db51113907dfda7e166439f71ea
+#   9ddb0571e312a27be2d5ae2d4151da6122a55db51113907dfda7e166439f71ea
+NO_SKIN_WEAVE_SHA256 = "9ddb0571e312a27be2d5ae2d4151da6122a55db51113907dfda7e166439f71ea"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

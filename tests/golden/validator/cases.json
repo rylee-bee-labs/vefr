@@ -693,7 +693,7 @@
    ]
   },
   "errors": [
-   "rule 'r1' when names unknown event 'bogus' - the events are starts, enters, comes-near, opens, picks-up, uses-with, defeats, buys, sells, reads, phase-changes, falls, wakes"
+   "rule 'r1' when names unknown event 'bogus' - the events are starts, enters, comes-near, opens, picks-up, uses-with, defeats, buys, sells, reads, phase-changes, falls, wakes, mends"
   ]
  },
  {

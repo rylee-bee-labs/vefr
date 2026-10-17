@@ -30,7 +30,13 @@ keeps the order and the position it always had. Five cases were ADDED for a bloc
 exist before ("an endless block with three one-field omens", "an omen that names two fields",
 "omens with wrong values and an unknown key", "a warden's endless record, right and wrong" and
 "a warden's endless affixes out of range"); their expected sentences were written out by hand from
-the table's own defaults and then re-captured from the code, exactly as E4's were."""
+the table's own defaults and then re-captured from the code, exactly as E4's were.
+
+E2 (mending) changed ONE captured sentence the same way the event table's own twin test was
+changed with it: the unknown-event sentence of the rules case '{"bogus": {}}' names every event
+the table holds, and `mends` is now one of them, appended LAST so every other name keeps its
+place. That is the whole of the written reason - the vocabulary grew by one declared-thing event
+(`tests/test_event_table.py` pins the same growth), and no other byte moved."""
 import json
 from pathlib import Path
 
