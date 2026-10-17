@@ -76,11 +76,17 @@ PARTS = ROOT / "web" / "player" / "parts"
 # mending flow keeps, not a baked block - is a line the data-line regex
 # reads here; measured twice in separate processes, readings equal. With
 # that one line removed both pins are unchanged.
+# Both moved again on 2026-10-16 for vefr E3 (time that costs something):
+# the new part 255-time-rest.js bakes a `window.VEFR_TIME` snapshot into
+# every pack - the standing phase and the pack's three opt-ins, whatever
+# it declared; measured twice in separate processes, readings equal. With
+# that one block removed both pins are unchanged.
 # Both moved again on 2026-10-16 for vefr #502 (the opt-in music bed): every pack now bakes a
 # `window.VEFR_MUSIC_DEF` line (the literal `null` for a pack that names no music); measured twice in
 # separate processes, readings equal. With that one line removed both pins are unchanged.
-SAMPLE_DATA_SHA = 'a5cba720d740b7d0fb397dea1d66d6c958bc29d9806bb1eb986f6ef0eb096658'
-ROLLED_DATA_SHA = '1a8381a7c98d300af7157b9ff04ff7b02038f17ab07e9605de6e190cbd5a2e9b'
+# Both moved again for the music bed merged onto main with time (vefr#502 + Mending Shift E3), 2026-10-16; measured twice on the host.
+SAMPLE_DATA_SHA = '1ce7cdb05b3697959945370186c4d0839d8f91d041e91cf435048b60be97a25b'
+ROLLED_DATA_SHA = 'a45ba8c164bd6816aa0240d2804da42fce699fe1b39a566aaf6d6d30a8744381'
 
 
 def _data_blocks(html: str) -> str:

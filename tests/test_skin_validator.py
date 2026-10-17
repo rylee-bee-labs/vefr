@@ -497,6 +497,23 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # Mending recipes merged onto main with item-granted verbs (Mending Shift E2 + E1), 2026-10-16; measured twice on the host in separate processes, readings equal:
 #   45c8ab256a6abaa4c995609857629f098ccf4f2a3505ed647e0fe8986b860873
 #   45c8ab256a6abaa4c995609857629f098ccf4f2a3505ed647e0fe8986b860873
+# Time that costs something (vefr E3): the new part 255-time-rest.js,
+# plus 076, 090, 250, 320, 445, 480 and 510, 2026-10-16; measured twice
+# on the host in separate processes, readings equal:
+#   8c741d0cf093438f0e5aa2c4801150d2201da198b89c7577412be6c664487709
+#   8c741d0cf093438f0e5aa2c4801150d2201da198b89c7577412be6c664487709
+# Time that costs something (Mending Shift E3) merged onto main, 2026-10-16; measured twice on the host in separate processes, readings equal:
+#   178ba3596538f01cc0edb148ca7d6c126a285839d38afca388444efc856c45fd
+#   178ba3596538f01cc0edb148ca7d6c126a285839d38afca388444efc856c45fd
+# Time that costs something (Mending Shift E3) merged onto main, 2026-10-16; measured twice on the host in separate processes, readings equal:
+#   273ad0e292028b03f15932962e18ed888ab3165e7dfba5ec3ea224aae51bd023
+#   273ad0e292028b03f15932962e18ed888ab3165e7dfba5ec3ea224aae51bd023
+# Time that costs something (Mending Shift E3) merged onto main, 2026-10-16; measured twice on the host in separate processes, readings equal:
+#   c048a8b874b745edd7ea3a52e94f2999241a6cb2f770d9e6fa08a8ac47f780c8
+#   c048a8b874b745edd7ea3a52e94f2999241a6cb2f770d9e6fa08a8ac47f780c8
+# Time (Mending Shift E3) merged onto main with mending (E2), 2026-10-16; measured twice on the host in separate processes, readings equal:
+#   191b6feb63f355d2d418f678e6594b1cf406293c26c9ee3fa166f16f106491d0
+#   191b6feb63f355d2d418f678e6594b1cf406293c26c9ee3fa166f16f106491d0
 # The optional ambient music block (vefr#502) on top of the ending-only room scale, 2026-10-16; the player's
 # template grew one data line (window.VEFR_MUSIC_DEF, the literal null here), measured twice in separate
 # processes, readings equal:
@@ -518,7 +535,10 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # Music bed merged onto main (vefr#502), 2026-10-16; measured twice on the host in separate processes, readings equal:
 #   ee436470181a34522863247599115260f4347f1214b54572d74187ec4ffe2563
 #   ee436470181a34522863247599115260f4347f1214b54572d74187ec4ffe2563
-NO_SKIN_WEAVE_SHA256 = "ee436470181a34522863247599115260f4347f1214b54572d74187ec4ffe2563"
+# Music bed merged onto main with time (vefr#502 + E3), 2026-10-16; measured twice on the host in separate processes, readings equal:
+#   3f79471527605e15c4b0ec01832f58e3670aca24ee76c4ecc4e1221076214309
+#   3f79471527605e15c4b0ec01832f58e3670aca24ee76c4ecc4e1221076214309
+NO_SKIN_WEAVE_SHA256 = "3f79471527605e15c4b0ec01832f58e3670aca24ee76c4ecc4e1221076214309"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

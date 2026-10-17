@@ -256,6 +256,13 @@
     else if (keybindOn('bag', e.key)) { if (window.openBag) window.openBag(); }
     else if (keybindOn('explore', e.key)) startExplore();
     else if (keybindOn('fog', e.key)) toggleFog();
+    else if (timeRestOn() && keybindOn('rest', e.key)) {
+      // Rest (vefr E3): one press turns the watch on by exactly one
+      // phase, and a held key is not a second press. The key is only
+      // asked about when the pack declared a Rest action, so in every
+      // other pack this letter is as free as it always was.
+      if (!e.repeat) { e.preventDefault(); timeRest(); }
+    }
     else if (keybindOn('journal', e.key)) window.openMenu();
     // The fight verbs answer 1, 2, 3 - the digits printed on them
     // (#463). The row's own order is the key's, and a surface with no

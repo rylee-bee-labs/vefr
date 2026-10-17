@@ -51,13 +51,19 @@ function startPlaySurface() {
 }
 
 function bootstrap() {
-  STATE.set({ world: window.VEFR_WORLD, phase: Object.keys(window.VEFR_WORLD.phases)[0] });
+  // firstPhaseForPlay is the first phase as always, unless a pack
+  // persisted a later one (255-time-rest.js).
+  STATE.set({ world: window.VEFR_WORLD, phase: firstPhaseForPlay() });
   loadEquipped();
   loadHeroHp();
   applySurface();
   buildPhaseRail();
   bindWhisper();
   setupTown();
+  // After setupTown, because the action row it builds is where the Rest
+  // verb sits. A pack with no `"time": {"rest": true}` has no row here
+  // and no verb to press.
+  wireTimeRest();
   bindMenu();
   bindLibrary();
   renderBagPanel();
