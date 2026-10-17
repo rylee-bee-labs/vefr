@@ -17,6 +17,10 @@ function fireRule(eventName, data) {
   if (!engine || !Array.isArray(rules) || !rules.length) return;
   var state = rulesStateNow();
   if (!state) return;
+  // The STANDING phase goes on the state before the run, so a rule's
+  // `phase` condition reads the hour the event happened in (vefr E3),
+  // whatever the event was. One assignment, every event.
+  state.phase = STATE.get().phase;
   var out = engine.run(state, eventName, data || {});
   saveRulesState();   // a picks-up changes items even when no rule fires
   rulesWhyRecord(out.fired);

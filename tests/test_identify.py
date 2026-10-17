@@ -76,8 +76,13 @@ PARTS = ROOT / "web" / "player" / "parts"
 # mending flow keeps, not a baked block - is a line the data-line regex
 # reads here; measured twice in separate processes, readings equal. With
 # that one line removed both pins are unchanged.
-SAMPLE_DATA_SHA = '5ecc078f79e358d66f55485548b51b53c2833f81c2b791f6ccb81721d7b38598'
-ROLLED_DATA_SHA = '359185629a57c6194c3e8d327c4d0ff7eecc38fd265fb8d2b86ca9370a127a3d'
+# Both moved again on 2026-10-16 for vefr E3 (time that costs something):
+# the new part 255-time-rest.js bakes a `window.VEFR_TIME` snapshot into
+# every pack - the standing phase and the pack's three opt-ins, whatever
+# it declared; measured twice in separate processes, readings equal. With
+# that one block removed both pins are unchanged.
+SAMPLE_DATA_SHA = '3278bf580e832f382994cb2d0e2932549ab7ca3282dbb12bac967c59850abc04'
+ROLLED_DATA_SHA = '6cbf6b02ad9c145cf0f9ec0322a26f979e5dadb956db20cdc74754208a13458b'
 
 
 def _data_blocks(html: str) -> str:
