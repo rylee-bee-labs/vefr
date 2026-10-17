@@ -56,6 +56,18 @@ class NotMeasurable(Exception):
     """The merge-base guard cannot run here. The message is the skip reason."""
 
 
+class MeasurementFailed(AssertionError):
+    """The branch claims to be a refactor and there IS a merge base, but it
+    could not be measured. That fails the guard: a skip would let a broken
+    measurement pass a refactor quietly (review of vefr#538)."""
+
+    def __init__(self, why: str) -> None:
+        super().__init__(
+            f"{why}. A branch that claims to be behaviour-neutral "
+            f"({REFACTOR_ENV} is set) must be measurable against its merge "
+            f"base: fix the measurement, or drop the refactor label.")
+
+
 def data_blocks(html: str) -> str:
     """Every baked data line the weave carries: the `window.VEFR_*`
     assignments, in file order, joined."""
@@ -83,7 +95,9 @@ def assert_unchanged_from_merge_base(name: str, digest: str) -> None:
     value for it. Raises `AssertionError` when the merge base prints a
     different one - a "refactor" that moved a byte is not a refactor - and
     `NotMeasurable` (skip this test) when there is nothing to measure
-    against, or when the branch never claimed to be neutral.
+    against (no origin/main, no shared history, HEAD is main), or when the
+    branch never claimed to be neutral. A claimed branch whose merge base
+    exists but cannot be measured raises `MeasurementFailed`, a failure.
     """
     if not claims_behaviour_neutral():
         raise NotMeasurable(
@@ -91,8 +105,7 @@ def assert_unchanged_from_merge_base(name: str, digest: str) -> None:
             f"({REFACTOR_ENV} is unset), so its bytes are its own to choose")
     base = merge_base_digests()
     if base.get(name) is None:
-        raise NotMeasurable(
-            f"the merge base could not measure '{name}'; nothing to compare")
+        raise MeasurementFailed(f"the merge base did not measure '{name}'")
     if digest != base[name]:
         raise AssertionError(
             f"this branch claims to be behaviour-neutral ({REFACTOR_ENV} is "
@@ -146,11 +159,11 @@ def merge_base_digests() -> dict:
             return _weave_in_a_worktree(base)
         except _Locked:
             if attempt == 2:
-                raise NotMeasurable(
+                raise MeasurementFailed(
                     "git could not take the repo lock to add the merge-base "
                     "worktree; nothing was measured")
             time.sleep(0.5 * (attempt + 1))
-    raise NotMeasurable("the merge base was never measured")  # pragma: no cover
+    raise MeasurementFailed("the merge base was never measured")  # pragma: no cover
 
 
 def _weave_in_a_worktree(base: str) -> dict:
@@ -162,7 +175,7 @@ def _weave_in_a_worktree(base: str) -> dict:
         except _GitError as err:
             if "cannot lock" in str(err):
                 raise _Locked(str(err))
-            raise NotMeasurable(f"the merge-base worktree failed to check out: {err}")
+            raise MeasurementFailed(f"the merge-base worktree failed to check out: {err}")
         _copy_fixture_builders(worktree)
         return _measure(worktree)
     finally:
@@ -242,7 +255,7 @@ def _measure(worktree: Path) -> dict:
     if done.returncode == 0:
         return json.loads(done.stdout)
     last = (done.stderr.strip().splitlines() or ["?"])[-1]
-    raise NotMeasurable(f"the merge base could not be woven: {last}")
+    raise MeasurementFailed(f"the merge base could not be woven: {last}")
 
 
 def _measure_main(argv: list[str]) -> int:
