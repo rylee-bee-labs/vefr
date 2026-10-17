@@ -165,7 +165,8 @@ function rulesWhyRecord(fired) {
 //   - ON WHAT TERMS: the pack's own `say`, then the two costs named -
 //     what would be put down, what could be gained - and the two keys
 //     that answer. Y puts the risk down and takes the reward; N walks
-//     away;
+//     away. The same two answers are also two buttons under the line,
+//     because a phone player has no keys at all;
 //   - AND WHAT WALKING AWAY COSTS: nothing. No flag, no timer, no turn,
 //     nothing taken. The offer is not remembered as refused, so the next
 //     time the pack's `when` matches the player is asked again - which
@@ -174,9 +175,9 @@ function rulesWhyRecord(fired) {
 //     above stops asking on its own.
 //
 // What this one example does not have yet, said plainly rather than
-// hidden: the two answer keys are keys, so a player on a phone reads
-// the offer and can only walk away from it for now. Nothing is taken
-// from them either way, which is why the gap costs no one anything.
+// hidden: nothing. The offer is asked as two on-screen buttons as well
+// as the two keys, so a phone can answer it either way (vefr#504, the
+// gap the accessibility contract names: a phone has no Y and no N).
 var STAKE_PENDING = null;   // the offer waiting for an answer, or null
 var STAKES_TAKEN = [];      // the ids the player has staked, in order
 
@@ -211,8 +212,64 @@ function stakesOffer(eventName, data) {
     STAKE_PENDING = s;
     combatSay(s.say + ' Risk: ' + itemName(s.risk) + '. Gain: '
       + itemName(s.reward) + '. [Y] stake it, [N] walk away.');
+    stakesShow(s);
     return;
   }
+}
+
+// ---- the offer, answerable without a keyboard (vefr#504) ----
+// The keys are still the keys: Y and N answer exactly as before. What
+// the buttons add is that the offer can now be ANSWERED at all on a
+// phone, which before this a player on one could not do - they could
+// read the offer, and could only walk away from it by standing still.
+//
+// Both buttons run the same two functions the keys run, so there is one
+// answer to an offer and one set of consequences, whichever way the
+// player gave it. The row lives under the offer line in the top corner
+// and the fight verbs live at the foot of the frame, so answering never
+// stands over a verb the player might want next.
+function stakesHost() {
+  return document.getElementById('stake-ask');
+}
+
+// Take the buttons away: the offer is answered, or there is no offer.
+function stakesClose() {
+  var host = stakesHost();
+  if (!host) return;
+  while (host.firstChild) host.removeChild(host.firstChild);
+  host.hidden = true;
+}
+
+function stakeButton(id, cls, label, said, run) {
+  var b = document.createElement('button');
+  b.type = 'button';
+  b.id = id;
+  b.className = cls;
+  b.textContent = label;
+  // The accessible name keeps the words on the face of the button and
+  // then names what the answer costs, so a screen reader hears the
+  // choice and not just its name.
+  b.setAttribute('aria-label', label + ': ' + said);
+  b.addEventListener('click', run);
+  return b;
+}
+
+function stakesShow(s) {
+  var host = stakesHost();
+  if (!host) return;
+  stakesClose();
+  var walk = stakeButton('stake-walk', 'stake-btn',
+    'Walk away', 'keep ' + itemName(s.risk) + ' and lose nothing', stakeWalk);
+  var take = stakeButton('stake-take', 'stake-btn stake-btn--take',
+    'Take the stake', 'put ' + itemName(s.risk) + ' down and gain '
+      + itemName(s.reward), stakeTake);
+  host.appendChild(take);
+  host.appendChild(walk);
+  host.hidden = false;
+  // Focus opens on the answer that costs nothing. A player who walked
+  // to this tile by accident should not have to read a button before
+  // they can press one.
+  walk.focus();
 }
 
 // Y: the player's own answer, the only thing that takes anything away.
@@ -222,6 +279,7 @@ function stakeTake() {
   var s = STAKE_PENDING;
   if (!s) return;
   STAKE_PENDING = null;
+  stakesClose();
   STAKES_TAKEN.push(s.id);
   bagRemoveOne(s.risk);
   if (bagAdd(s.reward, null, true)) {
@@ -238,6 +296,7 @@ function stakeTake() {
 function stakeWalk() {
   if (!STAKE_PENDING) return;
   STAKE_PENDING = null;
+  stakesClose();
   combatSay('You walk away from it. Nothing is lost.');
 }
 
@@ -255,7 +314,10 @@ function stakesKey(e) {
 
 // What the stakes are doing, as the published snapshot the browser tests
 // read: how many the pack declared, the offer waiting for an answer
-// (null when none), and the ids the player has staked.
+// (null when none), and the ids the player has staked. `pending` is
+// also how a reader knows the offer is OPEN - it is the offer's id
+// while the two buttons are on screen and null the moment one of them
+// has answered, so nothing else has to be published for it.
 window.VEFR_STAKES_STATE = function () {
   return {
     declared: stakesOffered().length,

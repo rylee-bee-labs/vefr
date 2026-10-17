@@ -23,6 +23,13 @@ State is read the published way: window.VEFR_STAKES_STATE() for the
 stakes, and the bag panel's own rows for what is carried - never the
 player's private variables.
 
+And the phone (vefr#504): the offer is answered with two on-screen
+buttons as well as with Y and N, because a phone has no keys. What
+the browser has to show is that a tap on "Walk away" changes nothing
+and is asked again, a tap on "Take the stake" moves the risk and the
+reward, the buttons are big enough to hit (48px), and the desktop keys
+still answer exactly as they did.
+
 Run with: uv run pytest tests/browser/test_stakes.py
 """
 
@@ -38,6 +45,8 @@ from vefr import cli
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tests" / "fixtures"))
 import make_stakes_pack  # noqa: E402
+
+PHONE = {"width": 390, "height": 844}
 
 DESKTOP = {"width": 1280, "height": 720}
 
@@ -81,8 +90,8 @@ def enter(page):
 
 
 @contextmanager
-def playing(browser, html, size=DESKTOP):
-    ctx = browser.new_context(viewport=size)
+def playing(browser, html, size=DESKTOP, touch=False):
+    ctx = browser.new_context(viewport=size, has_touch=touch, is_mobile=touch)
     page = ctx.new_page()
     try:
         page.goto(html.as_uri())
@@ -90,6 +99,13 @@ def playing(browser, html, size=DESKTOP):
         yield page
     finally:
         ctx.close()
+
+
+@contextmanager
+def on_a_phone(browser, html):
+    """A 390x844 phone with a touchscreen: the frame the buttons exist for."""
+    with playing(browser, html, size=PHONE, touch=True) as page:
+        yield page
 
 
 def stakes(page):
@@ -219,3 +235,165 @@ def test_the_woven_file_asks_only_what_the_pack_wrote(browser, woven):
         assert baked == make_stakes_pack.STAKES, baked
         assert json.loads(json.dumps(baked)) == json.loads(
             page.evaluate("() => JSON.stringify(window.VEFR_STAKES)"))
+
+# ---- the offer on a phone (vefr#504) ----
+# The gap this closes, in one line: Y and N are keys, and a phone has
+# neither. Before the buttons, a phone player could read the offer and
+# could not answer it at all. So the proof here is a finger.
+
+TAKE = "#stake-take"
+WALK = "#stake-walk"
+
+
+def offered(page):
+    """The two answers, as a player sees them: what is on screen, in the
+    order it is on screen, and where the focus is."""
+    return page.evaluate(
+        """() => ({ buttons: Array.from(document.querySelectorAll('#stake-ask button'))
+             .map((el) => ({ id: el.id, text: el.textContent.trim(),
+                             name: el.getAttribute('aria-label') })),
+             focused: document.activeElement ? document.activeElement.id : null })""")
+
+
+def height_of(page, selector):
+    return page.evaluate(
+        "(sel) => { const el = document.querySelector(sel);"
+        " return el ? el.getBoundingClientRect().height : 0; }", selector)
+
+
+def boxes(page):
+    """Where the offer's buttons sit, and where the fight verbs sit, as
+    rectangles, so the two can be compared rather than trusted."""
+    return page.evaluate(
+        """() => { const one = (el) => { const r = el.getBoundingClientRect();
+             return { x: r.x, y: r.y, w: r.width, h: r.height }; };
+             const verbs = Array.from(document.querySelectorAll('#verb-row button'))
+               .filter((el) => el.offsetParent !== null).map(one);
+             const acts = Array.from(document.querySelectorAll('.acts button'))
+               .filter((el) => el.offsetParent !== null).map(one);
+             const ask = Array.from(document.querySelectorAll('#stake-ask button'))
+               .map(one);
+             return { ask: ask, others: verbs.concat(acts) }; }""")
+
+
+def overlaps(a, b):
+    return (a["x"] < b["x"] + b["w"] and b["x"] < a["x"] + a["w"]
+            and a["y"] < b["y"] + b["h"] and b["y"] < a["y"] + a["h"])
+
+
+def test_a_phone_is_asked_the_offer_with_two_buttons_under_the_line(browser, woven):
+    with on_a_phone(browser, woven) as page:
+        assert offered(page)["buttons"] == [], "an offer was on screen before one was made"
+        walk_to_the_toll(page)
+        assert stakes(page)["pending"] == "the-tolls-price"
+
+        on_screen = offered(page)
+        assert [b["id"] for b in on_screen["buttons"]] == ["stake-take", "stake-walk"], on_screen
+        assert [b["text"] for b in on_screen["buttons"]] == ["Take the stake", "Walk away"], on_screen
+        # Each button says what its own answer costs, for a screen reader.
+        for button in on_screen["buttons"]:
+            assert button["name"].startswith(button["text"] + ":"), button
+        # The focus opens on the answer that costs nothing.
+        assert on_screen["focused"] == "stake-walk", (
+            f"the offer did not put the focus on the safe answer: {on_screen}")
+
+
+def test_the_answers_are_big_enough_to_hit_and_stand_clear_of_the_verbs(browser, woven):
+    with on_a_phone(browser, woven) as page:
+        walk_to_the_toll(page)
+        for selector in (TAKE, WALK):
+            high = height_of(page, selector)
+            assert high >= 48, f"{selector} is {high}px tall: too small to tap with a thumb"
+
+        placed = boxes(page)
+        assert placed["ask"], "the offer drew no buttons to place"
+        for ask in placed["ask"]:
+            for other in placed["others"]:
+                assert not overlaps(ask, other), (
+                    f"the offer's buttons stand over a verb the player may want next: "
+                    f"{ask} over {other}")
+
+    # The same two facts on a desktop frame, where the verb row and the
+    # action row really are on the page: there the offer's buttons must
+    # not be drawn over them either.
+    with playing(browser, woven) as page:
+        walk_to_the_toll(page)
+        placed = boxes(page)
+        assert placed["others"], "no verb was on screen to stand clear of"
+        for ask in placed["ask"]:
+            for other in placed["others"]:
+                assert not overlaps(ask, other), (
+                    f"the offer's buttons cover a verb: {ask} over {other}")
+
+
+def test_tapping_walk_away_on_a_phone_loses_nothing_and_is_asked_again(browser, woven):
+    with on_a_phone(browser, woven) as page:
+        walk_to_the_toll(page)
+        assert stakes(page)["pending"] == "the-tolls-price"
+
+        page.tap(WALK)
+        page.wait_for_timeout(250)
+        assert said(page) == WALKED, said(page)
+        state = stakes(page)
+        assert state["pending"] is None and state["taken"] == [], state
+        # THE REVERSAL, with a finger this time: nothing left the bag,
+        # nothing came into it, and the buttons are gone with the offer.
+        assert carried(page) == [TORCH], (
+            f"walking away on a phone changed what the hero carries: {carried(page)}")
+        assert offered(page)["buttons"] == [], (
+            "the buttons stayed on screen after the offer was answered")
+
+        # Asked again the next time the toll matches: a tap costs nothing.
+        page.keyboard.press("ArrowLeft")
+        page.wait_for_timeout(200)
+        walk_to_the_toll(page)
+        assert stakes(page)["pending"] == "the-tolls-price", (
+            "the toll did not ask again after the hero walked away on a phone")
+        assert carried(page) == [TORCH], "asking again cost the hero something"
+
+
+def test_taking_the_stake_on_a_phone_moves_the_risk_and_the_reward(browser, woven):
+    with on_a_phone(browser, woven) as page:
+        walk_to_the_toll(page)
+        assert carried(page) == [TORCH]
+
+        page.tap(TAKE)
+        page.wait_for_timeout(300)
+        assert said(page) == TAKEN, said(page)
+        state = stakes(page)
+        assert state["pending"] is None and state["taken"] == ["the-tolls-price"], state
+        assert carried(page) == [MAP], (
+            f"tapping Take the stake did not put the reward in the bag: {carried(page)}")
+        assert offered(page)["buttons"] == [], (
+            "the buttons stayed on screen after the offer was answered")
+
+        # And the toll asks no more: the risk is gone from the bag.
+        page.keyboard.press("ArrowLeft")
+        page.wait_for_timeout(200)
+        walk_to_the_toll(page)
+        assert stakes(page)["pending"] is None, (
+            "the toll asked again after the hero had already staked the torch")
+
+
+def test_the_keys_still_answer_the_offer_on_a_desktop(browser, woven):
+    """The buttons are an addition, not a replacement: Y and N answer
+    exactly as they did, and they answer the offer the buttons show."""
+    with playing(browser, woven) as page:
+        walk_to_the_toll(page)
+        assert [b["id"] for b in offered(page)["buttons"]] == ["stake-take", "stake-walk"]
+
+        page.keyboard.press("n")
+        page.wait_for_timeout(200)
+        assert said(page) == WALKED, said(page)
+        assert offered(page)["buttons"] == [], "the buttons outlived the answer"
+
+        page.keyboard.press("ArrowLeft")
+        page.wait_for_timeout(200)
+        walk_to_the_toll(page)
+        assert stakes(page)["pending"] == "the-tolls-price"
+
+        page.keyboard.press("y")
+        page.wait_for_timeout(250)
+        assert said(page) == TAKEN, said(page)
+        assert carried(page) == [MAP], carried(page)
+        assert offered(page)["buttons"] == []
