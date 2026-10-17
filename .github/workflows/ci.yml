@@ -77,7 +77,17 @@ jobs:
       # step took 12.6 min serially. `-n auto` uses every core the runner has (GitHub's hosted runners have
       # 2); pytest-xdist is added for this run only, so uv.lock is unchanged. Rollback: drop `--with
       # pytest-xdist` and `-n auto`.
+      #
+      # VEFR_REFACTOR is the behaviour-neutral claim (vefr#529): a PR labelled
+      # `refactor` must weave the same bytes its merge base weaves, measured in
+      # a temp worktree at `git merge-base HEAD origin/main` by
+      # tests/weave_digest.py. The full history above is what makes that
+      # merge base exist here. Nothing is committed for it, so two player PRs
+      # cannot collide on a digest line. Every other PR gets '' and the guard
+      # skips with its reason.
       - name: Pytest (blocks CI)
+        env:
+          VEFR_REFACTOR: ${{ contains(github.event.pull_request.labels.*.name, 'refactor') && '1' || '' }}
         run: uv run --group test --with pytest-xdist pytest -q -n auto
 
       - name: Validate sample-world

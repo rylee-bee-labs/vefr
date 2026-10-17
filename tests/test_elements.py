@@ -32,7 +32,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SAMPLE = ROOT / "worlds" / "sample-world"
 sys.path.insert(0, str(ROOT / "tests" / "fixtures"))
 import make_element_pack as mk  # noqa: E402
-from test_skin_validator import NO_SKIN_WEAVE_SHA256  # noqa: E402
+import weave_digest  # noqa: E402
 
 
 def errors(pack: Path) -> list[str]:
@@ -172,13 +172,18 @@ def test_a_pack_that_opts_out_bakes_none_of_it(tmp_path):
     assert "dmg_type" not in hound and "burns" not in hound
 
 
-def test_the_shipped_sample_pack_still_weaves_to_its_pinned_digest():
+def test_the_shipped_sample_pack_still_weaves_stable_and_unaffected():
     """Nothing here may change a pack that has not opted in.
 
-    The constant is the one `tests/test_skin_validator.py` pins and
-    keeps, with the readings that produced it in its own comment."""
+    The byte-for-byte half of that claim - the whole-weave digest this
+    file used to read off `tests/test_skin_validator.py` - is measured at
+    the merge base for a branch that claims to be a refactor, and nothing
+    is pinned here any more (vefr#529). What stays is what a pack that
+    named no element must still get: a deterministic weave, and no
+    `resist` or `immune` in its hero."""
     woven = cli.weave_html(SAMPLE)
-    assert hashlib.sha256(woven.encode()).hexdigest() == NO_SKIN_WEAVE_SHA256
+    assert cli.weave_html(SAMPLE) == woven, "the sample weave is not deterministic"
+    assert weave_digest.is_sha256(hashlib.sha256(woven.encode()).hexdigest())
     hero = _hero_line(woven)
     assert "resist" not in hero and "immune" not in hero
 

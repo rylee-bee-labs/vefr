@@ -393,6 +393,13 @@ uv run python scripts/build_player.py
 uv run python scripts/build_player.py --check
 uv run python scripts/weave_digest.py
 
+# A PR labelled `refactor` claims its player changes moved no byte (vefr#529). CI passes that
+# label down as VEFR_REFACTOR=1 and tests/weave_digest.py then weaves the merge base
+# (`git merge-base HEAD origin/main`) in a temp worktree and compares. Nothing is committed for
+# it, so two player PRs cannot collide on a digest line - that is the whole point. Run it
+# locally the same way; without an origin/main to measure against it skips, with the reason
+VEFR_REFACTOR=1 uv run --group test pytest -q tests/test_skin_validator.py
+
 # Validate a world pack
 uv run norns validate --pack worlds/<name>
 

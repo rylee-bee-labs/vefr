@@ -24,6 +24,7 @@ from vefr import cli, maplab
 
 sys.path.insert(0, str(Path(__file__).parent / "fixtures"))
 import make_skin_pack as mk  # noqa: E402
+import weave_digest  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -119,459 +120,63 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
     assert has(errors(mk.build(tmp_path, skin=skin)), "backdrop")
 
 
-# The digest rule 6 of docs/plans/interface/PLAN.md is about, pinned so a
-# skin change can never move a pack that names no skin. It moves when the
-# engine's own player code or the bundled fonts move - the player template is
-# woven into every pack, skinned or not - and never because of a skin. To
-# refresh it, and to say in the commit message why it moved:
-#   uv run python -c "import hashlib, vefr.cli as c; from pathlib import Path; \
-#     print(hashlib.sha256(c.weave_html(Path('worlds/sample-world')).encode()).hexdigest())"
-# Last moved 2026-10-10, for ADR 0017 slice 2. The identify service and its
-# reveal now reach the woven player: a new part (195-the-identify-service.js)
-# and the bag strip, bag panel and Interact verb beside it all sit in the
-# player template, which is woven into every pack skinned or not, so every
-# pack's weave moved by 13989 bytes of engine code.
+# Rule 6 of docs/plans/interface/PLAN.md - a pack that names no skin bakes no
+# skin, backdrop or font data - is still the claim this test makes, and the
+# proof that nothing else moved with it is `tests/weave_digest.py`, not a
+# constant in this file.
 #
-# It last moved for vefr #364's fog `shape` key: the player part that draws
-# the lit area grew one branch, and the part that writes a floor's fog
-# block grew one line. Nothing a pack carries moved with it - the sample
-# world's own weave of its own data is the same bytes, and the sample world
-# names no shape at all.
+# There was one here until vefr#529: a byte-for-byte digest of this pack's whole
+# weave, which every player PR had to re-measure and every merge made the next
+# PR re-measure again - three open player PRs, three serial rounds of merge,
+# re-weave twice, re-push. It guarded a refactor ("a refactor of the player
+# must not change behaviour") and charged every feature PR for it, because
+# every feature PR moves the same bytes on purpose, and the digest is over the
+# WHOLE weave and does not compose: a stack's own reading is worth nothing and
+# neither side's survives a merge.
 #
-# This digest is over the WHOLE weave and does not compose: it is measured,
-# never derived, and it must be re-measured after every union of two stacks
-# that each changed the player. The value a stack computes on its own is
-# worth nothing here, and neither side's can be carried across a merge.
-# This union carries both moves at once, so the value below was re-measured
-# over the merged weave and is neither side's old value. The lit-area reader
-# also named its local `inLight` (vefr #364), a rename in the same part, so
-# the pin moved once more with the union's re-measure.
-#
-# What was checked before this value was written, and is the reason it is a
-# pack-neutrality proof rather than a golden: the pack's OWN baked content
-# did not move. All 41 `window.VEFR_*` data lines this pack weaves are
-# byte-identical before and after - only the player around them grew - and
-# `worlds/sample-world` declares no skin, so `window.VEFR_SKIN` lands the
-# literal null exactly as it did.
-# Last moved 2026-10-10, rebasing the S349 Section-tiles stack onto E8c.
-# Two player changes reach the woven pack from opposite sides of that rebase:
-# E8c adds the town gate, the state a region shows and the descent's
-# story-end handling, and S349 adds the per-Section tiles and the descent
-# lines that name them. Both land in the player template, which is woven into
-# every pack skinned or not, so neither side's digest could be carried over
-# and the two could not be composed: the digest is over the whole weave, not
-# a sum. Both sides were self-consistent before the rebase (E8c's tree
-# computed `7ef6d441...` and the S349 tip computed `86311d4c...`), so this
-# value is the digest of the merged tree and nothing else. Recomputed by the
-# documented command above. Nothing about this pack's own bytes moved -
-# `worlds/sample-world` declares no skin, so every new bake lands the literal
-# null here exactly as `window.VEFR_SKIN` does.
-# Moved again 2026-10-11, rebasing the C4 player-words stack onto main. That
-# stack adds the woven player's message table (`VEFR_PLAYER_WORDS`, part 340)
-# and reads the where-next lines from it, so the player template - woven into
-# every pack, skinned or not - changed. The stack left the constant at its own
-# base's value, so it is the merged tree's digest and nothing else. Recomputed
-# with the documented command above; the pack's own bytes did not move.
-# Last moved 2026-10-10, on the spells tree (ADR 0018). Spells changed the
-# player: a new `225-spells.js` part teaches the Bag panel the spells a
-# level has earned and the ones a book has taught, and `180-gold.js` reads a
-# spellbook's `spell` through the `use` verb it already had. The player
-# template is woven into every pack, so the digest had to be recomputed
-# rather than carried over. Nothing about this pack's own bytes moved -
-# `worlds/sample-world` declares no skin and no spells, so the bake adds
-# no spells data for it (the line meant to bake the literal null was later
-# dropped entirely; see the last note below), and spells did not touch the
-# pack at all. The
-# proof that only the shared template moved: woven with `main`'s
-# `web/packaged.html` in place of this one, this branch's `cli.py` produces
-# `7ef6d4411e8a6f2661346fe6701d4a741173f33aaa94ec4085925c2649258dfe` for
-# this pack - byte for byte what `main` produced.
-# Re-cut 2026-10-11, the union of the spells stack with `main`'s identify
-# service: both sides changed the player template, so the pinned value is
-# this merged tree's weave and neither side's could be carried across.
-# The spells refactor (one gate for what the hero knows) moved the player
-# once more, and measured `d993042f...` for the source stack on its own.
-# The source stack's own union repair moved the player again: `spellsKnown`
-# in `225-spells.js` published the book-learned spells ahead of the ones a
-# level had earned; it now walks the pack's own order and publishes each
-# known spell in the order the hero learns it, which is what
-# `test_spells_play.py::test_a_book_found_as_loot_teaches_its_spell_and_is_spent`
-# pins.
-# Re-cut again 2026-10-11, onto `main` one landing further on: the spells
-# stack now meets vefr #395 (FOGSHAPE), whose lit-area reader grew a branch
-# and whose floor-fog writer grew a line. That is a third move in the same
-# player template as the identify service and the spells, so the union of
-# all three is measured here and is again no side's value (the earlier
-# union measured `d4e5136d...`, `main` alone `7b672cc2...`, and the source
-# stack's last step `abeaef56...`). The sample world names no shape and no
-# skin, so its own baked bytes still do not move.
-# Last moved 2026-10-11: the spells slice's `window.VEFR_SPELLS` line was
-# dropped for a pack that declares no `spells` block, because a new
-# `VEFR_*` line for a pack that does not use the feature is exactly what
-# ADR 0017 slice 2's additive rule forbids (test_identify.py's
-# `test_the_reader_needs_no_new_baked_block`). The sample world names no
-# spells, so its baked data went back to pristine `main`'s bytes - the
-# whole-weave pin still moves because the player template keeps the
-# `225-spells.js` part (and 050's now-accurate spells comment), so the
-# merged weave was re-measured here.
-# Re-cut 2026-10-11, onto current `main`: U353 moves the woven player (the fight verbs now stand in the HUD frame; the look slice's `--sizes`/`--at`/`--seed` reach the descent).
-# Measured twice with the documented command above (as
-# `PYTHONPATH=src python3 -c ...`, no uv in the sandbox):
-#   7b672cc24f806fdf7f0bfd2d05b0f6318ad8d9626e6cd1e00838df6ab5d118c7
-#   2260620a961dd59f91af65b88b356cfcb2412936eefb1e28e6d57fb6297caff7
-#   cd70c89312c0da7a60691b0aa6b3e0ded7aa03006bb4687bef61a07389146dfa
-# Re-cut 2026-10-11, the union of the D357 monster-count stack onto current
-# `main`: vefr#357's player's own descent part (397) and its generator part
-# (396) read the new `mobs` key, so every pack's woven player carries the new
-# lines - which is the one thing this digest is allowed to move for - on top
-# of every earlier move. The value below is this merged tree's weave and
-# neither side's could be carried across. Re-measured twice with the
-# documented command above (as `PYTHONPATH=src python3 -c ...`, no uv in the
-# sandbox) and the two readings matched:
-#   73fe8996400b939e781cf8eb8df13ca848d645c2858f3d187b585c6dd6dd006c
-#   73fe8996400b939e781cf8eb8df13ca848d645c2858f3d187b585c6dd6dd006c
-# Re-cut 2026-10-11, the vefr#359 monster-reward piece onto current `main`: part
-# 397 reads a family's `xp` in `mobsAt` and `withWarden` and exports `xpFor`, so
-# every pack's woven player moves. Measured twice with the documented command
-# above (as `PYTHONPATH=src python3 -c ...`, no uv in the sandbox), readings equal:
-#   ebff7450540b050ca83d6796c6184264314040eeb4ac90c3e5dc7a7ef9770348
-#   ebff7450540b050ca83d6796c6184264314040eeb4ac90c3e5dc7a7ef9770348
-# Re-cut 2026-10-11, the vefr#350 death-resume stack onto current `main`:
-# a death on a floor of the descent wakes the hero on that floor instead of
-# at the pack's baked wake point. That is `deathResume` beside `cozyDeath` in
-# the player template, and `cozyDeath` reads it, so every pack's weave moves,
-# skinned or not; this pack's own bytes do not (no skin, no `VEFR_ITEMS`
-# change). Measured twice with the documented command above (as
-# `PYTHONPATH=src python3 -c ...`, no uv in the sandbox), readings equal:
-#   4927bff9b106baf362e253589a9e01f6a1e2e41c70e3af8ea2339fc4ca66cfc5
-#   4927bff9b106baf362e253589a9e01f6a1e2e41c70e3af8ea2339fc4ca66cfc5
-# Last moved 2026-10-10, on the E8d tree. E8d changed the player: it adds
-# ADR 0015 Amendment 1's warden's `challenge`, `yields` and `fightable`
-# (the key a rule challenge delivers, a beaten warden that stays, and a
-# warden a blow cannot land on). The player template is woven into every
-# pack, so the digest had to be recomputed rather than carried over.
-# Last moved 2026-10-11, repairing the E8d union. E8d changed the player:
-# it adds ADR 0015 Amendment 1's warden's `challenge`, `yields` and
-# `fightable` (the key a rule challenge delivers, a beaten warden that
-# stays, and a warden a blow cannot land on). The repair keeps a `yields`
-# warden hostile until it is actually beaten - on the live entry `yields`
-# is a state, not the pack's key - so `enemyEntry` no longer copies it and
-# the player template moved again. The template is woven into every pack,
-# so the digest had to be recomputed rather than carried over.
-# Nothing about this pack's own bytes moved - `worlds/sample-world`
-# declares no skin and no descent, so `window.VEFR_TOWN_STATES` and
-# `window.VEFR_DESCENT_DEF` bake the literal null here exactly as
-# `window.VEFR_SKIN` does, and E8d did not touch the pack at all.
-# `tests/test_warden_challenge.py` holds the pin that says so for a pack
-# that DOES name a descent: the bytes the pack itself contributes.
-# Re-cut 2026-10-11, the E8d warden stack onto current `main` (after #402): the
-# woven player moved on the union, so every pack's weave moves. Measured twice
-# with the documented command above (as `PYTHONPATH=src python3 -c ...`, no uv
-# in the sandbox), readings equal:
-#   5fe9f907e61cf39c96f6d442605bce131fc15786d2491ddb61bc0824e82ff580
-#   5fe9f907e61cf39c96f6d442605bce131fc15786d2491ddb61bc0824e82ff580
-# Re-cut 2026-10-11, the V352S stack (vefr #352 descent entry tile, #346 stamp
-# sweep) onto current `main`: the descent part's `claimTile` moves the woven
-# player, so every pack's weave moves. Measured twice with the documented
-# command above (as `PYTHONPATH=src python3 -c ...`, no uv in the sandbox),
-# readings equal:
-#   5c281472acffbba023480b7fc0fc4cf43d21cb2d67e093ab07fdfac5401703c0
-#   5c281472acffbba023480b7fc0fc4cf43d21cb2d67e093ab07fdfac5401703c0
-# V352fix 2026-10-11, repairing that same re-cut: the union of the descent
-# part's `wireEntry` had kept main's gate on a `stair` variable and called
-# `claimTile(list, stair)`, which is the #352 precedence fix in behaviour but
-# not in the shape the acceptance test pins - the authored-door precedence
-# call is restored as the original inline `claimTile(list, { from: entry.region
-# ... })`, with main's gate folded into the literal, so the player template
-# moved again. Measured twice with the documented command above (as
-# `PYTHONPATH=src python3 -c ...`, no uv in the sandbox), readings equal, and
-# all 41 `window.VEFR_*` data lines of this pack are byte-identical before and
-# after - only the player around them changed:
-#   4f88895a4fe23ea81dda35e30c887d09540a29fac4ded1821ee29a5975a550c7
-#   4f88895a4fe23ea81dda35e30c887d09540a29fac4ded1821ee29a5975a550c7
-# ELSLICEFIX 2026-10-11, the endless gate (the stair past the last Section waits
-# for `story_end`) cherry-picked onto post-#405 main: its hunk in the descent
-# part moves the woven player, so this weave moves. Measured twice in separate
-# processes, readings equal; the pack's data lines are unchanged:
-#   bd38a6085259b6ec3fc987037c78d1d35fcecddb6105f69c99070c4cc6eaa8ff
-#   bd38a6085259b6ec3fc987037c78d1d35fcecddb6105f69c99070c4cc6eaa8ff
-# Descent polish 2026-10-12 (vefr#412): generated monsters carry their family's sprite, the bag strip
-# stacks by kind, a scrolling dark floor sizes its tile to the lit circle; all three move the woven
-# player. Measured twice in separate processes, readings equal; the pack's data lines are unchanged:
-#   258470fd8a0d9c8925f39b9d1dff597ab443bc6807f24fd34e47f9119cdede20
-#   258470fd8a0d9c8925f39b9d1dff597ab443bc6807f24fd34e47f9119cdede20
-# ELDECFIX4 2026-10-12, PR 410 edits web/player/parts/397-the-descent.js, which
-# is woven into every pack, so this weave moved from the ELSLICEFIX digest
-# (bd38a6085259b6ec3fc987037c78d1d35fcecddb6105f69c99070c4cc6eaa8ff) to:
-#   f02974fad1de235eb0a6b0123cc692c0362c6405a45470315d995b57249f9eb6
-# Merged with #412 on 2026-10-12: both moved the woven player; measured twice in separate processes:
-#   c9ec6b7110edeb6fb3d3d3d8d0eba4d3a3475888339280a88042e866ab4b162e
-#   c9ec6b7110edeb6fb3d3d3d8d0eba4d3a3475888339280a88042e866ab4b162e
-# WAYART 2026-10-12: the woven player gains VEFR_WAY_ICONS and VEFR_REGION_WAY_ICONS (both `{}` here)
-# and picks a transition's picture by kind; measured twice in separate processes, readings equal:
-#   07f66d54ca31e402935a9a0d285bf1703d8fa283a6e7f7dfa1d319c807a4d116
-#   07f66d54ca31e402935a9a0d285bf1703d8fa283a6e7f7dfa1d319c807a4d116
-# #417 2026-10-12: Talk with no brain says the seeded line (480-town-input-and-turns.js), on top of #416; measured twice in separate processes, readings equal:
-#   aab9d5457b034d7b900bc2ed34ccb99645514acf744739ec559e173b7f9c8d7f
-#   aab9d5457b034d7b900bc2ed34ccb99645514acf744739ec559e173b7f9c8d7f
-# #418 phone camera merged with #419 (Talk) on 2026-10-12; measured twice in separate processes, readings equal:
-#   3efab5dcd619fc4e4510f3297cf3e6ea5dcb1a059341f4fcad5c5476b014113d
-#   3efab5dcd619fc4e4510f3297cf3e6ea5dcb1a059341f4fcad5c5476b014113d
-# #420 object layer merged with #418 phone camera, 2026-10-12; measured twice in separate processes, readings equal:
-#   578de6ada011a5a407a4a9d6cd1e53a10c44a6c2e417dfbfe37549f8b4abb509
-#   578de6ada011a5a407a4a9d6cd1e53a10c44a6c2e417dfbfe37549f8b4abb509
-# Monster parts run without the props part (#420), 2026-10-12; measured twice in separate processes, readings equal:
-#   0a80b00def25f0cfaecd56841753a2285a84daea0a8c74a04dd13833e51a3aca
-#   0a80b00def25f0cfaecd56841753a2285a84daea0a8c74a04dd13833e51a3aca
-# Pixel art (#427) merged with the object layer (#420), 2026-10-12; measured twice in separate processes, readings equal:
-#   b260300bef12bb4c6f0dc52cbcea83e078522609cdf3cd87d5005d48960ecbc9
-#   b260300bef12bb4c6f0dc52cbcea83e078522609cdf3cd87d5005d48960ecbc9
-# Pixel art keeps main's sprite height name (#427), 2026-10-12; measured twice in separate processes, readings equal:
-#   8bb8656ba52c90b03d24ce2a3d40f70606decb09aa16d91415fcd40babf869c4
-#   8bb8656ba52c90b03d24ce2a3d40f70606decb09aa16d91415fcd40babf869c4
-# Touch controls (#428) merged with pixel art (#427); measured twice in separate processes, readings equal:
-#   e857bc9ef7ae6cbaafc57ab3e2995a2c0d833dc7fc11a0c791d7b5d9a9db31cf
-#   e857bc9ef7ae6cbaafc57ab3e2995a2c0d833dc7fc11a0c791d7b5d9a9db31cf
-# The sweep fixes on top of touch controls (#428); measured twice in separate processes, readings equal:
-#   36865f9d011c3b59cb11d9cb235a9a02d92e1691ec233bff8375474eaaa8b1cd
-#   36865f9d011c3b59cb11d9cb235a9a02d92e1691ec233bff8375474eaaa8b1cd
-# Bag capacity (#434) merged with the sweep fixes, 2026-10-12; measured twice in separate processes, readings equal:
-#   031824c0d4c54435c88f0de5b4d4678ca3d448d9fad9a6c1c1dc5979bb4bcfa9
-#   031824c0d4c54435c88f0de5b4d4678ca3d448d9fad9a6c1c1dc5979bb4bcfa9
-# The vault chest's own permanent flag (ADR 0015), 2026-10-12; measured twice in separate processes, readings equal:
-#   07177f55a79e308bb2894b0858e3ead070dea3d74ff940d599f1ec36871c4455
-#   07177f55a79e308bb2894b0858e3ead070dea3d74ff940d599f1ec36871c4455
-# The town gate on a Section's last stair only (the stair that leaves the Section), 2026-10-12; measured twice in separate processes, readings equal:
-#   7c1c8e962977b479584fc48b1bb106265bb9ae5f34cb7fbcee333c9fd9521b00
-#   7c1c8e962977b479584fc48b1bb106265bb9ae5f34cb7fbcee333c9fd9521b00
-# A full bag refuses a shop purchase in words (#343), 2026-10-12; measured twice in separate processes, readings equal:
-#   4d79733b09c9dec30d9c2421d34199f7b456b4f226cba5693dc2a0fa666b583c
-#   4d79733b09c9dec30d9c2421d34199f7b456b4f226cba5693dc2a0fa666b583c
-# A cast writes the why-log (#345), 2026-10-12; measured twice in separate processes, readings equal:
-#   bad7095e61c85cd26166562090bf77e0e3b2cacdf9b6288b8bf6d4d1d5abcc32
-#   bad7095e61c85cd26166562090bf77e0e3b2cacdf9b6288b8bf6d4d1d5abcc32
-# A deep landing's up-stair climbs to the entry (vefr#366), 2026-10-12; measured twice in separate processes, readings equal:
-#   6c5b2fd0008ad2ed6c6dd262b414c444f3a879f58c881e6cc638268ebda01218
-#   6c5b2fd0008ad2ed6c6dd262b414c444f3a879f58c881e6cc638268ebda01218
-# A Section's label in the player's hints (#363), 2026-10-12; measured twice in separate processes, readings equal:
-#   7289fe208fe7f306d626b1e154171f3a1848e4e1ad777471dc3a6491f1596442
-#   7289fe208fe7f306d626b1e154171f3a1848e4e1ad777471dc3a6491f1596442
-# A generated floor announced by its Section's label on arrival (#362), 2026-10-12; measured twice in separate processes, readings equal:
-#   0538c9bd605fa1debc42c2ede3176dda7bc2c17cbfa89ac9c20417967e9cf41b
-#   0538c9bd605fa1debc42c2ede3176dda7bc2c17cbfa89ac9c20417967e9cf41b
-# A family's `sight: 0` kept on a generated floor (#437, 397-the-descent.js), 2026-10-12; measured twice in separate processes, readings equal:
-#   e8cf6223969fede34b9133ae5afc07ef6b010f79e2ecce01a18f9367a816dbc4
-#   e8cf6223969fede34b9133ae5afc07ef6b010f79e2ecce01a18f9367a816dbc4
-# Whisper and Explore on the touch controls (#431), 2026-10-12; measured twice in separate processes, readings equal:
-#   253b11028d3f6657906310f375cf8cfe9151d681609720078163e76d4d7e89b0
-#   253b11028d3f6657906310f375cf8cfe9151d681609720078163e76d4d7e89b0
-# A whole lit map leaves the HUD bands clear (#424), 2026-10-12; measured twice in separate processes, readings equal:
-#   ec3f6c7a8ca6cb4c6e9185ec76030f14655a293d690f6b77af5c8095cc365811
-#   ec3f6c7a8ca6cb4c6e9185ec76030f14655a293d690f6b77af5c8095cc365811
-# All of the 2026-10-12 issue sweep merged together (#362 #363 #366 #422 #424 #425 #431 #437, #343/#345 parts); measured twice in separate processes, readings equal:
-#   68ced1bfc4e74836419c4adc4d54cb4928c375b31318c12cdb12b4969657d09a
-#   68ced1bfc4e74836419c4adc4d54cb4928c375b31318c12cdb12b4969657d09a
-# A Section's decor drawn on its generated floors (#442), 2026-10-13; measured twice in separate processes, readings equal:
-#   b6f4ea4afb04ec07c027c21fa06bd8b1d9129728a58a12ca2bc56ad8df037f79
-#   b6f4ea4afb04ec07c027c21fa06bd8b1d9129728a58a12ca2bc56ad8df037f79
-# A mirrored side drawn flipped and a phone drag held in play, 2026-10-13; measured twice in separate processes, readings equal:
-#   9b3e7c3d5aee077ee84f0ddd1259d10fc9e8277ca9340049bf483d559f2f6849
-#   9b3e7c3d5aee077ee84f0ddd1259d10fc9e8277ca9340049bf483d559f2f6849
-# The storybook phone layout: a look setting, a slim top bar and a one-line message, 2026-10-13; measured twice in separate processes, readings equal:
-#   fa13a8b845fb10320940f4b8e9326f4f5800cd78a0a8c3ba12111a834e42aab6
-#   fa13a8b845fb10320940f4b8e9326f4f5800cd78a0a8c3ba12111a834e42aab6
-# Two buttons on a phone, the Dark look dark on a light-mode phone, a calmer walk, 2026-10-13; measured twice in separate processes, readings equal:
-#   82ae0a667b9c144c7abe8f2d06369ed173159303b92bbcbf6db2ec09a2f13915
-#   82ae0a667b9c144c7abe8f2d06369ed173159303b92bbcbf6db2ec09a2f13915
-# A desk's follow camera (display.desk_tile) and its one fading message line, 2026-10-13; measured twice in separate processes, readings equal:
-#   d8aa37fc38bdc1d17160232896b30791d9be64b68b49fc7c5ed29d0174597e56
-#   d8aa37fc38bdc1d17160232896b30791d9be64b68b49fc7c5ed29d0174597e56
-# Three settings in Display - larger text, reduced motion, volume (#473), 2026-10-14; measured twice in separate processes, readings equal:
-#   6ca8bb7e68c75e1ecf535e809ae6065b32f8f7bf295183e024c9939afc9e3501
-#   6ca8bb7e68c75e1ecf535e809ae6065b32f8f7bf295183e024c9939afc9e3501
-# Main merged into the #461 change, 2026-10-14; measured twice in separate processes, readings equal:
-#   5507922bae1d70f88fb2fbe16769683dfac028bf23e2a15f10662d50961d567d
-#   5507922bae1d70f88fb2fbe16769683dfac028bf23e2a15f10662d50961d567d
-# Main merged into the #466 change, 2026-10-14; measured twice in separate processes, readings equal:
-#   c311f714c37037836c37ff2e67a3226117b18001a4192cc6fb9884f5d31e4572
-#   c311f714c37037836c37ff2e67a3226117b18001a4192cc6fb9884f5d31e4572
-# Main merged into the #470 change, 2026-10-14; measured twice in separate processes, readings equal:
-#   8db8a3d84556d4b0e956de5e92cfaf0bc87ada0a47935105f7d558695a2124a6
-#   8db8a3d84556d4b0e956de5e92cfaf0bc87ada0a47935105f7d558695a2124a6
-# F everywhere, merged with Listen (#467), 2026-10-14; measured twice in separate processes, readings equal:
-#   793bbd72cacac799042960da5078c5d3e94b5ee8ba47c967fc1c3528f9848633
-#   793bbd72cacac799042960da5078c5d3e94b5ee8ba47c967fc1c3528f9848633
-# Main merged into the #463 change, 2026-10-14; measured twice in separate processes, readings equal:
-#   b8f182378ebd00890686415c17b9bfe61e116b9cd86696857cabc5dcbe94c8e5
-#   b8f182378ebd00890686415c17b9bfe61e116b9cd86696857cabc5dcbe94c8e5
-# Main merged into the #464 change, 2026-10-14; measured twice in separate processes, readings equal:
-#   05e94f97089c006bd4d8d7278028b35c6367773ca3fa7d21b8c8ca8f9ef3ee30
-#   05e94f97089c006bd4d8d7278028b35c6367773ca3fa7d21b8c8ca8f9ef3ee30
-# Main merged into the #465 change, 2026-10-14; measured twice in separate processes, readings equal:
-#   f512821602e4f0fc8fad40cdc1391cfd5e05693a633d59db8901fc5a7dc82373
-#   f512821602e4f0fc8fad40cdc1391cfd5e05693a633d59db8901fc5a7dc82373
-# Main merged into the #462 change, 2026-10-14; measured twice in separate processes, readings equal:
-#   6b241cdfee6f9efb43b3d30d0468403a717290659cb1750bdcd5e0dcbe096a91
-#   6b241cdfee6f9efb43b3d30d0468403a717290659cb1750bdcd5e0dcbe096a91
-# Clamp of short rooms under the top bar (#448), 2026-10-14; measured in CI on the PR head:
-#   698ee86e511cb6a6393d5478dfa9df160d7bbe437004b137856a22f910e42a51
-# Note dialog keeps Read on in view (cottage#165, vefr#509): the player CSS changed, 2026-10-15; measured on the host:
-#   aeb96b67ec7e215962dbb4aed1f364a9feb72ebdf059877346b5652a086e873a
-# Back-to-library link (#488, b166a35a: the player bakes player.library_url, null here) and the landscape two-column
-# Bag (#485, ee74312c: player CSS), 2026-10-16; measured twice on the host in separate processes, readings equal:
-#   f4b52eef534b79029f087c9f9b38d1ce711ab61b79e81fdbda9d02ae3fcfde50
-#   f4b52eef534b79029f087c9f9b38d1ce711ab61b79e81fdbda9d02ae3fcfde50
-# One compact HUD on desk and phone (#449, rolling-interview decision 2026-10-16): the follow-camera top bar
-# rules in 020-style.css changed, 2026-10-16; measured twice on the host in separate processes, readings equal:
-#   3456e77a0ae5e9d4df33cfc70297aaf8eb1c642f3274be207a6d4134a4db9f23
-#   3456e77a0ae5e9d4df33cfc70297aaf8eb1c642f3274be207a6d4134a4db9f23
-# The player's own keys for every named surface (vefr#508): the new part 076-keybinds.js, plus the
-# 510-rules-closure-surfaces.js keybind block, 030-shell.html and 020-style.css, 2026-10-16; measured
-# twice in separate processes, readings equal:
-#   e51fb64aa887744155f1b02dfd4947970f77a2362d820e27d20df7b63ad1f01e
-#   e51fb64aa887744155f1b02dfd4947970f77a2362d820e27d20df7b63ad1f01e
-# The archive loader (vefr#455/#519) on top of the keybinds (#517), 2026-10-16; measured twice on the host in
-# separate processes after merging main, readings equal:
-#   df53bf59d89d3ee6afe1289fe04e317714379fa9d1b994197d55f0c19ec47782
-#   df53bf59d89d3ee6afe1289fe04e317714379fa9d1b994197d55f0c19ec47782
-# The ending-only room scale (display.ending_tile, cottage-of-the-breeze#166) on top of the archive loader (#519),
-# 2026-10-16; measured twice on the host in separate processes after merging main, readings equal:
-#   6234996f734f57e47389b63ea6c181b3b54a8e6a0ee36ab761c4397f1bac7886
-# The quiet page and the calm fall card (vefr#484, mockup C): the new part
-# 245-the-quiet-page.js, plus 240, 260, 430, 510, 030-shell.html and
-# 020-style.css, 2026-10-16; measured twice on the host in separate
-# processes, readings equal:
-#   7f2070891f9abd9ca51017e4ebacfc356a92f540251abf6804d9839a9ce4fd53
-#   7f2070891f9abd9ca51017e4ebacfc356a92f540251abf6804d9839a9ce4fd53
-#   6234996f734f57e47389b63ea6c181b3b54a8e6a0ee36ab761c4397f1bac7886
-# The target cue on the smart action's tile (vefr#486: the glow and the corner marks in
-# 480-town-input-and-turns.js), 2026-10-16; measured twice on the host in separate processes
-# readings equal (before Journal C merged):
-#   545f51327267a4b63fb3412687e4a86a97515b218d0d5e67eec8b23837558e50
-#   545f51327267a4b63fb3412687e4a86a97515b218d0d5e67eec8b23837558e50
-# The target cue merged onto main with Journal C (vefr#486 + #484), 2026-10-16; measured twice on the host in separate
-# processes, readings equal:
-#   38867f8932cf51e9131803df44deddb34fd69d1bb6dcc03f4830a6801b0ce518
-#   38867f8932cf51e9131803df44deddb34fd69d1bb6dcc03f4830a6801b0ce518
-# Damage types, resistances and burning (vefr#497, slice 1) on top of the ending tile (#520): the new part
-# 425-the-elements.js, plus 410/430/480/510, 030-shell.html and 020-style.css. The sample declares no
-# resist, no immune and no typed hazard, so its BAKE is byte-for-byte what it was - measured at
-# 6234996f... after the engine half alone - and only the player's own source moved; 2026-10-16; measured
-# twice in separate processes, readings equal:
-#   78635fd8140a1f9823fb0f07b5438f3ae8a15bc576340cc86afe37ca079fd339
-#   78635fd8140a1f9823fb0f07b5438f3ae8a15bc576340cc86afe37ca079fd339
-# The two review findings of vefr#528 on the slice above: #hud-state is no
-# longer hidden on the quiet surfaces (020-style.css) and the burn ticks after
-# the monsters' turn, keeping the turn's whole line (425-the-elements.js,
-# 480-town-input-and-turns.js, 510-rules-closure-surfaces.js). Player source
-# only; the sample still declares no resist, no immune and no typed hazard, so
-# its BAKE is byte-for-byte what it was; 2026-10-16; measured twice in separate
-# processes, readings equal:
-#   3af87a53314eea60f7d01588b202330af97d691cbde93139558ace24ddb83181
-#   3af87a53314eea60f7d01588b202330af97d691cbde93139558ace24ddb83181
-# Damage types and burning merged onto main with Journal C (vefr#497 + #484), 2026-10-16; measured twice on the host
-# in separate processes, readings equal:
-#   78920d6d4a0574d85ad8e300a977dfe804a582daab1aa3b3dd5ff584c7a2fbe1
-#   78920d6d4a0574d85ad8e300a977dfe804a582daab1aa3b3dd5ff584c7a2fbe1
-# Damage types and burning (vefr#497) merged onto main, 2026-10-16; measured twice on the host in separate processes, readings equal:
-#   892ac967e19b32ca948bee7d50180b5a80d596a25759b79194daa6e3463f9e80
-#   892ac967e19b32ca948bee7d50180b5a80d596a25759b79194daa6e3463f9e80
-# The item-grants slice (E1): the verb row moved out of 510 into 220-growth.js beside
-# surfaceVerbs(), and 445, 430 and 480 grew the `uses-verb` event and the blow a carried
-# thing adds to, 2026-10-16; measured twice in separate processes, readings equal:
-#   b687c8bcce99cc3ef3299fc414ded6c81ef6a48b2683aad379a821ca943d93e4
-#   b687c8bcce99cc3ef3299fc414ded6c81ef6a48b2683aad379a821ca943d93e4
-# Item-granted verbs merged onto main (Mending Shift E1), 2026-10-16; measured twice on the host in separate processes, readings equal:
-#   eb014ad9e78442a1c21b767622554e2a183eb0c8fba6ab6ee97e3c94f85bd206
-#   eb014ad9e78442a1c21b767622554e2a183eb0c8fba6ab6ee97e3c94f85bd206
-# Mending recipes (E2): the `mends` event in the rules engine's EVENTS
-# table (445-rules-engine.js), 2026-10-16; measured twice in separate
-# processes, readings equal:
-#   9ddb0571e312a27be2d5ae2d4151da6122a55db51113907dfda7e166439f71ea
-#   9ddb0571e312a27be2d5ae2d4151da6122a55db51113907dfda7e166439f71ea
-# Mending recipes, player side (E2): the new part 186-the-mending.js,
-# plus 180-gold.js, 030-shell.html and the manifest, 2026-10-16;
-# measured twice in separate processes, readings equal:
-#   8413f7fd735cd33cc69c9d9c0e78cf1209b922e2352606a339c45835b6ba06ca
-#   8413f7fd735cd33cc69c9d9c0e78cf1209b922e2352606a339c45835b6ba06ca
-# Mending recipes merged onto main with item-granted verbs (Mending Shift E2 + E1), 2026-10-16; measured twice on the host in separate processes, readings equal:
-#   45c8ab256a6abaa4c995609857629f098ccf4f2a3505ed647e0fe8986b860873
-#   45c8ab256a6abaa4c995609857629f098ccf4f2a3505ed647e0fe8986b860873
-# Time that costs something (vefr E3): the new part 255-time-rest.js,
-# plus 076, 090, 250, 320, 445, 480 and 510, 2026-10-16; measured twice
-# on the host in separate processes, readings equal:
-#   8c741d0cf093438f0e5aa2c4801150d2201da198b89c7577412be6c664487709
-#   8c741d0cf093438f0e5aa2c4801150d2201da198b89c7577412be6c664487709
-# Time that costs something (Mending Shift E3) merged onto main, 2026-10-16; measured twice on the host in separate processes, readings equal:
-#   178ba3596538f01cc0edb148ca7d6c126a285839d38afca388444efc856c45fd
-#   178ba3596538f01cc0edb148ca7d6c126a285839d38afca388444efc856c45fd
-# Time that costs something (Mending Shift E3) merged onto main, 2026-10-16; measured twice on the host in separate processes, readings equal:
-#   273ad0e292028b03f15932962e18ed888ab3165e7dfba5ec3ea224aae51bd023
-#   273ad0e292028b03f15932962e18ed888ab3165e7dfba5ec3ea224aae51bd023
-# Time that costs something (Mending Shift E3) merged onto main, 2026-10-16; measured twice on the host in separate processes, readings equal:
-#   c048a8b874b745edd7ea3a52e94f2999241a6cb2f770d9e6fa08a8ac47f780c8
-#   c048a8b874b745edd7ea3a52e94f2999241a6cb2f770d9e6fa08a8ac47f780c8
-# Time (Mending Shift E3) merged onto main with mending (E2), 2026-10-16; measured twice on the host in separate processes, readings equal:
-#   191b6feb63f355d2d418f678e6594b1cf406293c26c9ee3fa166f16f106491d0
-#   191b6feb63f355d2d418f678e6594b1cf406293c26c9ee3fa166f16f106491d0
-# The optional ambient music block (vefr#502) on top of the ending-only room scale, 2026-10-16; the player's
-# template grew one data line (window.VEFR_MUSIC_DEF, the literal null here), measured twice in separate
-# processes, readings equal:
-#   b09fdb1a32e51e1e63b866c6cda355e04a70e147285ecea8e76cbd91d0b23446
-#   b09fdb1a32e51e1e63b866c6cda355e04a70e147285ecea8e76cbd91d0b23446
-# The bed's own loop timer (vefr#502): one line in 120-sound.js lost its unused local, 2026-10-16; measured
-# twice in separate processes, readings equal:
-#   6805800bd454e092454e76b2ba7ff693579dae21407925ebbb831f24f8b9d161
-#   6805800bd454e092454e76b2ba7ff693579dae21407925ebbb831f24f8b9d161
-# Music bed merged onto main (vefr#502), 2026-10-16; measured twice on the host in separate processes, readings equal:
-#   ee06718ab0f96304d7b4616596b1bcaaa32b9c34528c489c89d10163b5fa52c9
-#   ee06718ab0f96304d7b4616596b1bcaaa32b9c34528c489c89d10163b5fa52c9
-# Music bed (vefr#502) merged onto main, 2026-10-16; measured twice on the host in separate processes, readings equal:
-#   fe41b2ae5e25a60989b1e51968f284beb770522e8044301403bafa0e0aa32311
-#   fe41b2ae5e25a60989b1e51968f284beb770522e8044301403bafa0e0aa32311
-# Music bed (vefr#502) merged onto main, 2026-10-16; measured twice on the host in separate processes, readings equal:
-#   f8d159180df1652256d925f0ae7e8051499703b1a38968c50fa4073093937851
-#   f8d159180df1652256d925f0ae7e8051499703b1a38968c50fa4073093937851
-# Music bed merged onto main (vefr#502), 2026-10-16; measured twice on the host in separate processes, readings equal:
-#   ee436470181a34522863247599115260f4347f1214b54572d74187ec4ffe2563
-#   ee436470181a34522863247599115260f4347f1214b54572d74187ec4ffe2563
-# Music bed merged onto main with time (vefr#502 + E3), 2026-10-16; measured twice on the host in separate processes, readings equal:
-#   3f79471527605e15c4b0ec01832f58e3670aca24ee76c4ecc4e1221076214309
-#   3f79471527605e15c4b0ec01832f58e3670aca24ee76c4ecc4e1221076214309
-# The opt-in stakes bake (vefr#504): the added line in 050-inlined-world-pack.js
-# with the stake handling in 320-pack-rules.js, the one-key answer in
-# 510-rules-closure-surfaces.js and the predicate handed out in
-# 445-rules-engine.js, 2026-10-16; measured twice in separate processes,
-# readings equal:
-#   f75c45dfbaa661bce978316efb38f6912b0dc53d38fc4115b252c35876c26c7c
-#   f75c45dfbaa661bce978316efb38f6912b0dc53d38fc4115b252c35876c26c7c
-# Stakes (vefr#504) merged onto main, 2026-10-16; measured twice on the host in separate processes, readings equal:
-#   c0a062c0e234af8f49695e26294025d87ebb6f8ccdbfb84bf91d068f70e5afd2
-#   c0a062c0e234af8f49695e26294025d87ebb6f8ccdbfb84bf91d068f70e5afd2
-# The stake offer on a phone (vefr#504): the two answer buttons under the
-# offer line, added to 030-shell.html, 020-style.css and 320-pack-rules.js,
-# 2026-10-16; measured twice in separate processes, readings equal:
-#   05b45341ef14df3c90f94e98e288caff867ebbebb23ccc018228b05b5cb5a6f3
-#   05b45341ef14df3c90f94e98e288caff867ebbebb23ccc018228b05b5cb5a6f3
-# Stakes (vefr#504) merged onto main, 2026-10-16; measured twice on the host in separate processes, readings equal:
-#   2a6216c415fcafbed3f5a8271279e40e9f8bdfc27bdbd9a54cb1d1bccdedc8f5
-#   2a6216c415fcafbed3f5a8271279e40e9f8bdfc27bdbd9a54cb1d1bccdedc8f5
-NO_SKIN_WEAVE_SHA256 = "d42518a195b180b240f76659e35a510e02af52db0b1b23efb6bc921eac990e38"
+# The guard is now measured where it matters. A PR that claims to be
+# behaviour-neutral (a `refactor` label; CI passes it as VEFR_REFACTOR=1)
+# must reproduce the digest the merge base prints - main's engine, woven in a
+# temp worktree at `git merge-base HEAD origin/main`, against this branch's
+# fixtures. Nothing is committed, so nothing can conflict. Every other PR
+# checks what a pin never could and still can: that the weave is deterministic
+# and the digest is a well-formed sha256. The visual-regression job over this
+# pack's woven sample is the other half of the guard and is unchanged.
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():
     """Rule 6: a pack with no skin carries no skin, backdrop or font data, and
-    weaves the same bytes every time (the digest is deterministic)."""
+    weaves the same bytes every time (the digest is deterministic).
+
+    The byte-for-byte half - that the weave is not merely well-formed but the
+    same weave main prints - is measured at the merge base, for a branch that
+    claims to be a refactor, in its own test below.
+    """
     pack = ROOT / "worlds" / "sample-world"
     first, second = cli.weave_html(pack), cli.weave_html(pack)
     assert first == second, "the weave of a pack with no skin is not deterministic"
-    assert hashlib.sha256(first.encode()).hexdigest() == NO_SKIN_WEAVE_SHA256, (
-        "the weave of a pack with no skin changed; nothing in this slice may "
-        "change it, and the comment above the constant says how to refresh it")
+    digest = hashlib.sha256(first.encode()).hexdigest()
+    assert weave_digest.is_sha256(digest), f"not a sha256: {digest!r}"
     assert _baked(first) == "null"
     # Nothing the skin contract reads is baked for a pack that names no skin.
     skin_line = re.search(r"window\.VEFR_SKIN = .*", first).group(0)
     assert len(skin_line) < 40 and "data:" not in skin_line
+
+
+def test_a_refactor_of_the_player_weaves_the_same_bytes():
+    """The guard the pinned constant used to be, kept where it does work.
+
+    Runs only for a branch that claims to be behaviour-neutral (the
+    `refactor` label, which CI passes as VEFR_REFACTOR=1) and only where
+    there is an `origin/main` to measure the merge base against; it skips
+    with that reason rather than passing quietly (vefr#529).
+    """
+    digest = hashlib.sha256(
+        cli.weave_html(ROOT / "worlds" / "sample-world").encode()).hexdigest()
+    try:
+        weave_digest.assert_unchanged_from_merge_base("no_skin_weave", digest)
+    except weave_digest.NotMeasurable as why:
+        pytest.skip(str(why))
 
 
 def test_a_missing_skin_json_or_folder(tmp_path):

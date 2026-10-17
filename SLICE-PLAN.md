@@ -140,11 +140,13 @@ also touch the generated player:
 - **E1** (`vefr#308`) adds `web/player/parts/395-the-descent.js`.
 - **E3** (`vefr#307`) adds `web/player/parts/395-engine-delve-v3.js`.
 
-Neither touches a file you are building in, but all three regenerate
-`web/packaged.html` and all three refresh `NO_SKIN_WEAVE_SHA256` in
-`tests/test_skin_validator.py`. Expect that constant to need refreshing in your branch —
-that is the designed behaviour, not a failure. See the next section for why it is easy to
-get wrong.
+Neither touches a file you are building in, and none of them has to re-measure a digest
+either: `NO_SKIN_WEAVE_SHA256` is gone (vefr#529). A PR labelled `refactor` still gets the
+byte-for-byte guard - CI passes the label down as `VEFR_REFACTOR=1` and
+`tests/weave_digest.py` weaves the merge base in a temp worktree to compare against, so
+nothing is committed and nothing collides. Every other PR's bytes are its own to choose;
+its test checks that the weave is deterministic and its digest a well-formed sha256. See
+the next section for the one thing that *is* still easy to get wrong.
 
 ## The one thing this slice's build will otherwise waste a day on
 
