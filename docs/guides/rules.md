@@ -42,6 +42,7 @@ at most **40 rules** (see `docs/adr/0004-scoped-rules.md` for why).
 | `{"falls": {"what": "X", "where": "Y"}}` | the hero's health reached zero; `what` is what did it, `where` the region it happened in | the blow that empties the health bar |
 | `{"wakes": {"where": "X"}}` | the hero wakes after a fall, in region X | the Cozy wake, at the pack's wake point |
 | `{"uses-verb": {"verb": "X"}}` | a verb on the verb row is pressed | pressing it - the act's own verb, or one an item granted |
+| `{"mends": {"recipe": "X"}}` | two carried things are mended into one, by recipe X | Mend in the bag (see `recipes` in `docs/guides/rulesets.md`) |
 
 `falls` and `wakes` are the hero's own two facts, and they are why a
 death is not the same as an arrival. `enters` fires on every door the
@@ -85,6 +86,7 @@ pack declares is nameable:
 | **book ids** | `library/<id>.md` file names | `opens` (a chest), `reads` |
 | **enemy ids** | the region contract's `enemies` | `defeats`, `falls`' `what` |
 | phase names | `world.json` `phases` | `phase-changes`, the `phase` condition |
+| **recipe ids** | `world.json` `recipes` | `mends` |
 | flags / claims | `world.json` `flags` / `claims` | `set`, `believes`… |
 
 The validator names anything else. There is no need to register a

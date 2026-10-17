@@ -484,6 +484,19 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # Item-granted verbs merged onto main (Mending Shift E1), 2026-10-16; measured twice on the host in separate processes, readings equal:
 #   eb014ad9e78442a1c21b767622554e2a183eb0c8fba6ab6ee97e3c94f85bd206
 #   eb014ad9e78442a1c21b767622554e2a183eb0c8fba6ab6ee97e3c94f85bd206
+# Mending recipes (E2): the `mends` event in the rules engine's EVENTS
+# table (445-rules-engine.js), 2026-10-16; measured twice in separate
+# processes, readings equal:
+#   9ddb0571e312a27be2d5ae2d4151da6122a55db51113907dfda7e166439f71ea
+#   9ddb0571e312a27be2d5ae2d4151da6122a55db51113907dfda7e166439f71ea
+# Mending recipes, player side (E2): the new part 186-the-mending.js,
+# plus 180-gold.js, 030-shell.html and the manifest, 2026-10-16;
+# measured twice in separate processes, readings equal:
+#   8413f7fd735cd33cc69c9d9c0e78cf1209b922e2352606a339c45835b6ba06ca
+#   8413f7fd735cd33cc69c9d9c0e78cf1209b922e2352606a339c45835b6ba06ca
+# Mending recipes merged onto main with item-granted verbs (Mending Shift E2 + E1), 2026-10-16; measured twice on the host in separate processes, readings equal:
+#   45c8ab256a6abaa4c995609857629f098ccf4f2a3505ed647e0fe8986b860873
+#   45c8ab256a6abaa4c995609857629f098ccf4f2a3505ed647e0fe8986b860873
 # Time that costs something (vefr E3): the new part 255-time-rest.js,
 # plus 076, 090, 250, 320, 445, 480 and 510, 2026-10-16; measured twice
 # on the host in separate processes, readings equal:
@@ -498,7 +511,10 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # Time that costs something (Mending Shift E3) merged onto main, 2026-10-16; measured twice on the host in separate processes, readings equal:
 #   c048a8b874b745edd7ea3a52e94f2999241a6cb2f770d9e6fa08a8ac47f780c8
 #   c048a8b874b745edd7ea3a52e94f2999241a6cb2f770d9e6fa08a8ac47f780c8
-NO_SKIN_WEAVE_SHA256 = "c048a8b874b745edd7ea3a52e94f2999241a6cb2f770d9e6fa08a8ac47f780c8"
+# Time (Mending Shift E3) merged onto main with mending (E2), 2026-10-16; measured twice on the host in separate processes, readings equal:
+#   191b6feb63f355d2d418f678e6594b1cf406293c26c9ee3fa166f16f106491d0
+#   191b6feb63f355d2d418f678e6594b1cf406293c26c9ee3fa166f16f106491d0
+NO_SKIN_WEAVE_SHA256 = "191b6feb63f355d2d418f678e6594b1cf406293c26c9ee3fa166f16f106491d0"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

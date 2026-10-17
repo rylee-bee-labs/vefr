@@ -1581,6 +1581,33 @@ BAG = Block(
     ),
 )
 
+# Mending (E2, for The Mending Shift). One record per recipe: exactly two
+# item ids in (`inputs`), one item id out (`output`), and the `say` line
+# the mend speaks. `inputs` is order-insensitive - mending the peg with
+# the net is the same mend - and the pair is consumed one copy of each,
+# which is the bag's own idea of spending a thing. The id is what the
+# `mends` rules event carries, so a pack can react to its own mends.
+#
+# The questions a record cannot answer for itself - whether the ids are
+# items the pack declares, and whether two recipes share an id - are
+# `maplab.recipes_errors`, because they are the pack's to answer.
+RECIPE = Block(
+    name='recipe',
+    example='{"id": "mend-the-net", "inputs": ["torn-net", '
+            '"driftwood-peg"], "output": "mended-net", '
+            '"say": "The net is whole again."}',
+    keys=(
+        Key('id', 'str', lo=1, hi=40, required=True),
+        Key('inputs', 'ids', required=True, say={
+            'wrong-type': '{path} must be a list of item ids, such as '
+                           '["torn-net", "driftwood-peg"]',
+            'wrong-element': '{path} must be an item id, such as "torn-net"'}),
+        Key('output', 'str', lo=1, hi=40, required=True),
+        Key('say', 'str', lo=1, hi=200),
+    ),
+    say={'missing-key': '{name} must hold its {key}, such as {example}'},
+)
+
 # ------------------------------------------------ the player's own words
 #
 # v0 of the player-words contract: one row per action-critical line a
@@ -1681,6 +1708,7 @@ BLOCKS = {
     'scenario start': SCENARIO_START,
     'item': ITEM,
     'bag': BAG,
+    'recipe': RECIPE,
     'player_words': PLAYER_WORDS,
     'pixel_art': PIXEL_ART,
     'spells': SPELLS,
@@ -1718,6 +1746,9 @@ BLOCKS = {
 # able to write what pressing it does. It carries the verb's id, which
 # names a verb of the act's own `verbs` list or one an item grants -
 # never a word only this rule made up.
+# The fifteenth is E2's (mending, `docs/guides/rulesets.md`): two
+# carried things became one, and the event carries the recipe's id - a
+# thing the pack itself declares, so the same one identity model holds.
 #
 # This is the one place the vocabulary is typed on the Python side. The
 # woven player holds a JavaScript twin of it today (the `EVENTS` table
@@ -1745,6 +1776,10 @@ EVENTS = {
               Key('where', 'ref', ref='place')),
     'wakes': (Key('where', 'ref', ref='place'),),
     'uses-verb': (Key('verb', 'ref', ref='verb'),),
+    # The fifteenth is E2's (mending): a recipe is a thing the pack
+    # declares, so the event carries its id and the identity model
+    # holds - a rule may name only a recipe this pack wrote.
+    'mends': (Key('recipe', 'ref', ref='recipe'),),
 }
 
 

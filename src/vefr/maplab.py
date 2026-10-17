@@ -183,6 +183,10 @@ def load_pack(pack_dir: Path) -> dict:
         # way: the schools the pack teaches and the spells in them.
         if 'spells' in config:
             unified['spells'] = config['spells']
+        # The optional recipes block (E2, mending), carried through the
+        # same way: two carried things that become one.
+        if 'recipes' in config:
+            unified['recipes'] = config['recipes']
         # The optional descent block (slice E1), carried through ONLY when
         # the pack declares it: a pack with none loads exactly as before.
         if 'descent' in config:
@@ -924,6 +928,14 @@ def _rule_known_ids(w: dict, pack_dir: Path | None) -> dict:
     for source in (w.get('items'), pack_cfg.get('items')):
         if isinstance(source, dict):
             items |= set(source)
+    # A recipe id is nameable the same way (the `mends` event carries
+    # one), so it is collected from both shapes the same as items.
+    recipes: set = set()
+    for source in (w.get('recipes'), pack_cfg.get('recipes')):
+        if isinstance(source, list):
+            recipes |= {r['id'] for r in source
+                        if isinstance(r, dict)
+                        and isinstance(r.get('id'), str)}
     people = set(w['speakers']) if isinstance(w.get('speakers'), dict) else set()
     regions = w.get('regions')
     if isinstance(regions, dict):
@@ -961,6 +973,7 @@ def _rule_known_ids(w: dict, pack_dir: Path | None) -> dict:
         # The verbs a `uses-verb` may name: the acts' own `verbs` lists
         # and every verb an item grants (`pack_verbs`).
         'verbs': pack_verbs(w) | pack_verbs(pack_cfg),
+        'recipes': recipes,
         'things': items | people | places | pois | book_ids | enemies,
         # None means "declared but malformed": the shape error in
         # rules_errors already speaks for it, so id checks stay
@@ -983,7 +996,8 @@ def _rule_value_errors(rid: str, where: str, val, kind: str, known: dict) -> lis
     if not isinstance(val, str):
         noun = {'person': 'person id', 'claim': 'claim name', 'item': 'item id',
                 'place': 'region id', 'thing': 'thing id', 'book': 'book id',
-                'enemy': 'enemy id', 'phase': 'phase name', 'verb': 'verb id'}[kind]
+                'enemy': 'enemy id', 'phase': 'phase name', 'verb': 'verb id',
+                'recipe': 'recipe id'}[kind]
         return [f"rule '{rid}' {where} must be a {noun}"]
     if kind == 'person':
         if val not in known['people']:
@@ -1017,6 +1031,9 @@ def _rule_value_errors(rid: str, where: str, val, kind: str, known: dict) -> lis
     if kind == 'verb':
         if val not in known['verbs']:
             return [f"rule '{rid}' {where} names unknown verb '{val}'"]
+    if kind == 'recipe':
+        if val not in known['recipes']:
+            return [f"rule '{rid}' {where} names unknown recipe '{val}'"]
         return []
     if kind == 'thing' and val not in known['things']:
         return [f"rule '{rid}' {where} names unknown thing '{val}'"]
@@ -1838,6 +1855,78 @@ def enemy_element_errors(where: str, e: dict) -> list[str]:
                 errors.append(
                     f"{where} burns may only hold turns and tick; not "
                     f"allowed: {', '.join(sorted(extra))}")
+    return errors
+
+
+def recipes_of(w: dict) -> list:
+    """The pack's recipes: the record list as written, in order."""
+    listed = w.get('recipes') if isinstance(w, dict) else None
+    return listed if isinstance(listed, list) else []
+
+
+def recipes_errors(w: dict, pack_dir: Path | None = None) -> list[str]:
+    """Every problem with a pack's optional `recipes` block (empty = good).
+
+    Mending is optional and additive: a pack that declares no recipes
+    gets no output at all, exactly as before. `shapes` speaks for each
+    record's own keys - an `id`, `inputs` as a list of item ids, an
+    `output` and the `say` line - and the cross-record questions are
+    asked here, one plain sentence per problem naming the recipe: an
+    input or an output the pack's `items` does not declare, `inputs`
+    that is not exactly two things, and an id a second recipe already
+    took. The item ids come from `_rule_known_ids`, so both pack shapes
+    answer the same way.
+
+    Nothing here says what the player does with a recipe - that is the
+    woven player's mending part - and no pack without recipes reaches
+    any of it.
+    """
+    if 'recipes' not in w:
+        return []
+    listed = w['recipes']
+    if not isinstance(listed, list):
+        return [f'recipes must be a list, such as [{shapes.RECIPE.example}]']
+    errors: list[str] = []
+    items = _rule_known_ids(w, pack_dir)['items']
+    seen: set = set()
+    for index, record in enumerate(listed):
+        if not isinstance(record, dict):
+            errors.append(f'the recipe at position {index} must be an object, '
+                          f'such as {shapes.RECIPE.example}')
+            continue
+        rid = record.get('id')
+        label = (f"recipe '{rid}'" if isinstance(rid, str) and rid
+                 else f'recipes[{index}]')
+        for p in shapes.check(shapes.BLOCKS['recipe'], record,
+                              at=f'recipes[{index}]'):
+            # The table's own sentences name the block ('recipe must
+            # hold its output'); the ones that do are said again with
+            # the recipe's own id in front, so a pack with twenty
+            # recipes is told which one is wrong. The path-bearing
+            # sentences already carry the record's place, and keep the
+            # label beside them the way the item errors do.
+            sentence = p.sentence
+            if sentence.startswith('recipe ') and isinstance(rid, str) and rid:
+                sentence = f"recipe '{rid}'" + sentence[len('recipe'):]
+                errors.append(sentence)
+            else:
+                errors.append(f'{label} {sentence}')
+        if isinstance(rid, str) and rid:
+            if rid in seen:
+                errors.append(f"two recipes share the id '{rid}' "
+                              '- recipe ids must be unique')
+            seen.add(rid)
+        inputs = record.get('inputs')
+        if isinstance(inputs, list):
+            if len(inputs) != 2:
+                errors.append(f'{label} inputs must name exactly two '
+                              'things to mend')
+            for one in inputs:
+                if isinstance(one, str) and one and one not in items:
+                    errors.append(f"{label} inputs names unknown item '{one}'")
+        output = record.get('output')
+        if isinstance(output, str) and output and output not in items:
+            errors.append(f"{label} output names unknown item '{output}'")
     return errors
 
 
@@ -2996,6 +3085,7 @@ _KNOWN_FOR_REF = {
     'item': 'items', 'place': 'places', 'thing': 'things',
     'book': 'books', 'enemy': 'enemies', 'phase': 'phases',
     'verb': 'verbs',
+    'recipe': 'recipes',
 }
 
 
@@ -3882,6 +3972,10 @@ def validate(w: dict, pack_dir: Path | None = None) -> list[str]:
     errors.extend(time_errors(w))
     errors.extend(display_errors(w))
     errors.extend(bag_errors(w))
+    # The pack's optional recipes (E2, mending): two carried things that
+    # become one. A pack that declares none gets nothing here and its
+    # bag plays exactly as it always did.
+    errors.extend(recipes_errors(w, pack_dir))
     # The pack's optional player words (vefr #259): the pack's own
     # wording for the action-critical lines the engine speaks. A pack
     # that declares none gets nothing here and says nothing else about
