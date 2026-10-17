@@ -1885,6 +1885,75 @@ def recipes_of(w: dict) -> list:
     return listed if isinstance(listed, list) else []
 
 
+STAKE_KEYS = ('id', 'when', 'risk', 'reward', 'say')
+
+
+def stakes_errors(w: dict, pack_dir: Path | None = None) -> list[str]:
+    """Every problem with a pack's optional `stakes` block (empty = good), vefr#504.
+
+    The player bakes only the stakes it can offer and drops the rest
+    (cli._stake_bakes); this is where the author is TOLD, one plain sentence
+    per problem naming the stake: the five keys and no others, a `when` in
+    the one shape a rule's `when` has, and an id no other stake took. A pack
+    that declares no stakes gets no output at all.
+    """
+    if 'stakes' not in w:
+        return []
+    listed = w['stakes']
+    # The example `when` is built from the event table, never typed here (tests/test_event_table.py).
+    ev = RULE_EVENTS[1]
+    when_ex = '{"%s": {%s}}' % (ev, ', '.join('"%s": "..."' % k for k in RULE_EVENT_KEYS[ev]))
+    example = ('{"id": "the-wager", "when": %s, "risk": "your lantern", '
+               '"reward": "the ferryman\'s map", "say": "..."}' % when_ex)
+    if not isinstance(listed, list):
+        return [f'stakes must be a list, such as [{example}]']
+    errors: list[str] = []
+    seen: set = set()
+    items = _rule_known_ids(w, pack_dir)['items']
+    for index, stake in enumerate(listed):
+        if not isinstance(stake, dict):
+            errors.append(f'the stake at position {index} must be an object, such as {example}')
+            continue
+        sid = stake.get('id')
+        label = f"stake '{sid}'" if isinstance(sid, str) and sid.strip() else f'stakes[{index}]'
+        if not (isinstance(sid, str) and sid.strip()):
+            errors.append(f'{label} needs an id')
+        elif sid in seen:
+            errors.append(f"two stakes share the id '{sid}'")
+        else:
+            seen.add(sid)
+        extra = sorted(k for k in stake if k not in STAKE_KEYS)
+        if extra:
+            errors.append(f"{label} may only hold {', '.join(STAKE_KEYS)}; not allowed: {', '.join(extra)}")
+        # Exactly as strict as the bake (cli._stake_bakes): a non-empty string, not trimmed, so a
+        # stake that validates is a stake the player will be offered (#535 review).
+        for key in ('risk', 'reward', 'say'):
+            if not (isinstance(stake.get(key), str) and stake[key]):
+                errors.append(f'{label} needs a {key} line the player can read')
+        # risk and reward are things the pack declares: a typo would put the risk down for nothing.
+        for key in ('risk', 'reward'):
+            val = stake.get(key)
+            if isinstance(val, str) and val and val not in items:
+                errors.append(f"{label} {key} names unknown item '{val}'")
+        when = stake.get('when')
+        ok = isinstance(when, dict) and len(when) == 1
+        if ok:
+            event, payload = next(iter(when.items()))
+            ok = (event in RULE_EVENTS and isinstance(payload, dict)
+                  and set(payload) == set(RULE_EVENT_KEYS[event]))
+            # The same value rules as cli._when_bakes: `distance` a whole number 0..9, every other
+            # payload value a non-empty string.
+            if ok:
+                for k, v in payload.items():
+                    if k == 'distance':
+                        ok = ok and not isinstance(v, bool) and isinstance(v, int) and 0 <= v <= 9
+                    else:
+                        ok = ok and isinstance(v, str) and bool(v)
+        if not ok:
+            errors.append(f"{label} when must be one event in a rule's own shape, such as {when_ex}")
+    return errors
+
+
 def recipes_errors(w: dict, pack_dir: Path | None = None) -> list[str]:
     """Every problem with a pack's optional `recipes` block (empty = good).
 
@@ -4001,6 +4070,7 @@ def validate(w: dict, pack_dir: Path | None = None) -> list[str]:
     # become one. A pack that declares none gets nothing here and its
     # bag plays exactly as it always did.
     errors.extend(recipes_errors(w, pack_dir))
+    errors.extend(stakes_errors(w, pack_dir))
     # The pack's optional player words (vefr #259): the pack's own
     # wording for the action-critical lines the engine speaks. A pack
     # that declares none gets nothing here and says nothing else about

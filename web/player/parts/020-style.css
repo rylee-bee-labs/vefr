@@ -238,6 +238,16 @@
   .toasts p:empty { display: none; }
   .toasts-toggle { pointer-events: auto; font: 700 0.82rem var(--display); letter-spacing: 0.08em; text-transform: uppercase; padding: 3px 9px; min-height: 44px; background: var(--glass); color: var(--glass-ink); border: 1px solid var(--glass-edge); border-radius: 4px; cursor: pointer; }
   .toasts:not(:has(p:not(:empty))) .toasts-toggle { display: none; }
+  /* The stake offer's two answers (vefr#504). They ride under the offer line in
+     the top corner, so they never stand over the fight verbs at the foot of the
+     frame; the toasts column is pointer-transparent, so the buttons take their
+     own touches back. 48px targets: a phone is the reason these exist. */
+  .stake-ask { position: relative; z-index: 3; pointer-events: auto; display: grid; gap: 6px; justify-items: stretch; width: 100%; }
+  .stake-ask[hidden] { display: none; }
+  .stake-btn { min-height: 48px; min-width: 48px; padding: 6px 12px; background: var(--glass); color: var(--glass-ink); border: 1px solid var(--glass-edge); border-radius: 6px; cursor: pointer;
+    font: 700 0.85rem var(--read); text-align: left; }
+  .stake-btn--take { border-color: rgba(216, 170, 78, 0.7); }
+  .stake-btn:focus-visible { outline: 3px solid #D8AA4E; outline-offset: 2px; }
   .encounter-prompt { font-style: italic; }
   body[data-surface="plain"] .encounter-prompt,
   body[data-surface="investigation"] .encounter-prompt { display: none; }
