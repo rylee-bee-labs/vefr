@@ -9,6 +9,32 @@ Spec source: Rylee, 2026-10-03, in chat ("electrified or fiery or necromancer or
 mobs and the players"). The vocabulary below is the correction, because the request mixed four
 different axes under one adjective.
 
+## Slice 1 landed (vefr#497, 2026-10-16)
+
+Rylee's decision in vefr#497 (issue comment 6221698162) chose Option B and named this slice: optional
+damage types, resistances and status effects, begun as one small reversible fire/burning encounter
+with accessible feedback, preserving existing balance and saves. What that decision has bought, in
+the build order below:
+
+1. **The resolver.** `elements.after_resist()` (engine) and `resolveDamage()` (player part 425) are
+   the one place a number is changed by a resistance, and both damage paths call it. Resistance is a
+   **divisor** (`{"fire": 2}` is half), so the numbers stay whole in both languages.
+2. **`player.resist` / `player.immune`.** Settled above on 2026-10-03; built, validated, and baked
+   only when a pack declares them.
+3. **`burning`, one status effect,** authored on a hazard as `burns: {"turns", "tick"}`, on the
+   `lightTick` pattern. It is **not stored**: a reload, a new region and a cozy death all end it, so
+   no save changes shape. That answers open question 2 with the answer that changes nothing else.
+4. **The encounter and its feedback.** Words on the live region and a words-only HUD line beside the
+   health (`#hud-state`, kept on a phone), never a colour.
+
+The pack contract is documented in [`docs/guides/elements.md`](../docs/guides/elements.md), the
+pinned behaviour in `tests/test_elements.py` and `tests/test_elements_play.py`.
+
+**Still owed, deliberately not in this slice:** a hazard authored in a Blueprint (its fields are the
+closed `FIELD_KEYS` set, which is a format change and wants its own review rather than a side door),
+resistances granted by worn gear (open question 3's second half), a second status effect, stacking,
+and any damage type with no source yet.
+
 ## The vocabulary, because "fiery" and "necromancer" are three things each
 
 | Axis | The term | Values |

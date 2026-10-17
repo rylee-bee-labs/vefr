@@ -702,6 +702,7 @@
     fogOn = fogEnabled();
     fogRadius = (town.fog && town.fog.radius) || 6;
     resetLight();
+    resetStatuses();   // a burn does not travel either (vefr#497)
     loadTiles();
     loadFog();
     seeNow();
@@ -1252,7 +1253,11 @@
           // struck), which changes nothing and therefore costs nothing.
           if (takeVerb(verbs[0][0], verbs[0][1], foe)) {
             lightTick();
+            // The monsters have their turn first, then the states their blows
+            // left tick - the established order, and the one place the hero's own
+            // damage resolves (vefr#497, review #528).
             enemyTurn();
+            statusTurn();
           }
         } else {
           openEnemyVerbs(foe);
@@ -1380,7 +1385,11 @@
       closeEnemyVerbs();   // a bump closes any open enemy menu
       if (struck !== false) {
         lightTick();
+        // The monsters have their turn first, then the states their blows
+        // left tick - the established order, and the one place the hero's own
+        // damage resolves (vefr#497, review #528).
         enemyTurn();
+        statusTurn();
       }
       heroSettleSoon();
       return;
@@ -1420,7 +1429,11 @@
     seeNow();
     updateUse();
     lightTick();
+    // The monsters have their turn first, then the states their blows
+    // left tick - the established order, and the one place the hero's own
+    // damage resolves (vefr#497, review #528).
     enemyTurn();
+    statusTurn();
     updateVerbRow();   // the monsters moved: the fight buttons follow
   }
 

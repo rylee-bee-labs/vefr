@@ -67,6 +67,7 @@ PARTS = ROOT / "web" / "player" / "parts"
 # floods through.
 AI_PARTS = ("410-the-living-hazards.js",
             "420-how-a-monster-thinks.js",
+            "425-the-elements.js",          # damage types, which 410 and 430 call (vefr#497)
             "430-loot-on-the-floor.js")
 
 # The floor: PLAN.md section 3's largest size, and a room count that
