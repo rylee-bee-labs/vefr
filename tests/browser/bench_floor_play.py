@@ -528,6 +528,7 @@ def test_monster_turn_cost_in_chromium(browser):
     parts = "\n".join((PARTS / name).read_text(encoding="utf-8")
                       for name in ("410-the-living-hazards.js",
                                    "420-how-a-monster-thinks.js",
+                                   "425-the-elements.js",
                                    "430-loot-on-the-floor.js"))
     pg.evaluate(AI_HARNESS.replace("__PARTS__", parts))
     client = pg.context.new_cdp_session(pg)

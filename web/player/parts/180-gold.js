@@ -157,6 +157,9 @@ function bagAdd(id, roll, alwaysFits) {
   store.setJSON(BAG_KEY, ids);
   renderBagPanel();
   renderBagStrip();
+  // A thing that grants a verb brings that verb with it, and takes it
+  // back when it goes: the verb row is drawn from what is carried.
+  renderVerbRow();
   syncCombat();
   return true;
 }
@@ -177,6 +180,9 @@ function bagRemoveOne(id) {
   store.setJSON(BAG_KEY, ids);
   renderBagPanel();
   renderBagStrip();
+  // A thing that grants a verb brings that verb with it, and takes it
+  // back when it goes: the verb row is drawn from what is carried.
+  renderVerbRow();
   syncCombat();
   return true;
 }
@@ -535,6 +541,7 @@ function renderBagPanel() {
     p.textContent = 'Nothing yet.';
     list.appendChild(p);
     if (count) count.textContent = '';
+    renderMendPanel();
     renderGold();
     return;
   }
@@ -590,6 +597,11 @@ function renderBagPanel() {
       use.addEventListener('click', function () { useItem(id); });
       row.appendChild(use);
     }
+    // Mending (E2): a pack that declares recipes gives every carried
+    // thing a Mend button; the mending part owns the choosing and the
+    // preview. A pack with no recipes gets no button at all.
+    var mendCtl = mendRowControl(id);
+    if (mendCtl) row.appendChild(mendCtl);
     list.appendChild(row);
   });
   var room = bagRoom();
@@ -598,6 +610,7 @@ function renderBagPanel() {
       ? ids.length + (ids.length === 1 ? ' thing carried.' : ' things carried.')
       : ids.length + ' of ' + room + ' carried.';
   }
+  renderMendPanel();
   renderGold();
 }
 

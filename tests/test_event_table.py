@@ -5,7 +5,7 @@ The event vocabulary was typed three times and had already drifted (vefr #269): 
 table in the woven player. S2 gives the Python side one table, `shapes.EVENTS`, and both
 validators read it. This file pins:
 
-  - the table itself: thirteen events, in order, each with exactly its payload fields, each
+  - the table itself: fifteen events, in order, each with exactly its payload fields, each
     field's kind, ref kind and bounds;
   - that `maplab` holds no second list: `RULE_EVENTS` and `RULE_EVENT_KEYS` are derived, and
     no event name is typed anywhere else in `maplab.py`;
@@ -24,11 +24,13 @@ from pathlib import Path
 
 from vefr import maplab, shapes
 
-# The thirteen events, in the order the pack contract and the player speak them.
-# The last two are the hero's own two facts (vefr #365): nothing in the eleven
-# before them said the hero died.
-THIRTEEN = ('starts', 'enters', 'comes-near', 'opens', 'picks-up', 'uses-with',
-            'defeats', 'buys', 'sells', 'reads', 'phase-changes', 'falls', 'wakes')
+# The fifteen events, in the order the pack contract and the player speak them.
+# `falls` and `wakes` are the hero's own two facts (vefr #365): nothing in the eleven
+# before them said the hero died. `uses-verb` came with the item-grants slice; `mends` with
+# E2 (mending): a recipe is a thing the pack declares, so the event carries its id.
+FIFTEEN = ('starts', 'enters', 'comes-near', 'opens', 'picks-up', 'uses-with',
+           'defeats', 'buys', 'sells', 'reads', 'phase-changes', 'falls', 'wakes',
+           'uses-verb', 'mends')
 
 # event -> ((field, kind, ref, lo, hi), ...), in payload order. `ref` is the pack id a field
 # names; a field with no ref is a number the table bounds itself.
@@ -49,6 +51,8 @@ EXPECTED = {
     'falls': (('what', 'ref', 'enemy', None, None),
               ('where', 'ref', 'place', None, None)),
     'wakes': (('where', 'ref', 'place', None, None),),
+    'uses-verb': (('verb', 'ref', 'verb', None, None),),
+    'mends': (('recipe', 'ref', 'recipe', None, None),),
 }
 
 KNOWN = {
@@ -63,6 +67,8 @@ KNOWN = {
     'things': {'torch', 'chalked-map', 'keeper', 'town', 'hearth', 'almanac', 'rat'},
     'flags': {'lit'},
     'claims': {'keeper-watches'},
+    'verbs': {'console'},
+    'recipes': {'mend-the-net'},
 }
 
 GOOD = {
@@ -79,6 +85,8 @@ GOOD = {
     'phase-changes': {'to': 'dawn'},
     'falls': {'what': 'rat', 'where': 'town'},
     'wakes': {'where': 'town'},
+    'uses-verb': {'verb': 'console'},
+    'mends': {'recipe': 'mend-the-net'},
 }
 
 
@@ -88,8 +96,8 @@ def _fields(event):
 
 # --- the table -----------------------------------------------------------
 
-def test_the_table_holds_the_thirteen_events_in_order():
-    assert tuple(shapes.EVENTS) == THIRTEEN
+def test_the_table_holds_the_fifteen_events_in_order():
+    assert tuple(shapes.EVENTS) == FIFTEEN
 
 
 def test_every_event_carries_exactly_its_payload_fields():
@@ -98,7 +106,7 @@ def test_every_event_carries_exactly_its_payload_fields():
 
 def test_the_table_is_the_only_place_the_vocabulary_is_typed():
     source = inspect.getsource(maplab)
-    for event in THIRTEEN:
+    for event in FIFTEEN:
         assert f"'{event}'" not in source, event
         assert f'"{event}"' not in source, event
 
@@ -187,7 +195,7 @@ def test_an_unknown_or_missing_field_is_still_reported_in_payload_order():
 def test_an_unknown_event_is_refused_and_the_sentence_lists_the_whole_table():
     (rule,) = maplab._rule_event_errors('r', {'bogus': {}}, KNOWN)
     assert rule == ("rule 'r' when names unknown event 'bogus' - the events are "
-                    + ', '.join(THIRTEEN))
+                    + ', '.join(FIFTEEN))
     assert 'six' not in rule
     assert maplab._album_when_errors('s', {'bogus': {}}, KNOWN) == [
         "sticker 's' when names unknown event 'bogus'"]
@@ -215,7 +223,7 @@ def test_both_validators_reach_the_same_table_for_the_same_payload():
     for event, payload in GOOD.items():
         assert maplab._rule_event_errors('r', {event: payload}, KNOWN) == (
             maplab._album_when_errors('s', {event: payload}, KNOWN))
-    for event in THIRTEEN:
+    for event in FIFTEEN:
         assert set(maplab.RULE_EVENT_KEYS[event]) == set(
             k.name for k in shapes.EVENTS[event])
 
@@ -229,7 +237,7 @@ def _js_events():
     for part in sorted((root / 'web' / 'player' / 'parts').glob('*.js')):
         for name, keys in re.findall(
                 r"'([a-z-]+)':\s*\{\s*keys:\s*\[([^\]]*)\]", part.read_text()):
-            if name not in THIRTEEN:
+            if name not in FIFTEEN:
                 continue
             found[name] = re.findall(r"'([^']*)'", keys)
     return found
@@ -240,4 +248,4 @@ def test_the_player_event_table_still_matches_the_python_one():
     # then this is the guard against the drift #269 was: both tables must name the same
     # events carrying the same keys, in the same order.
     assert _js_events() == {event: [field[0] for field in EXPECTED[event]]
-                            for event in THIRTEEN}
+                            for event in FIFTEEN}

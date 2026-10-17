@@ -12,7 +12,14 @@ One sentence changed on purpose a second time, for #365 (`falls` and `wakes`): a
 lists thirteen, not eleven. That is the same one-time regeneration the table earned when the
 vocabulary moved, written down here because this file says a change needs a reason. Four `when`
 cases were added beside it - two events, an accepted shape and a refused one each - and nothing
-else in the capture moved: the diff is that one line and the eight new cases."""
+else in the capture moved: the diff is that one line and the eight new cases.
+
+One sentence changed on purpose a third time, for the item-grants slice (`uses-verb`): an
+unknown event now lists fourteen, not thirteen. The same one-time regeneration the table
+earned the last two times, and the same shape of reason: four `when` cases were added beside
+it - a refused verb and a missing key, for both validators - the accepted shape is pinned in
+tests/test_event_table.py GOOD, where a pack's own verb exists to be named, and nothing else in
+the capture moved. This world is unchanged, so every other case's bytes are untouched."""
 import json
 from pathlib import Path
 
@@ -73,10 +80,24 @@ WHENS = [
     {"falls": {"what": "rat"}},
     {"wakes": {"where": "town"}},
     {"wakes": {"where": "nowhere"}},
+    # The item-grants slice added `uses-verb` to shapes.EVENTS, and with it
+    # the sentence the two `when` validators speak for an unknown event
+    # changed again: it now lists fourteen. There is no pack directory here,
+    # so the only verb this world has is the one `mend-kit` grants - which is
+    # the point of the pair: a verb the pack declared is accepted by name,
+    # and one it never declared is refused by name.
+    {"uses-verb": {"verb": "mend"}},
+    {"uses-verb": {"verb": "ghost"}},
+    {"uses-verb": {}},
 ]
 BASE = {
     "regions": {"town": {"name": "Town"}},
-    "items": {"torch": {"name": "torch"}, "chalked-map": {"name": "map"}},
+    # `mend-kit` is the item-grants slice's one item: it grants the verb
+    # `mend`, which is what makes `uses-verb`'s accepted case nameable here
+    # with no pack directory at all.
+    "items": {"torch": {"name": "torch"}, "chalked-map": {"name": "map"},
+              "mend-kit": {"name": "a mend kit",
+                           "grants": [{"verb": "mend", "label": "Mend"}]}},
     "phases": {"dawn": "dawn"},
     "flags": {"lit": "the torch burns"},
 }

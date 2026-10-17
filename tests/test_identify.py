@@ -71,13 +71,19 @@ PARTS = ROOT / "web" / "player" / "parts"
 # two lines each that the data-line regex reads here; measured twice in
 # separate processes, readings equal. With that one block removed both pins
 # are unchanged.
+# Both moved again on 2026-10-16 for mending (E2): the new player part's one
+# `window.VEFR_LAST_MEND = null;` line - the published snapshot the bag's
+# mending flow keeps, not a baked block - is a line the data-line regex
+# reads here; measured twice in separate processes, readings equal. With
+# that one line removed both pins are unchanged.
 # Both moved again on 2026-10-16 for vefr#504 (opt-in stakes): one empty
 # line, `window.VEFR_STAKES = null;`, in every weave - the literal null
 # for a pack that declares no stakes, which is the same asking of a player
 # as before the line was there. Measured twice in separate processes,
 # readings equal.
-SAMPLE_DATA_SHA = '0e248a8eae679710b3ebe35824a8bd6407e6d6f528625b83c35d5d789a29aab5'
-ROLLED_DATA_SHA = 'b53066a2a5a4f76c94999996df8b0482928e56530bb1fd5829a7ced9ba6cff75'
+# Both moved again for Stakes (vefr#504) merged onto main, 2026-10-16; measured twice on the host.
+SAMPLE_DATA_SHA = '26866b86b7aa71211f2387df4a160f79aa22f4623cd75cb8321eef9e6579e953'
+ROLLED_DATA_SHA = '0009dc7095c18ffcf8f2bd4d43559409f6e113b3b48802d0c977eb53b8341e69'
 
 
 def _data_blocks(html: str) -> str:

@@ -453,6 +453,50 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # processes, readings equal:
 #   38867f8932cf51e9131803df44deddb34fd69d1bb6dcc03f4830a6801b0ce518
 #   38867f8932cf51e9131803df44deddb34fd69d1bb6dcc03f4830a6801b0ce518
+# Damage types, resistances and burning (vefr#497, slice 1) on top of the ending tile (#520): the new part
+# 425-the-elements.js, plus 410/430/480/510, 030-shell.html and 020-style.css. The sample declares no
+# resist, no immune and no typed hazard, so its BAKE is byte-for-byte what it was - measured at
+# 6234996f... after the engine half alone - and only the player's own source moved; 2026-10-16; measured
+# twice in separate processes, readings equal:
+#   78635fd8140a1f9823fb0f07b5438f3ae8a15bc576340cc86afe37ca079fd339
+#   78635fd8140a1f9823fb0f07b5438f3ae8a15bc576340cc86afe37ca079fd339
+# The two review findings of vefr#528 on the slice above: #hud-state is no
+# longer hidden on the quiet surfaces (020-style.css) and the burn ticks after
+# the monsters' turn, keeping the turn's whole line (425-the-elements.js,
+# 480-town-input-and-turns.js, 510-rules-closure-surfaces.js). Player source
+# only; the sample still declares no resist, no immune and no typed hazard, so
+# its BAKE is byte-for-byte what it was; 2026-10-16; measured twice in separate
+# processes, readings equal:
+#   3af87a53314eea60f7d01588b202330af97d691cbde93139558ace24ddb83181
+#   3af87a53314eea60f7d01588b202330af97d691cbde93139558ace24ddb83181
+# Damage types and burning merged onto main with Journal C (vefr#497 + #484), 2026-10-16; measured twice on the host
+# in separate processes, readings equal:
+#   78920d6d4a0574d85ad8e300a977dfe804a582daab1aa3b3dd5ff584c7a2fbe1
+#   78920d6d4a0574d85ad8e300a977dfe804a582daab1aa3b3dd5ff584c7a2fbe1
+# Damage types and burning (vefr#497) merged onto main, 2026-10-16; measured twice on the host in separate processes, readings equal:
+#   892ac967e19b32ca948bee7d50180b5a80d596a25759b79194daa6e3463f9e80
+#   892ac967e19b32ca948bee7d50180b5a80d596a25759b79194daa6e3463f9e80
+# The item-grants slice (E1): the verb row moved out of 510 into 220-growth.js beside
+# surfaceVerbs(), and 445, 430 and 480 grew the `uses-verb` event and the blow a carried
+# thing adds to, 2026-10-16; measured twice in separate processes, readings equal:
+#   b687c8bcce99cc3ef3299fc414ded6c81ef6a48b2683aad379a821ca943d93e4
+#   b687c8bcce99cc3ef3299fc414ded6c81ef6a48b2683aad379a821ca943d93e4
+# Item-granted verbs merged onto main (Mending Shift E1), 2026-10-16; measured twice on the host in separate processes, readings equal:
+#   eb014ad9e78442a1c21b767622554e2a183eb0c8fba6ab6ee97e3c94f85bd206
+#   eb014ad9e78442a1c21b767622554e2a183eb0c8fba6ab6ee97e3c94f85bd206
+# Mending recipes (E2): the `mends` event in the rules engine's EVENTS
+# table (445-rules-engine.js), 2026-10-16; measured twice in separate
+# processes, readings equal:
+#   9ddb0571e312a27be2d5ae2d4151da6122a55db51113907dfda7e166439f71ea
+#   9ddb0571e312a27be2d5ae2d4151da6122a55db51113907dfda7e166439f71ea
+# Mending recipes, player side (E2): the new part 186-the-mending.js,
+# plus 180-gold.js, 030-shell.html and the manifest, 2026-10-16;
+# measured twice in separate processes, readings equal:
+#   8413f7fd735cd33cc69c9d9c0e78cf1209b922e2352606a339c45835b6ba06ca
+#   8413f7fd735cd33cc69c9d9c0e78cf1209b922e2352606a339c45835b6ba06ca
+# Mending recipes merged onto main with item-granted verbs (Mending Shift E2 + E1), 2026-10-16; measured twice on the host in separate processes, readings equal:
+#   45c8ab256a6abaa4c995609857629f098ccf4f2a3505ed647e0fe8986b860873
+#   45c8ab256a6abaa4c995609857629f098ccf4f2a3505ed647e0fe8986b860873
 # The opt-in stakes bake (vefr#504): the added line in 050-inlined-world-pack.js
 # with the stake handling in 320-pack-rules.js, the one-key answer in
 # 510-rules-closure-surfaces.js and the predicate handed out in
@@ -460,7 +504,10 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # readings equal:
 #   f75c45dfbaa661bce978316efb38f6912b0dc53d38fc4115b252c35876c26c7c
 #   f75c45dfbaa661bce978316efb38f6912b0dc53d38fc4115b252c35876c26c7c
-NO_SKIN_WEAVE_SHA256 = "f75c45dfbaa661bce978316efb38f6912b0dc53d38fc4115b252c35876c26c7c"
+# Stakes (vefr#504) merged onto main, 2026-10-16; measured twice on the host in separate processes, readings equal:
+#   c0a062c0e234af8f49695e26294025d87ebb6f8ccdbfb84bf91d068f70e5afd2
+#   c0a062c0e234af8f49695e26294025d87ebb6f8ccdbfb84bf91d068f70e5afd2
+NO_SKIN_WEAVE_SHA256 = "c0a062c0e234af8f49695e26294025d87ebb6f8ccdbfb84bf91d068f70e5afd2"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

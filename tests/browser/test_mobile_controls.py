@@ -123,8 +123,11 @@ SHOW_FULL_HUD = """() => {
   const show = id => { const el = document.getElementById(id);
                        if (el) { el.hidden = false; } };
   show('hud-level'); show('bag-strip'); show('light-live');
+  show('hud-state');
   const lvl = document.getElementById('hud-level');
   if (lvl) lvl.textContent = 'lvl 3';
+  const state = document.getElementById('hud-state');
+  if (state) state.textContent = 'Burning (fire, 2 turns left)';
   const bag = document.getElementById('bag-strip');
   if (bag) bag.textContent = 'rusty key / band / lamp / rope';
   const light = document.getElementById('light-live');
@@ -143,8 +146,8 @@ READ_INSETS = """() => {
 
 RECTS = """() => {
   const ids = ['touch-cluster', 'touch-smart', 'touch-bag', 'touch-b',
-               'menu-open', 'hud-hp', 'hud-level', 'hud-gold', 'bag-strip',
-               'light-live', 'toasts-toggle', 'toasts', 'verb-row'];
+               'menu-open', 'hud-hp', 'hud-level', 'hud-state', 'hud-gold',
+               'bag-strip', 'light-live', 'toasts-toggle', 'toasts', 'verb-row'];
   const out = {};
   for (const id of ids) {
     const el = document.getElementById(id);
@@ -280,13 +283,15 @@ def test_control_bar_is_stable_when_hud_changes(browser, woven):
         assert "stage--dock" in page.evaluate(
             "document.getElementById('stage').className"), (
             "the stable box is the dock's; this measured another layout")
-        # Start from the sparsest HUD: hide the level chip, bag strip and light.
+        # Start from the sparsest HUD: hide the level chip, the state line, the
+        # bag strip and the light.
         # The interact fixture already enables growth + gold so the HUD grows
         # when we flip them back on.
         page.evaluate("""() => {
           const hide = id => { const el = document.getElementById(id);
                                if (el) { el.hidden = true; } };
-          hide('hud-level'); hide('bag-strip'); hide('light-live');
+          hide('hud-level'); hide('hud-state'); hide('bag-strip');
+          hide('light-live');
         }""")
         page.wait_for_timeout(150)
         sparse = page.evaluate(RECTS)
