@@ -119,3 +119,19 @@ def test_the_stake_when_is_the_rule_when(tmp_path):
         assert not cli._stake_bakes(
             {"id": "x", "when": broken, "risk": "torch",
              "reward": "chalked-map", "say": "."})
+
+def test_the_validator_tells_the_author_what_is_wrong_with_a_stake():
+    """The player drops a stake it cannot offer; maplab.stakes_errors says why, naming the stake."""
+    from vefr import maplab
+    good = {"id": "wager", "when": {"enters": {"place": "dock"}},
+            "risk": "your lantern", "reward": "a map", "say": "Bet the lantern?"}
+    assert maplab.stakes_errors({}) == []
+    assert maplab.stakes_errors({"stakes": [good]}) == []
+    assert maplab.stakes_errors({"stakes": "nope"})[0].startswith("stakes must be a list")
+    bad = dict(good, when={"bogus": {}}, extra=1)
+    del bad["say"]
+    errs = maplab.stakes_errors({"stakes": [bad, dict(good)]})
+    assert any("stake 'wager' when must be one event" in e for e in errs), errs
+    assert any("not allowed: extra" in e for e in errs), errs
+    assert any("needs a say line" in e for e in errs), errs
+    assert any("two stakes share the id 'wager'" in e for e in errs), errs
