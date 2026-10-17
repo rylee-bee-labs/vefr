@@ -484,7 +484,20 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # Item-granted verbs merged onto main (Mending Shift E1), 2026-10-16; measured twice on the host in separate processes, readings equal:
 #   eb014ad9e78442a1c21b767622554e2a183eb0c8fba6ab6ee97e3c94f85bd206
 #   eb014ad9e78442a1c21b767622554e2a183eb0c8fba6ab6ee97e3c94f85bd206
-NO_SKIN_WEAVE_SHA256 = "0e8369a648d66d5592394724d2257ceeddb28aefc9a27baec667801c2af6a964"
+# Mending recipes (E2): the `mends` event in the rules engine's EVENTS
+# table (445-rules-engine.js), 2026-10-16; measured twice in separate
+# processes, readings equal:
+#   9ddb0571e312a27be2d5ae2d4151da6122a55db51113907dfda7e166439f71ea
+#   9ddb0571e312a27be2d5ae2d4151da6122a55db51113907dfda7e166439f71ea
+# Mending recipes, player side (E2): the new part 186-the-mending.js,
+# plus 180-gold.js, 030-shell.html and the manifest, 2026-10-16;
+# measured twice in separate processes, readings equal:
+#   8413f7fd735cd33cc69c9d9c0e78cf1209b922e2352606a339c45835b6ba06ca
+#   8413f7fd735cd33cc69c9d9c0e78cf1209b922e2352606a339c45835b6ba06ca
+# Mending recipes merged onto main with item-granted verbs (Mending Shift E2 + E1), 2026-10-16; measured twice on the host in separate processes, readings equal:
+#   45c8ab256a6abaa4c995609857629f098ccf4f2a3505ed647e0fe8986b860873
+#   45c8ab256a6abaa4c995609857629f098ccf4f2a3505ed647e0fe8986b860873
+NO_SKIN_WEAVE_SHA256 = "45c8ab256a6abaa4c995609857629f098ccf4f2a3505ed647e0fe8986b860873"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():
