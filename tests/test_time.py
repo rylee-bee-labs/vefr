@@ -170,7 +170,7 @@ def test_the_time_fixture_pack_validates_both_ways(tmp_path):
     # and no such key for the pack that did not.
     def _baked_world(pack: Path) -> str:
         line = next(ln for ln in cli.weave_html(pack).splitlines()
-                    if l.startswith("window.VEFR_WORLD = "))
+                    if ln.startswith("window.VEFR_WORLD = "))
         return line
     assert '"time"' in _baked_world(opted_in)
     assert '"time"' not in _baked_world(plain)
