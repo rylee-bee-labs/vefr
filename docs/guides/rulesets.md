@@ -843,6 +843,15 @@ named in plain words. Code: `src/vefr/maplab.py` (validation) +
 `tests/test_combat_loop.py` + `tests/test_transitions.py` +
 `tests/test_builder_weave.py` + `tests/fixtures/make_combat_pack.py`.
 
+### damage types, resistances and burning (optional, vefr#497)
+
+A pack may opt in to typed damage: `player.resist` / `player.immune` on
+the hero, and a hazard's `dmg_type` and `burns`. A pack that declares
+none of them deals the same untyped blows as always - nothing above
+changes. The whole contract, the refusals and the feedback are in
+[`elements.md`](elements.md); the design note behind it is
+`design/elemental-and-status-effects.md`.
+
 ## loot (first slice: drops and a simple bag)
 
 Killing something used to give survival and nothing else. Now a kill can

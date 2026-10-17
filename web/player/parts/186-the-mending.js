@@ -66,17 +66,14 @@ function mendPairCarried(a, b) {
 // it can while that slice lands, and shows nothing when the pack gave
 // nothing - which is every pack today.
 function mendGrantVerbs(def) {
+  // E1's one shape (vefr#531): `grants` is a list of {verb, label}. The preview names what
+  // the player will see on the verb row, so it reads the label, falling back to the verb id.
   var grants = def && def.grants;
-  if (!grants) return [];
-  if (Array.isArray(grants)) {
-    return grants.map(function (v) {
-      if (typeof v === 'string') return v;
-      if (v && typeof v === 'object' && typeof v.verb === 'string') return v.verb;
-      return '';
-    }).filter(function (v) { return !!v; });
-  }
-  if (typeof grants === 'object') return Object.keys(grants);
-  return [];
+  if (!Array.isArray(grants)) return [];
+  return grants.map(function (g) {
+    if (!g || typeof g !== 'object' || typeof g.verb !== 'string') return '';
+    return (typeof g.label === 'string' && g.label) ? g.label : g.verb;
+  }).filter(function (v) { return !!v; });
 }
 
 // One bag row's Mend button, or null when the pack declares no recipes

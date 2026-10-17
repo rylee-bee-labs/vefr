@@ -91,6 +91,18 @@
         // before the player can touch anything.
         fightable: e.fightable !== false,
         yields: e.yields === true,
+        // What this blow IS, and what it leaves behind (vefr#497): the
+        // damage type the hero's resistances may turn aside, and the
+        // burning it inflicts. A contract that named neither reads as
+        // '' and null here, and the fight is then the untyped one it
+        // always was.
+        dmgType: normalDamageType(e.dmg_type),
+        burns: (e.burns && typeof e.burns === 'object'
+                && typeof e.burns.turns === 'number' && e.burns.turns >= 1
+                && typeof e.burns.tick === 'number' && e.burns.tick >= 1)
+               ? { effect: 'burning', type: 'fire', turns: e.burns.turns,
+                   tick: e.burns.tick }
+               : null,
         // A yielding warden that is on the roster at all has already
         // yielded: the descent puts one here only once its challenge
         // flag is set, and it is not a living hazard from then on - it

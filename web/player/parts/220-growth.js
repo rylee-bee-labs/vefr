@@ -213,20 +213,146 @@ function applySurface() {
   renderEncounter();
 }
 
+// ---- the verbs a carried thing grants (the item-grants slice) ----
+//
+// An item may hand the hero a verb of its own: `"grants": [{"verb":
+// "mend", "label": "Mend the hull"}]` in the pack's catalog. While the
+// thing is in the bag - or worn, when the item names a `slot` - its verbs
+// sit in the row beside the act's, and when it leaves they go with it.
+// Nothing here is stored: the bag and the equipped map already say what
+// is carried, so a pack that grants nothing plays and saves as before.
+
+// What the hero is carrying, worn things included: the bag's ids and the
+// five slots'. A worn thing is out of the bag list, so the two are read
+// together or a granted verb would blink off the moment it was worn.
+function carryingItems() {
+  var ids = bagItems();
+  for (var i = 0; i < EQUIP_SLOTS.length; i++) {
+    if (typeof EQUIP_STATE[EQUIP_SLOTS[i]] === 'string') {
+      ids.push(EQUIP_STATE[EQUIP_SLOTS[i]]);
+    }
+  }
+  return ids;
+}
+
+// What carrying things does to one verb: the extra damage that verb's
+// blow carries, summed over every carried or worn thing whose `changes`
+// name it. An effect the pack wrote in a broken shape adds nothing.
+function verbAtkBonus(verb) {
+  var cat = itemCatalog();
+  var total = 0;
+  carryingItems().forEach(function (id) {
+    var def = cat[id];
+    var changes = def && def.changes;
+    if (!changes || typeof changes !== 'object') return;
+    var effect = changes[verb];
+    if (effect && typeof effect === 'object'
+        && typeof effect.atk === 'number' && isFinite(effect.atk)) {
+      total += effect.atk;
+    }
+  });
+  return total;
+}
+
+// The verbs the hero carries that the act did not write, one entry per
+// verb: `{verb, label, from, atk}`. Two copies of one thing grant one
+// button, in the order the catalog and the pack listed them.
+function grantedVerbs() {
+  var cat = itemCatalog();
+  var seen = {};
+  var out = [];
+  carryingItems().forEach(function (id) {
+    var def = cat[id];
+    if (!def || !Array.isArray(def.grants)) return;
+    def.grants.forEach(function (g) {
+      if (!g || typeof g.verb !== 'string' || !g.verb) return;
+      if (typeof g.label !== 'string' || !g.label) return;
+      if (seen[g.verb]) return;
+      seen[g.verb] = true;
+      out.push({ verb: g.verb, label: g.label, from: id,
+                 atk: verbAtkBonus(g.verb) });
+    });
+  });
+  return out;
+}
+
+// Is this verb one the hero is carrying? The granted verbs, by id. A verb
+// the act already offers answers true as well when an item changes it -
+// the change is what makes it worth noticing.
+function isGrantedVerb(verb) {
+  var granted = grantedVerbs();
+  for (var i = 0; i < granted.length; i++) {
+    if (granted[i].verb === verb) return true;
+  }
+  return verbAtkBonus(verb) > 0;
+}
+
+// The costume verbs of an act that declares none of its own. The act's own
+// `verbs` replace this list entirely; the literals stay here so the default
+// row is one table like any other.
+var DEFAULT_VERB_ROW = [['attack', 'Strike'], ['console', 'Console'],
+                        ['hurl', 'Hurl an insult']];
+
 // The act's verbs are the pack's own vocabulary; the baked defaults
 // keep the old costume when the act declares none. One home for the
 // list, so the verb row, Interact's enemy path and the tests cannot
-// drift apart.
+// drift apart. What the hero carries comes after the act's own, and a
+// verb the act already has is never printed twice.
 function surfaceVerbs() {
   var act = (window.VEFR_WORLD && window.VEFR_WORLD.acts
              && window.VEFR_WORLD.acts[0]) || {};
-  if (Array.isArray(act.verbs) && act.verbs.length) {
-    return act.verbs.map(function (v) {
-      return [v, v.charAt(0).toUpperCase() + v.slice(1)];
-    });
+  var out = [];
+  var seen = {};
+  function add(verb, label) {
+    if (typeof verb !== 'string' || !verb || seen[verb]) return;
+    seen[verb] = true;
+    out.push([verb, label]);
   }
-  return [['attack', 'Strike'], ['console', 'Console'],
-          ['hurl', 'Hurl an insult']];
+  if (Array.isArray(act.verbs) && act.verbs.length) {
+    act.verbs.forEach(function (v) {
+      if (typeof v !== 'string') return;
+      add(v, v.charAt(0).toUpperCase() + v.slice(1));
+    });
+  } else {
+    DEFAULT_VERB_ROW.forEach(function (pair) { add(pair[0], pair[1]); });
+  }
+  grantedVerbs().forEach(function (g) { add(g.verb, g.label); });
+  return out;
+}
+
+// The row itself, rebuilt from the one list. Called at boot and again
+// whenever the bag or the worn map changes, so a verb that arrives with
+// a thing and leaves with it is painted and unpainted by the same line -
+// and the digits printed on the buttons are re-numbered with them, so the
+// number keys (#463) always answer through this row and nothing else.
+//
+// The granted verbs ride out on `window.VEFR_VERBS` for the tests: what
+// is on the row because of what the hero is carrying, and what carrying
+// it does to that verb. A pack that grants nothing publishes an empty
+// list, which is the honest reading of an unchanged row.
+function renderVerbRow() {
+  var row = document.getElementById('verb-row');
+  window.VEFR_VERBS = grantedVerbs();
+  if (!row) return;
+  row.textContent = '';
+  surfaceVerbs().forEach(function (pair, i) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.dataset.verb = pair[0];
+    // The label is kept beside its own word: the verb is the pack's
+    // and the digit is a shortcut, and the two must not be read as
+    // one name.
+    var label = document.createElement('span');
+    label.className = 'verb';
+    label.textContent = pair[1];
+    b.dataset.label = pair[1];
+    var key = document.createElement('kbd');
+    key.textContent = String(i + 1);
+    b.appendChild(label);
+    b.appendChild(document.createTextNode(' '));
+    b.appendChild(key);
+    row.appendChild(b);
+  });
 }
 
 // The nth button of the combat row, 1 being the first verb, or null.

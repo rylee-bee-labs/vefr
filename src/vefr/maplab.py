@@ -961,6 +961,9 @@ def _rule_known_ids(w: dict, pack_dir: Path | None) -> dict:
         'enemies': enemies,
         'acts': act_ids,
         'phases': set(phases) if isinstance(phases, dict) else set(),
+        # The verbs a `uses-verb` may name: the acts' own `verbs` lists
+        # and every verb an item grants (`pack_verbs`).
+        'verbs': pack_verbs(w) | pack_verbs(pack_cfg),
         'recipes': recipes,
         'things': items | people | places | pois | book_ids | enemies,
         # None means "declared but malformed": the shape error in
@@ -984,7 +987,7 @@ def _rule_value_errors(rid: str, where: str, val, kind: str, known: dict) -> lis
     if not isinstance(val, str):
         noun = {'person': 'person id', 'claim': 'claim name', 'item': 'item id',
                 'place': 'region id', 'thing': 'thing id', 'book': 'book id',
-                'enemy': 'enemy id', 'phase': 'phase name',
+                'enemy': 'enemy id', 'phase': 'phase name', 'verb': 'verb id',
                 'recipe': 'recipe id'}[kind]
         return [f"rule '{rid}' {where} must be a {noun}"]
     if kind == 'person':
@@ -1016,6 +1019,9 @@ def _rule_value_errors(rid: str, where: str, val, kind: str, known: dict) -> lis
         if val not in known['phases']:
             return [f"rule '{rid}' {where} names unknown phase '{val}'"]
         return []
+    if kind == 'verb':
+        if val not in known['verbs']:
+            return [f"rule '{rid}' {where} names unknown verb '{val}'"]
     if kind == 'recipe':
         if val not in known['recipes']:
             return [f"rule '{rid}' {where} names unknown recipe '{val}'"]
@@ -1512,6 +1518,175 @@ def item_spell_errors(item_id, spec, spell_ids) -> list[str]:
             f"is not one of its spells"]
 
 
+# ---- the verbs a carried thing grants (the item-grants slice) -------------
+
+# What carrying a thing may change about a verb: today the one effect is
+# extra attack - the extra damage that verb's blow carries. The bounds are a
+# worn item's `mods` bounds on purpose, so a pack learns one table and a
+# number that would be refused there is refused here too.
+VERB_EFFECTS = ('atk',)
+VERB_EFFECT_MAX = 9
+
+
+def _grant_where(item_id, spec) -> str:
+    """The item named the way every item sentence names it."""
+    label = str(spec.get('name') or item_id)
+    return (f"item '{label}'" if label == item_id
+            else f"item '{label}' ({item_id})")
+
+
+def _whole_in(v, lo: int, hi: int) -> bool:
+    return isinstance(v, int) and not isinstance(v, bool) and lo <= v <= hi
+
+
+def item_grants_of(spec) -> list[dict]:
+    """The verbs this item grants, in the form the bake and the player read.
+
+    `[{verb, label}]` in the pack's own order - which is the order the verb
+    row shows them in - with one entry per grant that names a plain-word
+    verb and non-empty words for the button. A grant the shape table already
+    refused (no verb, no label, a label that is not words) is dropped here
+    rather than baked as a button with nothing on it.
+    """
+    if not isinstance(spec, dict):
+        return []
+    listed = spec.get('grants')
+    if not isinstance(listed, list):
+        return []
+    out: list[dict] = []
+    seen: set = set()
+    for grant in listed:
+        if not isinstance(grant, dict):
+            continue
+        verb, label = grant.get('verb'), grant.get('label')
+        if not isinstance(verb, str) or not shapes.WORD.fullmatch(verb.strip()):
+            continue
+        if not isinstance(label, str) or not label.strip():
+            continue
+        verb = verb.strip()
+        if verb in seen:
+            continue
+        seen.add(verb)
+        out.append({'verb': verb, 'label': label.strip()})
+    return out
+
+
+def item_changes_of(spec) -> dict:
+    """What carrying this thing does to the verbs it names.
+
+    `{verb: {effect: n}}`, with only the effects and numbers the table
+    allows, in the pack's own order. An entry that names a verb no effect
+    rides along for is left out rather than baked as a no-op.
+    """
+    if not isinstance(spec, dict):
+        return {}
+    listed = spec.get('changes')
+    if not isinstance(listed, dict) or isinstance(listed, bool):
+        return {}
+    out: dict[str, dict] = {}
+    for verb, effects in listed.items():
+        if not isinstance(verb, str) or not verb.strip():
+            continue
+        if not isinstance(effects, dict) or isinstance(effects, bool):
+            continue
+        clean = {k: v for k, v in effects.items()
+                 if k in VERB_EFFECTS and _whole_in(v, 0, VERB_EFFECT_MAX)}
+        if clean:
+            out[verb.strip()] = clean
+    return out
+
+
+def pack_verbs(w: dict) -> set:
+    """Every verb id this pack can fire: its acts' own `verbs` lists, and
+    every verb an item grants.
+
+    This is what a `uses-verb` rule - or a sticker's `when` - is checked
+    against, so a rule may name a verb of the act's own vocabulary or one
+    an item hands the hero, and nothing else. Both are read from the pack
+    itself: an act's `verbs` is the row the player pressed before this
+    slice, and a granted verb is the row this slice added.
+    """
+    if not isinstance(w, dict):
+        return set()
+    out: set = set()
+    acts = w.get('acts')
+    for act in acts if isinstance(acts, list) else []:
+        listed = act.get('verbs') if isinstance(act, dict) else None
+        if isinstance(listed, list):
+            out |= {v.strip() for v in listed
+                    if isinstance(v, str) and v.strip()}
+    items = w.get('items')
+    for spec in items.values() if isinstance(items, dict) else []:
+        for grant in item_grants_of(spec):
+            out.add(grant['verb'])
+    return out
+
+
+def item_grants_errors(item_id, spec, verb_ids) -> list[str]:
+    """Every problem with an item's optional `grants` and `changes` (empty = good).
+
+    Both are additive: an item with neither plays exactly as it did, and
+    the shape table has already spoken about anything of the wrong type -
+    what is left here are the questions `shapes.check_item` cannot answer
+    for itself, in the same voice as `item_spell_errors`.
+
+    Three of them: an item that grants one verb twice (the row would show
+    two buttons with the same word, and only one could ever be pressed),
+    a `changes` entry naming a verb this pack has not got, and an effect
+    that is not one this slice plays. `verb_ids` is the pack's own verb
+    set, from `pack_verbs` - the only way this function can answer
+    whether the verb exists.
+    """
+    if not isinstance(spec, dict):
+        return []
+    where = _grant_where(item_id, spec)
+    errors: list[str] = []
+    granted = item_grants_of(spec)
+    named = [g['verb'] for g in granted]
+    listed = spec.get('grants')
+    if isinstance(listed, list):
+        # A verb granted twice is refused by the reader above (the second
+        # is dropped), so the count is read off what the pack wrote.
+        counted: dict = {}
+        for grant in listed:
+            if isinstance(grant, dict) and isinstance(grant.get('verb'), str):
+                verb = grant['verb'].strip()
+                counted[verb] = counted.get(verb, 0) + 1
+        for verb in named:
+            if counted.get(verb, 0) > 1:
+                errors.append(
+                    f"{where} grants the verb '{verb}' more than once: the "
+                    "verb row would show two buttons with the same word")
+    changes = spec.get('changes')
+    if isinstance(changes, dict) and not isinstance(changes, bool):
+        known = set(verb_ids or ())
+        for verb, effects in changes.items():
+            if not isinstance(verb, str) or not verb.strip():
+                continue        # the shape table spoke about the key
+            name = verb.strip()
+            if name not in known:
+                errors.append(
+                    f"{where} changes the verb '{name}', which is not a verb "
+                    "this pack uses: a verb is one of the act's own, or one "
+                    "this item grants")
+                continue
+            if not isinstance(effects, dict) or isinstance(effects, bool):
+                errors.append(
+                    f"{where} change for the verb '{name}' must be an object "
+                    f"holding {' and '.join(VERB_EFFECTS)}")
+                continue
+            for key, value in effects.items():
+                if key not in VERB_EFFECTS:
+                    errors.append(
+                        f"{where} change for the verb '{name}' may only hold "
+                        f"{' and '.join(VERB_EFFECTS)}, not '{key}'")
+                elif not _whole_in(value, 0, VERB_EFFECT_MAX):
+                    errors.append(
+                        f"{where} change {key} for the verb '{name}' must be a "
+                        f"whole number 0 to {VERB_EFFECT_MAX}")
+    return errors
+
+
 def saves_errors(w: dict) -> list[str]:
     """Every problem with a pack's optional `saves` block (empty = good).
 
@@ -1553,6 +1728,105 @@ def bag_errors(w: dict) -> list[str]:
     return _shape_sentences('world.json', shapes.check(shapes.BLOCKS['bag'], w['bag']))
 
 
+def element_errors(w: dict) -> list[str]:
+    """Every problem with a pack's optional resistances (empty = good).
+
+    The pack opts in by naming them: `player.resist` is an object of
+    damage type to a whole-number divisor (1 to 9, where 2 is "half"),
+    and `player.immune` is a list of damage types nothing can hurt
+    the hero with. Both live on the pack's `player` block, which is
+    the floor for a whole run (Rylee, 2026-10-03; the gear half that
+    sits on top of it is a later slice).
+
+    A pack that declares neither is not this function's business: it
+    bakes no resistance, deals untyped damage and plays byte for byte
+    as it always did. Every sentence here is one plain refusal naming
+    the field and, where a closed set is the reason, the words in it.
+    See `docs/guides/elements.md`.
+    """
+    from . import elements
+
+    # The block `load_pack` already holds: the pack's own `player`, under
+    # the name the merged shape keeps it under (`_player`).
+    player = w.get('_player') or w.get('player')
+    if not isinstance(player, dict):
+        return []
+    errors: list[str] = []
+    choices = ', '.join(elements.DAMAGE_TYPES)
+    resist = player.get('resist')
+    if resist is not None:
+        if not isinstance(resist, dict) or isinstance(resist, bool):
+            errors.append(
+                "world.json: player.resist must be an object of damage "
+                "types to a whole number, such as {\"fire\": 2}")
+        else:
+            for key, value in resist.items():
+                name = elements.normal_type(key)
+                if name is None:
+                    errors.append(
+                        f"world.json: player.resist names {key!r}, which is "
+                        f"not a damage type; use one of {choices}")
+                    continue
+                if not _is_whole(value) or value < 1 or value > elements.MAX_RESIST:
+                    errors.append(
+                        f"world.json: player.resist '{name}' must be a whole "
+                        f"number from 1 to {elements.MAX_RESIST}, where 2 "
+                        f"means half the damage")
+    immune = player.get('immune')
+    if immune is not None:
+        if not isinstance(immune, list):
+            errors.append(
+                "world.json: player.immune must be a list of damage types, "
+                "such as [\"cold\"]")
+        else:
+            for value in immune:
+                if elements.normal_type(value) is None:
+                    errors.append(
+                        f"world.json: player.immune names {value!r}, which is "
+                        f"not a damage type; use one of {choices}")
+    return errors
+
+
+def enemy_element_errors(where: str, e: dict) -> list[str]:
+    """Every problem with one hazard's `dmg_type` and `burns` (empty = good).
+
+    `where` is the sentence's own prefix - the enemy named by its
+    display name, the region it stands in and the act, exactly as
+    `_region_enemy_errors` has already built it.
+
+    `dmg_type` is the damage type of the blow that hazard deals, and
+    `burns` leaves the hero burning: a `turns` count and a `tick`, the
+    two properties the design note says every status effect needs and
+    the whole of its data shape. A hazard that names neither deals the
+    untyped blow it always dealt, which no resistance can touch.
+    """
+    from . import elements
+
+    errors: list[str] = []
+    choices = ', '.join(elements.DAMAGE_TYPES)
+    dtype = e.get('dmg_type')
+    if dtype is not None and elements.normal_type(dtype) is None:
+        errors.append(
+            f"{where} carries dmg_type {dtype!r}, which is not a damage "
+            f"type; use one of {choices}")
+    burns = e.get('burns')
+    if burns is not None:
+        if not isinstance(burns, dict) or isinstance(burns, bool):
+            errors.append(
+                f"{where} burns must be an object holding a turns count and "
+                f"a tick, such as {{\"turns\": 3, \"tick\": 1}}")
+        else:
+            for field in ('turns', 'tick'):
+                value = burns.get(field)
+                if not _is_whole(value) or value < 1:
+                    errors.append(
+                        f"{where} burns needs a whole {field} of 1 or more, "
+                        f"such as {{\"turns\": 3, \"tick\": 1}}")
+            extra = [k for k in burns if k not in ('turns', 'tick')]
+            if extra:
+                errors.append(
+                    f"{where} burns may only hold turns and tick; not "
+                    f"allowed: {', '.join(sorted(extra))}")
 def recipes_of(w: dict) -> list:
     """The pack's recipes: the record list as written, in order."""
     listed = w.get('recipes') if isinstance(w, dict) else None
@@ -2779,6 +3053,7 @@ def _album_name_errors(sid: str, where: str, val, known_set, noun: str) -> list[
 _KNOWN_FOR_REF = {
     'item': 'items', 'place': 'places', 'thing': 'things',
     'book': 'books', 'enemy': 'enemies', 'phase': 'phases',
+    'verb': 'verbs',
     'recipe': 'recipes',
 }
 
@@ -3545,6 +3820,12 @@ def _region_enemy_errors(rname: str, geo: dict, levels_mode: bool,
         errors.extend(_enemy_drop_errors(
             f"{prefix}enemy '{who}' in region '{rname}'",
             e.get('drops', library.NO_DROPS), declared))
+        # What the blow IS and what it leaves behind (vefr#497): a
+        # `dmg_type` the hero's resistances may turn aside, and a
+        # `burns` block that leaves the hero burning for a count of
+        # turns. Both are optional and named the same way.
+        errors.extend(enemy_element_errors(
+            f"{prefix}enemy '{who}' in region '{rname}'", e))
     return errors
 
 
@@ -3589,12 +3870,16 @@ def validate(w: dict, pack_dir: Path | None = None) -> list[str]:
     if isinstance(items, dict):
         key_ids = _door_key_items(w)
         spell_ids = spell_ids_of(w)
+        # A granted verb is a verb of this pack's own, so the `uses-verb`
+        # rules are checked against the set the catalog itself hands over.
+        verb_ids = pack_verbs(w)
         for iid, spec in items.items():
             if isinstance(spec, dict):
                 errors.extend(item_light_errors(iid, spec))
                 errors.extend(item_slot_errors(iid, spec, key_ids))
                 errors.extend(item_roll_errors(iid, spec))
                 errors.extend(item_spell_errors(iid, spec, spell_ids))
+                errors.extend(item_grants_errors(iid, spec, verb_ids))
     # The pack's optional identify service (ADR 0017, T3 slice 2): the
     # speaker that reads things, checked beside the other optional
     # fields so a service that names no place to stand is an authoring
@@ -3661,6 +3946,11 @@ def validate(w: dict, pack_dir: Path | None = None) -> list[str]:
     # that declares none gets nothing here and says nothing else about
     # it - the engine's own words are its own business.
     errors.extend(player_words_errors(w))
+    # The pack's optional resistances (vefr#497, slice 1): the hero's
+    # own `resist`/`immune`, checked beside the other optional player
+    # words. A pack that declares neither bakes nothing and fights
+    # every blow untyped, exactly as before.
+    errors.extend(element_errors(w))
     # The pack's optional display block (pixel art): a pack that declares
     # none is drawn exactly as before.
     errors.extend(display_errors(w))

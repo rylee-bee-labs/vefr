@@ -90,32 +90,13 @@
   renderCombatLog(store.getJSON(COMBAT_KEY, []));
   /* The act's verbs are the pack's own vocabulary; baked defaults
      keep the old costume when the act declares none. The list lives
-     in surfaceVerbs() so the row and the enemy menu share one home.
-     Each button prints the number that presses it, in the order it
-     sits in the row (#463), the same idiom the action row uses for
-     its own keys. */
-  (function () {
-    var row = document.getElementById('verb-row');
-    var verbs = surfaceVerbs();
-    verbs.forEach(function (pair, i) {
-      var b = document.createElement('button');
-      b.type = 'button';
-      b.dataset.verb = pair[0];
-      // The label is kept beside its own word: the verb is the pack's
-      // and the digit is a shortcut, and the two must not be read as
-      // one name.
-      var label = document.createElement('span');
-      label.className = 'verb';
-      label.textContent = pair[1];
-      b.dataset.label = pair[1];
-      var key = document.createElement('kbd');
-      key.textContent = String(i + 1);
-      b.appendChild(label);
-      b.appendChild(document.createTextNode(' '));
-      b.appendChild(key);
-      row.appendChild(b);
-    });
-  })();
+     in surfaceVerbs() so the row and the enemy menu share one home,
+     and renderVerbRow() paints it - at boot, and again whenever the
+     bag or the worn map changes, so a verb an item grants arrives
+     and leaves with that item. Each button prints the number that
+     presses it, in the order it sits in the row (#463), the same
+     idiom the action row uses for its own keys. */
+  renderVerbRow();
   document.getElementById('verb-row').addEventListener('click', function (e) {
     var b = e.target.closest('button[data-verb]');
     if (!b) return;
@@ -131,7 +112,11 @@
     if (VERB_TARGET) {
       if (takeVerb(b.dataset.verb, b.dataset.label, VERB_TARGET) !== false) {
         lightTick();
+        // The monsters have their turn first, then the states their blows
+        // left tick - the established order, and the one place the hero's own
+        // damage resolves (vefr#497, review #528).
         enemyTurn();
+        statusTurn();
       }
       closeEnemyVerbs();
       updateUse();
