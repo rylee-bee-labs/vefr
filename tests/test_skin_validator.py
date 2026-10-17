@@ -437,13 +437,23 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # The ending-only room scale (display.ending_tile, cottage-of-the-breeze#166) on top of the archive loader (#519),
 # 2026-10-16; measured twice on the host in separate processes after merging main, readings equal:
 #   6234996f734f57e47389b63ea6c181b3b54a8e6a0ee36ab761c4397f1bac7886
+# The quiet page and the calm fall card (vefr#484, mockup C): the new part
+# 245-the-quiet-page.js, plus 240, 260, 430, 510, 030-shell.html and
+# 020-style.css, 2026-10-16; measured twice on the host in separate
+# processes, readings equal:
+#   7f2070891f9abd9ca51017e4ebacfc356a92f540251abf6804d9839a9ce4fd53
+#   7f2070891f9abd9ca51017e4ebacfc356a92f540251abf6804d9839a9ce4fd53
 #   6234996f734f57e47389b63ea6c181b3b54a8e6a0ee36ab761c4397f1bac7886
 # The target cue on the smart action's tile (vefr#486: the glow and the corner marks in
 # 480-town-input-and-turns.js), 2026-10-16; measured twice on the host in separate processes
-# after merging main, readings equal:
+# readings equal (before Journal C merged):
 #   545f51327267a4b63fb3412687e4a86a97515b218d0d5e67eec8b23837558e50
 #   545f51327267a4b63fb3412687e4a86a97515b218d0d5e67eec8b23837558e50
-NO_SKIN_WEAVE_SHA256 = "545f51327267a4b63fb3412687e4a86a97515b218d0d5e67eec8b23837558e50"
+# The target cue merged onto main with Journal C (vefr#486 + #484), 2026-10-16; measured twice on the host in separate
+# processes, readings equal:
+#   38867f8932cf51e9131803df44deddb34fd69d1bb6dcc03f4830a6801b0ce518
+#   38867f8932cf51e9131803df44deddb34fd69d1bb6dcc03f4830a6801b0ce518
+NO_SKIN_WEAVE_SHA256 = "38867f8932cf51e9131803df44deddb34fd69d1bb6dcc03f4830a6801b0ce518"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():
