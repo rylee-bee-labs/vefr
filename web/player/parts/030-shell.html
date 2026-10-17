@@ -64,6 +64,12 @@
           <p class="glass sr-only" id="use-hint" aria-live="polite"></p>
           <p class="glass" id="library-live" role="status" aria-live="polite"></p>
           <p class="glass" id="combat-live" role="status" aria-live="polite"></p>
+          <!-- The stake offer's own two answers (vefr#504). Y and N answer it on a
+               keyboard, but a phone has neither, so the offer is drawn as two real
+               buttons under the line that says it. Empty and hidden unless an offer
+               is open, and out of the way of the fight verbs, which sit at the foot
+               of the frame. -->
+          <div class="stake-ask" id="stake-ask" role="group" aria-label="Answer the stake" hidden></div>
           <p class="glass" id="explore-status" role="status" aria-live="polite"></p>
         </div>
         <div class="dpad" id="dpad" aria-label="Move">

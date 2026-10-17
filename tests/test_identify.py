@@ -85,8 +85,15 @@ PARTS = ROOT / "web" / "player" / "parts"
 # `window.VEFR_MUSIC_DEF` line (the literal `null` for a pack that names no music); measured twice in
 # separate processes, readings equal. With that one line removed both pins are unchanged.
 # Both moved again for the music bed merged onto main with time (vefr#502 + Mending Shift E3), 2026-10-16; measured twice on the host.
-SAMPLE_DATA_SHA = '1ce7cdb05b3697959945370186c4d0839d8f91d041e91cf435048b60be97a25b'
-ROLLED_DATA_SHA = 'a45ba8c164bd6816aa0240d2804da42fce699fe1b39a566aaf6d6d30a8744381'
+# Both moved again on 2026-10-16 for vefr#504 (opt-in stakes): one empty
+# line, `window.VEFR_STAKES = null;`, in every weave - the literal null
+# for a pack that declares no stakes, which is the same asking of a player
+# as before the line was there. Measured twice in separate processes,
+# readings equal.
+# Both moved again for Stakes (vefr#504) merged onto main, 2026-10-16; measured twice on the host.
+# Both moved again for Stakes (vefr#504) merged onto main, 2026-10-16; measured twice on the host.
+SAMPLE_DATA_SHA = '1c2bef0ac42f9f377db23054816a0b064bec1e83db8ad9d7cc9384032cba2d1a'
+ROLLED_DATA_SHA = '517fadefee4953a8753346be2141cb76b9ebd5c39d56822fff17b6071a23f1b7'
 
 
 def _data_blocks(html: str) -> str:
