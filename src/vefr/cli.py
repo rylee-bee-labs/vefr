@@ -37,6 +37,7 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
+from . import elements
 from .maplab import (SKIN_PICTURE_KEYS, item_changes_of, item_grants_of,
                      item_rarity_of, item_roll_of,
                      item_slot_and_mods, item_traits_of, load_pack, prop_blocks,
@@ -2800,6 +2801,17 @@ def weave_html(pack: Path, *, pool: dict | None = None,
                 for key in MIND_KEYS:
                     if key in e:
                         entry[key] = e.get(key)
+                # What the blow IS, and what it leaves behind (vefr#497):
+                # `dmg_type` is the damage type the hero's resistances may
+                # turn aside, and `burns` is the status it inflicts. Both
+                # ride along only when the contract names them, on the
+                # same rule as `xp` and the mind keys above: a pack with no
+                # fire in it bakes the exact bytes it always did.
+                if 'dmg_type' in e:
+                    entry['dmg_type'] = e.get('dmg_type')
+                burns = elements.burning_of(e)
+                if burns:
+                    entry['burns'] = burns
                 out.append(entry)
             enemies_by_region[rname] = out
 
@@ -2835,6 +2847,17 @@ def weave_html(pack: Path, *, pool: dict | None = None,
         hero_gold = 0
     hero = {'hp': hero_hp, 'atk': hero_atk, 'gold': hero_gold,
             'wake': {'region': wake_region, 'at': wake_at}}
+    # What the hero shrugs off (vefr#497, slice 1): the pack's own
+    # `player.resist` and `player.immune`, the floor for a whole run.
+    # Both ride along only when the pack declares them, so a pack that
+    # has not opted in bakes the exact bytes it always did and deals
+    # every blow untyped - which no resistance can turn aside.
+    resist = elements.resist_of(player)
+    if resist:
+        hero['resist'] = resist
+    immune = elements.immune_of(player)
+    if immune:
+        hero['immune'] = immune
     # The shelf this game came from, when the pack names one: the woven
     # player is one offline file, but it keeps a way back to the library
     # page it was published from. Only an http(s) URL is baked - the

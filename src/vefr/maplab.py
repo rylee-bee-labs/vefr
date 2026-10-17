@@ -1711,6 +1711,108 @@ def bag_errors(w: dict) -> list[str]:
     return _shape_sentences('world.json', shapes.check(shapes.BLOCKS['bag'], w['bag']))
 
 
+def element_errors(w: dict) -> list[str]:
+    """Every problem with a pack's optional resistances (empty = good).
+
+    The pack opts in by naming them: `player.resist` is an object of
+    damage type to a whole-number divisor (1 to 9, where 2 is "half"),
+    and `player.immune` is a list of damage types nothing can hurt
+    the hero with. Both live on the pack's `player` block, which is
+    the floor for a whole run (Rylee, 2026-10-03; the gear half that
+    sits on top of it is a later slice).
+
+    A pack that declares neither is not this function's business: it
+    bakes no resistance, deals untyped damage and plays byte for byte
+    as it always did. Every sentence here is one plain refusal naming
+    the field and, where a closed set is the reason, the words in it.
+    See `docs/guides/elements.md`.
+    """
+    from . import elements
+
+    # The block `load_pack` already holds: the pack's own `player`, under
+    # the name the merged shape keeps it under (`_player`).
+    player = w.get('_player') or w.get('player')
+    if not isinstance(player, dict):
+        return []
+    errors: list[str] = []
+    choices = ', '.join(elements.DAMAGE_TYPES)
+    resist = player.get('resist')
+    if resist is not None:
+        if not isinstance(resist, dict) or isinstance(resist, bool):
+            errors.append(
+                "world.json: player.resist must be an object of damage "
+                "types to a whole number, such as {\"fire\": 2}")
+        else:
+            for key, value in resist.items():
+                name = elements.normal_type(key)
+                if name is None:
+                    errors.append(
+                        f"world.json: player.resist names {key!r}, which is "
+                        f"not a damage type; use one of {choices}")
+                    continue
+                if not _is_whole(value) or value < 1 or value > elements.MAX_RESIST:
+                    errors.append(
+                        f"world.json: player.resist '{name}' must be a whole "
+                        f"number from 1 to {elements.MAX_RESIST}, where 2 "
+                        f"means half the damage")
+    immune = player.get('immune')
+    if immune is not None:
+        if not isinstance(immune, list):
+            errors.append(
+                "world.json: player.immune must be a list of damage types, "
+                "such as [\"cold\"]")
+        else:
+            for value in immune:
+                if elements.normal_type(value) is None:
+                    errors.append(
+                        f"world.json: player.immune names {value!r}, which is "
+                        f"not a damage type; use one of {choices}")
+    return errors
+
+
+def enemy_element_errors(where: str, e: dict) -> list[str]:
+    """Every problem with one hazard's `dmg_type` and `burns` (empty = good).
+
+    `where` is the sentence's own prefix - the enemy named by its
+    display name, the region it stands in and the act, exactly as
+    `_region_enemy_errors` has already built it.
+
+    `dmg_type` is the damage type of the blow that hazard deals, and
+    `burns` leaves the hero burning: a `turns` count and a `tick`, the
+    two properties the design note says every status effect needs and
+    the whole of its data shape. A hazard that names neither deals the
+    untyped blow it always dealt, which no resistance can touch.
+    """
+    from . import elements
+
+    errors: list[str] = []
+    choices = ', '.join(elements.DAMAGE_TYPES)
+    dtype = e.get('dmg_type')
+    if dtype is not None and elements.normal_type(dtype) is None:
+        errors.append(
+            f"{where} carries dmg_type {dtype!r}, which is not a damage "
+            f"type; use one of {choices}")
+    burns = e.get('burns')
+    if burns is not None:
+        if not isinstance(burns, dict) or isinstance(burns, bool):
+            errors.append(
+                f"{where} burns must be an object holding a turns count and "
+                f"a tick, such as {{\"turns\": 3, \"tick\": 1}}")
+        else:
+            for field in ('turns', 'tick'):
+                value = burns.get(field)
+                if not _is_whole(value) or value < 1:
+                    errors.append(
+                        f"{where} burns needs a whole {field} of 1 or more, "
+                        f"such as {{\"turns\": 3, \"tick\": 1}}")
+            extra = [k for k in burns if k not in ('turns', 'tick')]
+            if extra:
+                errors.append(
+                    f"{where} burns may only hold turns and tick; not "
+                    f"allowed: {', '.join(sorted(extra))}")
+    return errors
+
+
 def player_words_errors(w: dict) -> list[str]:
     """Every problem with a pack's optional `player_words` block.
 
@@ -3631,6 +3733,12 @@ def _region_enemy_errors(rname: str, geo: dict, levels_mode: bool,
         errors.extend(_enemy_drop_errors(
             f"{prefix}enemy '{who}' in region '{rname}'",
             e.get('drops', library.NO_DROPS), declared))
+        # What the blow IS and what it leaves behind (vefr#497): a
+        # `dmg_type` the hero's resistances may turn aside, and a
+        # `burns` block that leaves the hero burning for a count of
+        # turns. Both are optional and named the same way.
+        errors.extend(enemy_element_errors(
+            f"{prefix}enemy '{who}' in region '{rname}'", e))
     return errors
 
 
@@ -3747,6 +3855,11 @@ def validate(w: dict, pack_dir: Path | None = None) -> list[str]:
     # that declares none gets nothing here and says nothing else about
     # it - the engine's own words are its own business.
     errors.extend(player_words_errors(w))
+    # The pack's optional resistances (vefr#497, slice 1): the hero's
+    # own `resist`/`immune`, checked beside the other optional player
+    # words. A pack that declares neither bakes nothing and fights
+    # every blow untyped, exactly as before.
+    errors.extend(element_errors(w))
     # The pack's optional display block (pixel art): a pack that declares
     # none is drawn exactly as before.
     errors.extend(display_errors(w))

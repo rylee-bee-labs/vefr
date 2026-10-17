@@ -152,9 +152,18 @@
     // into an enemy is the attack (vefr #464). A warden that cannot be
     // struck returns above, because there was no fight to teach.
     hintStrikeOnce();
-    var dmg = heroAtk()
-      + ((typeof bonus === 'number' && isFinite(bonus) && bonus > 0)
-         ? Math.round(bonus) : 0);
+    // Through the one resolver (vefr#497), on the hero's side as well as
+    // the hazard's - a resolver on one side only is how fire turns aside
+    // and poison does not. The hero's own blow is untyped for now: a
+    // hazard's `dmg_type` is what it DEALS, not what it takes, and the
+    // pack contract has no key for the second yet. A hazard that
+    // declares no resistance answers with its own number, so this is the
+    // blow that always landed.
+    // An item-granted verb's bonus (Mending Shift E1) is added before the resolver, so a resistance
+    // answers the whole blow.
+    var dmg = resolveDamage(heroAtk()
+      + ((typeof bonus === 'number' && isFinite(bonus) && bonus > 0) ? Math.round(bonus) : 0),
+      '', e.resist, e.immune).damage;
     e.hp = Math.max(0, e.hp - dmg);
     playOneShot('hero', 'attack');
     playOneShot('enemy:' + e.id, 'hurt');
@@ -210,17 +219,49 @@
     return true;
   }
   // One enemy's attack: the hero loses its `atk`, clamped at zero.
+  //
+  // The number that is subtracted comes from the one resolver, so the
+  // hero's own resistances are read here and nowhere else. An untyped
+  // blow is the identity and the sentence is the bytes this always
+  // read; a typed one says what the type did in words - never by colour,
+  // never by the health bar alone (vefr#497).
   function enemyAttack(e) {
-    HERO_HP = Math.max(0, HERO_HP - e.atk);
+    var struck = heroTakes(e.atk, e.dmgType);
+    HERO_HP = Math.max(0, HERO_HP - struck.damage);
     playOneShot('enemy:' + e.id, 'attack');
     playOneShot('hero', 'hurt');
     saveHeroHp();
     renderHp();
-    combatSay(e.name + ' hits you for ' + e.atk + '.');
+    var line;
+    if (struck.how === 'immune') {
+      line = e.name + ' hits you with ' + struck.type + ', and it cannot touch you.';
+    } else if (struck.how === 'resisted' && struck.damage <= 0) {
+      // A blow the resistance divides away entirely never says "for 0":
+      // it says the one true thing, which is that it did not land.
+      line = e.name + ' hits you with ' + struck.type
+           + ', and your resistance turns it aside.';
+    } else if (struck.how === 'resisted') {
+      line = e.name + ' hits you with ' + struck.type + ' for ' + struck.damage
+           + '; your resistance turns the rest aside.';
+    } else if (struck.type) {
+      line = e.name + ' hits you with ' + struck.type + ' for ' + struck.damage + '.';
+    } else {
+      line = e.name + ' hits you for ' + struck.damage + '.';
+    }
+    combatSay(line);
     // A hit that reaches the hero is one practice count.
     sayGrowth(practiceSuffix(growBump('hits-taken')));
     soundCue('hurt');
     if (HERO_HP <= 0) { cozyDeath(e); return true; }
+    // What the blow left behind, if anything: the hero is burning, and
+    // the HUD line and this same live region are how that is said. A
+    // blow that felled the hero leaves nothing to be burning - the
+    // wake above has already cleared it.
+    var lit = e.burns ? applyBurning(e.burns) : null;
+    if (lit && lit.fresh) {
+      combatSay(combatText() + ' ' + e.name + ' sets you alight: burning '
+               + lit.status.turns + (lit.status.turns === 1 ? ' turn' : ' turns') + '.');
+    }
     return false;
   }
   // The turn's flood is cut off here however far the pack's sights
@@ -483,6 +524,9 @@
     HERO_HP = heroMax();
     saveHeroHp();
     renderHp();
+    // Waking whole wakes unburnt: nothing is left of what did it
+    // (vefr#497), the way the wake point is the same wherever it is.
+    resetStatuses();
     var woke = regionName;
     if (back) {
       enterRegion(back.region, back.at);
@@ -560,6 +604,13 @@
           return out;
         })
     };
+    // The hero's status effects (part 425, vefr#497), only when there is one, so a pack with
+    // no statuses reads the snapshot it always read. In memory only, like the store itself.
+    if (typeof heroStatuses !== 'undefined' && heroStatuses.length) {
+      window.VEFR_COMBAT.statuses = heroStatuses.map(function (st) {
+        return { effect: st.effect, type: st.type, turns: st.turns, tick: st.tick };
+      });
+    }
     return window.VEFR_COMBAT;
   }
   // The bag and gold code lives outside this closure; give it a way to

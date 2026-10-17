@@ -432,27 +432,106 @@
         }
       }
     }
-    drawTargetRing();
+    drawTargetCue();
     ctx.restore();
     if (animWant) scheduleAnim();
   }
 
-  // A thin ring on the tile Interact would act on, so the picture and
-  // the hint words agree. Draw only: it reads the pick, changes no
-  // game state, and never calls draw(). The HUD gold reads on both
-  // light and dark ground; an outline only, never a fill.
-  function drawTargetRing() {
+  // ---- the cue on the smart action's target (vefr#486) --------------
+  //
+  // F, and the touch layer's smart button, act on ONE tile; before the
+  // press, the player is told what that is with words alone. The cue
+  // puts the same answer on the map itself, in two parts that are not
+  // each other's backup:
+  //
+  //   the glow   - a soft halo over the tile and a little past its
+  //               edge. It is what the eye notices first, and it is
+  //               the part that is colour;
+  //   the marks  - four corner brackets around the tile. A SHAPE: the
+  //               cue still reads with the glow turned off, in a
+  //               greyscale screenshot, to a player who cannot tell
+  //               the gold from the ground. Nothing here relies on
+  //               colour alone.
+  //
+  // The glow breathes only while motion is allowed; reduced motion -
+  // the OS setting or Display > Reduced motion, the same question
+  // reducedMotion() already answers for the step - draws it once, at
+  // the middle of its range, and the brackets are identical either
+  // way, so the cue is never motion-only information.
+  //
+  // Draw only: it reads the pick, changes no game state and never
+  // calls draw(). It asks for the one shared ticker (455-the-props.js:
+  // at most twelve times a second, only while the page is shown, and
+  // never started without animation) for the breath, and nothing else.
+  var TARGET_GLOW_MS = 2400;   // one breath, out and back
+  var TARGET_GLOW_MIN = 0.08;  // the glow's own alpha, at its dimmest
+  var TARGET_GLOW_MAX = 0.30;  // and at its brightest
+  // The glow's alpha at a moment, as a pure function of a clock, so a
+  // harness can ask what it should be without a canvas. Reduced
+  // motion has no breath to read: it takes the middle and keeps it.
+  window.VEFR_TARGET_GLOW = function (at) {
+    var mid = (TARGET_GLOW_MIN + TARGET_GLOW_MAX) / 2;
+    if (reducedMotion()) return mid;
+    var t = typeof at === 'number' && isFinite(at) ? at : nowMs();
+    var wave = (Math.cos(t / TARGET_GLOW_MS * Math.PI * 2) + 1) / 2;   // 0..1..0
+    return TARGET_GLOW_MIN + (TARGET_GLOW_MAX - TARGET_GLOW_MIN) * wave;
+  };
+  function targetGlowColour(alpha) {
+    return 'rgba(216, 170, 78, ' + alpha.toFixed(3) + ')';
+  }
+  function drawTargetCue() {
     var t = pickTarget(interactState());
     if (!t) return;
+    if (!reducedMotion()) animWant = true;   // the shared ticker's breath
+    var cx = t.at[0] * T + T / 2, cy = t.at[1] * T + T / 2;
+    var reach = T * 1.05;      // how far the halo reaches past the centre
+    var alpha = window.VEFR_TARGET_GLOW();
     ctx.save();
+    // The glow. A context without gradients - the minimal stub a node
+    // harness runs the player against - gets the flat disc at the
+    // glow's centre value, so the cue still reads there.
+    var grad = typeof ctx.createRadialGradient === 'function'
+      ? ctx.createRadialGradient(cx, cy, T * 0.2, cx, cy, reach) : null;
+    if (grad && typeof grad.addColorStop === 'function') {
+      grad.addColorStop(0, targetGlowColour(alpha));
+      grad.addColorStop(1, targetGlowColour(0));
+      ctx.fillStyle = grad;
+      ctx.fillRect(cx - reach, cy - reach, reach * 2, reach * 2);
+    } else {
+      ctx.fillStyle = targetGlowColour(alpha);
+      ctx.beginPath();
+      ctx.arc(cx, cy, T * 0.62, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // The brackets: the tile's four corners, marked from just inside
+    // each corner along its two edges, so they frame the tile instead of
+    // covering what they point at. The HUD gold reads on both light and
+    // dark ground; the marks are strokes only, never a fill, so the thing
+    // being marked stays readable underneath.
     ctx.strokeStyle = '#D8AA4E';
     ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(t.at[0] * T + T / 2, t.at[1] * T + T / 2, T * 0.42,
-            0, Math.PI * 2);
-    ctx.stroke();
+    var inset = T * 0.4, arm = T * 0.18;
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (s) {
+      var mx = cx + s[0] * inset, my = cy + s[1] * inset;
+      ctx.beginPath();
+      ctx.moveTo(mx - s[0] * arm, my);
+      ctx.lineTo(mx, my);
+      ctx.lineTo(mx, my - s[1] * arm);
+      ctx.stroke();
+    });
     ctx.restore();
   }
+  // What the cue is showing right now, read-only (precedent:
+  // window.VEFR_MOTION), so a test can see the tile, the glow's alpha
+  // and whether it is breathing without reading pixels. Null when
+  // nothing is in reach, exactly as nothing is drawn.
+  window.VEFR_TARGET_CUE = function () {
+    var t = pickTarget(interactState());
+    if (!t) return null;
+    return { at: [t.at[0], t.at[1]], label: t.label, kind: t.kind,
+             glow: window.VEFR_TARGET_GLOW(), breathing: !reducedMotion(),
+             marks: 4 };
+  };
 
   // A door on the current region's tile (nx,ny), if any.
   function transitionAt(nx, ny) {
@@ -623,6 +702,7 @@
     fogOn = fogEnabled();
     fogRadius = (town.fog && town.fog.radius) || 6;
     resetLight();
+    resetStatuses();   // a burn does not travel either (vefr#497)
     loadTiles();
     loadFog();
     seeNow();
@@ -1182,7 +1262,11 @@
           // struck), which changes nothing and therefore costs nothing.
           if (takeVerb(verbs[0][0], verbs[0][1], foe)) {
             lightTick();
+            // The monsters have their turn first, then the states their blows
+            // left tick - the established order, and the one place the hero's own
+            // damage resolves (vefr#497, review #528).
             enemyTurn();
+            statusTurn();
           }
         } else {
           openEnemyVerbs(foe);
@@ -1310,7 +1394,11 @@
       closeEnemyVerbs();   // a bump closes any open enemy menu
       if (struck !== false) {
         lightTick();
+        // The monsters have their turn first, then the states their blows
+        // left tick - the established order, and the one place the hero's own
+        // damage resolves (vefr#497, review #528).
         enemyTurn();
+        statusTurn();
       }
       heroSettleSoon();
       return;
@@ -1350,7 +1438,11 @@
     seeNow();
     updateUse();
     lightTick();
+    // The monsters have their turn first, then the states their blows
+    // left tick - the established order, and the one place the hero's own
+    // damage resolves (vefr#497, review #528).
     enemyTurn();
+    statusTurn();
     updateVerbRow();   // the monsters moved: the fight buttons follow
   }
 

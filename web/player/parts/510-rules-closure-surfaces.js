@@ -112,7 +112,11 @@
     if (VERB_TARGET) {
       if (takeVerb(b.dataset.verb, b.dataset.label, VERB_TARGET) !== false) {
         lightTick();
+        // The monsters have their turn first, then the states their blows
+        // left tick - the established order, and the one place the hero's own
+        // damage resolves (vefr#497, review #528).
         enemyTurn();
+        statusTurn();
       }
       closeEnemyVerbs();
       updateUse();

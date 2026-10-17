@@ -443,12 +443,48 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # processes, readings equal:
 #   7f2070891f9abd9ca51017e4ebacfc356a92f540251abf6804d9839a9ce4fd53
 #   7f2070891f9abd9ca51017e4ebacfc356a92f540251abf6804d9839a9ce4fd53
+#   6234996f734f57e47389b63ea6c181b3b54a8e6a0ee36ab761c4397f1bac7886
+# The target cue on the smart action's tile (vefr#486: the glow and the corner marks in
+# 480-town-input-and-turns.js), 2026-10-16; measured twice on the host in separate processes
+# readings equal (before Journal C merged):
+#   545f51327267a4b63fb3412687e4a86a97515b218d0d5e67eec8b23837558e50
+#   545f51327267a4b63fb3412687e4a86a97515b218d0d5e67eec8b23837558e50
+# The target cue merged onto main with Journal C (vefr#486 + #484), 2026-10-16; measured twice on the host in separate
+# processes, readings equal:
+#   38867f8932cf51e9131803df44deddb34fd69d1bb6dcc03f4830a6801b0ce518
+#   38867f8932cf51e9131803df44deddb34fd69d1bb6dcc03f4830a6801b0ce518
+# Damage types, resistances and burning (vefr#497, slice 1) on top of the ending tile (#520): the new part
+# 425-the-elements.js, plus 410/430/480/510, 030-shell.html and 020-style.css. The sample declares no
+# resist, no immune and no typed hazard, so its BAKE is byte-for-byte what it was - measured at
+# 6234996f... after the engine half alone - and only the player's own source moved; 2026-10-16; measured
+# twice in separate processes, readings equal:
+#   78635fd8140a1f9823fb0f07b5438f3ae8a15bc576340cc86afe37ca079fd339
+#   78635fd8140a1f9823fb0f07b5438f3ae8a15bc576340cc86afe37ca079fd339
+# The two review findings of vefr#528 on the slice above: #hud-state is no
+# longer hidden on the quiet surfaces (020-style.css) and the burn ticks after
+# the monsters' turn, keeping the turn's whole line (425-the-elements.js,
+# 480-town-input-and-turns.js, 510-rules-closure-surfaces.js). Player source
+# only; the sample still declares no resist, no immune and no typed hazard, so
+# its BAKE is byte-for-byte what it was; 2026-10-16; measured twice in separate
+# processes, readings equal:
+#   3af87a53314eea60f7d01588b202330af97d691cbde93139558ace24ddb83181
+#   3af87a53314eea60f7d01588b202330af97d691cbde93139558ace24ddb83181
+# Damage types and burning merged onto main with Journal C (vefr#497 + #484), 2026-10-16; measured twice on the host
+# in separate processes, readings equal:
+#   78920d6d4a0574d85ad8e300a977dfe804a582daab1aa3b3dd5ff584c7a2fbe1
+#   78920d6d4a0574d85ad8e300a977dfe804a582daab1aa3b3dd5ff584c7a2fbe1
+# Damage types and burning (vefr#497) merged onto main, 2026-10-16; measured twice on the host in separate processes, readings equal:
+#   892ac967e19b32ca948bee7d50180b5a80d596a25759b79194daa6e3463f9e80
+#   892ac967e19b32ca948bee7d50180b5a80d596a25759b79194daa6e3463f9e80
 # The item-grants slice (E1): the verb row moved out of 510 into 220-growth.js beside
 # surfaceVerbs(), and 445, 430 and 480 grew the `uses-verb` event and the blow a carried
 # thing adds to, 2026-10-16; measured twice in separate processes, readings equal:
 #   b687c8bcce99cc3ef3299fc414ded6c81ef6a48b2683aad379a821ca943d93e4
 #   b687c8bcce99cc3ef3299fc414ded6c81ef6a48b2683aad379a821ca943d93e4
-NO_SKIN_WEAVE_SHA256 = "b687c8bcce99cc3ef3299fc414ded6c81ef6a48b2683aad379a821ca943d93e4"
+# Item-granted verbs merged onto main (Mending Shift E1), 2026-10-16; measured twice on the host in separate processes, readings equal:
+#   eb014ad9e78442a1c21b767622554e2a183eb0c8fba6ab6ee97e3c94f85bd206
+#   eb014ad9e78442a1c21b767622554e2a183eb0c8fba6ab6ee97e3c94f85bd206
+NO_SKIN_WEAVE_SHA256 = "eb014ad9e78442a1c21b767622554e2a183eb0c8fba6ab6ee97e3c94f85bd206"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

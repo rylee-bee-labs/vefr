@@ -17,14 +17,14 @@ import json
 import os
 from pathlib import Path
 
-from . import maplab
+from . import elements, maplab
 from .library import load_library
 from .maplab import load_pack
 from .paths import app_home
 
 VALID_STATUSES = ("built", "partial", "proposed")
 VALID_DETECTS = ("rules", "growth", "library", "items", "enemies", "fog",
-                 "skin", "blueprint", "slots", "always", "none")
+                 "skin", "blueprint", "slots", "elements", "always", "none")
 
 
 def _root(root=None) -> Path:
@@ -257,6 +257,24 @@ def _one_use(feat: dict, pack: Path, w: dict, config: dict,
                        if isinstance(spec, dict)
                        and spec.get("slot") in maplab.SLOTS)
         used, detail = worn > 0, f"{worn} wearable"
+    elif detect == "elements":
+        # Typed damage, read from the same two places the bake reads it:
+        # the hero's own resistances (`player.resist`/`player.immune`)
+        # and the hazards that deal a damage type or leave a burn. A pack
+        # that names none of them has opted out, which is a "no" and not
+        # an unknown.
+        player = w.get("_player") or w.get("player")
+        player = player if isinstance(player, dict) else {}
+        resists = len(elements.resist_of(player)) or len(elements.immune_of(player))
+        typed = sum(1 for contract in contracts
+                    for e in (contract.get("enemies") or [])
+                    if isinstance(e, dict) and (e.get("dmg_type") or e.get("burns")))
+        said = []
+        if resists:
+            said.append("resistances")
+        if typed:
+            said.append(f"{typed} typed hazards")
+        used, detail = bool(said), ", ".join(said) or "untyped damage"
     elif detect == "skin":
         skin = config.get("skin")
         if skin is None:

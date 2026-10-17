@@ -166,6 +166,9 @@ try {
     nextRows: nextRows,
     allOk: steps.every((s) => s.ok),
   }));
+  // Exit on purpose: with pretendToBeVisual, requestAnimationFrame is live, and an animation the page legitimately
+  // keeps running (the target cue's breathing glow, a prop's frames) would otherwise keep node alive forever.
+  process.exit(0);
 } catch (err) {
   console.error(String((err && err.stack) || err));
   console.log(JSON.stringify({ steps: steps, flags: flags(), bag: bag(),
