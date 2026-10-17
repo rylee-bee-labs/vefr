@@ -21,7 +21,7 @@ is always the same. The design note behind them is
 }
 ```
 
-## The thirteen events
+## The fourteen events
 
 Each fires from something the player already does. A pack may name
 at most **40 rules** (see `docs/adr/0004-scoped-rules.md` for why).
@@ -41,6 +41,7 @@ at most **40 rules** (see `docs/adr/0004-scoped-rules.md` for why).
 | `{"phase-changes": {"to": "X"}}` | the watch turns to a phase | the Dusk/Dawn buttons (Menu > Display) |
 | `{"falls": {"what": "X", "where": "Y"}}` | the hero's health reached zero; `what` is what did it, `where` the region it happened in | the blow that empties the health bar |
 | `{"wakes": {"where": "X"}}` | the hero wakes after a fall, in region X | the Cozy wake, at the pack's wake point |
+| `{"uses-verb": {"verb": "X"}}` | a verb on the verb row is pressed | pressing it - the act's own verb, or one an item granted |
 
 `falls` and `wakes` are the hero's own two facts, and they are why a
 death is not the same as an arrival. `enters` fires on every door the
@@ -56,6 +57,13 @@ place against the regions the pack declares, and a generated floor is
 redrawn every run, so a `falls`/`wakes` rule sticks to declared regions
 and hears the floor through `say` instead. (Library books are the one
 place a floor may be named; see `docs/guides/rulesets.md`.)
+
+`uses-verb` is the one event that names the pack's own vocabulary rather
+than a thing in it: `X` is a verb of the act's `verbs` list, or one an
+item grants (see below). It fires when the verb is pressed, whatever the
+press found - with a monster named or with nothing there - so a pack that
+wants "the verb happened" writes it here and a pack that wants "the verb
+landed" reads the flag the press set.
 
 `what` is `""` when nothing in the pack did it - a rule naming a
 specific enemy simply does not fire on that death. So a `falls` rule is
@@ -186,6 +194,44 @@ not one extra byte written to storage.
 
 A bare `use` with no `heal` and no `light` is a persistent tool: the
 button appears, `uses-with` fires, nothing is spent.
+
+### Items that grant a verb
+
+An item may hand the hero a verb of its own. While the hero carries it -
+or wears it, when the item names a `slot` - the verb sits in the verb row
+beside the act's, with the words the pack wrote on the button:
+
+```json
+"items": {
+  "caulking-mallet": {
+    "name": "a caulking mallet",
+    "grants": [{"verb": "mend", "label": "Mend the hull"}],
+    "changes": {"mend": {"atk": 2}}
+  }
+}
+```
+
+| Field | Means |
+|---|---|
+| `grants` | a list of `{"verb": "<id>", "label": "<button words>"}`, in the order the row shows them |
+| `changes` | what carrying the thing does to a verb it names, keyed by that verb's id |
+
+- `verb` is one plain word, and it is the word the pack's `uses-verb`
+  rules name. Two grants with the same verb are refused: the row would
+  show two buttons and only one could be pressed.
+- The verbs come and go with the thing. Spend it, sell it, hand it over -
+  or just walk away from it - and the buttons leave the row; put it on and
+  they stay. Two copies of one thing grant one button.
+- `changes` is optional, and `atk` (0 to 9, the same bounds as a worn
+  item's `mods`) is the only effect today: the extra damage that verb's
+  blow carries while the thing is carried. A verb with a change lands a
+  blow; a verb without one is still words. A `changes` key that names a
+  verb the pack has not got is refused.
+- Everything about this is opt-in. A pack with no `grants` anywhere plays
+  and saves exactly as it did, and its verb row is the row it always had.
+
+Pressing a granted verb fires `{"uses-verb": {"verb": "<id>"}}`, so what
+the verb does is authored the way every other fact in the world is.
 
 ## Why did that happen?
 

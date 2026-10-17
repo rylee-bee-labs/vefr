@@ -5,7 +5,7 @@ The event vocabulary was typed three times and had already drifted (vefr #269): 
 table in the woven player. S2 gives the Python side one table, `shapes.EVENTS`, and both
 validators read it. This file pins:
 
-  - the table itself: thirteen events, in order, each with exactly its payload fields, each
+  - the table itself: fourteen events, in order, each with exactly its payload fields, each
     field's kind, ref kind and bounds;
   - that `maplab` holds no second list: `RULE_EVENTS` and `RULE_EVENT_KEYS` are derived, and
     no event name is typed anywhere else in `maplab.py`;
@@ -24,11 +24,13 @@ from pathlib import Path
 
 from vefr import maplab, shapes
 
-# The thirteen events, in the order the pack contract and the player speak them.
-# The last two are the hero's own two facts (vefr #365): nothing in the eleven
-# before them said the hero died.
+# The fourteen events, in the order the pack contract and the player speak them.
+# `falls` and `wakes` are the hero's own two facts (vefr #365): nothing in the eleven
+# before them said the hero died. `uses-verb` came with the item-grants slice: a verb
+# an item hands the hero is a thing the player does, so a pack can write what it does.
 THIRTEEN = ('starts', 'enters', 'comes-near', 'opens', 'picks-up', 'uses-with',
-            'defeats', 'buys', 'sells', 'reads', 'phase-changes', 'falls', 'wakes')
+            'defeats', 'buys', 'sells', 'reads', 'phase-changes', 'falls', 'wakes',
+            'uses-verb')
 
 # event -> ((field, kind, ref, lo, hi), ...), in payload order. `ref` is the pack id a field
 # names; a field with no ref is a number the table bounds itself.
@@ -49,6 +51,7 @@ EXPECTED = {
     'falls': (('what', 'ref', 'enemy', None, None),
               ('where', 'ref', 'place', None, None)),
     'wakes': (('where', 'ref', 'place', None, None),),
+    'uses-verb': (('verb', 'ref', 'verb', None, None),),
 }
 
 KNOWN = {
@@ -63,6 +66,7 @@ KNOWN = {
     'things': {'torch', 'chalked-map', 'keeper', 'town', 'hearth', 'almanac', 'rat'},
     'flags': {'lit'},
     'claims': {'keeper-watches'},
+    'verbs': {'console'},
 }
 
 GOOD = {
@@ -79,6 +83,7 @@ GOOD = {
     'phase-changes': {'to': 'dawn'},
     'falls': {'what': 'rat', 'where': 'town'},
     'wakes': {'where': 'town'},
+    'uses-verb': {'verb': 'console'},
 }
 
 
@@ -88,7 +93,7 @@ def _fields(event):
 
 # --- the table -----------------------------------------------------------
 
-def test_the_table_holds_the_thirteen_events_in_order():
+def test_the_table_holds_the_fourteen_events_in_order():
     assert tuple(shapes.EVENTS) == THIRTEEN
 
 
