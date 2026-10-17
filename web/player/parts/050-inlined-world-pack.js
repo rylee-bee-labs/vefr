@@ -69,6 +69,13 @@ window.VEFR_RULES = {{rules_json}};
 window.VEFR_FLAGS = {{flags_json}};
 window.VEFR_CLAIMS = {{claims_json}};
 window.VEFR_PEOPLE = {{people_json}};
+// The pack's optional stakes (vefr#504): the risk/reward offers THIS
+// pack puts to the player, one
+// `{"id", "when": <a rule's when>, "risk", "reward", "say"}` each, and
+// asked for by the same events a rule hears. The literal null for a
+// pack that declares none - which is every pack that never opted in -
+// so nothing is offered anywhere by default.
+window.VEFR_STAKES = {{stakes_json}};
 // The pack's optional sticker album (design/album.md), baked beside
 // the rule data. The literal null when the pack declares no album, so
 // every existing pack weaves exactly as it did.
