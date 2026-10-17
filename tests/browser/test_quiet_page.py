@@ -166,7 +166,7 @@ def test_every_line_lands_on_the_page_newest_first_and_older_lines_stay_readable
         page.wait_for_timeout(150)
         open_journal(page)
         lines = page.evaluate(LINES)
-        assert [l["words"] for l in lines] == [
+        assert [ln["words"] for ln in lines] == [
             "a cellar rat hits you for 1.", "You hit a cellar rat for 2.", MERCHANT_LINE], lines
         assert lines[0]["newest"] and not lines[1]["newest"] and not lines[2]["newest"], lines
         assert lines[2]["who"] == MERCHANT_WHO, "the spoken line lost its name"
@@ -205,7 +205,7 @@ def test_a_whisper_and_a_fall_are_plain_lines_on_one_page(browser, woven):
         assert not lines[0]["who"], "the fall's line grew a name it was not said with"
         # The whisper and the fall sit on the one page as plain lines,
         # interleaved with the fight's own lines - not grouped apart.
-        assert any(l["who"].startswith("You overhear ") for l in lines), \
+        assert any(ln["who"].startswith("You overhear ") for ln in lines), \
             f"the whisper never landed on the page: {lines}"
         assert len(lines) > 3, f"the fight's lines were not kept: {lines}"
         # No tabs, no chips, no grouping: one list, nothing else on the page.
