@@ -146,6 +146,11 @@
      the world grows heroes, so a world with no growth keeps its HUD. */
   .hud-level { padding: 6px 10px; font-size: 0.82rem; white-space: nowrap; }
   .hud-level[hidden] { display: none; }
+  /* what the hero is in the middle of being: the same line the level and
+     the torch take, with the same words-only rule. It keeps its place on
+     a phone where the level line does not (vefr#497). */
+  .hud-state { padding: 6px 10px; font-size: 0.82rem; white-space: nowrap; }
+  .hud-state[hidden] { display: none; }
   /* the bag at the top of the screen: one small sprite per thing carried */
   .hud-bag { display: flex; align-items: center; gap: 4px; padding: 4px 6px; max-width: 40vw; flex-wrap: wrap; }
   /* the small mark a skin sets beside a HUD line (docs/plans/interface/PLAN.md,
@@ -179,6 +184,12 @@
   .equip-row-name { flex: 1 1 auto; }
   .equip-row button { min-height: 44px; }
   .equip-empty-svg { width: 32px; height: 32px; stroke: var(--ink-dim); fill: none; stroke-width: 1.5; }
+  /* The quiet surfaces keep the health pill and the level out of the way.
+     #hud-state is deliberately NOT in this list: it is the one HUD line
+     that says something only while it lasts (a burn, vefr#497), and a pack
+     that opted in must be told in words on EVERY surface - hidden here, a
+     burning hero on `plain` or `investigation` was signalled by nothing at
+     all. Empty, the line is `hidden` by the shell and takes no room. */
   body[data-surface="plain"] .hud-hp,
   body[data-surface="investigation"] .hud-hp,
   body[data-surface="plain"] .hud-level,
@@ -538,6 +549,8 @@
   @media (pointer: coarse) {
     body.in-game #hud-level, body.in-game #hud-gold, body.in-game #bag-strip,
     body.in-game .hud--tl .hud-mark { display: none !important; }
+    /* #hud-state is deliberately NOT in that list: a hero who is burning
+       is told so in words on a phone too, without opening the Bag. */
     body.in-game .hud--tl { gap: 6px; flex-wrap: nowrap; align-items: center; }
     body.in-game .hud-hp { padding: 0 10px; min-height: 30px; border-radius: 999px; gap: 6px; }
     body.in-game .hud-hp-bar { width: 44px; height: 6px; }

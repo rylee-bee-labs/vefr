@@ -453,6 +453,29 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # processes, readings equal:
 #   38867f8932cf51e9131803df44deddb34fd69d1bb6dcc03f4830a6801b0ce518
 #   38867f8932cf51e9131803df44deddb34fd69d1bb6dcc03f4830a6801b0ce518
+# Damage types, resistances and burning (vefr#497, slice 1) on top of the ending tile (#520): the new part
+# 425-the-elements.js, plus 410/430/480/510, 030-shell.html and 020-style.css. The sample declares no
+# resist, no immune and no typed hazard, so its BAKE is byte-for-byte what it was - measured at
+# 6234996f... after the engine half alone - and only the player's own source moved; 2026-10-16; measured
+# twice in separate processes, readings equal:
+#   78635fd8140a1f9823fb0f07b5438f3ae8a15bc576340cc86afe37ca079fd339
+#   78635fd8140a1f9823fb0f07b5438f3ae8a15bc576340cc86afe37ca079fd339
+# The two review findings of vefr#528 on the slice above: #hud-state is no
+# longer hidden on the quiet surfaces (020-style.css) and the burn ticks after
+# the monsters' turn, keeping the turn's whole line (425-the-elements.js,
+# 480-town-input-and-turns.js, 510-rules-closure-surfaces.js). Player source
+# only; the sample still declares no resist, no immune and no typed hazard, so
+# its BAKE is byte-for-byte what it was; 2026-10-16; measured twice in separate
+# processes, readings equal:
+#   3af87a53314eea60f7d01588b202330af97d691cbde93139558ace24ddb83181
+#   3af87a53314eea60f7d01588b202330af97d691cbde93139558ace24ddb83181
+# Damage types and burning merged onto main with Journal C (vefr#497 + #484), 2026-10-16; measured twice on the host
+# in separate processes, readings equal:
+#   78920d6d4a0574d85ad8e300a977dfe804a582daab1aa3b3dd5ff584c7a2fbe1
+#   78920d6d4a0574d85ad8e300a977dfe804a582daab1aa3b3dd5ff584c7a2fbe1
+# Damage types and burning (vefr#497) merged onto main, 2026-10-16; measured twice on the host in separate processes, readings equal:
+#   892ac967e19b32ca948bee7d50180b5a80d596a25759b79194daa6e3463f9e80
+#   892ac967e19b32ca948bee7d50180b5a80d596a25759b79194daa6e3463f9e80
 # Time that costs something (vefr E3): the new part 255-time-rest.js,
 # plus 076, 090, 250, 320, 445, 480 and 510, 2026-10-16; measured twice
 # on the host in separate processes, readings equal:
@@ -461,7 +484,10 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # Time that costs something (Mending Shift E3) merged onto main, 2026-10-16; measured twice on the host in separate processes, readings equal:
 #   178ba3596538f01cc0edb148ca7d6c126a285839d38afca388444efc856c45fd
 #   178ba3596538f01cc0edb148ca7d6c126a285839d38afca388444efc856c45fd
-NO_SKIN_WEAVE_SHA256 = "178ba3596538f01cc0edb148ca7d6c126a285839d38afca388444efc856c45fd"
+# Time that costs something (Mending Shift E3) merged onto main, 2026-10-16; measured twice on the host in separate processes, readings equal:
+#   273ad0e292028b03f15932962e18ed888ab3165e7dfba5ec3ea224aae51bd023
+#   273ad0e292028b03f15932962e18ed888ab3165e7dfba5ec3ea224aae51bd023
+NO_SKIN_WEAVE_SHA256 = "273ad0e292028b03f15932962e18ed888ab3165e7dfba5ec3ea224aae51bd023"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():
