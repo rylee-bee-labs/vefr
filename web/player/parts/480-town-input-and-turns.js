@@ -1108,11 +1108,12 @@
   // written down. Both call sites go through here, so a verb can never
   // be journalled without saying what it did.
   function takeVerb(verb, label, foe) {
-    // A verb the hero carries is a fact of the world too: it fires
-    // `uses-verb` with the verb's own id, so a pack writes what pressing
-    // it does the way it writes everything else it notices. A verb the
-    // act already had, with nothing carrying it, is silent as before.
-    if (isGrantedVerb(verb)) fireRule('uses-verb', { verb: verb });
+    // Every verb pressed is a fact of the world: it fires `uses-verb` with
+    // the verb's own id, the act's own verbs as well as the ones an item
+    // grants, because the validator lets a rule name either (maplab.pack_verbs)
+    // and a rule it accepts must be able to fire (#531 review). A pack with no
+    // `uses-verb` rule notices nothing, so its play is unchanged.
+    fireRule('uses-verb', { verb: verb });
     if (!foe) {
       // Pressed with nothing named to act on: nothing happens, and the
       // line says so in a sentence rather than naming the verb.

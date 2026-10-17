@@ -274,7 +274,7 @@ def test_a_pack_that_grants_nothing_shows_the_row_it_always_did(
 def test_the_pack_with_no_grants_still_plays_its_own_rules(browser, woven_none):
     """Nothing about a pack that declines the feature changed: the bag holds
     what it is given, the rules still fire on what the player does, and a
-    verb press with nothing granting it is still silent."""
+    plain verb press fires no rule the pack did not write."""
     ctx, page = _open(browser, woven_none)
     try:
         assert "mallet-1" in page.evaluate(CARRIED)["bag"]
@@ -283,5 +283,24 @@ def test_the_pack_with_no_grants_still_plays_its_own_rules(browser, woven_none):
         assert flags.get("mended") is not True  # nothing granted `mend`
         _press(page, "console")
         assert page.evaluate(WHY) == ["the-tool-bag"]
+    finally:
+        ctx.close()
+
+def test_a_rule_on_the_acts_own_verb_fires_too(browser, tmp_path_factory):
+    """#531 review: the validator accepts a `uses-verb` rule on a verb the act already had
+    (maplab.pack_verbs), so pressing that verb must fire it, granted or not."""
+    import json as _json
+    home = tmp_path_factory.mktemp("plain-verb")
+    out = subprocess.run([sys.executable, str(MAKE), str(home), "none"],
+                         capture_output=True, text=True, check=True).stdout
+    pack = Path(out.strip().splitlines()[-1])
+    w = _json.loads((pack / "world.json").read_text())
+    w.setdefault("rules", []).append({"id": "plain-console", "when": {"uses-verb": {"verb": "console"}},
+                                     "once": True, "then": [{"set": "consoled"}]})
+    (pack / "world.json").write_text(_json.dumps(w))
+    ctx, page = _open(browser, _weave(pack, home / "plain.html"))
+    try:
+        _press(page, "console")
+        assert page.evaluate(FLAGS).get("consoled") is True, "a rule on the act's own verb never fired"
     finally:
         ctx.close()
