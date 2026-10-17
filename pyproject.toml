@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "vefr"
-version = "2.1.0"
+version = "2.2.0"
 description = "vefr - a rumor engine for playable worlds. Weaves whichever story you give it. Take the bones, grow your own flesh."
 license = "MPL-2.0"
 license-files = ["LICENSE"]
