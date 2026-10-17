@@ -507,7 +507,12 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # Stakes (vefr#504) merged onto main, 2026-10-16; measured twice on the host in separate processes, readings equal:
 #   c0a062c0e234af8f49695e26294025d87ebb6f8ccdbfb84bf91d068f70e5afd2
 #   c0a062c0e234af8f49695e26294025d87ebb6f8ccdbfb84bf91d068f70e5afd2
-NO_SKIN_WEAVE_SHA256 = "c0a062c0e234af8f49695e26294025d87ebb6f8ccdbfb84bf91d068f70e5afd2"
+# The stake offer on a phone (vefr#504): the two answer buttons under the
+# offer line, added to 030-shell.html, 020-style.css and 320-pack-rules.js,
+# 2026-10-16; measured twice in separate processes, readings equal:
+#   05b45341ef14df3c90f94e98e288caff867ebbebb23ccc018228b05b5cb5a6f3
+#   05b45341ef14df3c90f94e98e288caff867ebbebb23ccc018228b05b5cb5a6f3
+NO_SKIN_WEAVE_SHA256 = "05b45341ef14df3c90f94e98e288caff867ebbebb23ccc018228b05b5cb5a6f3"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():
