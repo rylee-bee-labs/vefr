@@ -29,79 +29,37 @@ import re
 import sys
 from pathlib import Path
 
+import pytest
+
 from vefr import cli, delve, maplab
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tests" / "fixtures"))
 import make_identify_pack as mi  # noqa: E402
 import make_rolled_pack as mk  # noqa: E402
+import weave_digest  # noqa: E402
 
 PARTS = ROOT / "web" / "player" / "parts"
 
 # The packed sample world declares no `identify` on any speaker, so
 # everything woven out of it is what was woven before ADR 0017 slice 2.
-# Both digests below are over the whole set of baked `window.VEFR_*` data
-# lines (every one of them, in file order) for their pack.
+# The claim this file makes is over the whole set of baked `window.VEFR_*`
+# data lines (every one of them, in file order) for its pack - the pack's own
+# content, which is what a slice that adds a reader must not disturb.
 #
-# SAMPLE_DATA_SHA is the one a pristine `main` printed, until 2026-10-16:
-# the sample world declares no descent, so nothing ADR 0017 slice 2 or the
-# Section-tiles work baked into it, and it is the half of this test that
-# says a pack naming no reader is untouched by the slice. It last moved on
-# 2026-10-12, when #416 (way pictures) added `VEFR_WAY_ICONS` and
-# `VEFR_REGION_WAY_ICONS` to every weave: two lines, `{}` for a pack with
-# no way pictures, which the sample world is.
-# It moved again on 2026-10-12 for the props slice's `window.VEFR_PROP_PICS = {};`
-# line (measured twice); with that one line removed both pins are unchanged.
+# Two digests of exactly those lines were pinned here until vefr#529,
+# SAMPLE_DATA_SHA and ROLLED_DATA_SHA. Like the no-skin weave digest they
+# guarded, they were whole-weave measurements that do not compose: every
+# player PR re-measured both, and every merge made the next PR merge main,
+# re-weave twice and re-push before CI could start. The sample world's was the
+# digest a pristine main printed, which is the stronger claim - and it is the
+# one the merge-base check now makes for a branch that claims to be a
+# refactor, against main itself rather than against a remembered reading.
 #
-# ROLLED_DATA_SHA is over the rolled-loot fixture pack - a pack this slice
-# ADDS, so no `main` ever wove it and "what pristine main prints" is not a
-# claim about it. It is a whole-weave digest and does not compose: measured
-# after every union, never derived. It was last moved on 2026-10-10 when
-# #385 (Section tiles reach play) added `section_tiles` to the descent
-# block at src/vefr/cli.py:2627 - a key that lands in `VEFR_DESCENT_DEF`
-# for every pack with a descent, which the sample world has none of. That
-# is merged engine behaviour, not this slice: it is the ONLY byte that
-# moved, and this slice adds no baked block of its own. It moved again on
-# 2026-10-12 for #416's two empty way-picture lines, measured twice.
-# It moved again on 2026-10-12 for the props slice's empty `VEFR_PROP_PICS` line.
-# Both moved again on 2026-10-12 for #422's empty `window.VEFR_TILE_EDGES = {};`
-# line (measured twice); with that one line removed both pins are unchanged.
-# Both moved again on 2026-10-16 for vefr #508 (the player's own keys): the
-# closure-surfaces part bakes a `window.VEFR_KEYBINDS` block into every pack,
-# two lines each that the data-line regex reads here; measured twice in
-# separate processes, readings equal. With that one block removed both pins
-# are unchanged.
-# Both moved again on 2026-10-16 for mending (E2): the new player part's one
-# `window.VEFR_LAST_MEND = null;` line - the published snapshot the bag's
-# mending flow keeps, not a baked block - is a line the data-line regex
-# reads here; measured twice in separate processes, readings equal. With
-# that one line removed both pins are unchanged.
-# Both moved again on 2026-10-16 for vefr E3 (time that costs something):
-# the new part 255-time-rest.js bakes a `window.VEFR_TIME` snapshot into
-# every pack - the standing phase and the pack's three opt-ins, whatever
-# it declared; measured twice in separate processes, readings equal. With
-# that one block removed both pins are unchanged.
-# Both moved again on 2026-10-16 for vefr #502 (the opt-in music bed): every pack now bakes a
-# `window.VEFR_MUSIC_DEF` line (the literal `null` for a pack that names no music); measured twice in
-# separate processes, readings equal. With that one line removed both pins are unchanged.
-# Both moved again for the music bed merged onto main with time (vefr#502 + Mending Shift E3), 2026-10-16; measured twice on the host.
-# Both moved again on 2026-10-16 for vefr#504 (opt-in stakes): one empty
-# line, `window.VEFR_STAKES = null;`, in every weave - the literal null
-# for a pack that declares no stakes, which is the same asking of a player
-# as before the line was there. Measured twice in separate processes,
-# readings equal.
-# Both moved again for Stakes (vefr#504) merged onto main, 2026-10-16; measured twice on the host.
-# Both moved again for Stakes (vefr#504) merged onto main, 2026-10-16; measured twice on the host.
-SAMPLE_DATA_SHA = '1c2bef0ac42f9f377db23054816a0b064bec1e83db8ad9d7cc9384032cba2d1a'
-ROLLED_DATA_SHA = '517fadefee4953a8753346be2141cb76b9ebd5c39d56822fff17b6071a23f1b7'
-
-
-def _data_blocks(html: str) -> str:
-    """Every baked data line the weave carries: the `window.VEFR_*`
-    assignments, in file order, joined. This is the pack's own content;
-    the player around it is the engine's, and this slice changes it."""
-    return '\n'.join(re.findall(r'^window\.VEFR_[A-Z_]+ = .*?;$', html,
-                                re.M | re.S))
+# Every other branch keeps what a pin never could: that each pack's data lines
+# weave deterministically and hash to a well-formed sha256, and that the
+# reader adds no baked block at all. See `tests/weave_digest.py`.
+_data_blocks = weave_digest.data_blocks
 
 
 def _body(part: str, name: str) -> str:
@@ -264,24 +222,48 @@ def test_the_draw_still_never_identifies_a_thing(tmp_path):
 
 # --- the bake --------------------------------------------------------------
 
+def _data_digest(pack):
+    """The pack's own baked content, hashed; woven twice so a digest that
+    is only stable by accident says so here rather than in the hash."""
+    first = _data_blocks(cli.weave_html(pack))
+    second = _data_blocks(cli.weave_html(pack))
+    assert first == second, f"{Path(pack).name}: the baked data is not deterministic"
+    digest = hashlib.sha256(first.encode()).hexdigest()
+    assert weave_digest.is_sha256(digest), f"not a sha256: {digest!r}"
+    return digest
+
+
 def test_a_pack_with_no_reader_bakes_the_same_bytes():
-    """The backward-compatibility hash, for both packs.
+    """The backward-compatibility claim, for both packs.
 
-    Nothing in the baked data changes: a pack that names no reader bakes
-    every `window.VEFR_*` line exactly as it did. The player around those
-    lines DOES change - this slice adds the service to the bag strip, the
-    bag panel and the Interact verb, which is what the slice is - so the
-    claim pinned here is the pack's own content, hash for hash. The sample
-    world's digest is the one a pristine `main` prints and still is; the
-    fixture pack's is measured, because it is a pack this slice adds and a
-    whole-weave digest does not compose across a union.
+    A pack that names no reader bakes the same `window.VEFR_*` data lines
+    every time. The player around those lines changes whenever the player
+    does, which is the engine's business and not this pack's content; the
+    byte-for-byte half of the claim is measured at the merge base, for a
+    branch that claims to be a refactor, in its own test below (vefr#529).
     """
-    sample = cli.weave_html(ROOT / "worlds" / "sample-world")
-    assert hashlib.sha256(_data_blocks(sample).encode()).hexdigest() == SAMPLE_DATA_SHA
+    _data_digest(ROOT / "worlds" / "sample-world")
+    _data_digest(mi.build(Path(_scratch('bake')), reader=False))
 
-    pack = mi.build(Path(_scratch('bake')), reader=False)
-    rolled = cli.weave_html(pack)
-    assert hashlib.sha256(_data_blocks(rolled).encode()).hexdigest() == ROLLED_DATA_SHA
+
+def test_a_refactor_bakes_the_same_data_lines():
+    """The two digests this file used to pin, checked against the merge
+    base instead of against a remembered reading.
+
+    Runs only for a branch that claims to be behaviour-neutral (the
+    `refactor` label, which CI passes as VEFR_REFACTOR=1) and only where
+    there is an `origin/main` to measure against; it skips with that reason
+    rather than passing quietly.
+    """
+    digests = {
+        "sample_data": _data_digest(ROOT / "worlds" / "sample-world"),
+        "rolled_data": _data_digest(mi.build(Path(_scratch('guard')), reader=False)),
+    }
+    for name, digest in digests.items():
+        try:
+            weave_digest.assert_unchanged_from_merge_base(name, digest)
+        except weave_digest.NotMeasurable as why:
+            pytest.skip(str(why))
 
 
 def test_the_reader_needs_no_new_baked_block(tmp_path):
