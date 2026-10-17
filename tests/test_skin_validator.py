@@ -444,6 +444,15 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 #   7f2070891f9abd9ca51017e4ebacfc356a92f540251abf6804d9839a9ce4fd53
 #   7f2070891f9abd9ca51017e4ebacfc356a92f540251abf6804d9839a9ce4fd53
 #   6234996f734f57e47389b63ea6c181b3b54a8e6a0ee36ab761c4397f1bac7886
+# The target cue on the smart action's tile (vefr#486: the glow and the corner marks in
+# 480-town-input-and-turns.js), 2026-10-16; measured twice on the host in separate processes
+# readings equal (before Journal C merged):
+#   545f51327267a4b63fb3412687e4a86a97515b218d0d5e67eec8b23837558e50
+#   545f51327267a4b63fb3412687e4a86a97515b218d0d5e67eec8b23837558e50
+# The target cue merged onto main with Journal C (vefr#486 + #484), 2026-10-16; measured twice on the host in separate
+# processes, readings equal:
+#   38867f8932cf51e9131803df44deddb34fd69d1bb6dcc03f4830a6801b0ce518
+#   38867f8932cf51e9131803df44deddb34fd69d1bb6dcc03f4830a6801b0ce518
 # Damage types, resistances and burning (vefr#497, slice 1) on top of the ending tile (#520): the new part
 # 425-the-elements.js, plus 410/430/480/510, 030-shell.html and 020-style.css. The sample declares no
 # resist, no immune and no typed hazard, so its BAKE is byte-for-byte what it was - measured at
@@ -464,7 +473,10 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # in separate processes, readings equal:
 #   78920d6d4a0574d85ad8e300a977dfe804a582daab1aa3b3dd5ff584c7a2fbe1
 #   78920d6d4a0574d85ad8e300a977dfe804a582daab1aa3b3dd5ff584c7a2fbe1
-NO_SKIN_WEAVE_SHA256 = "78920d6d4a0574d85ad8e300a977dfe804a582daab1aa3b3dd5ff584c7a2fbe1"
+# Damage types and burning (vefr#497) merged onto main, 2026-10-16; measured twice on the host in separate processes, readings equal:
+#   892ac967e19b32ca948bee7d50180b5a80d596a25759b79194daa6e3463f9e80
+#   892ac967e19b32ca948bee7d50180b5a80d596a25759b79194daa6e3463f9e80
+NO_SKIN_WEAVE_SHA256 = "892ac967e19b32ca948bee7d50180b5a80d596a25759b79194daa6e3463f9e80"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

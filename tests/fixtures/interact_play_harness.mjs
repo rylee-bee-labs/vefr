@@ -38,7 +38,7 @@ const SAVE_SEED = '42';
 
 /* jsdom has no canvas; the player only needs a 2D context to exist so
    setupTown runs. Every drawing call is a no-op - except stroke, which
-   counts the ring's own gold so the tests can see drawTargetRing ran.
+   counts the cue's own gold (four corner strokes a frame) so the tests can see drawTargetCue ran.
    #D8AA4E is set as a canvas strokeStyle nowhere else in the player
    (the CSS uses of that gold are DOM, not canvas). */
 const ring = { strokes: 0 };
