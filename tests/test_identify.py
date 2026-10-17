@@ -71,8 +71,13 @@ PARTS = ROOT / "web" / "player" / "parts"
 # two lines each that the data-line regex reads here; measured twice in
 # separate processes, readings equal. With that one block removed both pins
 # are unchanged.
-SAMPLE_DATA_SHA = 'ecc6968e18d20aa851010f7e0ed1c4ffb47cf129a66684bbd3d486d56c8814e4'
-ROLLED_DATA_SHA = 'a88ccca088b926b6936133d2bebbc2a00a8bfc50acfbf11e99181572c8110ac6'
+# Both moved again on 2026-10-16 for vefr#504 (opt-in stakes): one empty
+# line, `window.VEFR_STAKES = null;`, in every weave - the literal null
+# for a pack that declares no stakes, which is the same asking of a player
+# as before the line was there. Measured twice in separate processes,
+# readings equal.
+SAMPLE_DATA_SHA = '0e248a8eae679710b3ebe35824a8bd6407e6d6f528625b83c35d5d789a29aab5'
+ROLLED_DATA_SHA = 'b53066a2a5a4f76c94999996df8b0482928e56530bb1fd5829a7ced9ba6cff75'
 
 
 def _data_blocks(html: str) -> str:

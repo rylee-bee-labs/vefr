@@ -234,6 +234,12 @@
       }
       return;
     }
+    // A stake on offer (vefr#504) takes one key and gives it back: Y
+    // puts the risk down, N walks away with nothing lost, and the offer
+    // waits for an answer while the rest of the game carries on - it
+    // is a question, not a screen. With no stake pending this is one
+    // check and no key is touched.
+    if (stakesKey(e)) { e.preventDefault(); return; }
     var menuOpen = !document.getElementById('menu').hidden;
     if (keybindOn('menu', e.key)) {
       closeEnemyVerbs();

@@ -453,12 +453,14 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # processes, readings equal:
 #   38867f8932cf51e9131803df44deddb34fd69d1bb6dcc03f4830a6801b0ce518
 #   38867f8932cf51e9131803df44deddb34fd69d1bb6dcc03f4830a6801b0ce518
-# The opt-in stakes bake (vefr#504): one added line in 050-inlined-world-pack.js
-# and the stake handling in 320-pack-rules.js, 2026-10-16; measured twice in
-# separate processes, readings equal:
-#   7dc4e5e023793056003b6a06b21f6502c08dde1095d398650009ffdba39b7994
-#   7dc4e5e023793056003b6a06b21f6502c08dde1095d398650009ffdba39b7994
-NO_SKIN_WEAVE_SHA256 = "7dc4e5e023793056003b6a06b21f6502c08dde1095d398650009ffdba39b7994"
+# The opt-in stakes bake (vefr#504): the added line in 050-inlined-world-pack.js
+# with the stake handling in 320-pack-rules.js, the one-key answer in
+# 510-rules-closure-surfaces.js and the predicate handed out in
+# 445-rules-engine.js, 2026-10-16; measured twice in separate processes,
+# readings equal:
+#   f75c45dfbaa661bce978316efb38f6912b0dc53d38fc4115b252c35876c26c7c
+#   f75c45dfbaa661bce978316efb38f6912b0dc53d38fc4115b252c35876c26c7c
+NO_SKIN_WEAVE_SHA256 = "f75c45dfbaa661bce978316efb38f6912b0dc53d38fc4115b252c35876c26c7c"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

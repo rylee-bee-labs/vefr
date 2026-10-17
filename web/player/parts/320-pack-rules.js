@@ -12,6 +12,10 @@ function fireRule(eventName, data) {
   // a pack with an album but no rules bakes VEFR_RULES = null, and the
   // return below would otherwise skip the sticker its `starts` earns.
   albumNotify(eventName, data);
+  // Stakes are asked here for the same reason, and answer the same way:
+  // an offer is the game saying a line, so it is said whatever the
+  // rules say. With no stakes baked this asks one question and returns.
+  stakesOffer(eventName, data);
   var engine = window.VEFR_RULES_ENGINE;
   var rules = window.VEFR_RULES;
   if (!engine || !Array.isArray(rules) || !rules.length) return;
@@ -142,4 +146,121 @@ function rulesWhyRecord(fired) {
   while (window.VEFR_WHY.length > 20) window.VEFR_WHY.shift();
   store.setJSON(rulesWhyKey(), window.VEFR_WHY);
 }
+
+// ---- stakes: the risk a pack offers, and the answer that is the
+// player's own (vefr#504) ----
+// One opt-in pack field, window.VEFR_STAKES, baked as the literal null
+// for every pack that declares none - which is every pack until a game
+// asks for this. A pack that writes no stakes is never asked anything,
+// and a pack that writes them is asked only what it wrote: there is no
+// default, no global rule, no loss that happens on its own, and no
+// other pack's stakes reach this one.
+//
+// The asking, kept to what the decision said and no more:
+//   - WHERE: the pack's own `when`, read by the rules engine's own
+//     predicate, so a stake means the same event a rule means and a
+//     second reading of the shape can never drift from the first;
+//   - TO WHOM: only while the hero really carries the `risk`. There is
+//     nothing to ask about otherwise, and no ask is made;
+//   - ON WHAT TERMS: the pack's own `say`, then the two costs named -
+//     what would be put down, what could be gained - and the two keys
+//     that answer. Y puts the risk down and takes the reward; N walks
+//     away;
+//   - AND WHAT WALKING AWAY COSTS: nothing. No flag, no timer, no turn,
+//     nothing taken. The offer is not remembered as refused, so the next
+//     time the pack's `when` matches the player is asked again - which
+//     is what makes this reversible rather than a punishment. Staking
+//     is its own memory: the risk leaves the bag, so the carry check
+//     above stops asking on its own.
+//
+// What this one example does not have yet, said plainly rather than
+// hidden: the two answer keys are keys, so a player on a phone reads
+// the offer and can only walk away from it for now. Nothing is taken
+// from them either way, which is why the gap costs no one anything.
+var STAKE_PENDING = null;   // the offer waiting for an answer, or null
+var STAKES_TAKEN = [];      // the ids the player has staked, in order
+
+// The pack's offers, or an empty list, so every check below asks one
+// question and moves on.
+function stakesOffered() {
+  return Array.isArray(window.VEFR_STAKES) ? window.VEFR_STAKES : [];
+}
+
+// Is the hero really carrying this id right now? The bag is the truth -
+// an id the pack's catalog no longer holds is not carried, whatever a
+// save once said.
+function stakesCarries(id) {
+  return bagCarried().some(function (c) { return c.id === id; });
+}
+
+// One event in: the first offer the pack wrote that matches it, that the
+// hero can be asked, and that is not already being answered. An offer
+// waits for its answer before another is asked - two questions at once
+// would be two risks the player never chose to weigh.
+function stakesOffer(eventName, data) {
+  if (STAKE_PENDING) return;
+  var offers = stakesOffered();
+  if (!offers.length) return;
+  var engine = window.VEFR_RULES_ENGINE;
+  if (!engine || typeof engine.matchesWhen !== 'function') return;
+  for (var i = 0; i < offers.length; i++) {
+    var s = offers[i];
+    if (!s || typeof s.id !== 'string') continue;
+    if (engine.matchesWhen(s.when, eventName, data || {}) !== true) continue;
+    if (!stakesCarries(s.risk)) continue;
+    STAKE_PENDING = s;
+    combatSay(s.say + ' Risk: ' + itemName(s.risk) + '. Gain: '
+      + itemName(s.reward) + '. [Y] stake it, [N] walk away.');
+    return;
+  }
+}
+
+// Y: the player's own answer, the only thing that takes anything away.
+// Both moves go through the surfaces the game already had - the bag
+// and the line - so nothing here is a new subsystem.
+function stakeTake() {
+  var s = STAKE_PENDING;
+  if (!s) return;
+  STAKE_PENDING = null;
+  STAKES_TAKEN.push(s.id);
+  bagRemoveOne(s.risk);
+  if (bagAdd(s.reward, null, true)) {
+    combatSay('You put ' + itemName(s.risk) + ' down. You take '
+      + itemName(s.reward) + '.');
+  } else {
+    combatSay('You put ' + itemName(s.risk) + ' down, and nothing comes '
+      + 'back for it.');
+  }
+}
+
+// N: the walk-away. Nothing leaves the bag, nothing is remembered
+// against the player, and the next matching event asks again.
+function stakeWalk() {
+  if (!STAKE_PENDING) return;
+  STAKE_PENDING = null;
+  combatSay('You walk away from it. Nothing is lost.');
+}
+
+// One key answers an offer and nothing else: Y takes the risk, N walks
+// away, and every other key is left to mean what it always meant. A
+// player who presses neither keeps everything, which is the whole of
+// what "optional" has to promise.
+function stakesKey(e) {
+  if (!STAKE_PENDING || e.repeat) return false;
+  var k = (e.key && e.key.length === 1) ? e.key.toLowerCase() : '';
+  if (k === 'y') { stakeTake(); return true; }
+  if (k === 'n') { stakeWalk(); return true; }
+  return false;
+}
+
+// What the stakes are doing, as the published snapshot the browser tests
+// read: how many the pack declared, the offer waiting for an answer
+// (null when none), and the ids the player has staked.
+window.VEFR_STAKES_STATE = function () {
+  return {
+    declared: stakesOffered().length,
+    pending: STAKE_PENDING ? STAKE_PENDING.id : null,
+    taken: STAKES_TAKEN.slice()
+  };
+};
 
