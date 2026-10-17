@@ -514,7 +514,31 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # Time (Mending Shift E3) merged onto main with mending (E2), 2026-10-16; measured twice on the host in separate processes, readings equal:
 #   191b6feb63f355d2d418f678e6594b1cf406293c26c9ee3fa166f16f106491d0
 #   191b6feb63f355d2d418f678e6594b1cf406293c26c9ee3fa166f16f106491d0
-NO_SKIN_WEAVE_SHA256 = "191b6feb63f355d2d418f678e6594b1cf406293c26c9ee3fa166f16f106491d0"
+# The optional ambient music block (vefr#502) on top of the ending-only room scale, 2026-10-16; the player's
+# template grew one data line (window.VEFR_MUSIC_DEF, the literal null here), measured twice in separate
+# processes, readings equal:
+#   b09fdb1a32e51e1e63b866c6cda355e04a70e147285ecea8e76cbd91d0b23446
+#   b09fdb1a32e51e1e63b866c6cda355e04a70e147285ecea8e76cbd91d0b23446
+# The bed's own loop timer (vefr#502): one line in 120-sound.js lost its unused local, 2026-10-16; measured
+# twice in separate processes, readings equal:
+#   6805800bd454e092454e76b2ba7ff693579dae21407925ebbb831f24f8b9d161
+#   6805800bd454e092454e76b2ba7ff693579dae21407925ebbb831f24f8b9d161
+# Music bed merged onto main (vefr#502), 2026-10-16; measured twice on the host in separate processes, readings equal:
+#   ee06718ab0f96304d7b4616596b1bcaaa32b9c34528c489c89d10163b5fa52c9
+#   ee06718ab0f96304d7b4616596b1bcaaa32b9c34528c489c89d10163b5fa52c9
+# Music bed (vefr#502) merged onto main, 2026-10-16; measured twice on the host in separate processes, readings equal:
+#   fe41b2ae5e25a60989b1e51968f284beb770522e8044301403bafa0e0aa32311
+#   fe41b2ae5e25a60989b1e51968f284beb770522e8044301403bafa0e0aa32311
+# Music bed (vefr#502) merged onto main, 2026-10-16; measured twice on the host in separate processes, readings equal:
+#   f8d159180df1652256d925f0ae7e8051499703b1a38968c50fa4073093937851
+#   f8d159180df1652256d925f0ae7e8051499703b1a38968c50fa4073093937851
+# Music bed merged onto main (vefr#502), 2026-10-16; measured twice on the host in separate processes, readings equal:
+#   ee436470181a34522863247599115260f4347f1214b54572d74187ec4ffe2563
+#   ee436470181a34522863247599115260f4347f1214b54572d74187ec4ffe2563
+# Music bed merged onto main with time (vefr#502 + E3), 2026-10-16; measured twice on the host in separate processes, readings equal:
+#   3f79471527605e15c4b0ec01832f58e3670aca24ee76c4ecc4e1221076214309
+#   3f79471527605e15c4b0ec01832f58e3670aca24ee76c4ecc4e1221076214309
+NO_SKIN_WEAVE_SHA256 = "3f79471527605e15c4b0ec01832f58e3670aca24ee76c4ecc4e1221076214309"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

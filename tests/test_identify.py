@@ -81,8 +81,12 @@ PARTS = ROOT / "web" / "player" / "parts"
 # every pack - the standing phase and the pack's three opt-ins, whatever
 # it declared; measured twice in separate processes, readings equal. With
 # that one block removed both pins are unchanged.
-SAMPLE_DATA_SHA = '3278bf580e832f382994cb2d0e2932549ab7ca3282dbb12bac967c59850abc04'
-ROLLED_DATA_SHA = '6cbf6b02ad9c145cf0f9ec0322a26f979e5dadb956db20cdc74754208a13458b'
+# Both moved again on 2026-10-16 for vefr #502 (the opt-in music bed): every pack now bakes a
+# `window.VEFR_MUSIC_DEF` line (the literal `null` for a pack that names no music); measured twice in
+# separate processes, readings equal. With that one line removed both pins are unchanged.
+# Both moved again for the music bed merged onto main with time (vefr#502 + Mending Shift E3), 2026-10-16; measured twice on the host.
+SAMPLE_DATA_SHA = '1ce7cdb05b3697959945370186c4d0839d8f91d041e91cf435048b60be97a25b'
+ROLLED_DATA_SHA = 'a45ba8c164bd6816aa0240d2804da42fce699fe1b39a566aaf6d6d30a8744381'
 
 
 def _data_blocks(html: str) -> str:

@@ -3022,6 +3022,12 @@ def weave_html(pack: Path, *, pool: dict | None = None,
     out_html = out_html.replace('{{sound_json}}',
                                 _json.dumps(world.get('sound'),
                                             ensure_ascii=False))
+    # The pack's optional ambient music (vefr #502): the literal `null`
+    # when the pack declares none, so every pack that has not opted in
+    # weaves and sounds exactly as it did.
+    out_html = out_html.replace('{{music_json}}',
+                                _json.dumps(world.get('music'),
+                                            ensure_ascii=False))
     out_html = out_html.replace('{{library_json}}', _json.dumps(books, ensure_ascii=False))
     out_html = out_html.replace('{{regions_json}}', _json.dumps(regions, ensure_ascii=False))
     # The pack's descent block (slice E1), resolved and with the engine's
@@ -5472,6 +5478,7 @@ def _explain_blocks() -> dict:
         'skin': lambda w, p: maplab.skin_errors(w, p),
         'sound': lambda w, p: maplab.sound_errors(w),
         'time': lambda w, p: maplab.time_errors(w),
+        'music': lambda w, p: maplab.music_errors(w),
         'spells': lambda w, p: maplab.spells_errors(w),
         'town_states': lambda w, p: maplab.town_states_errors(w),
     }

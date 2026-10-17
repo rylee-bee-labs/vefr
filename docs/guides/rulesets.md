@@ -1492,6 +1492,26 @@ Each fires at one moment of play, never on a timer, and the live line already sa
 Menu > Display > Sound turns them off for this browser, on by default; a pack with no `sound` has no switch.
 Code: `src/vefr/maplab.py` (`sound_errors`) + `src/vefr/cli.py` + `web/packaged.html`; tests: `tests/test_sound.py`.
 
+## Music
+
+A `world.json` may carry `music`, an optional object: `{"track": "shore"}`.
+It is optional and additive like `sound`: a pack that names none has no music
+at all, and its audio is exactly what it was.
+No audio files: the bed is synthesized in the browser, so there is nothing to
+license. `shore` is the only track in this first slice ([vefr#502](https://github.com/rylee-bee-labs/vefr/issues/502),
+the recorded option A) - one small demonstration of the capability, not a
+catalogue. Each pack owns its own musical identity and may leave this alone.
+
+Menu > Display holds a **Music** switch and a **Music volume** slider beside the
+Sound ones. Music is off at boot: nothing sounds until the player ticks the box,
+so there is never an unexpected autoplay. The volume starts at 40, not at full,
+and the bed itself peaks lower than any cue. Both choices are remembered in this
+browser under the world's own name (`vefr-music-<world>` and `-volume`); a choice
+carried over from last time waits for this boot's first touch before it sounds.
+Code: `src/vefr/maplab.py` (`music_errors`), `src/vefr/shapes.py` (`MUSIC`),
+`src/vefr/cli.py`, `web/player/parts/120-sound.js`; tests: `tests/test_music.py`
+and `tests/browser/test_music.py`.
+
 ## Skins (a picture pack for the interface)
 
 A skin is a folder of pictures that repaints the player's interface. It is

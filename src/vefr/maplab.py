@@ -228,6 +228,11 @@ def load_pack(pack_dir: Path) -> dict:
         # memory only as it always has, and the validator sees nothing new.
         if 'time' in config:
             unified['time'] = config['time']
+        # The optional music block (vefr #502), carried through ONLY when
+        # the pack declares it: a pack with no music loads exactly as
+        # before, and the validator sees nothing new.
+        if 'music' in config:
+            unified['music'] = config['music']
         if 'display' in config:
             unified['display'] = config['display']
         # The optional bag block (bag capacity): carried through ONLY when
@@ -1742,6 +1747,22 @@ def time_errors(w: dict) -> list[str]:
     if 'time' not in w:
         return []
     return [p.sentence for p in shapes.check(shapes.BLOCKS['time'], w['time'])]
+
+
+def music_errors(w: dict) -> list[str]:
+    """Every problem with a pack's optional `music` block (empty = good).
+
+    Music is optional and additive, like sound: a pack that declares
+    none gets no output at all, exactly as before, and its audio
+    behaves byte for byte as it did. A pack that declares one holds
+    exactly one key, `track`, naming one of the engine's synthesized
+    ambient beds (`shore` is the only bed in this first slice, vefr
+    #502); every other shape is one plain sentence naming music. See
+    `docs/guides/rulesets.md`.
+    """
+    if 'music' not in w:
+        return []
+    return [p.sentence for p in shapes.check(shapes.BLOCKS['music'], w['music'])]
 
 
 def bag_errors(w: dict) -> list[str]:
@@ -3970,6 +3991,10 @@ def validate(w: dict, pack_dir: Path | None = None) -> list[str]:
     # the phase save. A pack that declares none gets nothing here and
     # keeps the free phase rail and a phase in memory only, as before.
     errors.extend(time_errors(w))
+    # The pack's optional music block (vefr #502), checked beside the
+    # other optional catalogs. A pack that declares none gets nothing
+    # here, and a pack that does changes nothing about its sound.
+    errors.extend(music_errors(w))
     errors.extend(display_errors(w))
     errors.extend(bag_errors(w))
     # The pack's optional recipes (E2, mending): two carried things that
