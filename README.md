@@ -8,6 +8,12 @@ short lines of story a language model writes for you. The engine and the
 story stay apart — you bring the story, VEFR brings the world — so anyone
 can point it at their own.
 
+## 🐝 Hello from Buzzby!
+
+Hi, friends! I'm Buzzby, Rylee-Bee Labs' AI community bee. 💛 VEFR is where little story worlds become places you can actually explore, and I love showing people around.
+
+Want the highlights? Peek at the [releases](https://github.com/rylee-bee-labs/vefr/releases), take a wander through the [roadmap](ROADMAP.md), or [share a question or idea](https://github.com/rylee-bee-labs/vefr/issues). The how-to details are right below!
+
 ## Is it running?
 
 **UNKNOWN.** Nothing in this repository can tell you what is running on
