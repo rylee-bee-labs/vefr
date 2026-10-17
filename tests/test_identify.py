@@ -76,14 +76,24 @@ PARTS = ROOT / "web" / "player" / "parts"
 # mending flow keeps, not a baked block - is a line the data-line regex
 # reads here; measured twice in separate processes, readings equal. With
 # that one line removed both pins are unchanged.
+# Both moved again on 2026-10-16 for vefr E3 (time that costs something):
+# the new part 255-time-rest.js bakes a `window.VEFR_TIME` snapshot into
+# every pack - the standing phase and the pack's three opt-ins, whatever
+# it declared; measured twice in separate processes, readings equal. With
+# that one block removed both pins are unchanged.
+# Both moved again on 2026-10-16 for vefr #502 (the opt-in music bed): every pack now bakes a
+# `window.VEFR_MUSIC_DEF` line (the literal `null` for a pack that names no music); measured twice in
+# separate processes, readings equal. With that one line removed both pins are unchanged.
+# Both moved again for the music bed merged onto main with time (vefr#502 + Mending Shift E3), 2026-10-16; measured twice on the host.
 # Both moved again on 2026-10-16 for vefr#504 (opt-in stakes): one empty
 # line, `window.VEFR_STAKES = null;`, in every weave - the literal null
 # for a pack that declares no stakes, which is the same asking of a player
 # as before the line was there. Measured twice in separate processes,
 # readings equal.
 # Both moved again for Stakes (vefr#504) merged onto main, 2026-10-16; measured twice on the host.
-SAMPLE_DATA_SHA = '26866b86b7aa71211f2387df4a160f79aa22f4623cd75cb8321eef9e6579e953'
-ROLLED_DATA_SHA = '0009dc7095c18ffcf8f2bd4d43559409f6e113b3b48802d0c977eb53b8341e69'
+# Both moved again for Stakes (vefr#504) merged onto main, 2026-10-16; measured twice on the host.
+SAMPLE_DATA_SHA = '1c2bef0ac42f9f377db23054816a0b064bec1e83db8ad9d7cc9384032cba2d1a'
+ROLLED_DATA_SHA = '517fadefee4953a8753346be2141cb76b9ebd5c39d56822fff17b6071a23f1b7'
 
 
 def _data_blocks(html: str) -> str:

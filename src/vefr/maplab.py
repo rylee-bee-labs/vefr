@@ -222,6 +222,17 @@ def load_pack(pack_dir: Path) -> dict:
         # loads exactly as before, and the validator sees nothing new.
         if 'sound' in config:
             unified['sound'] = config['sound']
+        # The optional time block (the Rest action, the rail lock and the
+        # phase save), carried through ONLY when the pack declares it: a
+        # pack with no `time` loads exactly as before, its phase lives in
+        # memory only as it always has, and the validator sees nothing new.
+        if 'time' in config:
+            unified['time'] = config['time']
+        # The optional music block (vefr #502), carried through ONLY when
+        # the pack declares it: a pack with no music loads exactly as
+        # before, and the validator sees nothing new.
+        if 'music' in config:
+            unified['music'] = config['music']
         if 'display' in config:
             unified['display'] = config['display']
         # The optional bag block (bag capacity): carried through ONLY when
@@ -837,8 +848,11 @@ RULE_EVENT_KEYS = {name: tuple(key.name for key in fields)
 
 # The keys a condition may name. The `flag` form is the one condition
 # in the contract with two top-level keys: {"flag": ..., "is": ...}.
+# `phase` reads the STANDING phase - the one the watch is at while the
+# event happens, whatever the event was - so a rule can wait for the
+# right hour instead of for the event that turns it (vefr E3).
 RULE_CONDITION_KEYS = ('has', 'flag', 'is', 'believes', 'not-believes',
-                       'is-in', 'not', 'all-of')
+                       'is-in', 'phase', 'not', 'all-of')
 
 # The keys an action may name. `takes` is `give`'s pair: remove one
 # copy of an item from what the hero carries (a delivery, a turn-in).
@@ -1148,6 +1162,8 @@ def _rule_condition_errors(rid: str, cond, known: dict) -> list[str]:
     if key == 'is-in':
         return _rule_payload_errors(rid, 'is-in', val,
                                     (('who', 'person'), ('place', 'place')), known)
+    if key == 'phase':
+        return _rule_value_errors(rid, "condition 'phase'", val, 'phase', known)
     if key == 'not':
         if not isinstance(val, dict):
             return [f"rule '{rid}' 'not' must wrap a condition"]
@@ -1714,6 +1730,39 @@ def sound_errors(w: dict) -> list[str]:
     if 'sound' not in w:
         return []
     return [p.sentence for p in shapes.check(shapes.BLOCKS['sound'], w['sound'])]
+
+
+def time_errors(w: dict) -> list[str]:
+    """Every problem with a pack's optional `time` block (empty = good).
+
+    Time that costs something: `rest` gives the pack a Rest action that
+    turns the watch on by one phase per press, `rail: "locked"` takes
+    away the free jump in the phase rail so time moves only by resting
+    and by rules, and `persist` keeps the standing phase across a reload
+    under the save key `vefr-time-<world>`. Every other shape is one
+    plain sentence naming time. All three are optional and additive: a
+    pack that declares no `time` gets no output here at all and plays and
+    saves exactly as before. See `docs/guides/rules.md`.
+    """
+    if 'time' not in w:
+        return []
+    return [p.sentence for p in shapes.check(shapes.BLOCKS['time'], w['time'])]
+
+
+def music_errors(w: dict) -> list[str]:
+    """Every problem with a pack's optional `music` block (empty = good).
+
+    Music is optional and additive, like sound: a pack that declares
+    none gets no output at all, exactly as before, and its audio
+    behaves byte for byte as it did. A pack that declares one holds
+    exactly one key, `track`, naming one of the engine's synthesized
+    ambient beds (`shore` is the only bed in this first slice, vefr
+    #502); every other shape is one plain sentence naming music. See
+    `docs/guides/rulesets.md`.
+    """
+    if 'music' not in w:
+        return []
+    return [p.sentence for p in shapes.check(shapes.BLOCKS['music'], w['music'])]
 
 
 def bag_errors(w: dict) -> list[str]:
@@ -3991,6 +4040,14 @@ def validate(w: dict, pack_dir: Path | None = None) -> list[str]:
     # checked beside the other optional catalogs. A pack that declares
     # none gets nothing here.
     errors.extend(sound_errors(w))
+    # The pack's optional time block: the Rest action, the rail lock and
+    # the phase save. A pack that declares none gets nothing here and
+    # keeps the free phase rail and a phase in memory only, as before.
+    errors.extend(time_errors(w))
+    # The pack's optional music block (vefr #502), checked beside the
+    # other optional catalogs. A pack that declares none gets nothing
+    # here, and a pack that does changes nothing about its sound.
+    errors.extend(music_errors(w))
     errors.extend(display_errors(w))
     errors.extend(bag_errors(w))
     # The pack's optional recipes (E2, mending): two carried things that

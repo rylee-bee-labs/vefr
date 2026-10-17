@@ -84,6 +84,10 @@ window.VEFR_ALBUM_DEF = {{album_json}};
 // null when the pack declares no sound, so every existing pack weaves
 // exactly as it did.
 window.VEFR_SOUND_DEF = {{sound_json}};
+// The pack's optional ambient music (vefr#502): the literal null when the
+// pack declares none, so every pack that did not opt in weaves and sounds
+// exactly as it did.
+window.VEFR_MUSIC_DEF = {{music_json}};
 // Where the game begins: {"region": "...", "at": [x, y]}. Empty when the
 // act does not say, and then the first region's own hero_start is used.
 window.VEFR_START = {{start_json}};

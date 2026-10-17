@@ -2219,7 +2219,8 @@ def _conditions_bake(conds) -> bool:
 
     Mirrors evalCond's null (skip) cases exactly: the flag form is
     `flag`+`is` and nothing else, `believes`/`is-in` payloads carry
-    exactly their two keys, and `not`/`all-of` recurse.
+    exactly their two keys, `phase` is one phase name, and `not`/`all-of`
+    recurse.
     """
     if not isinstance(conds, list):
         return False
@@ -2248,6 +2249,11 @@ def _conditions_bake(conds) -> bool:
                     or set(payload) != {'who', 'place'}
                     or not isinstance(payload.get('who'), str)
                     or not isinstance(payload.get('place'), str)):
+                return False
+        elif 'phase' in cond:
+            # The STANDING phase (vefr E3): one non-empty phase name, read
+            # against the phase the watch stands at while the event runs.
+            if not isinstance(cond['phase'], str) or not cond['phase']:
                 return False
         elif 'not' in cond:
             if not _conditions_bake([cond['not']]):
@@ -3075,6 +3081,12 @@ def weave_html(pack: Path, *, pool: dict | None = None,
     # pack weaves exactly as it did.
     out_html = out_html.replace('{{sound_json}}',
                                 _json.dumps(world.get('sound'),
+                                            ensure_ascii=False))
+    # The pack's optional ambient music (vefr #502): the literal `null`
+    # when the pack declares none, so every pack that has not opted in
+    # weaves and sounds exactly as it did.
+    out_html = out_html.replace('{{music_json}}',
+                                _json.dumps(world.get('music'),
                                             ensure_ascii=False))
     out_html = out_html.replace('{{library_json}}', _json.dumps(books, ensure_ascii=False))
     out_html = out_html.replace('{{regions_json}}', _json.dumps(regions, ensure_ascii=False))
@@ -5525,6 +5537,8 @@ def _explain_blocks() -> dict:
         'saves': lambda w, p: maplab.saves_errors(w),
         'skin': lambda w, p: maplab.skin_errors(w, p),
         'sound': lambda w, p: maplab.sound_errors(w),
+        'time': lambda w, p: maplab.time_errors(w),
+        'music': lambda w, p: maplab.music_errors(w),
         'spells': lambda w, p: maplab.spells_errors(w),
         'town_states': lambda w, p: maplab.town_states_errors(w),
     }

@@ -713,10 +713,48 @@ SAVES = Block(
     ),
 )
 
+# `time`: the pack's own answer to "what does waiting cost?". Opt-in
+# and additive - a pack that declares no `time` block has no Rest action,
+# a free phase rail, and a phase that lives only in memory, exactly as
+# before. `rest` puts a Rest verb in the action row (and R on the
+# keybind table) that turns the watch on by exactly one phase; `rail:
+# "locked"` takes away the free jump in the rail, so time moves only by
+# resting and by rules that change the phase; `persist` keeps the
+# standing phase across a reload under its own save key.
+TIME = Block(
+    name='time',
+    example='{"rest": true, "rail": "locked", "persist": true}',
+    keys=(
+        Key('rest', 'bool'),
+        Key('rail', 'enum', choices=('open', 'locked')),
+        Key('persist', 'bool'),
+    ),
+    say={
+        'unknown-key': '{name} may only hold {keys}, not {key!r}',
+        'not-in-choices': '{name} {key} must be the string {choices}',
+    },
+)
+
 SOUND = Block(
     name='sound',
     example='{"theme": "soft"}',
     keys=(Key('theme', 'enum', choices=('soft',), required=True),),
+    say={
+        'unknown-key': '{name} may only hold {keys}, not {key!r}',
+        'missing-key': '{name} must hold a {key}, such as {example}',
+        'not-in-choices': '{name} {key} must be the string {choices}',
+    },
+)
+
+# `music`: the pack's optional ambient bed (vefr #502, option A). A pack
+# that declares none gets no music at all, exactly as before. A pack that
+# declares one names one track from the engine's synthesized beds; no audio
+# files ship, so there is nothing to license. `shore` is the only bed in
+# this first slice: one small, reversible demonstration of the capability.
+MUSIC = Block(
+    name='music',
+    example='{"track": "shore"}',
+    keys=(Key('track', 'enum', choices=('shore',), required=True),),
     say={
         'unknown-key': '{name} may only hold {keys}, not {key!r}',
         'missing-key': '{name} must hold a {key}, such as {example}',
@@ -1672,6 +1710,8 @@ SPELLS = Block(
 BLOCKS = {
     'saves': SAVES,
     'sound': SOUND,
+    'time': TIME,
+    'music': MUSIC,
     'display': DISPLAY,
     'affix': AFFIX,
     'elites': ELITES,
