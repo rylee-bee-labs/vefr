@@ -748,8 +748,8 @@ before it could land. That, not the three-open-PR cap, was the estate's biggest 
 
 ## 2026-10-17: the player digest is measured at the merge base, not pinned (vefr#529)
 
-Rylee's call on the three options in vefr#529: **option 1**, keep the byte-for-byte guard for
-refactors only. The second half of vefr#523's problem survived it. `web/packaged.html` stopped
+Option 1 of the three in vefr#529, chosen by Claude under Rylee's 2026-10-17 overnight approval to
+cut the estate's noise: keep the byte-for-byte guard for refactors only. The second half of vefr#523's problem survived it. `web/packaged.html` stopped
 being committed, so player PRs no longer collide on 755 KB - and still collided on one line,
 `NO_SKIN_WEAVE_SHA256` in `tests/test_skin_validator.py` (and on `SAMPLE_DATA_SHA` /
 `ROLLED_DATA_SHA` in `tests/test_identify.py`). On 2026-10-16 three player PRs each re-pinned
