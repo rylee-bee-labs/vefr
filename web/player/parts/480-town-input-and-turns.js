@@ -1174,10 +1174,11 @@
           // struck), which changes nothing and therefore costs nothing.
           if (takeVerb(verbs[0][0], verbs[0][1], foe)) {
             lightTick();
-            // A burn that finished the hero is a death, and it ends the turn
-            // there: the monsters do not take a second turn on a hero who
-            // has already woken elsewhere (vefr#497).
-            if (!statusTurn()) enemyTurn();
+            // The monsters have their turn first, then the states their blows
+            // left tick - the established order, and the one place the hero's own
+            // damage resolves (vefr#497, review #528).
+            enemyTurn();
+            statusTurn();
           }
         } else {
           openEnemyVerbs(foe);
@@ -1305,10 +1306,11 @@
       closeEnemyVerbs();   // a bump closes any open enemy menu
       if (struck !== false) {
         lightTick();
-        // A burn that finished the hero is a death, and it ends the turn
-        // there: the monsters do not take a second turn on a hero who
-        // has already woken elsewhere (vefr#497).
-        if (!statusTurn()) enemyTurn();
+        // The monsters have their turn first, then the states their blows
+        // left tick - the established order, and the one place the hero's own
+        // damage resolves (vefr#497, review #528).
+        enemyTurn();
+        statusTurn();
       }
       heroSettleSoon();
       return;
@@ -1348,10 +1350,11 @@
     seeNow();
     updateUse();
     lightTick();
-    // A burn that finished the hero is a death, and it ends the turn
-    // there: the monsters do not take a second turn on a hero who
-    // has already woken elsewhere (vefr#497).
-    if (!statusTurn()) enemyTurn();
+    // The monsters have their turn first, then the states their blows
+    // left tick - the established order, and the one place the hero's own
+    // damage resolves (vefr#497, review #528).
+    enemyTurn();
+    statusTurn();
     updateVerbRow();   // the monsters moved: the fight buttons follow
   }
 

@@ -159,13 +159,22 @@
     return { status: s, fresh: true };
   }
   // One hero turn passes: every state ticks its damage, then counts
-  // down, and the last one says so and goes. Called beside every
-  // `lightTick()` - the four places the player's turn is over - and
-  // nowhere else, so a turn is a turn.
+  // down, and the last one says so and goes.
+  //
+  // WHERE it runs is the whole of it (vefr#497, review #528): after
+  // `enemyTurn()`, never before it. The hero's own damage always
+  // resolved there - inside the monsters' turn, in `enemyAttack` - so
+  // this is where a burn resolves too, and the established order is
+  // untouched: the hero acts, the monsters act, and only then does the
+  // fire the monsters lit take its turn. Ticking it earlier let a burn
+  // fell a hero on their last health BEFORE the monsters moved - the
+  // monsters then never acted at all, and a hazard whose blow was about
+  // to land never landed. Called beside every `enemyTurn()` - the four
+  // places the player's turn is over - and nowhere else, so a turn is a
+  // turn.
   function statusTurn() {
     if (!heroStatuses.length) return;
     var said = [];
-    var died = false;
     var left = [];
     for (var i = 0; i < heroStatuses.length; i++) {
       var s = heroStatuses[i];
@@ -187,9 +196,18 @@
     saveHeroHp();
     renderHp();
     renderStatusHud();
-    combatSay(said.join(' '));
+    // The turn's line keeps what the monsters said first, for the reason
+    // `enemyAttack` joins its "sets you alight" the same way: a hero told
+    // only that the fire took 2 would not know what lit it. Both halves
+    // are on the live region, in the order they happened.
+    var before = combatText();
+    combatSay(before ? before + ' ' + said.join(' ') : said.join(' '));
+    // The harness reads the fight's own snapshot, so the health this
+    // tick just moved is published with the rest of the turn.
+    combatSnapshot();
     // A burn that finished the hero is a death like any other: the same
-    // wake, the same rules, the same reset. There is no second one.
-    if (HERO_HP <= 0) { died = true; cozyDeath({ id: 'burning' }); }
-    return died;
+    // wake, the same rules, the same reset. There is no second one, and
+    // the monsters have already had their turn - so there is nothing
+    // left here to stop.
+    if (HERO_HP <= 0) cozyDeath({ id: 'burning' });
   }

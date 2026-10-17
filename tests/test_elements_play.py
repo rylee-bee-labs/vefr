@@ -7,7 +7,8 @@ other half - the prototype encounter a pack gets when it opts in:
   * a hazard that deals fire, and the sentence that says so;
   * the hero's own resistance turning the blow aside, and immunity
     stopping it dead;
-  * burning: the HUD line, the tick a turn later, and the turn it ends;
+  * burning: the HUD line, the tick after the monsters' turn, and the
+    turn it ends;
   * and the pack that declares none of it, which plays the old fight
     with the old sentence and no line on the HUD at all.
 
@@ -56,30 +57,40 @@ def test_fire_is_dealt_and_burning_is_caught_in_words(tmp_path):
     The blow lands for what the hazard deals, the live region says what
     it was, and the state line beside the health carries the burn - the
     same words for the eye and for a screen reader.
+
+    The fire ticks where the hero's own damage always resolved: after
+    the monsters' turn, so the turn that lights it is the turn it takes
+    from the hero, and the live region carries the whole of that turn in
+    the order it happened - the blow, the lighting, the tick (vefr#497,
+    review #528).
     """
     out = play(tmp_path, [
         {"do": "press", "dir": "left"},          # bump: the hero strikes, the hazard answers
         {"do": "snap", "tag": "lit"},
-        {"do": "press", "dir": "right"},         # a plain step: the burn ticks
+        {"do": "press", "dir": "right"},         # a plain step: the burn's last turn
         {"do": "snap", "tag": "one"},
-        {"do": "press", "dir": "right"},         # and again: the last turn of it
+        {"do": "press", "dir": "right"},         # and again: the fire is long out
         {"do": "snap", "tag": "out"},
     ])
     lit, one, out_ = out["snaps"]["lit"], out["snaps"]["one"], out["snaps"]["out"]
 
     assert "hits you with fire for 3" in lit["live"], lit["live"]
     assert "sets you alight" in lit["live"], lit["live"]
-    assert lit["hp"] == 5, lit["hp"]            # 8 less the hazard's 3
+    assert "The fire takes 2 from you." in lit["live"], lit["live"]
+    assert lit["live"].index("hits you with fire") < lit["live"].index("sets you alight") \
+        < lit["live"].index("The fire takes"), lit["live"]
+    assert lit["hp"] == 3, lit["hp"]            # 8, less the hazard's 3 and the fire's 2
     assert lit["foe"] == 3, lit["foe"]          # and the hero's own blow still landed
-    assert lit["state"] == "Burning (fire, 2 turns left)", lit["state"]
+    assert lit["state"] == "Burning (fire, 1 turn left)", lit["state"]
     assert lit["stateOn"] is True
 
     assert "The fire takes 2 from you." in one["live"], one["live"]
-    assert one["hp"] == 3, one["hp"]
-    assert one["state"] == "Burning (fire, 1 turn left)", one["state"]
+    assert "The burning dies out of you." in one["live"], one["live"]
+    assert one["hp"] == 1, one["hp"]
+    assert one["state"] == "" and one["stateOn"] is False
+    assert one["statuses"] == []
 
-    assert "The burning dies out of you." in out_["live"], out_["live"]
-    assert out_["hp"] == 1, out_["hp"]
+    assert out_["hp"] == 1, out_["hp"]          # and the fire takes nothing more
     assert out_["state"] == "" and out_["stateOn"] is False
     assert out_["statuses"] == []
 
@@ -95,8 +106,10 @@ def test_a_resistance_turns_the_blow_and_the_burn_aside(tmp_path):
     lit, one = out["snaps"]["lit"], out["final"]
     assert "hits you with fire for 1" in lit["live"], lit["live"]
     assert "your resistance turns the rest aside" in lit["live"], lit["live"]
-    assert lit["hp"] == 7, lit["hp"]
-    assert one["hp"] == 6, one["hp"]
+    # The tick runs in the same turn as the blow it came from, after the
+    # monsters' turn: 8, less the blow's 1 and the tick's 1.
+    assert lit["hp"] == 6, lit["hp"]
+    assert one["hp"] == 5, one["hp"]
 
 
 def test_a_resistance_that_divides_the_blow_away_says_it_did_not_land(tmp_path):
@@ -148,8 +161,10 @@ def test_a_burn_is_not_stored_so_a_reload_is_the_hero_again(tmp_path):
     """
     out = play(tmp_path, [{"do": "press", "dir": "left"}])
     lit = out["final"]
+    # Still in memory, and one turn of it already gone: the burn ticks
+    # after the monsters' turn, in the very turn that lit it.
     assert lit["statuses"] == [{"effect": "burning", "type": "fire",
-                                "turns": 2, "tick": 2}], lit["statuses"]
+                                "turns": 1, "tick": 2}], lit["statuses"]
     about_a_status = [k for k in lit["saved"]
                       if "status" in k or "burn" in k or "state" in k]
     assert about_a_status == [], about_a_status

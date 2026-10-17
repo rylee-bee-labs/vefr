@@ -10,7 +10,8 @@ encounter:
 
 Every part of it is optional, so one call with all of them None is the
 pack that has not opted in at all - the one that must weave and play
-exactly as it always did.
+exactly as it always did. `surface` puts the encounter on another
+surface and `rules` gives the pack a word of its own.
 
 The name is the pack's own and means nothing outside this fixture.
 """
@@ -31,7 +32,7 @@ HOUND = {"id": "ember-hound", "name": "an ember hound", "at": [2, 4],
 
 def build(dest: Path, name="element-test", hp=8, atk=2, resist=None,
           immune=None, dmg_type="fire", burns=None, hound_hp=5,
-          hound_atk=3) -> Path:
+          hound_atk=3, surface=None, rules=None) -> Path:
     pack = dest / "worlds" / name
     if pack.exists():
         shutil.rmtree(pack)
@@ -47,6 +48,12 @@ def build(dest: Path, name="element-test", hp=8, atk=2, resist=None,
     if immune is not None:
         player["immune"] = json.loads(json.dumps(immune))
     world["player"] = player
+    # The surface a pack wears, and its own rules: both optional, so a
+    # call that names neither weaves exactly what it always wove.
+    if surface is not None:
+        world["surface"] = surface
+    if rules is not None:
+        world["rules"] = json.loads(json.dumps(rules))
     world_json.write_text(json.dumps(world), encoding="utf-8")
 
     contract_path = pack / "acts" / "act-1" / "town" / "contract.json"
@@ -65,6 +72,21 @@ def build(dest: Path, name="element-test", hp=8, atk=2, resist=None,
 # burning for two turns, two a turn. Nothing resists it unless a test
 # says so.
 BURNING = {"turns": 2, "tick": 2}
+
+# Two rules that NAME what felled the hero, one line each. A death says
+# its own line, so a pack that wants to say who did it says it here -
+# and `falls` carries the killer: the hazard's id when a monster struck
+# the hero down, the word `burning` when the fire did. A turn-order test
+# can therefore read the order off what the hero was killed by, which no
+# health number can tell it.
+FELLED = [
+    {"id": "felled-by-the-hound",
+     "when": {"falls": {"what": "ember-hound", "where": "town"}},
+     "then": [{"say": "The ember hound felled you."}]},
+    {"id": "felled-by-the-fire",
+     "when": {"falls": {"what": "burning", "where": "town"}},
+     "then": [{"say": "The burning felled you."}]},
+]
 
 if __name__ == "__main__":
     print(build(Path(sys.argv[1])))
