@@ -2124,8 +2124,6 @@ def _rule_bakes(rule) -> bool:
     half-broken. Pure shape logic: no clock, no model, no filesystem,
     and no id here ever becomes a path.
     """
-    from .maplab import RULE_EVENTS, RULE_EVENT_KEYS
-
     if not isinstance(rule, dict):
         return False
     rid = rule.get('id')
@@ -2135,7 +2133,29 @@ def _rule_bakes(rule) -> bool:
         return False
     if 'once' in rule and not isinstance(rule['once'], bool):
         return False
-    when = rule.get('when')
+    if not _when_bakes(rule.get('when')):
+        return False
+    if 'if' in rule and not _conditions_bake(rule['if']):
+        return False
+    then = rule.get('then')
+    if not isinstance(then, list) or not then:
+        return False
+    return all(_action_bakes(a) for a in then)
+
+
+def _when_bakes(when) -> bool:
+    """Can this `when` ever describe an event the player fires?
+
+    The same shape the engine's whenMatches() demands, checked at bake
+    time: exactly one event the engine knows, carrying exactly that
+    event's payload keys, every one a non-empty string (`distance` a
+    number in 0..9, which is "within N tiles", 0 = standing on it). A
+    rule's `when` and a stake's `when` are one shape and one check, so
+    a pack that writes one in a stake means what it means in a rule.
+    Pure shape logic: no clock, no model, no filesystem.
+    """
+    from .maplab import RULE_EVENTS, RULE_EVENT_KEYS
+
     if not isinstance(when, dict) or len(when) != 1:
         return False
     event, payload = next(iter(when.items()))
@@ -2153,12 +2173,45 @@ def _rule_bakes(rule) -> bool:
                 return False
         elif not isinstance(value, str) or not value:
             return False
-    if 'if' in rule and not _conditions_bake(rule['if']):
+    return True
+
+
+def _stake_bakes(stake) -> bool:
+    """Can this one stake be offered to the player at all?
+
+    A stake is five things and no more: an id, a `when` in the shape a
+    rule bakes with (_when_bakes, the very same check), the thing that
+    would be put at risk, the thing that would be gained, and the line
+    the game says while asking. An offer the player could not act on -
+    nothing to put down, nothing to gain, no line to read - is dropped
+    whole, never baked half-broken. Pure shape logic: no clock, no
+    model, no filesystem, and no id here ever becomes a path.
+    """
+    if not isinstance(stake, dict):
         return False
-    then = rule.get('then')
-    if not isinstance(then, list) or not then:
+    sid = stake.get('id')
+    if not isinstance(sid, str) or not sid.strip():
         return False
-    return all(_action_bakes(a) for a in then)
+    if not _when_bakes(stake.get('when')):
+        return False
+    return all(isinstance(stake.get(k), str) and stake[k]
+               for k in ('risk', 'reward', 'say'))
+
+
+def _player_stakes(world: dict):
+    """The pack's optional stakes, baked for the woven player (vefr#504).
+
+    The literal `null` when the pack declares no `stakes` at all, which
+    is every pack but one that opts in - so an opt-out pack weaves the
+    file it always woven. An offer that could not be made is DROPPED,
+    never baked half-broken (_stake_bakes). Stakes are opt-in and
+    per-pack by construction: nothing here is global, and no game gets
+    an offer it did not write.
+    """
+    declared = world.get('stakes')
+    if not isinstance(declared, list):
+        return None
+    return [s for s in declared if _stake_bakes(s)]
 
 
 def _conditions_bake(conds) -> bool:
@@ -3009,6 +3062,13 @@ def weave_html(pack: Path, *, pool: dict | None = None,
         '{{people_json}}',
         _json.dumps(rules_pack['people'] if rules_pack else None,
                     ensure_ascii=False))
+    # The pack's optional stakes (vefr#504): the risk/reward offers it
+    # puts to the player, each asked for by the same `when` a rule uses.
+    # The literal `null` when the pack declares none, so every pack
+    # without the key plays exactly as it did.
+    out_html = out_html.replace('{{stakes_json}}',
+                                _json.dumps(_player_stakes(world),
+                                            ensure_ascii=False))
     # The pack's optional sticker album (design/album.md): the stickers
     # to earn, baked beside the rule data. A pack that declares none
     # bakes the literal `null` (every existing pack's file, unchanged);

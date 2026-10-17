@@ -538,7 +538,25 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # Music bed merged onto main with time (vefr#502 + E3), 2026-10-16; measured twice on the host in separate processes, readings equal:
 #   3f79471527605e15c4b0ec01832f58e3670aca24ee76c4ecc4e1221076214309
 #   3f79471527605e15c4b0ec01832f58e3670aca24ee76c4ecc4e1221076214309
-NO_SKIN_WEAVE_SHA256 = "3f79471527605e15c4b0ec01832f58e3670aca24ee76c4ecc4e1221076214309"
+# The opt-in stakes bake (vefr#504): the added line in 050-inlined-world-pack.js
+# with the stake handling in 320-pack-rules.js, the one-key answer in
+# 510-rules-closure-surfaces.js and the predicate handed out in
+# 445-rules-engine.js, 2026-10-16; measured twice in separate processes,
+# readings equal:
+#   f75c45dfbaa661bce978316efb38f6912b0dc53d38fc4115b252c35876c26c7c
+#   f75c45dfbaa661bce978316efb38f6912b0dc53d38fc4115b252c35876c26c7c
+# Stakes (vefr#504) merged onto main, 2026-10-16; measured twice on the host in separate processes, readings equal:
+#   c0a062c0e234af8f49695e26294025d87ebb6f8ccdbfb84bf91d068f70e5afd2
+#   c0a062c0e234af8f49695e26294025d87ebb6f8ccdbfb84bf91d068f70e5afd2
+# The stake offer on a phone (vefr#504): the two answer buttons under the
+# offer line, added to 030-shell.html, 020-style.css and 320-pack-rules.js,
+# 2026-10-16; measured twice in separate processes, readings equal:
+#   05b45341ef14df3c90f94e98e288caff867ebbebb23ccc018228b05b5cb5a6f3
+#   05b45341ef14df3c90f94e98e288caff867ebbebb23ccc018228b05b5cb5a6f3
+# Stakes (vefr#504) merged onto main, 2026-10-16; measured twice on the host in separate processes, readings equal:
+#   2a6216c415fcafbed3f5a8271279e40e9f8bdfc27bdbd9a54cb1d1bccdedc8f5
+#   2a6216c415fcafbed3f5a8271279e40e9f8bdfc27bdbd9a54cb1d1bccdedc8f5
+NO_SKIN_WEAVE_SHA256 = "2a6216c415fcafbed3f5a8271279e40e9f8bdfc27bdbd9a54cb1d1bccdedc8f5"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

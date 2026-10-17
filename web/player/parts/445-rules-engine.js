@@ -442,6 +442,10 @@
       return out;
     }
 
-    return { newState: newState, run: run };
+    // `matchesWhen` is whenMatches itself, handed out so one `when`
+    // shape has exactly one reading: the stake a pack writes (vefr#504)
+    // is asked by the same predicate a rule is fired by, not by a
+    // second copy of it that could drift from the first.
+    return { newState: newState, run: run, matchesWhen: whenMatches };
   })();
   // -- rules end --
