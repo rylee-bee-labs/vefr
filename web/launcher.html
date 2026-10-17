@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Choose a game</title>
+<link rel="icon" href="/static/art/icon.svg" type="image/svg+xml">
+<link rel="icon" href="/static/art/icon-192.png" type="image/png" sizes="192x192">
+<link rel="stylesheet" href="/static/vefr-theme.css">
+<style>
+  /* The game-neutral launcher (vefr#454, step 1). Design tokens come
+     from /static/vefr-theme.css; this block is layout only, and it
+     stays deliberately plain: the shell owns almost nothing. Every
+     game's own look - its title art, its accent, its skin - arrives
+     with the game, inside the frame. */
+
+  body {
+    margin: 0;
+    font-family: var(--font-ui);
+    background: var(--background);
+    color: var(--foreground);
+  }
+
+  /* ── the list of games ── */
+
+  .launcher-home {
+    max-width: 40rem;
+    margin: 0 auto;
+    padding: var(--space-3xl, 48px) var(--space-lg, 16px);
+  }
+  .launcher-home h1 { margin: 0 0 var(--space-sm, 8px); }
+  .launcher-note {
+    margin: 0 0 var(--space-xl, 24px);
+    color: var(--ink-dim, var(--foreground));
+  }
+  #launcher-games {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: var(--space-md, 12px);
+  }
+  .launcher-game {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs, 2px);
+    width: 100%;
+    min-height: var(--size-target-min, 44px);
+    padding: var(--space-md, 12px) var(--space-lg, 16px);
+    font-family: var(--font-ui);
+    font-size: 1rem;
+    text-align: left;
+    color: var(--foreground);
+    background: var(--card);
+    border: 1px solid var(--card-edge);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+  }
+  .launcher-game:hover { border-color: var(--foreground); }
+  .launcher-game:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+  .launcher-game-file {
+    font-size: 0.75rem;
+    color: var(--ink-dim, var(--foreground));
+  }
+  .launcher-empty {
+    margin: 0;
+    padding: var(--space-lg, 16px);
+    border: 1px dashed var(--card-edge);
+    border-radius: var(--radius-md);
+    color: var(--ink-dim, var(--foreground));
+  }
+  .launcher-error { color: var(--foreground); }
+
+  /* ── the play surface: the shell's chrome is one bar and the frame ── */
+
+  .launcher-surface {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--background);
+  }
+  .launcher-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md, 12px);
+    padding: var(--space-xs, 4px) var(--space-md, 12px);
+    border-bottom: 1px solid var(--card-edge);
+  }
+  .launcher-bar button {
+    font-family: var(--font-ui);
+    font-size: 0.875rem;
+    min-height: var(--size-target-min, 44px);
+    min-width: var(--size-target-min, 44px);
+    padding: 0 var(--space-lg, 16px);
+    color: var(--foreground);
+    background: transparent;
+    border: 1px solid var(--border, var(--card-edge));
+    border-radius: var(--radius-md);
+    cursor: pointer;
+  }
+  .launcher-bar button:hover { border-color: var(--foreground); }
+  .launcher-bar button:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+  #launcher-now {
+    margin: 0;
+    font-size: 0.875rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .launcher-frame {
+    flex: 1;
+    width: 100%;
+    border: 0;
+  }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+
+<main class="launcher-home" id="launcher-home">
+  <h1>Games</h1>
+  <p class="launcher-note">Each game keeps its own face - its title
+    screen, its look, its rules. This page only lists them, and hands
+    each one the whole player.</p>
+  <ul id="launcher-games" aria-label="Games"></ul>
+  <p class="launcher-empty" id="launcher-empty" hidden>No games here yet.
+    Weave one and it will appear in this list.</p>
+  <p class="launcher-error" id="launcher-error" role="alert" hidden>
+    The list of games could not be loaded. Try again in a moment.</p>
+</main>
+
+<section class="launcher-surface" id="launcher-surface" hidden
+         aria-label="The game, playing here">
+  <div class="launcher-bar">
+    <button type="button" id="launcher-back">All games</button>
+    <p id="launcher-now" aria-live="polite"></p>
+  </div>
+  <iframe class="launcher-frame" id="launcher-frame"
+          title="The game, playing here" sandbox="allow-scripts"></iframe>
+</section>
+
+<script src="/static/launcher.js"></script>
+</body>
+</html>
