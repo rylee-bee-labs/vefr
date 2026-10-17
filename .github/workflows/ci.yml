@@ -13,6 +13,12 @@ on:
 permissions:
   contents: read
 
+# A newer push to the same PR cancels the run it supersedes (2026-10-17: ~35 min/day went to stale runs). Pushes to
+# main are grouped by commit, so a main run is never cancelled: it is the check of two merges landing together.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.head_ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
 
   # Honest-claims gate. A strong claim (a count, a pass/fail, a "nothing
