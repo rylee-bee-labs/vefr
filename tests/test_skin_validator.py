@@ -476,6 +476,27 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # Damage types and burning (vefr#497) merged onto main, 2026-10-16; measured twice on the host in separate processes, readings equal:
 #   892ac967e19b32ca948bee7d50180b5a80d596a25759b79194daa6e3463f9e80
 #   892ac967e19b32ca948bee7d50180b5a80d596a25759b79194daa6e3463f9e80
+# The item-grants slice (E1): the verb row moved out of 510 into 220-growth.js beside
+# surfaceVerbs(), and 445, 430 and 480 grew the `uses-verb` event and the blow a carried
+# thing adds to, 2026-10-16; measured twice in separate processes, readings equal:
+#   b687c8bcce99cc3ef3299fc414ded6c81ef6a48b2683aad379a821ca943d93e4
+#   b687c8bcce99cc3ef3299fc414ded6c81ef6a48b2683aad379a821ca943d93e4
+# Item-granted verbs merged onto main (Mending Shift E1), 2026-10-16; measured twice on the host in separate processes, readings equal:
+#   eb014ad9e78442a1c21b767622554e2a183eb0c8fba6ab6ee97e3c94f85bd206
+#   eb014ad9e78442a1c21b767622554e2a183eb0c8fba6ab6ee97e3c94f85bd206
+# Mending recipes (E2): the `mends` event in the rules engine's EVENTS
+# table (445-rules-engine.js), 2026-10-16; measured twice in separate
+# processes, readings equal:
+#   9ddb0571e312a27be2d5ae2d4151da6122a55db51113907dfda7e166439f71ea
+#   9ddb0571e312a27be2d5ae2d4151da6122a55db51113907dfda7e166439f71ea
+# Mending recipes, player side (E2): the new part 186-the-mending.js,
+# plus 180-gold.js, 030-shell.html and the manifest, 2026-10-16;
+# measured twice in separate processes, readings equal:
+#   8413f7fd735cd33cc69c9d9c0e78cf1209b922e2352606a339c45835b6ba06ca
+#   8413f7fd735cd33cc69c9d9c0e78cf1209b922e2352606a339c45835b6ba06ca
+# Mending recipes merged onto main with item-granted verbs (Mending Shift E2 + E1), 2026-10-16; measured twice on the host in separate processes, readings equal:
+#   45c8ab256a6abaa4c995609857629f098ccf4f2a3505ed647e0fe8986b860873
+#   45c8ab256a6abaa4c995609857629f098ccf4f2a3505ed647e0fe8986b860873
 # The optional ambient music block (vefr#502) on top of the ending-only room scale, 2026-10-16; the player's
 # template grew one data line (window.VEFR_MUSIC_DEF, the literal null here), measured twice in separate
 # processes, readings equal:
@@ -494,7 +515,10 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # Music bed (vefr#502) merged onto main, 2026-10-16; measured twice on the host in separate processes, readings equal:
 #   f8d159180df1652256d925f0ae7e8051499703b1a38968c50fa4073093937851
 #   f8d159180df1652256d925f0ae7e8051499703b1a38968c50fa4073093937851
-NO_SKIN_WEAVE_SHA256 = "f8d159180df1652256d925f0ae7e8051499703b1a38968c50fa4073093937851"
+# Music bed merged onto main (vefr#502), 2026-10-16; measured twice on the host in separate processes, readings equal:
+#   ee436470181a34522863247599115260f4347f1214b54572d74187ec4ffe2563
+#   ee436470181a34522863247599115260f4347f1214b54572d74187ec4ffe2563
+NO_SKIN_WEAVE_SHA256 = "ee436470181a34522863247599115260f4347f1214b54572d74187ec4ffe2563"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

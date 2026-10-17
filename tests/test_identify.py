@@ -71,11 +71,16 @@ PARTS = ROOT / "web" / "player" / "parts"
 # two lines each that the data-line regex reads here; measured twice in
 # separate processes, readings equal. With that one block removed both pins
 # are unchanged.
+# Both moved again on 2026-10-16 for mending (E2): the new player part's one
+# `window.VEFR_LAST_MEND = null;` line - the published snapshot the bag's
+# mending flow keeps, not a baked block - is a line the data-line regex
+# reads here; measured twice in separate processes, readings equal. With
+# that one line removed both pins are unchanged.
 # Both moved again on 2026-10-16 for vefr #502 (the opt-in music bed): every pack now bakes a
 # `window.VEFR_MUSIC_DEF` line (the literal `null` for a pack that names no music); measured twice in
 # separate processes, readings equal. With that one line removed both pins are unchanged.
-SAMPLE_DATA_SHA = '25a3a8ac88c102544fcc17d5204ac6c12f9458b513908572381f6a698cad6abe'
-ROLLED_DATA_SHA = '04ff16ba093a776cac746d82c3839f4c2f890dd9b240022abaab0cf10715de38'
+SAMPLE_DATA_SHA = 'a5cba720d740b7d0fb397dea1d66d6c958bc29d9806bb1eb986f6ef0eb096658'
+ROLLED_DATA_SHA = '1a8381a7c98d300af7157b9ff04ff7b02038f17ab07e9605de6e190cbd5a2e9b'
 
 
 def _data_blocks(html: str) -> str:

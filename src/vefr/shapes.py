@@ -681,8 +681,9 @@ def check(block, value, known=None, at='') -> list[Problem]:
 
 def check_item(value, at: str = '') -> list[Problem]:
     """Every problem with an item's added fields: ADR 0017's `rarity`,
-    `traits` and `roll`, the spell slice's `spell`, and the bag's `carry`.
-    An item with none of them has no problems at all.
+    `traits` and `roll`, the spell slice's `spell`, the bag's `carry`,
+    and the item-grants slice's `grants` and `changes`. An item with
+    none of them has no problems at all.
 
     Only the added keys are read, and the pack's own words for the rest are
     left exactly as they were: see `ITEM` for why the first nine keys are
@@ -692,7 +693,8 @@ def check_item(value, at: str = '') -> list[Problem]:
     if not isinstance(value, dict):
         return []
     added = {key: value[key]
-             for key in ITEM_ADDED + ITEM_TAUGHT + ITEM_CARRIES if key in value}
+             for key in ITEM_ADDED + ITEM_TAUGHT + ITEM_CARRIES + ITEM_GRANTS
+             if key in value}
     return check(ITEM, added, at=at)
 
 
@@ -1050,6 +1052,29 @@ ROLL = Block(
     ),
 )
 
+# One verb a carried thing grants the hero while it is carried (the
+# item-grants slice). `verb` is the id the verb fires under - the same
+# plain word the act's own `verbs` list uses - and `label` is what the
+# button on the verb row says. Both are required: a grant with no words
+# would put an unnamed button on the screen, and a grant with no id
+# would be a verb nothing could name.
+GRANT = Block(
+    name='grant',
+    example='{{"verb": "mend", "label": "Mend the hull"}}',
+    keys=(
+        Key('verb', 'word', lo=1, hi=24, required=True, say={
+            'missing-key': 'a grant must hold its verb, such as {{"verb": "mend", '
+                           '"label": "Mend the hull"}}',
+            'wrong-type': 'a grant verb must be one plain word, such as "mend"'}),
+        Key('label', 'str', lo=1, hi=60, required=True, say={
+            'missing-key': 'a grant must hold its label, such as {{"verb": "mend", '
+                           '"label": "Mend the hull"}}',
+            'wrong-type': 'a grant label must be the words on the button, such as '
+                          '"Mend the hull"',
+            'out-of-range': 'a grant label must be 1 to 60 characters'}),
+    ),
+)
+
 # One entry of a pack's `items` catalog. The first nine keys are what an
 # item has been since the loot slice - each of them checked by the
 # validator that owns it (`maplab.item_light_errors`,
@@ -1099,6 +1124,19 @@ ITEM = Block(
         Key('carry', 'int', lo=1, hi=99, say={
             'wrong-type': '{path} must be a whole number, such as 2',
             'out-of-range': '{path} must be a whole number of at least 1'}),
+        # The verbs this thing grants while the hero carries (or wears)
+        # it. The list is in the pack's own order, which is the order the
+        # verb row shows them in.
+        Key('grants', 'list', sub=GRANT, say={
+            'wrong-type': '{path} must be a list of the verbs this grants, such as '
+                          '[{{"verb": "mend", "label": "Mend the hull"}}]'}),
+        # What carrying this thing does to a verb it names, keyed by that
+        # verb's id. The table only states that it is an object: which
+        # verbs it may name and what each effect may hold are the item
+        # validator's questions (`maplab.item_grants_errors`).
+        Key('changes', 'obj', say={
+            'wrong-type': '{path} must be an object naming the verb each effect is for, '
+                          'such as {{"mend": {{"atk": 2}}}}'}),
     ),
 )
 
@@ -1106,6 +1144,12 @@ ITEM = Block(
 # reads, and what it refuses.
 ITEM_ADDED = ('rarity', 'traits', 'roll')
 ITEM_CARRIES = ('carry',)
+
+# The keys the item-grants slice added, beside the two above rather than
+# inside them: `grants` is the list of verbs a carried thing hands the
+# hero, and `changes` is what it does to a verb it names. `check_item`
+# reads them both, beside the spell key.
+ITEM_GRANTS = ('grants', 'changes')
 
 # A warden's own endless record (ADR 0015, "In cycles `c >= 1` it draws
 # `endless.affixes` affixes"). `affixes` is how many extra affixes an
@@ -1531,6 +1575,33 @@ BAG = Block(
     ),
 )
 
+# Mending (E2, for The Mending Shift). One record per recipe: exactly two
+# item ids in (`inputs`), one item id out (`output`), and the `say` line
+# the mend speaks. `inputs` is order-insensitive - mending the peg with
+# the net is the same mend - and the pair is consumed one copy of each,
+# which is the bag's own idea of spending a thing. The id is what the
+# `mends` rules event carries, so a pack can react to its own mends.
+#
+# The questions a record cannot answer for itself - whether the ids are
+# items the pack declares, and whether two recipes share an id - are
+# `maplab.recipes_errors`, because they are the pack's to answer.
+RECIPE = Block(
+    name='recipe',
+    example='{"id": "mend-the-net", "inputs": ["torn-net", '
+            '"driftwood-peg"], "output": "mended-net", '
+            '"say": "The net is whole again."}',
+    keys=(
+        Key('id', 'str', lo=1, hi=40, required=True),
+        Key('inputs', 'ids', required=True, say={
+            'wrong-type': '{path} must be a list of item ids, such as '
+                           '["torn-net", "driftwood-peg"]',
+            'wrong-element': '{path} must be an item id, such as "torn-net"'}),
+        Key('output', 'str', lo=1, hi=40, required=True),
+        Key('say', 'str', lo=1, hi=200),
+    ),
+    say={'missing-key': '{name} must hold its {key}, such as {example}'},
+)
+
 # ------------------------------------------------ the player's own words
 #
 # v0 of the player-words contract: one row per action-critical line a
@@ -1631,6 +1702,7 @@ BLOCKS = {
     'scenario start': SCENARIO_START,
     'item': ITEM,
     'bag': BAG,
+    'recipe': RECIPE,
     'player_words': PLAYER_WORDS,
     'pixel_art': PIXEL_ART,
     'spells': SPELLS,
@@ -1652,14 +1724,25 @@ BLOCKS = {
 # absent: the woven player has nowhere to type words, so an event that
 # waited on typed speech could never fire.
 #
-# The last two are the hero's own two facts: `falls` and `wakes` (vefr
-# #365). `defeats` is the player killing something; its mirror did not
+# The last two of those thirteen are the hero's own two facts: `falls`
+# and `wakes` (vefr #365). `defeats` is the player killing something;
+# its mirror did not
 # exist, so death was indistinguishable from a bug and a pack had to
 # fake it with `enters` - a line that then fires on every ordinary
 # arrival. `falls` carries the enemy that did it (`what`, empty when
 # nothing did) and the place the hero fell in (`where`); on a descent
 # floor that place is the floor's own name, `<section>-<cycle>-<floor>`,
 # so one id says how deep.
+#
+# `uses-verb` is the fourteenth: the hero pressed a verb on the verb
+# row. It exists because an item may hand the hero a verb of its own
+# (`grants` on an item, the item-grants slice) and a pack has to be
+# able to write what pressing it does. It carries the verb's id, which
+# names a verb of the act's own `verbs` list or one an item grants -
+# never a word only this rule made up.
+# The fifteenth is E2's (mending, `docs/guides/rulesets.md`): two
+# carried things became one, and the event carries the recipe's id - a
+# thing the pack itself declares, so the same one identity model holds.
 #
 # This is the one place the vocabulary is typed on the Python side. The
 # woven player holds a JavaScript twin of it today (the `EVENTS` table
@@ -1686,6 +1769,11 @@ EVENTS = {
     'falls': (Key('what', 'ref', ref='enemy'),
               Key('where', 'ref', ref='place')),
     'wakes': (Key('where', 'ref', ref='place'),),
+    'uses-verb': (Key('verb', 'ref', ref='verb'),),
+    # The fifteenth is E2's (mending): a recipe is a thing the pack
+    # declares, so the event carries its id and the identity model
+    # holds - a rule may name only a recipe this pack wrote.
+    'mends': (Key('recipe', 'ref', ref='recipe'),),
 }
 
 

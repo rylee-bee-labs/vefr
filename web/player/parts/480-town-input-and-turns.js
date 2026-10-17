@@ -1083,7 +1083,11 @@
   // that did not happen spends no turn.
   function applyVerb(verb, label, enemy) {
     if (!enemy) return false;
-    if (verb === 'attack') return heroAttack(enemy);
+    // A verb the hero carries may hit: the act's own `attack` always
+    // does, and any verb something's `changes` give attack does too, for
+    // that much more damage. A verb with no such change is still words.
+    var bonus = verbAtkBonus(verb);
+    if (verb === 'attack' || bonus > 0) return heroAttack(enemy, bonus);
     // The plain sentence, not "You use Console on it": what the verb
     // DID is the line a player reads (#463). `label` is kept in the
     // signature because the row's word is what the button says, but it
@@ -1104,6 +1108,12 @@
   // written down. Both call sites go through here, so a verb can never
   // be journalled without saying what it did.
   function takeVerb(verb, label, foe) {
+    // Every verb pressed is a fact of the world: it fires `uses-verb` with
+    // the verb's own id, the act's own verbs as well as the ones an item
+    // grants, because the validator lets a rule name either (maplab.pack_verbs)
+    // and a rule it accepts must be able to fire (#531 review). A pack with no
+    // `uses-verb` rule notices nothing, so its play is unchanged.
+    fireRule('uses-verb', { verb: verb });
     if (!foe) {
       // Pressed with nothing named to act on: nothing happens, and the
       // line says so in a sentence rather than naming the verb.

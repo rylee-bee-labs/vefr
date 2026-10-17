@@ -27,6 +27,10 @@ function loadEquipped() {
     var bag = bagItems().filter(function (id) { return !worn[id]; });
     store.setJSON(BAG_KEY, bag);
   }
+  // A worn thing that grants a verb keeps granting it: the verb row is
+  // drawn from what is carried AND what is worn, and this is the first
+  // moment the worn map is the whole truth.
+  renderVerbRow();
 }
 function saveEquipped(st) {
   store.setJSON(EQUIP_KEY, st || {});
