@@ -278,7 +278,7 @@ def test_the_target_ring_draws_with_a_target_and_moves_nothing(play):
 
 def test_the_target_ring_stays_away_when_nothing_is_in_reach(play):
     """The same forced draw with nothing in reach strokes the ring's
-    gold zero times (pickTarget is null, drawTargetRing returns early)
+    gold zero times (pickTarget is null, drawTargetCue returns early)
     and again changes nothing."""
     log = _log(play)
     assert log["empty-ring-strokes"] == 0

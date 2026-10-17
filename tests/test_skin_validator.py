@@ -444,6 +444,15 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 #   7f2070891f9abd9ca51017e4ebacfc356a92f540251abf6804d9839a9ce4fd53
 #   7f2070891f9abd9ca51017e4ebacfc356a92f540251abf6804d9839a9ce4fd53
 #   6234996f734f57e47389b63ea6c181b3b54a8e6a0ee36ab761c4397f1bac7886
+# The target cue on the smart action's tile (vefr#486: the glow and the corner marks in
+# 480-town-input-and-turns.js), 2026-10-16; measured twice on the host in separate processes
+# readings equal (before Journal C merged):
+#   545f51327267a4b63fb3412687e4a86a97515b218d0d5e67eec8b23837558e50
+#   545f51327267a4b63fb3412687e4a86a97515b218d0d5e67eec8b23837558e50
+# The target cue merged onto main with Journal C (vefr#486 + #484), 2026-10-16; measured twice on the host in separate
+# processes, readings equal:
+#   38867f8932cf51e9131803df44deddb34fd69d1bb6dcc03f4830a6801b0ce518
+#   38867f8932cf51e9131803df44deddb34fd69d1bb6dcc03f4830a6801b0ce518
 # The optional ambient music block (vefr#502) on top of the ending-only room scale, 2026-10-16; the player's
 # template grew one data line (window.VEFR_MUSIC_DEF, the literal null here), measured twice in separate
 # processes, readings equal:
@@ -456,7 +465,10 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # Music bed merged onto main (vefr#502), 2026-10-16; measured twice on the host in separate processes, readings equal:
 #   ee06718ab0f96304d7b4616596b1bcaaa32b9c34528c489c89d10163b5fa52c9
 #   ee06718ab0f96304d7b4616596b1bcaaa32b9c34528c489c89d10163b5fa52c9
-NO_SKIN_WEAVE_SHA256 = "ee06718ab0f96304d7b4616596b1bcaaa32b9c34528c489c89d10163b5fa52c9"
+# Music bed (vefr#502) merged onto main, 2026-10-16; measured twice on the host in separate processes, readings equal:
+#   fe41b2ae5e25a60989b1e51968f284beb770522e8044301403bafa0e0aa32311
+#   fe41b2ae5e25a60989b1e51968f284beb770522e8044301403bafa0e0aa32311
+NO_SKIN_WEAVE_SHA256 = "fe41b2ae5e25a60989b1e51968f284beb770522e8044301403bafa0e0aa32311"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():
