@@ -468,7 +468,7 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # Music bed (vefr#502) merged onto main, 2026-10-16; measured twice on the host in separate processes, readings equal:
 #   fe41b2ae5e25a60989b1e51968f284beb770522e8044301403bafa0e0aa32311
 #   fe41b2ae5e25a60989b1e51968f284beb770522e8044301403bafa0e0aa32311
-NO_SKIN_WEAVE_SHA256 = "fe41b2ae5e25a60989b1e51968f284beb770522e8044301403bafa0e0aa32311"
+NO_SKIN_WEAVE_SHA256 = "22467754b17b906989162609f26155ece1ed284e0f748b344f805b403e88359c"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():

@@ -225,7 +225,7 @@ if (window.VEFR_MUSIC_DEF && window.VEFR_MUSIC_DEF.track) {
 // One synthesized bed: [Hz, ms] pairs layered from the loop's start, so
 // a bed is a chord held long enough to sit under play rather than a
 // tune that asks for attention. `shore` is a low open fifth with the
-// fifth on top, one note at a time fading in over a second and out
+// fifth on top, its notes together, layered as one soft chord fading in over a second and out
 // over the last stretch of the loop, so the seam between loops is a
 // fade rather than a click. No audio files ship: nothing to license.
 var MUSIC_PEAK = 0.025;
@@ -257,7 +257,18 @@ function musicPass(ctx, gen) {
   var bed = MUSIC_BEDS[window.VEFR_MUSIC.track];
   if (!bed) return;
   var vol = musicVolume();
-  if (vol <= 0) return;
+  if (vol <= 0) {
+    // Silent at volume 0, but still listening: check again in a second, so raising the slider brings the
+    // bed back without turning Music off and on (#530 review).
+    try {
+      setTimeout(function () {
+        if (gen !== MUSIC_GEN) return;
+        if (!window.VEFR_MUSIC.on || !window.VEFR_MUSIC.playing) return;
+        musicPass(ctx, gen);
+      }, 1000);
+    } catch (e) {}
+    return;
+  }
   var at = ctx.currentTime + 0.05;
   var loopMs = 0;
   bed.notes.forEach(function (n) {
