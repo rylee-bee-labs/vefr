@@ -186,6 +186,17 @@
       }
       return;
     }
+    // The fall card (vefr#484): a warm hush - any key continues, and
+    // nothing else is answered while it waits. Tab is the one exception,
+    // so the focus can still move inside the card (045-dialog-focus.js).
+    var fallOpen = !document.getElementById('fall').hidden;
+    if (fallOpen) {
+      if (e.key !== 'Tab') {
+        e.preventDefault();
+        if (!e.repeat) closeFall();
+      }
+      return;
+    }
     // While the reader is open, its keys win and movement stops: the
     // pages answer to the reading keys, and Interact and the menu key
     // continue and close.

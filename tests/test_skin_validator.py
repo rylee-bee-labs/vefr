@@ -437,6 +437,12 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # The ending-only room scale (display.ending_tile, cottage-of-the-breeze#166) on top of the archive loader (#519),
 # 2026-10-16; measured twice on the host in separate processes after merging main, readings equal:
 #   6234996f734f57e47389b63ea6c181b3b54a8e6a0ee36ab761c4397f1bac7886
+# The quiet page and the calm fall card (vefr#484, mockup C): the new part
+# 245-the-quiet-page.js, plus 240, 260, 430, 510, 030-shell.html and
+# 020-style.css, 2026-10-16; measured twice on the host in separate
+# processes, readings equal:
+#   7f2070891f9abd9ca51017e4ebacfc356a92f540251abf6804d9839a9ce4fd53
+#   7f2070891f9abd9ca51017e4ebacfc356a92f540251abf6804d9839a9ce4fd53
 #   6234996f734f57e47389b63ea6c181b3b54a8e6a0ee36ab761c4397f1bac7886
 # The optional ambient music block (vefr#502) on top of the ending-only room scale, 2026-10-16; the player's
 # template grew one data line (window.VEFR_MUSIC_DEF, the literal null here), measured twice in separate
@@ -447,7 +453,10 @@ def test_a_backdrop_may_not_leave_the_skin_folder(tmp_path):
 # twice in separate processes, readings equal:
 #   6805800bd454e092454e76b2ba7ff693579dae21407925ebbb831f24f8b9d161
 #   6805800bd454e092454e76b2ba7ff693579dae21407925ebbb831f24f8b9d161
-NO_SKIN_WEAVE_SHA256 = "6805800bd454e092454e76b2ba7ff693579dae21407925ebbb831f24f8b9d161"
+# Music bed merged onto main (vefr#502), 2026-10-16; measured twice on the host in separate processes, readings equal:
+#   ee06718ab0f96304d7b4616596b1bcaaa32b9c34528c489c89d10163b5fa52c9
+#   ee06718ab0f96304d7b4616596b1bcaaa32b9c34528c489c89d10163b5fa52c9
+NO_SKIN_WEAVE_SHA256 = "ee06718ab0f96304d7b4616596b1bcaaa32b9c34528c489c89d10163b5fa52c9"
 
 
 def test_a_pack_with_no_skin_bakes_null_and_its_weave_is_stable():
