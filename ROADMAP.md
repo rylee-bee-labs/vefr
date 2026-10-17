@@ -122,6 +122,18 @@ gameplay features over new core machinery.
   not hand the stair back when it is read. Issue #465; tests: `tests/test_stair_landing.py` and
   `tests/test_descent_arrival.py`; player guide: "Arriving by stairs" in `docs/guides/playing.md`.
 
+### LANDED 2026-10-17 (one digest line no longer serializes every player PR)
+- [QA] The no-skin weave digest and the two baked-data digests are no longer committed constants (vefr#529). They
+  guarded a refactor - "a refactor of the player must not change behaviour" - and charged every feature PR for it:
+  every player PR re-measured one of those lines, and every merge made the next open PR merge `main`, re-weave
+  twice and re-push before CI could start, which with three open player PRs was three serial rounds. The guard now
+  runs where it matters: a PR labelled `refactor` (CI passes the label down as `VEFR_REFACTOR=1`) must reproduce
+  the digests `git merge-base HEAD origin/main` prints, woven in a temp worktree at the merge base against this
+  branch's fixtures. Nothing is committed, so nothing can conflict, and every other branch still checks that the
+  weave is deterministic and the digest a well-formed sha256. The visual-regression job over the woven sample is
+  unchanged. Measured at the merge base, the three old constants come back byte for byte. Tests:
+  `tests/weave_digest.py`, `tests/test_skin_validator.py`, `tests/test_identify.py`.
+
 ### IN PROGRESS (decided by Rylee on 2026-10-04; refreshed 2026-10-12)
 - **The endless dungeon** (epic [#273](https://github.com/rylee-bee-labs/vefr/issues/273); design `docs/plans/endless-dungeon/DESIGN.md`, build plan `docs/plans/endless-dungeon/PLAN.md`, research `docs/research/big-generated-maps.md`): floors generated while you play from `seed + depth`, cut into sections of 8 to 11 floors; each ends in a key warden whose key opens a vault with a lore note; acts change the town only; elites, linked groups, hand-painted stamps and much bigger maps (up to 128x96, kept cheap for phones); an endless mode after the story.
   - **Merged:** E0a measurements (#278), F1 fog as a bitset (#287), E0d sleeping monsters and a radius-bounded flood (#288), E2 the v3 Python floor generator with property sweeps (#289).
