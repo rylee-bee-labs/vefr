@@ -365,3 +365,39 @@ def test_strict_fails_on_a_rule_its_own_conditions_held_back(play, tmp_path):
     rc, report, _game, _page = play(pack, tmp_path / 'strict-shots', strict=True)
     assert rc == 1, report
     assert report['strict'] is True
+
+
+def _report_for(conditions, walked):
+    plan = {'world': 'w', 'unresolved': [], 'phases': [{'name': 'day'}, {'name': 'night'}],
+            'rules': {'r': {'who': 'the post', 'distance': 1, 'phases': ['day'],
+                            'conditions': conditions}}}
+    run = {'phases': [{'name': 'day', 'reached': True,
+                       'stops': [{'who': 'the post', 'walked': walked}]},
+                      {'name': 'night', 'reached': True, 'stops': []}],
+           'fired': [], 'why': []}
+    return devtools.playthrough_report(plan, run)
+
+
+def test_a_conditioned_rule_whose_stop_was_walked_is_held_not_missed():
+    report = _report_for([{'flag': 'ready', 'is': True}], walked=True)
+    assert report['missed'] == [] and report['ok'] is True
+
+
+def test_a_conditioned_rule_whose_stop_was_never_walked_is_missed():
+    """Review on #547: conditions do not excuse a trigger that never happened."""
+    report = _report_for([{'flag': 'ready', 'is': True}], walked=False)
+    assert report['missed'] == ['r'] and report['ok'] is False
+
+
+def test_an_unconditioned_silent_rule_is_missed_even_when_walked():
+    report = _report_for([], walked=True)
+    assert report['missed'] == ['r'] and report['ok'] is False
+
+
+def test_a_rule_scoped_to_every_phase_on_purpose_still_counts_as_phase_scoped():
+    """Review on #548: naming both phases explicitly is a phase condition, unlike naming none."""
+    both = {'if': [{'not': {'phase': 'nowhere'}}, {'flag': 'ready', 'is': True}]}
+    none = {'if': [{'flag': 'ready', 'is': True}]}
+    assert devtools._names_a_phase(both) is True
+    assert devtools._names_a_phase(none) is False
+    assert devtools._names_a_phase({'if': [{'all-of': [{'phase': 'day'}]}]}) is True
