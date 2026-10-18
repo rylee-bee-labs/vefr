@@ -1193,8 +1193,12 @@ def playthrough(html=None, pack=None, out=None, json_out=False,
                             entry['stops'].append(visit)
                     fired_now = set(_read(page).get('fired') or [])
                     now = len(fired_now)
+                    # Only rules scoped to THIS phase drive another round: a rule with no
+                    # phase condition may fire in any phase, and is not this phase's to chase.
                     waiting = [rid for rid, rule in plan['rules'].items()
-                               if name in rule['phases'] and rid not in fired_now]
+                               if name in rule['phases']
+                               and len(rule['phases']) < len(plan['phases'])
+                               and rid not in fired_now]
                     if now == seen or not waiting:
                         break       # nothing new fired, or nothing of this phase is left to fire
                     seen = now
@@ -1475,7 +1479,11 @@ def playthrough_report(plan: dict, run: dict, strict: bool = False) -> dict:
     # A silent rule with its own `if` was held back by the story (an exclusive ending, an item
     # not carried): reported, not a failure unless `strict`. A silent rule with no conditions
     # means its trigger never happened, which is the walk's failure.
-    missed = [n for n in never if not n['conditions']]
+    # ...and held back only if its stop was really walked: a rule whose trigger never happened is
+    # missed whatever its conditions say.
+    walked = {stop.get('who') for p in run.get('phases', []) if p.get('reached')
+              for stop in p.get('stops', []) if stop.get('walked')}
+    missed = [n for n in never if not n['conditions'] or n['who'] not in walked]
     ok = not unreachable and not plan['unresolved'] and not (never if strict else missed)
     return {
         'world': plan['world'],
@@ -1538,7 +1546,7 @@ def _print_playthrough(report: dict, json_out: bool) -> None:
             held = entry.get('held_by') or (
                 f'the pack asks for {_conditions_sentence(entry["conditions"])}'
                 if entry['conditions'] else 'nothing in the why-log says')
-            if entry['conditions']:
+            if entry['id'] not in (report.get('missed') or []):
                 print(f"  {entry['id']}: comes-near {entry['who']} within "
                       f"{entry['distance']} - held back by {held}")
             else:
