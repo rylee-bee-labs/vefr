@@ -103,7 +103,7 @@ eight seeds are clean - an 8-seed check says nothing at all, and a
 
 ## Developer verbs
 
-Three verbs help when you work on the game itself. They live in
+Four verbs help when you work on the game itself. They live in
 `src/vefr/devtools.py`, and `vefr doctor` now lists the tooling they
 need under a short `tooling:` block.
 
@@ -173,7 +173,41 @@ and flags back. Each event is written `event:key=value`.
 uv run vefr probe --pack worlds/sample-world --fire "enters:place=town"
 ```
 
-All three return `0` when they do the
+`vefr playthrough` plays the pack instead of firing at it: it walks,
+talks and rests, the way a person does, and reports what the game did.
+
+```sh
+uv run vefr playthrough --pack worlds/sample-world
+```
+
+The plan is read off the pack, not written by a script. Every phase the
+pack declares (in `phases` order, or one pass when the pack declares no
+`time` block), and for each phase the stops the rules that name that
+phase in `comes-near`: the speaker to walk up to, the place to stand on,
+at the reach the rule declared. Then Rest, when the pack wrote
+`"time": {"rest": true}`, which turns the watch on to the next phase.
+The walk is a real path over the pack's own map and legend, replanned
+from the hero's published tile after every step, so a wall the geometry
+does not know about costs a detour and not the run. The pack is read,
+never written.
+
+The report is the phases reached, the rules that fired, the rules a
+reached phase asked for that never fired (with the why-log's sentence
+when it has one), and one screenshot per phase.
+
+```sh
+uv run vefr playthrough --pack path/to/your-pack --json --out shots/
+```
+
+`--html FILE` plays a woven player you already have instead of weaving
+`--pack`; the plan still comes from the pack, so `--pack` is always
+needed. `--viewport 390x844` opens the game at one size.
+
+`playthrough` returns `0` when every phase was reached and every rule a
+reached phase asked for fired, `1` when a phase was unreachable or a
+rule stayed silent, and `2` when the run could not start at all.
+
+All four return `0` when they do the
 work, and `2` when the arguments are wrong or a tool they need
 (Chromium, the gallery CLI) is missing. A missing tool is a report, not
 a failed check, and never changes `vefr doctor`'s exit code.

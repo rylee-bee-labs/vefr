@@ -5639,6 +5639,27 @@ def cmd_probe(args) -> int:
                           json_out=args.json, scenario=getattr(args, "scenario", None))
 
 
+def cmd_playthrough(args) -> int:
+    """`vefr playthrough` - play the pack the way a person does, and report.
+
+    Like cmd_look and cmd_probe, the browser work lives in vefr.devtools;
+    this door resolves --pack (the plan is read off the pack, so it is
+    always needed, even when --html names the woven file to play).
+    """
+    from . import devtools
+
+    pack = _devtools_pack(args.pack)
+    viewport = None
+    if getattr(args, 'viewport', None):
+        sizes, why = devtools._parse_sizes([args.viewport])
+        if why is not None:
+            print(why, file=sys.stderr)
+            return EXIT_USAGE
+        viewport = sizes[0]
+    return devtools.playthrough(html=args.html, pack=pack, out=args.out,
+                                json_out=args.json, viewport=viewport)
+
+
 def cmd_features(args) -> int:
     """`vefr features` - what VEFR can do, and what a pack uses.
 
@@ -5903,6 +5924,28 @@ def vefr_main() -> int:
                          '(needs --pack)')
     pr.add_argument('--json', action='store_true', help='print the report as JSON')
     pr.set_defaults(fn=cmd_probe)
+
+    pt2 = sub.add_parser(
+        'playthrough',
+        help='play the pack end to end - phases, stops, Rest - and report',
+        description='play the pack the way a person does: walk to every '
+                    'place and speaker a comes-near rule names, rest '
+                    'through the phases, and report what fired',
+        epilog='see: docs/guides/vefr-command.md',
+    )
+    pt2.add_argument('--pack', default=None,
+                     help='the pack to play: a worlds/ name or a path '
+                          '(the plan is read off it)')
+    pt2.add_argument('--html', default=None,
+                     help='play this woven player instead of weaving --pack')
+    pt2.add_argument('--out', default=None, metavar='DIR',
+                     help='where the per-phase screenshots go '
+                          '(default: playthrough/)')
+    pt2.add_argument('--viewport', default=None, metavar='WxH',
+                     help='open the game at this size (default: 1280x800)')
+    pt2.add_argument('--json', action='store_true',
+                     help='print the report as JSON')
+    pt2.set_defaults(fn=cmd_playthrough)
 
     ft = sub.add_parser(
         'features',
