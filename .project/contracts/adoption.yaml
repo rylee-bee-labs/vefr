@@ -3,7 +3,8 @@ project: vefr
 source:
   repository: rylee-bee-labs/play-nice-contracts
   # 2026-10-18: auto re-pin, fast-forward from 6669c01 (1 commit(s); 0 file(s) under contracts/ changed)
-  revision: 63981682b638aa1418d995261e174f6bf92c0ca5
+  # 2026-10-18: auto re-pin, fast-forward from 6398168 (1 commit(s); 0 file(s) under contracts/ changed)
+  revision: 0ff800ba6d5ce865f001b01624bfbf98840e4dd6
   # -> 2bbe8f6 (2026-10-10, Rylee: "Repin and fix the rot too"): play-nice-contracts #65 (README) and #66
   # (org rename; schema/*.json changed only the owner in descriptions, defaults and $id). No contract rule
   # changed. From here the pin is update: automatic: docs-only library moves read CURRENT through the
