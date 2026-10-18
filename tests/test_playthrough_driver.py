@@ -392,3 +392,12 @@ def test_a_conditioned_rule_whose_stop_was_never_walked_is_missed():
 def test_an_unconditioned_silent_rule_is_missed_even_when_walked():
     report = _report_for([], walked=True)
     assert report['missed'] == ['r'] and report['ok'] is False
+
+
+def test_a_rule_scoped_to_every_phase_on_purpose_still_counts_as_phase_scoped():
+    """Review on #548: naming both phases explicitly is a phase condition, unlike naming none."""
+    both = {'if': [{'not': {'phase': 'nowhere'}}, {'flag': 'ready', 'is': True}]}
+    none = {'if': [{'flag': 'ready', 'is': True}]}
+    assert devtools._names_a_phase(both) is True
+    assert devtools._names_a_phase(none) is False
+    assert devtools._names_a_phase({'if': [{'all-of': [{'phase': 'day'}]}]}) is True
