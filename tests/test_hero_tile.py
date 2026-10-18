@@ -11,7 +11,6 @@ browser half of this coverage lives in tests/browser/test_playthrough.py.
 """
 
 import shutil
-from pathlib import Path
 
 import pytest
 
@@ -42,9 +41,11 @@ def test_the_hero_tile_is_published_where_the_pack_put_the_hero(tmp_path):
 def test_the_hero_tile_follows_every_step(tmp_path):
     """One step is one tile, and the published tile is the step - not the
     tile before it, and not the tile after the turn has run on."""
-    assert _play(tmp_path, ["dir:right"]) == {"x": START[0] + 1, "y": START[1],
-                                              "region": "town"}
-    assert _play(tmp_path, ["dir:right", "dir:down"]) == \
+    # (The storeroom rat stands at [2, 1], right of the start, so a first step right is a fight,
+    # not a step: the walk goes down first.)
+    assert _play(tmp_path, ["dir:down", "wait:400"]) == {"x": START[0], "y": START[1] + 1,
+                                                        "region": "town"}
+    assert _play(tmp_path, ["dir:down", "wait:400", "dir:right", "wait:400"]) == \
         {"x": START[0] + 1, "y": START[1] + 1, "region": "town"}
 
 
@@ -52,7 +53,7 @@ def test_a_refused_step_leaves_the_published_tile_where_it_was(tmp_path):
     """A wall is a refusal the driver can see, not a silent one: up out
     of the hero's own row is off the map, and the tile says so."""
     before = _play(tmp_path, [])
-    after = _play(tmp_path, ["dir:up"])
+    after = _play(tmp_path, ["dir:up", "wait:400"])
     assert after == before
 
 
@@ -70,7 +71,7 @@ def test_the_pack_file_is_where_it_was(tmp_path):
     byte of it."""
     pack = play_kit.pack(tmp_path, "interact")
     before = {p: p.read_bytes() for p in sorted(pack.rglob("*")) if p.is_file()}
-    play_kit.play(play_kit.weave(pack, tmp_path), tmp_path,
+    play_kit.play(play_kit.weave(pack, tmp_path),
                   {"steps": ["begin", "dir:right"], "read": ["VEFR_HERO_AT"]})
     after = {p: p.read_bytes() for p in sorted(pack.rglob("*")) if p.is_file()}
     assert after == before

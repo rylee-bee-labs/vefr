@@ -56,6 +56,9 @@ function setupTown() {
   var speakers = regionSpeakers(regionName);
   var hero = (Array.isArray(start.at) && start.at.length === 2
     ? start.at : town.hero_start).slice();
+  // Published from the first tile, not only after the first arrival or step: a harness
+  // (`vefr playthrough`) reads where the hero stands before its first key.
+  window.VEFR_HERO_AT = { x: hero[0], y: hero[1], region: regionName };
 
   // The canvas's name, for a screen reader (vefr#461). The shell writes
   // one name into the markup and it never moved: a hero who stepped

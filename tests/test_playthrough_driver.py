@@ -193,7 +193,7 @@ class ScriptedPage:
 def play(monkeypatch, capsys):
     """Run `vefr playthrough` against a scripted game; give back its code,
     its JSON report and the game it played."""
-    def _play(pack, out):
+    def _play(pack, out, strict=False):
         game = ScriptedGame(pack)
         page = ScriptedPage(game)
 
@@ -202,7 +202,7 @@ def play(monkeypatch, capsys):
             yield page
 
         monkeypatch.setattr(devtools, '_session', _session)
-        rc = devtools.playthrough(pack=pack, out=out, json_out=True)
+        rc = devtools.playthrough(pack=pack, out=out, json_out=True, strict=strict)
         printed = capsys.readouterr().out.strip().splitlines()
         return rc, json.loads(printed[-1]), game, page
     return _play
@@ -281,7 +281,10 @@ def test_a_rule_whose_condition_never_holds_is_reported(play, tmp_path):
     (pack / 'world.json').write_text(json.dumps(world), encoding='utf-8')
 
     rc, report, _game, _page = play(pack, tmp_path / 'shots')
-    assert rc == 1, report
+    # Held back by its own condition: reported, but not the walk's failure (a story has
+    # exclusive outcomes). Only --strict fails it.
+    assert rc == 0, report
+    assert report['missed'] == [], report
     assert [n['id'] for n in report['never_fired']] == ['the-watcher-agrees']
     assert report['never_fired'][0]['conditions'] == \
         [{'flag': 'asked-twice', 'is': True}]
@@ -350,3 +353,15 @@ def test_the_pack_is_never_written_to(play, tmp_path):
     play(pack, tmp_path / 'shots')
     after = {p: p.read_bytes() for p in sorted(pack.rglob('*')) if p.is_file()}
     assert after == before
+
+def test_strict_fails_on_a_rule_its_own_conditions_held_back(play, tmp_path):
+    pack = _time_pack(tmp_path)
+    world = json.loads((pack / 'world.json').read_text())
+    world['rules'].append({'id': 'the-watcher-agrees',
+                           'when': {'comes-near': {'who': 'watcher', 'distance': 2}},
+                           'if': [{'flag': 'asked-twice', 'is': True}],
+                           'then': [{'say': 'Aye.'}]})
+    (pack / 'world.json').write_text(json.dumps(world))
+    rc, report, _game, _page = play(pack, tmp_path / 'strict-shots', strict=True)
+    assert rc == 1, report
+    assert report['strict'] is True

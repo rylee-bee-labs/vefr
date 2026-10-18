@@ -25,11 +25,10 @@ import sys
 import time
 import urllib.request
 from pathlib import Path
-from types import SimpleNamespace
 
 import pytest
 
-from vefr import cli, devtools
+from vefr import cli
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tests" / "fixtures"))
@@ -85,10 +84,13 @@ def need_browser(browser):
 
 def _play(pack: Path, out: Path, capsys) -> tuple:
     """`vefr playthrough --pack <pack> --out <out> --json`, as the door runs it."""
-    rc = cli.cmd_playthrough(SimpleNamespace(
-        pack=str(pack), html=None, out=str(out), viewport=None, json=True))
-    printed = capsys.readouterr().out.strip().splitlines()
-    return rc, json.loads(printed[-1])
+    # A real subprocess, as a person runs it: `vefr playthrough` opens its own Playwright, and the
+    # browser fixture this module also uses already holds the sync API in this thread.
+    done = subprocess.run([str(Path(sys.executable).with_name("vefr")), "playthrough", "--pack", str(pack),
+                           "--out", str(out), "--json"], capture_output=True, text=True, timeout=600)
+    printed = done.stdout.strip().splitlines()
+    assert printed, done.stderr[-2000:]
+    return done.returncode, json.loads(printed[-1])
 
 
 # ---- the mending pack: one pass, its people and its places ----
@@ -212,7 +214,8 @@ def test_a_rule_whose_condition_never_holds_is_reported_as_not_fired(
 
     rc, report = _play(pack, tmp_path / "quiet-shots", capsys)
 
-    assert rc == 1, report
+    assert rc == 0, report          # held back by its own condition: reported, not a failure
+    assert report["missed"] == [], report
     quiet = [n["id"] for n in report["never_fired"]]
     assert quiet == ["the-watcher-agrees"], report
     entry = report["never_fired"][0]
@@ -269,8 +272,9 @@ def test_the_text_report_says_what_played_and_what_did_not(
     home = served_home / "time-text"
     home.mkdir(parents=True, exist_ok=True)
     pack = make_time_pack.build(home, name="time-test")
-    rc = devtools.playthrough(pack=pack, out=tmp_path / "text-shots")
-    out = capsys.readouterr().out
+    done = subprocess.run([str(Path(sys.executable).with_name("vefr")), "playthrough", "--pack", str(pack),
+                           "--out", str(tmp_path / "text-shots")], capture_output=True, text=True, timeout=600)
+    rc, out = done.returncode, done.stdout
     assert rc == 0, out
     assert "3 of 3 phase(s) reached" in out
     assert "phase whispers: ok" in out

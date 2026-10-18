@@ -5657,7 +5657,8 @@ def cmd_playthrough(args) -> int:
             return EXIT_USAGE
         viewport = sizes[0]
     return devtools.playthrough(html=args.html, pack=pack, out=args.out,
-                                json_out=args.json, viewport=viewport)
+                                json_out=args.json, viewport=viewport,
+                                strict=getattr(args, 'strict', False))
 
 
 def cmd_features(args) -> int:
@@ -5945,6 +5946,9 @@ def vefr_main() -> int:
                      help='open the game at this size (default: 1280x800)')
     pt2.add_argument('--json', action='store_true',
                      help='print the report as JSON')
+    pt2.add_argument('--strict', action='store_true',
+                     help='also fail on rules held back by their own conditions '
+                          '(a story has exclusive outcomes, so this fails most packs)')
     pt2.set_defaults(fn=cmd_playthrough)
 
     ft = sub.add_parser(

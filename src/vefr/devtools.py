@@ -1130,8 +1130,14 @@ def _press(page, key: str) -> None:
     _dismiss(page)
 
 
+#: A phase's stops are walked again while new rules keep firing (a rule may need what a later
+#: stop hands over: the Mending Shift's bench wants the fid the Warden gives), up to this many
+#: rounds, so visit order stops mattering without an endless walk.
+PLAYTHROUGH_ROUNDS = 3
+
+
 def playthrough(html=None, pack=None, out=None, json_out=False,
-                viewport=None) -> int:
+                viewport=None, strict=False) -> int:
     """Play a pack the way a person does, and report what it saw.
 
     Walks, talks and rests through the pack's own phases, taking the
@@ -1141,9 +1147,12 @@ def playthrough(html=None, pack=None, out=None, json_out=False,
     (`window.VEFR_RULES_STATE.fired`, the why-log `probe` reads), writes
     one screenshot per phase into `out`, and never edits the pack.
 
-    Exit `0` when every phase was reached and every rule a reached
-    phase asked for fired, `1` when a phase was unreachable or a rule
-    stayed silent, and `2` when the run could not start at all.
+    Exit `0` when every phase was reached and every rule a reached phase
+    asked for either fired or was held back by its own conditions (a story
+    has exclusive outcomes: one run cannot fire all three endings), `1`
+    when a phase was unreachable or a rule with no conditions stayed silent
+    (its trigger never happened), and `2` when the run could not start at
+    all. `strict=True` also fails on condition-held rules.
     """
     if pack is None:
         print('vefr playthrough needs --pack: the plan comes from the '
@@ -1176,8 +1185,23 @@ def playthrough(html=None, pack=None, out=None, json_out=False,
             entry = {'name': name, 'reached': reached, 'notes': [],
                      'stops': []}
             if reached:
-                for stop in phase['stops']:
-                    entry['stops'].append(_visit(page, plan, stop))
+                seen = len(_read(page).get('fired') or [])
+                for round_no in range(PLAYTHROUGH_ROUNDS):
+                    for stop in phase['stops']:
+                        visit = _visit(page, plan, stop)
+                        if round_no == 0:
+                            entry['stops'].append(visit)
+                    fired_now = set(_read(page).get('fired') or [])
+                    now = len(fired_now)
+                    waiting = [rid for rid, rule in plan['rules'].items()
+                               if name in rule['phases'] and rid not in fired_now]
+                    if now == seen or not waiting:
+                        break       # nothing new fired, or nothing of this phase is left to fire
+                    seen = now
+                    if round_no + 1 < PLAYTHROUGH_ROUNDS:
+                        entry['notes'].append(
+                            f'round {round_no + 2}: walked the stops again, '
+                            'because the last round fired something new')
                 entry['screenshot'] = str(
                     out / f'{index:02d}-{_slug(name or "pass")}.png')
                 page.screenshot(path=entry['screenshot'])
@@ -1193,7 +1217,7 @@ def playthrough(html=None, pack=None, out=None, json_out=False,
         run['why'] = _read(page).get('why') or []
         run['fired'] = _read(page).get('fired') or []
 
-    report = playthrough_report(plan, run)
+    report = playthrough_report(plan, run, strict=strict)
     _print_playthrough(report, json_out)
     return 0 if report['ok'] else 1
 
@@ -1410,7 +1434,7 @@ def _walk_to(page, w, region, where, goal):
     return (here.get('x'), here.get('y')) == tuple(goal)
 
 
-def playthrough_report(plan: dict, run: dict) -> dict:
+def playthrough_report(plan: dict, run: dict, strict: bool = False) -> dict:
     """The playthrough report, from the plan and what the run saw.
 
     `{world, phases, fired, never_fired, unresolved, notes, ok}`. `fired`
@@ -1448,7 +1472,11 @@ def playthrough_report(plan: dict, run: dict) -> dict:
 
     unreachable = [p['name'] for p in run.get('phases', [])
                    if not p.get('reached')]
-    ok = not unreachable and not never and not plan['unresolved']
+    # A silent rule with its own `if` was held back by the story (an exclusive ending, an item
+    # not carried): reported, not a failure unless `strict`. A silent rule with no conditions
+    # means its trigger never happened, which is the walk's failure.
+    missed = [n for n in never if not n['conditions']]
+    ok = not unreachable and not plan['unresolved'] and not (never if strict else missed)
     return {
         'world': plan['world'],
         'phases': [{'name': p['name'], 'reached': p.get('reached'),
@@ -1457,6 +1485,8 @@ def playthrough_report(plan: dict, run: dict) -> dict:
                    for p in run.get('phases', [])],
         'fired': [{'id': rid, 'why': why.get(rid)} for rid in fired],
         'never_fired': never,
+        'missed': [n['id'] for n in missed],
+        'strict': strict,
         'unresolved': plan['unresolved'],
         'unreachable': unreachable,
         'notes': run.get('notes', []),
@@ -1501,13 +1531,19 @@ def _print_playthrough(report: dict, json_out: bool) -> None:
     else:
         print('rules fired (0)')
     if report['never_fired']:
-        print(f"never fired ({len(report['never_fired'])}):")
+        held_n = len(report['never_fired']) - len(report.get('missed') or [])
+        print(f"never fired ({len(report['never_fired'])}: {held_n} held back by their own "
+              f"conditions, {len(report.get('missed') or [])} whose trigger never happened):")
         for entry in report['never_fired']:
             held = entry.get('held_by') or (
                 f'the pack asks for {_conditions_sentence(entry["conditions"])}'
                 if entry['conditions'] else 'nothing in the why-log says')
-            print(f"  {entry['id']}: comes-near {entry['who']} within "
-                  f"{entry['distance']} - held back by {held}")
+            if entry['conditions']:
+                print(f"  {entry['id']}: comes-near {entry['who']} within "
+                      f"{entry['distance']} - held back by {held}")
+            else:
+                print(f"  {entry['id']}: MISSED - comes-near {entry['who']} within "
+                      f"{entry['distance']} never happened")
     for entry in report['unresolved']:
         print(f"unresolved: rule {entry['id']} names {entry['why']}")
     for note in report['notes']:
