@@ -695,11 +695,13 @@ def probe(html=None, pack=None, fire=(), json_out=False, scenario=None) -> int:
 # phase. Read-only toward the pack: it plays and reports, and it never
 # writes a byte of one.
 
-# The key each direction is the player's own, and the step it takes on
-# the map. Read off the one keybinds table (part 076), so a pack whose
-# player chose WASD still walks when the table is read at the page.
+# The step each direction makes on the map, and the shipped key for it
+# (`window.VEFR_KEYBINDS`, the one keybinds table part 076 keeps, names
+# those; the driver asks the page for the player's own choices and falls
+# back to these).
 _DIRECTIONS = (('ArrowUp', 0, -1), ('ArrowDown', 0, 1),
                 ('ArrowLeft', -1, 0), ('ArrowRight', 1, 0))
+_ACTIONS = (('up', 0, -1), ('down', 0, 1), ('left', -1, 0), ('right', 1, 0))
 
 # Every wait is bounded by one of these. Nothing here sleeps blindly: a
 # wait is either a poll for something the page publishes, or a cap on
@@ -710,8 +712,9 @@ _TURN_MS = 3000
 # One read of what the game is doing right now: the hero's published
 # tile (`window.VEFR_HERO_AT`), the standing phase
 # (`window.VEFR_TIME()`), the engine's own fired marks
-# (`window.VEFR_RULES_STATE.fired`) and the why-log (`window.VEFR_WHY`,
-# the same source `probe` reads). Read-only - it asks the page nothing.
+# (`window.VEFR_RULES_STATE.fired`), the why-log (`window.VEFR_WHY`,
+# the same source `probe` reads), and the keybinds as they stand.
+# Read-only - it asks the page nothing.
 _READ_PLAY_JS = """() => {
   const h = window.VEFR_HERO_AT || null;
   const t = (typeof window.VEFR_TIME === 'function') ? window.VEFR_TIME() : null;
@@ -721,15 +724,17 @@ _READ_PLAY_JS = """() => {
     phase: (t && t.phase) || null,
     fired: Object.keys(s.fired || {}),
     why: Array.isArray(window.VEFR_WHY) ? window.VEFR_WHY : [],
+    keys: (typeof window.VEFR_KEYBINDS === 'function') ? window.VEFR_KEYBINDS() : null,
   };
 }"""
 
-# The game is in play: its own play pane is showing and the engine is
-# up. Not a phase test - a pack with no phases still plays, and a pack
-# with phases still has one behind the title screen.
+# The game is in play: its own play pane is showing. Not a phase test and
+# not an engine test - a pack with no phases still plays, a pack with
+# phases still has one behind the title screen, and a pack on a surface
+# with no map (the kitchen, the desk) publishes no combat snapshot at all.
 _PLAYING_JS = """() => {
   const pane = document.getElementById('play');
-  return !!(window.VEFR_COMBAT && pane && !pane.hidden);
+  return !!(pane && !pane.hidden);
 }"""
 
 # Put away whatever is standing over the game: a speaker's box (with its
@@ -952,11 +957,24 @@ def _is_at(value) -> bool:
 
 
 def _walkable(geometry: dict, props, x: int, y: int) -> bool:
-    """Can the hero stand on this tile of this region?"""
+    """Can the hero stand on this tile of this region?
+
+    The player's own rule (part 480's `tileOpen`): inside the map, not
+    solid in the legend, not under a prop. The validator's fallback
+    alphabet is deliberately not applied - a driver that walks the same
+    ground the hero does is the whole point, and a second reading of what
+    a `#` means would route the walk against walls the hero walks through
+    (or the other way round).
+    """
     from . import maplab
 
-    if maplab._map_tile_walkable(geometry.get('map') or [],
-                                 geometry.get('legend') or {}, x, y) is not True:
+    rows = geometry.get('map') or []
+    if not rows or y < 0 or y >= len(rows):
+        return False
+    row = rows[y]
+    if x < 0 or x >= len(row):
+        return False
+    if ((geometry.get('legend') or {}).get(row[x]) or {}).get('solid'):
         return False
     return not maplab.prop_blocks(props, x, y)
 
@@ -1041,12 +1059,32 @@ def _approach_tile(geometry, at, distance, kind='place', props=None):
     return best[1] if best else exact
 
 
-def _key_for(dx: int, dy: int):
-    """The key that steps `(dx, dy)`, or None."""
+def _key_for(dx: int, dy: int, binds: dict | None = None):
+    """The key that steps `(dx, dy)`, or None.
+
+    The player's own keybinds are asked first (`window.VEFR_KEYBINDS`, the
+    one table part 076 keeps), so a run against a save whose keys were
+    changed walks on those letters; the shipped defaults are the fallback.
+    """
+    action = next((name for name, kx, ky in _ACTIONS if (kx, ky) == (dx, dy)),
+                  None)
+    if action and isinstance(binds, dict):
+        for key in binds.get(action) or ():
+            if isinstance(key, str) and key:
+                return key
     for key, kx, ky in _DIRECTIONS:
         if (kx, ky) == (dx, dy):
             return key
     return None
+
+
+def _rest_key(binds: dict | None = None):
+    """The key Rest answers to, as the player's own table says it."""
+    if isinstance(binds, dict):
+        for key in binds.get('rest') or ():
+            if isinstance(key, str) and key:
+                return key
+    return 'r'
 
 
 def _read(page) -> dict:
@@ -1189,6 +1227,28 @@ def _begin(page) -> bool:
     return True
 
 
+_HERO_JS = '() => !!window.VEFR_HERO_AT'
+
+
+def _hero(page):
+    """Where the hero is, or None when the page has not said.
+
+    A town publishes its tile as it boots, which is after the play pane
+    appears, so the first read of a run can legitimately find nothing
+    there; one bounded wait for it settles that. None for good means a
+    pack playing a surface with no map - nothing to walk, said plainly
+    rather than guessed at.
+    """
+    where = _read(page).get('hero')
+    if where is None:
+        try:
+            page.wait_for_function(_HERO_JS, timeout=_TURN_MS)
+            where = _read(page).get('hero')
+        except Exception:  # noqa: BLE001 - no map here to wait for
+            return None
+    return where or None
+
+
 def _standing(page):
     """The phase the game is standing at right now, or None."""
     return _read(page).get('phase')
@@ -1197,17 +1257,22 @@ def _standing(page):
 def _press_rest(page) -> bool:
     """One press of Rest: the button the pack drew, else its own key.
 
-    The button is `[data-rest]` and its key is R; a pack that declared
-    `"rest": true` has both, and a pack that did not has neither, so the
-    driver never presses anything a pack never offered.
+    The button is `#rest` (it carries `data-rest`), and its key is R; a
+    pack that declared `"rest": true` has both, and a pack that did not
+    has neither, so the driver never presses anything a pack never
+    offered.
     """
     before = _standing(page)
-    button = page.locator('[data-rest]')
     try:
-        if button.count() and button.is_visible():
-            button.click()
-        else:
-            page.keyboard.press('r')
+        pressed = False
+        for selector in ('#rest', '[data-rest]'):
+            button = page.locator(selector)
+            if button.count() and button.is_visible():
+                button.click()
+                pressed = True
+                break
+        if not pressed:
+            page.keyboard.press(_rest_key(_read(page).get('keys')))
     except Exception:  # noqa: BLE001 - a refused press reads as no turn
         return False
     _settle(page)
@@ -1248,7 +1313,7 @@ def _visit(page, plan, stop) -> dict:
     w = plan['_world']
     region = stop['region']
     geometry = maplab.region_geometry(w).get(region) or {}
-    where = _read(page).get('hero') or {}
+    where = _hero(page) or {}
     if where.get('region') and where['region'] != region:
         return {**stop, 'walked': False,
                 'note': f'the hero is in {where["region"]}, and '
@@ -1292,9 +1357,10 @@ def _step_off(page, w, region, goal):
     from . import maplab
 
     geometry = maplab.region_geometry(w).get(region) or {}
+    binds = _read(page).get('keys')
     for _, dx, dy in _DIRECTIONS:
         tile = [goal[0] + dx, goal[1] + dy]
-        key = _key_for(dx, dy)
+        key = _key_for(dx, dy, binds)
         if key is None or not _walkable(geometry, geometry.get('props'), *tile):
             continue
         _press(page, key)
@@ -1325,10 +1391,11 @@ def _walk_to(page, w, region, where, goal):
         if tries > len(steps) * 4 + 8:
             return f'the hero never reached {list(goal)} in {region}'
         dx, dy = steps.pop(0)
-        key = _key_for(dx, dy)
+        seen = _read(page)
+        key = _key_for(dx, dy, seen.get('keys'))
         if key is None:
             return f'no key walks {dx},{dy}'
-        before = _read(page).get('hero')
+        before = seen.get('hero')
         _press(page, key)
         now = _read(page).get('hero')
         tries += 1
@@ -1354,7 +1421,11 @@ def playthrough_report(plan: dict, run: dict) -> dict:
     the log is silent, so a reader is never left with a bare id.
     """
     reached = {p['name'] for p in run.get('phases', []) if p.get('reached')}
-    fired = list(run.get('fired') or [])
+    # The engine's marks are one key per rule, so they are already unique;
+    # de-duplicated here because a rule that fired three times over a run
+    # is still one rule that fired, and a report that says otherwise is
+    # counting turns, not rules.
+    fired = list(dict.fromkeys(run.get('fired') or []))
     why = {}
     for entry in run.get('why') or []:
         if isinstance(entry, dict) and entry.get('id'):
@@ -1411,8 +1482,8 @@ def _print_playthrough(report: dict, json_out: bool) -> None:
           f"{len(reached)} of {len(phases)} phase(s) reached")
     for phase in phases:
         mark = 'ok' if phase.get('reached') else 'UNREACHED'
-        where = '' if phase['name'] is None else f" {phase['name']}"
-        print(f"  phase {where}: {mark}")
+        name = phase['name'] or '(one pass)'
+        print(f"  phase {name}: {mark}")
         if phase.get('screenshot'):
             print(f'    screenshot: {phase["screenshot"]}')
         for stop in phase.get('stops', []):

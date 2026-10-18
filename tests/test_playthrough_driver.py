@@ -327,6 +327,9 @@ def test_the_report_names_the_fired_rules_in_the_why_logs_words(play, tmp_path):
     _rc, report, _game, _page = play(pack, tmp_path / 'shots')
     fired = {f['id']: f['why'] for f in report['fired']}
     assert 'came near watcher' in fired['boats-may-come-in']
+    # A rule asked in every phase fires once per pass, and is reported
+    # once: the report counts rules, not turns.
+    assert len(report['fired']) == len(set(f['id'] for f in report['fired']))
 
 
 def test_one_screenshot_is_written_per_phase(play, tmp_path):

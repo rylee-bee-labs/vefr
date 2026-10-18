@@ -277,6 +277,18 @@ def test_the_walk_is_a_real_path_over_the_maps_own_geometry():
     assert devtools.walk_path(w, "nowhere", (1, 1), (3, 1)) is None
 
 
+def test_the_walk_presses_the_keys_the_player_chose():
+    """The player's own keybinds are asked first, so a save whose keys
+    were changed walks on those letters; the shipped defaults answer for
+    any direction the table does not name."""
+    assert devtools._key_for(1, 0) == "ArrowRight"
+    assert devtools._key_for(0, -1, {"up": ["w", "ArrowUp"]}) == "w"
+    assert devtools._key_for(1, 0, {"up": ["w"]}) == "ArrowRight"
+    assert devtools._key_for(2, 0) is None
+    assert devtools._rest_key({"rest": ["q"]}) == "q"
+    assert devtools._rest_key() == "r"
+
+
 def test_the_report_names_the_rules_that_stayed_silent_and_why():
     """A rule a reached phase asked for, that never fired, is reported
     with the why-log's sentence when the log has one and the pack's own
