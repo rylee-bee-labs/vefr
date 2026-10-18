@@ -36,7 +36,6 @@ Nothing is planned in this bucket.
 
 ## 🐝 Recently shipped
 
-- [a reader in town and the reveal in the bag's own words (T3B)](https://github.com/rylee-bee-labs/vefr/pull/391) ([#391](https://github.com/rylee-bee-labs/vefr/pull/391))
 - [a Section says what shape its fog is drawn as (FOGSHAPE)](https://github.com/rylee-bee-labs/vefr/pull/395) ([#395](https://github.com/rylee-bee-labs/vefr/pull/395))
 - [one message table for the words a player must act on (C4)](https://github.com/rylee-bee-labs/vefr/pull/396) ([#396](https://github.com/rylee-bee-labs/vefr/pull/396))
 - [schools, learning by level, and books found as loot (ADR 0018), with no baked null line for a pack that names no spells](https://github.com/rylee-bee-labs/vefr/pull/398) ([#398](https://github.com/rylee-bee-labs/vefr/pull/398))
