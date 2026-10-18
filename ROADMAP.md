@@ -17,7 +17,7 @@ Nothing is planned in this bucket.
 
 ## 🐝 Later
 
-- 18 more open issues — [all open issues](https://github.com/rylee-bee-labs/vefr/issues).
+- 3 more open issues — [all open issues](https://github.com/rylee-bee-labs/vefr/issues).
 - [#295](https://github.com/rylee-bee-labs/vefr/issues/295) bench: rerun the 128x96 monster-turn numbers after E0d (sleeping monsters)
 - [#317](https://github.com/rylee-bee-labs/vefr/issues/317) Epic: Player Driver, portable session capsules, and replayable play
 - [#452](https://github.com/rylee-bee-labs/vefr/issues/452) Epic: consolidate VEFR player, game packaging and existing-game compatibility
