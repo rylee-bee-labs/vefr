@@ -154,6 +154,188 @@ def test_probe_rejects_a_malformed_fire_spec(tmp_path, capsys):
     assert "event:key=value" in capsys.readouterr().err
 
 
+# ------------------------------------------------------------ playthrough
+
+def test_the_plan_is_read_off_the_pack_not_written_here(tmp_path):
+    """Every phase the time pack declares, and the one stop its only
+    `comes-near` rule asks for - the watcher, one tile's reach, in the
+    phase the rule's own `if` names. Nothing in the plan knows the pack
+    by heart: a second pack's phases come out the same way."""
+    import make_time_pack
+
+    pack = make_time_pack.build(tmp_path)
+    plan = devtools.playthrough_plan(pack)
+    assert plan["rest"] is True
+    assert [p["name"] for p in plan["phases"]] == ["whispers", "lowwater", "highwater"]
+    high = plan["phases"][2]
+    assert [s["who"] for s in high["stops"]] == ["watcher"]
+    assert high["stops"][0]["kind"] == "speaker"
+    assert high["stops"][0]["rules"] == ["boats-may-come-in"]
+    # A rule whose `if` names one phase is a stop of that phase only.
+    assert plan["rules"]["boats-may-come-in"]["phases"] == ["highwater"]
+
+
+def test_a_pack_with_no_time_block_gets_one_pass(tmp_path):
+    """No `"time"` block means nothing turns the watch on, so there is
+    no second phase to walk - the plan is one pass over the first."""
+    import make_time_pack
+
+    pack = make_time_pack.build(tmp_path, name="no-time-test", time_block=None)
+    plan = devtools.playthrough_plan(pack)
+    assert plan["rest"] is False
+    assert [p["name"] for p in plan["phases"]] == ["whispers"]
+    assert plan["phases"][0]["stops"] == []      # its rule asks for highwater
+
+
+def test_the_plan_finds_a_speaker_and_a_labelled_place(tmp_path):
+    """`comes-near` names a speaker key or a POI label; the plan resolves
+    both to the tile the hero walks to, and says so when it can resolve
+    neither."""
+    import make_mending_pack
+
+    pack = make_mending_pack.build(tmp_path)
+    world = json.loads((pack / "world.json").read_text(encoding="utf-8"))
+    world["rules"] = [
+        {"id": "keeper-nods", "when": {"comes-near": {"who": "keeper", "distance": 2}},
+         "then": [{"say": "The Keeper nods."}]},
+        {"id": "stone-warms", "when": {"comes-near": {"who": "the stone", "distance": 0}},
+         "then": [{"say": "The stone is warm."}]},
+        {"id": "nobody-here", "when": {"comes-near": {"who": "the mayor", "distance": 1}},
+         "then": [{"say": "Someone answers."}]},
+    ]
+    (pack / "world.json").write_text(json.dumps(world), encoding="utf-8")
+
+    plan = devtools.playthrough_plan(pack)
+    stops = {(s["who"], s["kind"]): s for s in plan["phases"][0]["stops"]}
+    assert stops[("keeper", "speaker")]["at"] == [7, 4]
+    assert stops[("the stone", "place")]["at"] == [7, 3]
+    # One pass (no `time` block), and both rules are asked in it.
+    assert [p["name"] for p in plan["phases"]] == ["dusk"]
+    # The rule that names nothing the pack declares is named as such,
+    # not left to look like a rule that simply never fires.
+    assert [u["id"] for u in plan["unresolved"]] == ["nobody-here"]
+    assert "the mayor" in plan["unresolved"][0]["why"]
+
+
+def test_two_rules_about_one_person_are_one_walk(tmp_path):
+    """Two rules about the keeper are one stop, at the widest reach
+    either declared - the event the game sends then satisfies both."""
+    import make_mending_pack
+
+    pack = make_mending_pack.build(tmp_path)
+    world = json.loads((pack / "world.json").read_text(encoding="utf-8"))
+    world["rules"] = [
+        {"id": "close-by", "when": {"comes-near": {"who": "keeper", "distance": 1}},
+         "then": [{"say": "Close."}]},
+        {"id": "nearby", "when": {"comes-near": {"who": "keeper", "distance": 3}},
+         "then": [{"say": "Nearby."}]},
+    ]
+    (pack / "world.json").write_text(json.dumps(world), encoding="utf-8")
+
+    plan = devtools.playthrough_plan(pack)
+    stops = plan["phases"][0]["stops"]
+    assert len(stops) == 1
+    assert stops[0]["distance"] == 3
+    assert sorted(stops[0]["rules"]) == ["close-by", "nearby"]
+
+
+def test_a_rule_is_asked_in_every_phase_unless_it_names_one(tmp_path):
+    """`{"phase": "x"}` asks for that phase and `not` asks for the rest;
+    a rule that names no phase is asked everywhere, because a flag it
+    waits for can be set in any phase before it is retried."""
+    rule = {"id": "r", "when": {"comes-near": {"who": "keeper", "distance": 1}},
+            "then": [{"say": "x"}]}
+    phases = ["one", "two", "three"]
+    assert devtools._phases_of(rule, phases) == phases
+    assert devtools._phases_of({**rule, "if": [{"phase": "two"}]}, phases) == ["two"]
+    assert devtools._phases_of(
+        {**rule, "if": [{"not": {"phase": "two"}}]}, phases) == ["one", "three"]
+    assert devtools._phases_of(
+        {**rule, "if": [{"all-of": [{"phase": "one"}, {"phase": "three"}]}]},
+        phases) == ["one", "three"]
+
+
+def test_the_walk_is_a_real_path_over_the_maps_own_geometry():
+    """The path steps around what the pack's legend calls solid, and says
+    so when a tile cannot be reached at all."""
+    w = {"town": {"map": ["#####",
+                          "#...#",
+                          "#.#.#",
+                          "#####"],
+                  "legend": {".": {"base": ["#fff"]},
+                             "#": {"base": ["#000"], "solid": True}}}}
+    assert devtools.walk_path(w, "town", (1, 1), (3, 1)) == [(1, 0), (1, 0)]
+    # The wall column at x=2 is walked around, never through.
+    around = devtools.walk_path(w, "town", (1, 1), (3, 2))
+    assert around == [(1, 0), (1, 0), (0, 1)]
+    walked = [(1, 1)]
+    for dx, dy in around:
+        walked.append((walked[-1][0] + dx, walked[-1][1] + dy))
+    assert (2, 2) not in walked, f"the path walked into the wall: {walked}"
+    assert devtools.walk_path(w, "town", (1, 1), (2, 2)) is None
+    assert devtools.walk_path(w, "town", (1, 1), (1, 1)) == []
+    assert devtools.walk_path(w, "nowhere", (1, 1), (3, 1)) is None
+
+
+def test_the_walk_presses_the_keys_the_player_chose():
+    """The player's own keybinds are asked first, so a save whose keys
+    were changed walks on those letters; the shipped defaults answer for
+    any direction the table does not name."""
+    assert devtools._key_for(1, 0) == "ArrowRight"
+    assert devtools._key_for(0, -1, {"up": ["w", "ArrowUp"]}) == "w"
+    assert devtools._key_for(1, 0, {"up": ["w"]}) == "ArrowRight"
+    assert devtools._key_for(2, 0) is None
+    assert devtools._rest_key({"rest": ["q"]}) == "q"
+    assert devtools._rest_key() == "r"
+
+
+def test_the_report_names_the_rules_that_stayed_silent_and_why():
+    """A rule a reached phase asked for, that never fired, is reported
+    with the why-log's sentence when the log has one and the pack's own
+    conditions when it does not."""
+    plan = {"world": "test", "unresolved": [], "rules": {
+        "spoke": {"id": "spoke", "who": "keeper", "distance": 2,
+                  "phases": ["dusk"], "conditions": []},
+        "quiet": {"id": "quiet", "who": "keeper", "distance": 2,
+                  "phases": ["dusk"], "conditions": [{"flag": "ever", "is": True}]},
+        "later": {"id": "later", "who": "keeper", "distance": 2,
+                  "phases": ["dawn"], "conditions": []}}}
+    run = {"phases": [{"name": "dusk", "reached": True, "screenshot": "a.png"},
+                      {"name": "dawn", "reached": False}],
+           "fired": ["spoke"],
+           "why": [{"id": "spoke", "why": "rule 'spoke' fired: the hero came near keeper"}]}
+    report = devtools.playthrough_report(plan, run)
+    assert report["ok"] is False
+    assert [f["id"] for f in report["fired"]] == ["spoke"]
+    assert "came near keeper" in report["fired"][0]["why"]
+    # `quiet` is named, with the pack's own condition; `later` belongs to
+    # a phase this run never reached, so it is not this run's business.
+    assert [n["id"] for n in report["never_fired"]] == ["quiet"]
+    assert report["never_fired"][0]["held_by"] is None
+    assert report["never_fired"][0]["conditions"] == [{"flag": "ever", "is": True}]
+    assert report["unreachable"] == ["dawn"]
+
+    # The why-log's own sentence is used when it has one.
+    run["why"].append({"id": "quiet", "why": "rule 'quiet' fired: later"})
+    report = devtools.playthrough_report(plan, run)
+    assert report["never_fired"][0]["held_by"].startswith("rule 'quiet' fired:")
+
+
+def test_the_report_is_ok_when_every_phase_and_every_rule_is_satisfied():
+    plan = {"world": "test", "unresolved": [], "rules": {
+        "spoke": {"id": "spoke", "who": "keeper", "distance": 2,
+                  "phases": ["dusk"], "conditions": []}}}
+    run = {"phases": [{"name": "dusk", "reached": True}], "fired": ["spoke"],
+           "why": [{"id": "spoke", "why": "rule 'spoke' fired"}]}
+    assert devtools.playthrough_report(plan, run)["ok"] is True
+
+
+def test_playthrough_needs_a_pack_to_plan_from(capsys):
+    rc = devtools.playthrough(pack=None)
+    assert rc == 2
+    assert "--pack" in capsys.readouterr().err
+
+
 # ------------------------------------------------------ doctor tooling rows
 
 def test_tooling_checks_report_each_tool_with_a_fix_hint(tmp_path):
@@ -194,6 +376,6 @@ def test_doctor_prints_the_tooling_rows_but_never_fails_on_them(monkeypatch, tmp
 
 def test_the_command_guide_documents_the_new_verbs():
     guide = (ROOT / "docs" / "guides" / "vefr-command.md").read_text(encoding="utf-8")
-    for verb in ("vefr publish", "vefr look", "vefr probe"):
+    for verb in ("vefr publish", "vefr look", "vefr probe", "vefr playthrough"):
         assert verb in guide, verb
     assert "tooling" in guide.lower()          # doctor's new rows are mentioned

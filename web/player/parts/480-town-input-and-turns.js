@@ -36,6 +36,17 @@
     window.VEFR_HERO_FRAME = { dir: heroFacing, state: state, frame: idx,
                                mirrored: heroSheetMirror };
   }
+  // Where the hero stands, published for a harness to read back (the
+  // precedent is window.VEFR_HERO_FRAME and window.VEFR_COMBAT, one
+  // step further: the pose says how the hero looks, this says where it
+  // is). Read-only, `{x, y, region}`, refreshed on every arrival and
+  // after every step - `vefr playthrough` walks by it and re-reads it
+  // after each press, so a refused step is a refusal it can see. A pack
+  // whose player has no town at all never publishes it.
+  function heroPublishAt() {
+    window.VEFR_HERO_AT = { x: hero[0], y: hero[1], region: regionName };
+    return window.VEFR_HERO_AT;
+  }
   function nowMs() {
     return (window.performance && window.performance.now)
       ? window.performance.now() : Date.now();
@@ -699,6 +710,7 @@
     if (changed) settleDrops(name);
     heroAnim = null;   // a new region's hero appears settled, not mid-hop
     heroSetPose('idle');
+    heroPublishAt();
     fogOn = fogEnabled();
     fogRadius = (town.fog && town.fog.radius) || 6;
     resetLight();
@@ -1426,6 +1438,7 @@
       return;
     }
     hero = [nx, ny];
+    heroPublishAt();
     arrivalNote = null;   // the arrival is over at the first step
     landing = null;       // and so is the set-aside: the stair is a stair
     quietTutorial();

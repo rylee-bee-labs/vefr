@@ -108,6 +108,14 @@ jobs:
           VEFR_BROWSER_REQUIRED: "1"
         run: uv run pytest -q tests/browser
 
+      # The command the browser tests only exercise on fixture packs,
+      # played against the pack this repo actually ships: one pass over
+      # the sample's phases, walked and photographed. Exits 1 if a phase
+      # is unreachable or a rule a reached phase asked for never fired,
+      # so the same gate the tests use holds the sample itself.
+      - name: Play the sample world through
+        run: uv run vefr playthrough --pack sample-world --out /tmp/playthrough
+
   visual:
     name: visual regression on woven sample
     runs-on: ubuntu-latest

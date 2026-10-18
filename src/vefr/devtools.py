@@ -21,6 +21,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from collections import deque
 from pathlib import Path
 from urllib.parse import quote
 
@@ -682,6 +683,872 @@ def probe(html=None, pack=None, fire=(), json_out=False, scenario=None) -> int:
     for key, value in result['flags'].items():
         print(f'flag {key} = {value}')
     return 0
+
+
+# ------------------------------------------------------------ playthrough
+#
+# `probe` fires events at the game; a playthrough plays it. The plan is
+# read off the pack (no script knows any pack's story): every phase the
+# pack declares, and for each one the stops the rules that name that
+# phase in `comes-near` ask for - the speaker to walk up to, the place to
+# stand on. Then Rest, when the pack declared a Rest, and the next
+# phase. Read-only toward the pack: it plays and reports, and it never
+# writes a byte of one.
+
+# The step each direction makes on the map, and the shipped key for it
+# (`window.VEFR_KEYBINDS`, the one keybinds table part 076 keeps, names
+# those; the driver asks the page for the player's own choices and falls
+# back to these).
+_DIRECTIONS = (('ArrowUp', 0, -1), ('ArrowDown', 0, 1),
+                ('ArrowLeft', -1, 0), ('ArrowRight', 1, 0))
+_ACTIONS = (('up', 0, -1), ('down', 0, 1), ('left', -1, 0), ('right', 1, 0))
+
+# Every wait is bounded by one of these. Nothing here sleeps blindly: a
+# wait is either a poll for something the page publishes, or a cap on
+# how long the driver will keep trying to make one step land.
+_SETTLE_MS = 1500
+_TURN_MS = 3000
+
+# One read of what the game is doing right now: the hero's published
+# tile (`window.VEFR_HERO_AT`), the standing phase
+# (`window.VEFR_TIME()`), the engine's own fired marks
+# (`window.VEFR_RULES_STATE.fired`), the why-log (`window.VEFR_WHY`,
+# the same source `probe` reads), and the keybinds as they stand.
+# Read-only - it asks the page nothing.
+_READ_PLAY_JS = """() => {
+  const h = window.VEFR_HERO_AT || null;
+  const t = (typeof window.VEFR_TIME === 'function') ? window.VEFR_TIME() : null;
+  const s = window.VEFR_RULES_STATE || {};
+  return {
+    hero: h ? { x: h.x, y: h.y, region: h.region } : null,
+    phase: (t && t.phase) || null,
+    fired: Object.keys(s.fired || {}),
+    why: Array.isArray(window.VEFR_WHY) ? window.VEFR_WHY : [],
+    keys: (typeof window.VEFR_KEYBINDS === 'function') ? window.VEFR_KEYBINDS() : null,
+  };
+}"""
+
+# The game is in play: its own play pane is showing. Not a phase test and
+# not an engine test - a pack with no phases still plays, a pack with
+# phases still has one behind the title screen, and a pack on a surface
+# with no map (the kitchen, the desk) publishes no combat snapshot at all.
+_PLAYING_JS = """() => {
+  const pane = document.getElementById('play');
+  return !!(pane && !pane.hidden);
+}"""
+
+# Put away whatever is standing over the game: a speaker's box (with its
+# Continue button) and the pause menu. A line the rules said is drawn in
+# a floating bubble or a speaker box, not in one place, so the driver
+# reads the engine's marks rather than the page's text.
+_DISMISS_JS = """() => {
+  let closed = 0;
+  const box = document.getElementById('npc-box');
+  if (box && !box.hidden) {
+    const btn = document.getElementById('npc-close');
+    if (btn) btn.click(); else box.hidden = true;
+    closed++;
+  }
+  const menu = document.getElementById('menu');
+  const opener = document.getElementById('menu-open');
+  if (menu && opener && !menu.hidden) { opener.click(); closed++; }
+  return closed;
+}"""
+
+# A slug a phase name can be a filename: the letters, digits and dashes
+# of the name, and nothing else.
+_SLUG = re.compile(r'[^A-Za-z0-9._-]+')
+
+
+def _slug(text: str) -> str:
+    """`text` reduced to something safe to write into a filename."""
+    return _SLUG.sub('-', str(text)).strip('-') or 'phase'
+
+
+def _pack_pois(w: dict) -> dict:
+    """Every labelled place in the pack: `{region: {label: [x, y]}}`.
+
+    A POI's label IS its id (docs/guides/rules.md), so a `comes-near`
+    that names a place is answered here. The flat shape keeps its pois in
+    the town block; an acts-shape pack keeps them in each region's
+    contract, which the loader also carries for the first region as the
+    unified `town`.
+    """
+    out: dict = {}
+    town = w.get('town')
+    if isinstance(town, dict) and isinstance(town.get('pois'), dict):
+        region = w.get('_region') or 'town'
+        out.setdefault(region, {})
+        _read_pois(out[region], town['pois'])
+    for act in (w.get('acts') or []):
+        for name, data in (act.get('regions') or {}).items():
+            contract = (data or {}).get('contract') or {}
+            if isinstance(contract.get('pois'), dict):
+                out.setdefault(name, {})
+                _read_pois(out[name], contract['pois'])
+    return out
+
+
+def _read_pois(into: dict, pois: dict) -> None:
+    """`{"7,3": "the stone"}` -> `into["the stone"] = [7, 3]`."""
+    for key, label in pois.items():
+        if not isinstance(label, str):
+            continue
+        parts = str(key).split(',')
+        if len(parts) != 2:
+            continue
+        try:
+            at = [int(parts[0]), int(parts[1])]
+        except ValueError:
+            continue
+        into.setdefault(label, at)
+
+
+def _phases_of(rule: dict, phases: list) -> list:
+    """The phases a rule's `if` speaks for.
+
+    `{"phase": "x"}` asks for that one; `{"not": {"phase": "x"}}` asks
+    for every other; `all-of` is both at once. A rule with no phase
+    condition is asked in every phase, so a flag it waits for can be set
+    in any of them before it is retried.
+    """
+    wanted: set = set()
+    banned: set = set()
+
+    def walk(cond, negated=False):
+        if not isinstance(cond, dict):
+            return
+        name = cond.get('phase')
+        if isinstance(name, str):
+            (banned if negated else wanted).add(name)
+        inner = cond.get('not')
+        if isinstance(inner, dict):
+            walk(inner, not negated)
+        for sub in cond.get('all-of') or ():
+            walk(sub, negated)
+
+    for cond in rule.get('if') or ():
+        walk(cond)
+    if not wanted and not banned:
+        return list(phases)
+    return [p for p in phases if (not wanted or p in wanted) and p not in banned]
+
+
+def playthrough_plan(pack) -> dict:
+    """The walk, read off the pack: phases, and the stops each one owes.
+
+    `{world, phases: [{name, rules, stops}], rules, unresolved}`.
+    `stops` are the people and places to visit, each carrying the rule
+    ids that asked for it; `unresolved` are the `comes-near` rules whose
+    `who` names nothing the pack declares - a pack author's typo, told
+    to them here rather than as a rule that never fires.
+
+    The phases are the pack's own, in the order it wrote them, when it
+    declared `"time"` (that block is what makes a phase a place time can
+    move to). A pack with no `time` gets one pass: there is nothing to
+    turn the watch on, so there is no second phase to walk.
+    """
+    from . import maplab
+
+    pack = Path(pack)
+    w = maplab.load_pack(pack)
+    phases = list((w.get('phases') or {}).keys())
+    rest = bool((w.get('time') or {}).get('rest') is True)
+    if rest:
+        passes = phases or [None]
+    else:
+        passes = phases[:1] or [None]
+
+    geometry = maplab.region_geometry(w)
+    speakers = w.get('speakers') or {}
+    pois = _pack_pois(w)
+    default_region = w.get('_region') or ('town' if 'town' in geometry
+                                         else next(iter(geometry), None))
+
+    rules: dict = {}
+    for rule in (w.get('rules') or []):
+        if not isinstance(rule, dict):
+            continue
+        when = rule.get('when')
+        if not isinstance(when, dict) or 'comes-near' not in when:
+            continue
+        near = when['comes-near']
+        if not isinstance(near, dict):
+            continue
+        who = near.get('who')
+        distance = near.get('distance')
+        if not isinstance(who, str):
+            continue
+        distance = distance if isinstance(distance, int) else 0
+        rules[rule.get('id') or who] = {
+            'id': rule.get('id') or who,
+            'who': who, 'distance': distance,
+            'phases': _phases_of(rule, passes),
+            'conditions': rule.get('if') or [],
+            'stop': _resolve_stop(w, geometry, speakers, pois, who, distance,
+                                  default_region),
+        }
+
+    # One stop per (who, kind) per phase: two rules about the same
+    # keeper are one walk, and the walk takes the widest reach either of
+    # them declared, so the event the game sends satisfies both.
+    plan_phases = []
+    for name in passes:
+        stops: dict = {}
+        wanted = [r for r in rules.values() if name in r['phases']]
+        for rule in wanted:
+            stop = rule['stop']
+            if stop is None:
+                continue
+            key = (stop['who'], stop['kind'])
+            here = stops.get(key)
+            if here is None:
+                stops[key] = dict(stop, distance=stop['distance'],
+                                  rules=[rule['id']])
+            else:
+                here['distance'] = max(here['distance'], stop['distance'])
+                here['rules'].append(rule['id'])
+        plan_phases.append({
+            'name': name,
+            'rules': [r['id'] for r in wanted],
+            'stops': [stops[k] for k in sorted(stops)],
+        })
+    return {
+        'world': w.get('name') or pack.name,
+        'pack': str(pack),
+        # The loaded pack itself, so the driver walks the same geometry
+        # the plan was read from instead of reading it twice.
+        '_world': w,
+        'rest': rest,
+        'phases': plan_phases,
+        'rules': rules,
+        'unresolved': [
+            {'id': r['id'], 'who': r['who'], 'distance': r['distance'],
+             'why': f'{r["who"]!r} is not a speaker or a labelled place '
+                    'this pack declares'}
+            for r in rules.values() if r['stop'] is None
+        ],
+    }
+
+
+def _resolve_stop(w, geometry, speakers, pois, who, distance, default_region):
+    """Where to stand to hear `comes-near` about `who`, or None.
+
+    A speaker is a tile `distance` away (the Talk button fires the event
+    with the distance the game measured); a labelled place is the tile
+    itself, because standing on it is what fires it.
+    """
+    spec = speakers.get(who)
+    if isinstance(spec, dict) and _is_at(spec.get('at')):
+        region = spec.get('region') or default_region
+        return {'who': who, 'kind': 'speaker', 'at': list(spec['at']),
+                'region': region, 'distance': distance}
+    for region, labels in pois.items():
+        if who in labels:
+            return {'who': who, 'kind': 'place', 'at': list(labels[who]),
+                    'region': region, 'distance': distance}
+    return None
+
+
+def _is_at(value) -> bool:
+    """True for a `[x, y]` pair of whole numbers."""
+    return (isinstance(value, list) and len(value) == 2
+            and all(isinstance(v, int) for v in value))
+
+
+def _walkable(geometry: dict, props, x: int, y: int) -> bool:
+    """Can the hero stand on this tile of this region?
+
+    The player's own rule (part 480's `tileOpen`): inside the map, not
+    solid in the legend, not under a prop. The validator's fallback
+    alphabet is deliberately not applied - a driver that walks the same
+    ground the hero does is the whole point, and a second reading of what
+    a `#` means would route the walk against walls the hero walks through
+    (or the other way round).
+    """
+    from . import maplab
+
+    rows = geometry.get('map') or []
+    if not rows or y < 0 or y >= len(rows):
+        return False
+    row = rows[y]
+    if x < 0 or x >= len(row):
+        return False
+    if ((geometry.get('legend') or {}).get(row[x]) or {}).get('solid'):
+        return False
+    return not maplab.prop_blocks(props, x, y)
+
+
+def walk_path(w: dict, region: str, start, goal, props=None) -> list | None:
+    """The steps from `start` to `goal`, as `[(dx, dy), ...]`, or None.
+
+    Breadth-first over the region's own map and legend (props included,
+    because a prop the hero cannot walk through is a wall), so the path
+    is a real one over the geometry the pack wrote rather than a guess
+    at the hero walking in a straight line. None when `goal` cannot be
+    reached at all - a wall, a prop, or a region the pack has no map for.
+    """
+    from . import maplab
+
+    geometry = maplab.region_geometry(w).get(region) or {}
+    rows = geometry.get('map') or []
+    if not rows:
+        return None
+    if props is None:
+        props = geometry.get('props')
+    start_t, goal_t = tuple(start), tuple(goal)
+    if start_t == goal_t:
+        return []
+    if not _walkable(geometry, props, *goal_t):
+        return None
+    came: dict = {start_t: None}
+    queue = deque([start_t])
+    while queue:
+        x, y = queue.popleft()
+        for _, dx, dy in _DIRECTIONS:
+            tile = (x + dx, y + dy)
+            if tile in came or not _walkable(geometry, props, *tile):
+                continue
+            came[tile] = (x, y)
+            if tile == goal_t:
+                queue.clear()
+                break
+            queue.append(tile)
+    if goal_t not in came:
+        return None
+    steps: list = []
+    at = goal_t
+    while came[at] is not None:
+        prev = came[at]
+        steps.append((at[0] - prev[0], at[1] - prev[1]))
+        at = prev
+    steps.reverse()
+    return steps
+
+
+def _approach_tile(geometry, at, distance, kind='place', props=None):
+    """A walkable tile within `distance` of `at`, as close as the map allows.
+
+    For a place this is the tile itself: standing on a labelled place is
+    what fires `comes-near`, and the reach it declares is a ceiling the
+    contact satisfies whatever it is. For a speaker it is a tile one step
+    off, when the map offers one - the Talk button reaches two, and a
+    pack whose people are solid is not walked into - and the speaker's own
+    tile when the rule's reach is that tight.
+    """
+    rows = geometry.get('map') or []
+    if not rows:
+        return None
+    if props is None:
+        props = geometry.get('props')
+    exact = [at[0], at[1]] if _walkable(geometry, props, *at) else None
+    if kind == 'place' and exact:
+        return exact
+    best = None
+    for y in range(len(rows)):
+        for x in range(len(rows[0])):
+            if not _walkable(geometry, props, x, y):
+                continue
+            if kind != 'place' and [x, y] == exact:
+                continue
+            d = abs(x - at[0]) + abs(y - at[1])
+            if d > distance:
+                continue
+            if best is None or d < best[0]:
+                best = (d, [x, y])
+    return best[1] if best else exact
+
+
+def _key_for(dx: int, dy: int, binds: dict | None = None):
+    """The key that steps `(dx, dy)`, or None.
+
+    The player's own keybinds are asked first (`window.VEFR_KEYBINDS`, the
+    one table part 076 keeps), so a run against a save whose keys were
+    changed walks on those letters; the shipped defaults are the fallback.
+    """
+    action = next((name for name, kx, ky in _ACTIONS if (kx, ky) == (dx, dy)),
+                  None)
+    if action and isinstance(binds, dict):
+        for key in binds.get(action) or ():
+            if isinstance(key, str) and key:
+                return key
+    for key, kx, ky in _DIRECTIONS:
+        if (kx, ky) == (dx, dy):
+            return key
+    return None
+
+
+def _rest_key(binds: dict | None = None):
+    """The key Rest answers to, as the player's own table says it."""
+    if isinstance(binds, dict):
+        for key in binds.get('rest') or ():
+            if isinstance(key, str) and key:
+                return key
+    return 'r'
+
+
+def _read(page) -> dict:
+    """What the game is doing right now (never raises on a dead page)."""
+    try:
+        return page.evaluate(_READ_PLAY_JS) or {}
+    except Exception:  # noqa: BLE001 - a page mid-reload reads as nothing
+        return {}
+
+
+def _dismiss(page) -> None:
+    """Put away the speaker box and the menu, the way a player does."""
+    try:
+        page.evaluate(_DISMISS_JS)
+    except Exception:  # noqa: BLE001 - a box that is not there is closed
+        pass
+
+
+def _settle(page, ms: int = _SETTLE_MS) -> dict:
+    """Wait - bounded - for the hero to stop moving, and read the page.
+
+    The hero's published tile is the thing to poll: it is written on
+    arrival and after every step, so a stable tile is a turn that has
+    finished. Nothing here sleeps a fixed time and hopes.
+    """
+    deadline = ms
+    step = 60
+    last = _read(page)
+    while deadline > 0:
+        page.wait_for_timeout(step)
+        deadline -= step
+        now = _read(page)
+        if now.get('hero') == last.get('hero'):
+            return now
+        last = now
+    return last
+
+
+def _press(page, key: str) -> None:
+    """One key press, then put away anything it opened."""
+    page.keyboard.press(key)
+    _settle(page)
+    _dismiss(page)
+
+
+#: A phase's stops are walked again while new rules keep firing (a rule may need what a later
+#: stop hands over: the Mending Shift's bench wants the fid the Warden gives), up to this many
+#: rounds, so visit order stops mattering without an endless walk.
+PLAYTHROUGH_ROUNDS = 3
+
+
+def playthrough(html=None, pack=None, out=None, json_out=False,
+                viewport=None, strict=False) -> int:
+    """Play a pack the way a person does, and report what it saw.
+
+    Walks, talks and rests through the pack's own phases, taking the
+    plan from the pack rather than from a script: every phase it
+    declares, and for each phase the stops the rules that name that
+    phase in `comes-near`. Reads the engine's own marks afterwards
+    (`window.VEFR_RULES_STATE.fired`, the why-log `probe` reads), writes
+    one screenshot per phase into `out`, and never edits the pack.
+
+    Exit `0` when every phase was reached and every rule a reached phase
+    asked for either fired or was held back by its own conditions (a story
+    has exclusive outcomes: one run cannot fire all three endings), `1`
+    when a phase was unreachable or a rule with no conditions stayed silent
+    (its trigger never happened), and `2` when the run could not start at
+    all. `strict=True` also fails on condition-held rules.
+    """
+    if pack is None:
+        print('vefr playthrough needs --pack: the plan comes from the '
+              'pack, not from a script', file=sys.stderr)
+        return 2
+    try:
+        plan = playthrough_plan(pack)
+    except FileNotFoundError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+
+    out = Path(out or 'playthrough')
+    out.mkdir(parents=True, exist_ok=True)
+    run = {'phases': [], 'notes': []}
+
+    with _player_file(html, pack) as player, \
+            _session(player, 300, size=viewport) as page:
+        if page is None:
+            return 2
+        if not _begin(page):
+            run['notes'].append('the game did not open its play pane; '
+                                'nothing was played')
+            report = playthrough_report(plan, run)
+            _print_playthrough(report, json_out)
+            return 2
+
+        for index, phase in enumerate(plan['phases']):
+            name = phase['name']
+            reached = _reach_phase(page, name, plan)
+            entry = {'name': name, 'reached': reached, 'notes': [],
+                     'stops': []}
+            if reached:
+                seen = len(_read(page).get('fired') or [])
+                for round_no in range(PLAYTHROUGH_ROUNDS):
+                    for stop in phase['stops']:
+                        visit = _visit(page, plan, stop)
+                        if round_no == 0:
+                            entry['stops'].append(visit)
+                    fired_now = set(_read(page).get('fired') or [])
+                    now = len(fired_now)
+                    waiting = [rid for rid, rule in plan['rules'].items()
+                               if name in rule['phases'] and rid not in fired_now]
+                    if now == seen or not waiting:
+                        break       # nothing new fired, or nothing of this phase is left to fire
+                    seen = now
+                    if round_no + 1 < PLAYTHROUGH_ROUNDS:
+                        entry['notes'].append(
+                            f'round {round_no + 2}: walked the stops again, '
+                            'because the last round fired something new')
+                entry['screenshot'] = str(
+                    out / f'{index:02d}-{_slug(name or "pass")}.png')
+                page.screenshot(path=entry['screenshot'])
+                if plan['rest'] and name is not None:
+                    _press_rest(page)
+            else:
+                entry['screenshot'] = None
+                entry['notes'].append(
+                    f'phase {name!r} was never reached: the watch stood at '
+                    f'{_standing(page)!r} every time it was asked')
+            run['phases'].append(entry)
+
+        run['why'] = _read(page).get('why') or []
+        run['fired'] = _read(page).get('fired') or []
+
+    report = playthrough_report(plan, run, strict=strict)
+    _print_playthrough(report, json_out)
+    return 0 if report['ok'] else 1
+
+
+def _begin(page) -> bool:
+    """Press Begin, take the first-run setup if it asks, and wait for play.
+
+    A pack's phase is readable behind the title screen, so "the phase is
+    there" is not "the game is playing": the visible start button is
+    pressed first, exactly as a player would, and the wait is on the play
+    pane itself rather than on any one pack's phase.
+    """
+    try:
+        enter = page.locator('#ts-enter')
+        if enter.count() and enter.is_visible():
+            enter.click()
+    except Exception:  # noqa: BLE001 - no title screen to press is fine
+        pass
+    try:
+        page.wait_for_function(_PLAYING_JS, timeout=_TURN_MS)
+        config = page.locator('#config')
+        if config.count() and config.is_visible():
+            # The first run asks which model to use before it plays. A
+            # playthrough talks to nobody, so it takes the offline
+            # button the player would.
+            page.click('#cfg-offline')
+            page.wait_for_function(_PLAYING_JS, timeout=_TURN_MS)
+    except Exception:  # noqa: BLE001 - the play pane never came up
+        return False
+    _dismiss(page)
+    return True
+
+
+_HERO_JS = '() => !!window.VEFR_HERO_AT'
+
+
+def _hero(page):
+    """Where the hero is, or None when the page has not said.
+
+    A town publishes its tile as it boots, which is after the play pane
+    appears, so the first read of a run can legitimately find nothing
+    there; one bounded wait for it settles that. None for good means a
+    pack playing a surface with no map - nothing to walk, said plainly
+    rather than guessed at.
+    """
+    where = _read(page).get('hero')
+    if where is None:
+        try:
+            page.wait_for_function(_HERO_JS, timeout=_TURN_MS)
+            where = _read(page).get('hero')
+        except Exception:  # noqa: BLE001 - no map here to wait for
+            return None
+    return where or None
+
+
+def _standing(page):
+    """The phase the game is standing at right now, or None."""
+    return _read(page).get('phase')
+
+
+def _press_rest(page) -> bool:
+    """One press of Rest: the button the pack drew, else its own key.
+
+    The button is `#rest` (it carries `data-rest`), and its key is R; a
+    pack that declared `"rest": true` has both, and a pack that did not
+    has neither, so the driver never presses anything a pack never
+    offered.
+    """
+    before = _standing(page)
+    try:
+        pressed = False
+        for selector in ('#rest', '[data-rest]'):
+            button = page.locator(selector)
+            if button.count() and button.is_visible():
+                button.click()
+                pressed = True
+                break
+        if not pressed:
+            page.keyboard.press(_rest_key(_read(page).get('keys')))
+    except Exception:  # noqa: BLE001 - a refused press reads as no turn
+        return False
+    _settle(page)
+    _dismiss(page)
+    return _standing(page) != before
+
+
+def _reach_phase(page, name, plan) -> bool:
+    """Stand the watch in `name`, resting as many times as it takes.
+
+    One press turns the watch on by exactly one phase, so the walk from
+    wherever the save left off to the phase this pass is about is one
+    press per step, bounded by the number of phases the pack declares -
+    a watch that will not move is a phase this run did not reach, not a
+    loop.
+    """
+    if name is None or not plan['rest']:
+        return True
+    for _ in range(len(plan['phases']) + 1):
+        if _standing(page) == name:
+            return True
+        if not _press_rest(page):
+            break
+    return _standing(page) == name
+
+
+def _visit(page, plan, stop) -> dict:
+    """Walk to one stop and do what the game expects there.
+
+    A place is fired by standing on it, so the walk itself is the visit; a
+    speaker is fired by the Talk button, so the walk is followed by one
+    press of it and the box it opens is put away again. The path is
+    recomputed from the hero's published tile after every step, so a step
+    the map refused is a step the driver sees and routes around.
+    """
+    from . import maplab
+
+    w = plan['_world']
+    region = stop['region']
+    geometry = maplab.region_geometry(w).get(region) or {}
+    where = _hero(page) or {}
+    if where.get('region') and where['region'] != region:
+        return {**stop, 'walked': False,
+                'note': f'the hero is in {where["region"]}, and '
+                        f'{stop["who"]} is in {region}'}
+    goal = _approach_tile(geometry, stop['at'], stop['distance'], stop['kind'])
+    if goal is None:
+        return {**stop, 'walked': False,
+                'note': f'no tile within {stop["distance"]} of '
+                        f'{stop["at"]} in {region} is walkable'}
+    outcome = _walk_to(page, w, region, where, goal)
+    if isinstance(outcome, str):
+        return {**stop, 'walked': False, 'note': outcome}
+    if stop['kind'] == 'place' and [where.get('x'), where.get('y')] == goal:
+        # Already standing on it. The contact is the step ONTO a place, so
+        # a hero who started here has to step off and back on - which is
+        # what a player does when a place will not speak to them.
+        off = _step_off(page, w, region, goal)
+        if off is not None:
+            outcome = _walk_to(page, w, region,
+                               {'x': off[0], 'y': off[1]}, goal)
+            if isinstance(outcome, str):
+                return {**stop, 'walked': False, 'note': outcome}
+    if stop['kind'] == 'speaker':
+        try:
+            page.click('#talk')
+            _settle(page)
+        except Exception:  # noqa: BLE001 - a refused talk reads as a miss
+            return {**stop, 'walked': outcome, 'note': 'the Talk button '
+                    'was not there to press'}
+        _dismiss(page)
+    return {**stop, 'walked': outcome, 'note': ''}
+
+
+def _step_off(page, w, region, goal):
+    """One step off a tile the hero is already on, and the tile reached.
+
+    None when every tile around it is a wall - a hero boxed in on a place
+    cannot circle it, and the report says the rule stayed silent rather
+    than pretending the walk was enough.
+    """
+    from . import maplab
+
+    geometry = maplab.region_geometry(w).get(region) or {}
+    binds = _read(page).get('keys')
+    for _, dx, dy in _DIRECTIONS:
+        tile = [goal[0] + dx, goal[1] + dy]
+        key = _key_for(dx, dy, binds)
+        if key is None or not _walkable(geometry, geometry.get('props'), *tile):
+            continue
+        _press(page, key)
+        here = _read(page).get('hero') or {}
+        if (here.get('x'), here.get('y')) == tuple(tile):
+            return tile
+    return None
+
+
+def _walk_to(page, w, region, where, goal):
+    """Press the hero along a real path to `goal`.
+
+    Returns True when the hero stood there, False when a step was refused
+    but it was standing there anyway, and a sentence when it never got
+    there. The path is replanned from wherever the hero actually is after
+    every refused step, up to a bound, so a prop or a monster the pack's
+    own geometry does not know about costs a detour and not the walk.
+    """
+    start = (where.get('x'), where.get('y'))
+    if None in start:
+        return ('the player published no hero position '
+                '(window.VEFR_HERO_AT), so nothing could be walked')
+    steps = walk_path(w, region, start, goal)
+    if steps is None:
+        return (f'no path in {region} from {list(start)} to {list(goal)}')
+    tries = 0
+    while steps:
+        if tries > len(steps) * 4 + 8:
+            return f'the hero never reached {list(goal)} in {region}'
+        dx, dy = steps.pop(0)
+        seen = _read(page)
+        key = _key_for(dx, dy, seen.get('keys'))
+        if key is None:
+            return f'no key walks {dx},{dy}'
+        before = seen.get('hero')
+        _press(page, key)
+        now = _read(page).get('hero')
+        tries += 1
+        if now == before:
+            # A refused step: re-plan from here rather than pressing on
+            # into the wall the same way.
+            here = ((now or {}).get('x'), (now or {}).get('y'))
+            if None in here:
+                return 'the player stopped publishing the hero position'
+            steps = walk_path(w, region, here, goal) or []
+    here = _read(page).get('hero') or {}
+    return (here.get('x'), here.get('y')) == tuple(goal)
+
+
+def playthrough_report(plan: dict, run: dict, strict: bool = False) -> dict:
+    """The playthrough report, from the plan and what the run saw.
+
+    `{world, phases, fired, never_fired, unresolved, notes, ok}`. `fired`
+    is the engine's own marks, in the why-log's own words where the log
+    has them; `never_fired` is every rule a reached phase named in
+    `comes-near` that stayed silent - with the condition that held it
+    back when the why-log says which one, and the pack's own `if` when
+    the log is silent, so a reader is never left with a bare id.
+    """
+    reached = {p['name'] for p in run.get('phases', []) if p.get('reached')}
+    # The engine's marks are one key per rule, so they are already unique;
+    # de-duplicated here because a rule that fired three times over a run
+    # is still one rule that fired, and a report that says otherwise is
+    # counting turns, not rules.
+    fired = list(dict.fromkeys(run.get('fired') or []))
+    why = {}
+    for entry in run.get('why') or []:
+        if isinstance(entry, dict) and entry.get('id'):
+            why[entry['id']] = entry.get('why')
+
+    never = []
+    for rid, rule in plan['rules'].items():
+        if rid in fired:
+            continue
+        if not any(name in reached for name in rule['phases']):
+            continue    # its phase was never reached: not this run's fault
+        never.append({
+            'id': rid, 'who': rule['who'], 'distance': rule['distance'],
+            'phases': list(rule['phases']),
+            # The why-log's sentence when it has one; else the pack's own
+            # conditions, said as the thing to go and check.
+            'held_by': why.get(rid),
+            'conditions': rule['conditions'],
+        })
+
+    unreachable = [p['name'] for p in run.get('phases', [])
+                   if not p.get('reached')]
+    # A silent rule with its own `if` was held back by the story (an exclusive ending, an item
+    # not carried): reported, not a failure unless `strict`. A silent rule with no conditions
+    # means its trigger never happened, which is the walk's failure.
+    missed = [n for n in never if not n['conditions']]
+    ok = not unreachable and not plan['unresolved'] and not (never if strict else missed)
+    return {
+        'world': plan['world'],
+        'phases': [{'name': p['name'], 'reached': p.get('reached'),
+                    'screenshot': p.get('screenshot'),
+                    'stops': p.get('stops', []), 'notes': p.get('notes', [])}
+                   for p in run.get('phases', [])],
+        'fired': [{'id': rid, 'why': why.get(rid)} for rid in fired],
+        'never_fired': never,
+        'missed': [n['id'] for n in missed],
+        'strict': strict,
+        'unresolved': plan['unresolved'],
+        'unreachable': unreachable,
+        'notes': run.get('notes', []),
+        'ok': ok,
+    }
+
+
+def _conditions_sentence(conditions) -> str:
+    """The pack's own `if` conditions, in one clause a reader can check."""
+    if not conditions:
+        return ''
+    return ', '.join(json.dumps(c) for c in conditions)
+
+
+def _print_playthrough(report: dict, json_out: bool) -> None:
+    """The report as JSON, or as the sentences a person reads."""
+    if json_out:
+        print(json.dumps(report))
+        return
+    phases = report['phases']
+    reached = [p['name'] for p in phases if p.get('reached')]
+    print(f"playthrough: {report['world']} - "
+          f"{len(reached)} of {len(phases)} phase(s) reached")
+    for phase in phases:
+        mark = 'ok' if phase.get('reached') else 'UNREACHED'
+        name = phase['name'] or '(one pass)'
+        print(f"  phase {name}: {mark}")
+        if phase.get('screenshot'):
+            print(f'    screenshot: {phase["screenshot"]}')
+        for stop in phase.get('stops', []):
+            said = 'walked' if stop.get('walked') else 'not walked'
+            line = f"    {stop['who']} ({stop['kind']}): {said}"
+            if stop.get('note'):
+                line += f" - {stop['note']}"
+            print(line)
+        for note in phase.get('notes', []):
+            print(f'    {note}')
+    if report['fired']:
+        print(f"rules fired ({len(report['fired'])}):")
+        for entry in report['fired']:
+            print(f"  {entry['id']}: {entry['why'] or '(no why-log sentence)'}")
+    else:
+        print('rules fired (0)')
+    if report['never_fired']:
+        held_n = len(report['never_fired']) - len(report.get('missed') or [])
+        print(f"never fired ({len(report['never_fired'])}: {held_n} held back by their own "
+              f"conditions, {len(report.get('missed') or [])} whose trigger never happened):")
+        for entry in report['never_fired']:
+            held = entry.get('held_by') or (
+                f'the pack asks for {_conditions_sentence(entry["conditions"])}'
+                if entry['conditions'] else 'nothing in the why-log says')
+            if entry['conditions']:
+                print(f"  {entry['id']}: comes-near {entry['who']} within "
+                      f"{entry['distance']} - held back by {held}")
+            else:
+                print(f"  {entry['id']}: MISSED - comes-near {entry['who']} within "
+                      f"{entry['distance']} never happened")
+    for entry in report['unresolved']:
+        print(f"unresolved: rule {entry['id']} names {entry['why']}")
+    for note in report['notes']:
+        print(note)
+    print('playthrough ok' if report['ok'] else 'playthrough failed')
 
 
 def tooling_checks(root, which=shutil.which, home=Path.home()) -> list[tuple[str, str, str]]:
