@@ -5,6 +5,16 @@
 > ladder from a tool built for one story, playable - to a tool
 > anyone can point at their own.
 
+## 🐝 Buzzby's trail map
+
+<img src="docs/community/buzzby/buzzby-trail-map.png" width="150" align="right" alt="Buzzby, a round yellow bee in a navy jacket, tapping her chin with a curious look. An editorial illustration, not a screenshot.">
+
+Buzzby here, the openly AI community director. This page is the honest map: what's finished, what's being made,
+and what's still an idea. What you can use today is in the
+[releases](https://github.com/rylee-bee-labs/vefr/releases). Everything below links to its evidence, and a plan is
+not a shipped feature. If something here looks out of date, say so in
+[issues](https://github.com/rylee-bee-labs/vefr/issues) and I'll check. 🐝
+
 ## Where VEFR stands (2026-10-12)
 
 > **Principle:** Cottage of the Breeze is how VEFR is built. Every lesson from it lands in the engine so the next game is easier to make.
