@@ -804,6 +804,19 @@ def _read_pois(into: dict, pois: dict) -> None:
         into.setdefault(label, at)
 
 
+def _names_a_phase(rule: dict) -> bool:
+    """True when any `if` condition (inside `not`/`all-of` too) names a phase."""
+    def walk(cond):
+        if not isinstance(cond, dict):
+            return False
+        if isinstance(cond.get('phase'), str):
+            return True
+        if isinstance(cond.get('not'), dict) and walk(cond['not']):
+            return True
+        return any(walk(sub) for sub in cond.get('all-of') or ())
+    return any(walk(c) for c in rule.get('if') or ())
+
+
 def _phases_of(rule: dict, phases: list) -> list:
     """The phases a rule's `if` speaks for.
 
@@ -884,6 +897,9 @@ def playthrough_plan(pack) -> dict:
             'id': rule.get('id') or who,
             'who': who, 'distance': distance,
             'phases': _phases_of(rule, passes),
+            # Whether its `if` names a phase at all: a rule scoped to every phase on purpose
+            # still drives revisits; a rule with no phase condition does not.
+            'phase_scoped': _names_a_phase(rule),
             'conditions': rule.get('if') or [],
             'stop': _resolve_stop(w, geometry, speakers, pois, who, distance,
                                   default_region),
@@ -1193,8 +1209,13 @@ def playthrough(html=None, pack=None, out=None, json_out=False,
                             entry['stops'].append(visit)
                     fired_now = set(_read(page).get('fired') or [])
                     now = len(fired_now)
+                    # Only rules scoped to THIS phase drive another round: a rule with no
+                    # phase condition may fire in any phase, and is not this phase's to chase.
                     waiting = [rid for rid, rule in plan['rules'].items()
-                               if name in rule['phases'] and rid not in fired_now]
+                               if name in rule['phases']
+                               and rule.get('phase_scoped',
+                                            len(rule['phases']) < len(plan['phases']))
+                               and rid not in fired_now]
                     if now == seen or not waiting:
                         break       # nothing new fired, or nothing of this phase is left to fire
                     seen = now
@@ -1475,7 +1496,11 @@ def playthrough_report(plan: dict, run: dict, strict: bool = False) -> dict:
     # A silent rule with its own `if` was held back by the story (an exclusive ending, an item
     # not carried): reported, not a failure unless `strict`. A silent rule with no conditions
     # means its trigger never happened, which is the walk's failure.
-    missed = [n for n in never if not n['conditions']]
+    # ...and held back only if its stop was really walked: a rule whose trigger never happened is
+    # missed whatever its conditions say.
+    walked = {stop.get('who') for p in run.get('phases', []) if p.get('reached')
+              for stop in p.get('stops', []) if stop.get('walked')}
+    missed = [n for n in never if not n['conditions'] or n['who'] not in walked]
     ok = not unreachable and not plan['unresolved'] and not (never if strict else missed)
     return {
         'world': plan['world'],
@@ -1538,7 +1563,7 @@ def _print_playthrough(report: dict, json_out: bool) -> None:
             held = entry.get('held_by') or (
                 f'the pack asks for {_conditions_sentence(entry["conditions"])}'
                 if entry['conditions'] else 'nothing in the why-log says')
-            if entry['conditions']:
+            if entry['id'] not in (report.get('missed') or []):
                 print(f"  {entry['id']}: comes-near {entry['who']} within "
                       f"{entry['distance']} - held back by {held}")
             else:
