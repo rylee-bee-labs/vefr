@@ -536,6 +536,7 @@
       woke = wake.region;
     } else {
       hero = (town.hero_start || [1, 1]).slice();
+      heroPublishAt();
       loadEnemies();
       draw();
     }
