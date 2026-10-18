@@ -197,6 +197,16 @@ function doMend() {
   bagRemoveOne(plan.a);
   bagRemoveOne(plan.b);
   bagAdd(plan.recipe.output, null, true);
+  // The rules engine keeps its own record of what is carried (`has` reads
+  // it; `give`/`take` and picking up keep it). A mend changes the bag, so it
+  // changes that record too, before the `mends` event: a rule may then read
+  // the thing just made, and no longer finds the two it was made from.
+  var rulesState = typeof rulesStateNow === 'function' ? rulesStateNow() : null;
+  if (rulesState && rulesState.items) {
+    delete rulesState.items[plan.a];
+    delete rulesState.items[plan.b];
+    rulesState.items[plan.recipe.output] = true;
+  }
   window.VEFR_LAST_MEND = {
     recipe: plan.recipe.id,
     inputs: [plan.a, plan.b],

@@ -27,7 +27,10 @@ RECIPES = [
 ]
 
 RULES = [
+    # The rule reads what the mend made (and not what it spent): a mend keeps the rules' own
+    # record of what is carried in step with the bag, before the event fires.
     {"id": "the-yard-notices", "when": {"mends": {"recipe": "mend-the-net"}},
+     "if": [{"has": "whole-net"}, {"not": {"has": "torn-net"}}],
      "once": False, "then": [{"say": "The yard trusts you a little more."}]},
 ]
 
