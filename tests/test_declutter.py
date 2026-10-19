@@ -56,6 +56,10 @@ def test_each_small_button_keeps_its_word_its_key_and_a_hidden_icon(seen, bid, w
     assert t["key"] == key and f"({key})" in t["title"] and word in t["title"]
 
 
+def test_talk_accessible_name_stays_talk_without_a_nearby_resident(seen):
+    assert seen["tools"]["talk"]["word"] == "Talk"
+
+
 def test_explore_keeps_its_pressed_state(seen):
     assert seen["explorePressedAttr"] == "false"
 

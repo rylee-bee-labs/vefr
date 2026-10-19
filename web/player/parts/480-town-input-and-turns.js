@@ -1326,7 +1326,7 @@
       var resident = interactTargets(interactState()).filter(function (t) {
         return t.kind === 'resident';
       }).sort(function (a, b) { return a.dist - b.dist; })[0];
-      var talkLabel = resident ? 'Talk to ' + resident.name : 'Talk to someone nearby';
+      var talkLabel = resident ? 'Talk to ' + resident.name : 'Talk';
       talk.setAttribute('aria-label', talkLabel);
       talk.title = talkLabel + ' (F)';
       var sr = talk.querySelector('.sr-only');
@@ -1506,8 +1506,7 @@
     talkToSpeaker(nearest);
   }
 
-  // The Talk button's handler: the same nearest-speaker path, under
-  // its own name so Interact and Talk share one road.
+  // The Talk button uses the same nearest-speaker path as a canvas click.
   function talkNearest() { tryNPC(); }
 
   function brainConfigured() { return Boolean(llmUrl && llmModel); }
@@ -1593,6 +1592,7 @@
     document.getElementById('talk').focus();
   });
   document.getElementById('interact').addEventListener('click', doInteract);
+  document.getElementById('talk').addEventListener('click', talkNearest);
   document.getElementById('bagbtn').addEventListener('click', function () {
     if (window.openBag) window.openBag();
   });

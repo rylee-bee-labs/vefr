@@ -355,5 +355,7 @@ def test_the_packaged_player_holds_both_fixes():
         "the packaged player puts the verb row outside the HUD frame")
     assert "var SEED_PARAM = 'vefr-seed'" in html, (
         "the packaged player does not read ?vefr-seed=")
-    assert "#stage.stage--dock .gbtn--main { width: auto;" in html, (
-        "the packaged player does not size labelled main actions as dock pills")
+    assert "#stage.stage--dock .acts > .gbtn--main { width: auto;" in html, (
+        "the packaged player does not size the desktop action as a dock pill")
+    assert "#stage.stage--dock .gbtn--main { width: auto;" not in html, (
+        "dock pill sizing must not change the phone touch-smart control")

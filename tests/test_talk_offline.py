@@ -95,6 +95,7 @@ def test_static_the_talk_button_beside_the_stranger_says_nobody_answered(runs):
     log = runs["static"]
     assert log["stranger-talkbtn-box-hidden"] is True
     assert log["stranger-talkbtn-near"] == SILENT
+    assert log["stranger-talkbtn-label"] == "Talk"
 
 
 def test_static_the_cat_never_gets_the_silent_words(runs):

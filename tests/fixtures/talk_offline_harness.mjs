@@ -130,6 +130,7 @@ try {
       say('stranger-talkbtn-box-hidden', g.box());
       say('stranger-talkbtn-name', g.txt('npc-name'));
       say('stranger-talkbtn-near', g.txt('near'));
+      say('stranger-talkbtn-label', g.document.getElementById('talk').getAttribute('aria-label'));
       g.close();
     }
   } else {
