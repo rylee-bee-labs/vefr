@@ -390,7 +390,7 @@
      13px and up, and it wraps: on the narrowest phone four lines of it need
      more room than one line ever did, so the pill keeps the floor and grows
      with its own words instead of clipping them. */
-  #stage.stage--dock .gbtn--main:not(.touch-smart) { width: auto; min-width: 44px; max-width: calc(100vw - 176px); min-height: 44px; border-radius: 999px; padding: 2px 10px; font-size: 0.82rem; }
+  #stage.stage--dock .acts > .gbtn--main { width: auto; min-width: 44px; max-width: calc(100vw - 176px); min-height: 44px; border-radius: 999px; padding: 2px 10px; font-size: 0.82rem; }
   #stage.stage--dock .gbtn--tool { width: 44px; height: 44px; border-radius: 50%; }
   #stage.stage--dock .acts kbd { display: none; }
   .touch-zone, .touch-hint, .touch-base, .touch-knob, .touch-cluster, .touch-quick, .touch-b, .touch-tool, .touch-settings { display: none; }

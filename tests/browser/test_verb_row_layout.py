@@ -193,6 +193,117 @@ def test_desktop_the_fight_verbs_are_inside_the_painted_frame(browser, woven_wid
         ctx.close()
 
 
+def test_desktop_adjacent_resident_has_labelled_talk_control(browser, woven_wide):
+    ctx, page = _open(browser, woven_wide, 1280, 720)
+    try:
+        # Walk from [1, 1] to [4, 2], beside the neutral fixture's porter.
+        for key in ("ArrowDown", "ArrowDown", "ArrowRight", "ArrowRight",
+                "ArrowUp", "ArrowRight"):
+            page.keyboard.press(key)
+        page.wait_for_function(
+            "() => document.getElementById('talk').getAttribute('aria-label')"
+            ".includes('the porter')", timeout=5000)
+        talk = page.locator('#talk')
+        assert talk.is_visible(), "resident Talk control is not visible on desktop"
+        assert talk.bounding_box() and talk.bounding_box()["width"] > 0 \
+            and talk.bounding_box()["height"] > 0, "resident Talk control has a 0x0 box"
+        assert "the porter" in talk.get_attribute("aria-label")
+        talk.click()
+        page.wait_for_function(
+            "() => !document.getElementById('npc-box').hidden", timeout=5000)
+        assert "the porter" in page.locator('#npc-name').inner_text().lower()
+    finally:
+        ctx.close()
+
+
+# The regression guard for pickTarget's tier arithmetic (the 2026-10-19
+# second review, blocker 2). The fixture town names a place under the
+# hero at [5, 5] (`TOWN_POIS`/`TOWN_POI_TEXT` in make_interact_pack.py),
+# and the peddler stands one tile east at [6, 5] - within talk reach.
+# Bare Interact must take the place under the hero's feet, not the
+# resident merely in reach.
+PLACE_NAME = "the old market cross"
+PLACE_LINE = "A knot in the boards marks where the market cross stood."
+
+
+def test_bare_interact_takes_the_place_under_the_hero(browser, woven):
+    """F on the place tile acts on the place, not on the peddler one tile
+    away. Reverting the tier fix in pickTarget makes this test talk to
+    the peddler and fail."""
+    ctx, page = _open(browser, woven, 390, 844)
+    try:
+        # Down to [5, 4], then down onto [5, 5] facing away from the
+        # peddler: it is in reach but not the tile the hero faces, which
+        # is the case the tier fix has to get right.
+        for _ in range(3):
+            page.keyboard.press("ArrowDown")
+        for _ in range(4):
+            page.keyboard.press("ArrowRight")
+        page.keyboard.press("ArrowDown")
+        page.wait_for_function(
+            "() => window.VEFR_COMBAT.hero.at.join(',') === '5,5'", timeout=5000)
+        assert page.text_content("#interact-label") == "Look at " + PLACE_NAME
+        # The default Interact key: the one the label's hint advertises.
+        page.keyboard.press("f")
+        page.wait_for_function(
+            "() => !document.getElementById('npc-box').hidden", timeout=5000)
+        assert page.text_content("#npc-name") == PLACE_NAME
+        assert page.text_content("#npc-line") == PLACE_LINE
+        assert page.text_content("#near") == ""
+    finally:
+        ctx.close()
+
+
+def test_talk_button_names_and_takes_the_same_resident(browser, woven):
+    """Blocker 4: standing on the line-less stranger's tile, the seeded
+    peddler two tiles west is the only resident the offline filter
+    offers. The Talk button must name that peddler and its press must
+    talk to that peddler - not to the nearer stranger with no line."""
+    ctx, page = _open(browser, woven, 390, 844)
+    try:
+        for _ in range(4):
+            page.keyboard.press("ArrowDown")
+        for _ in range(7):
+            page.keyboard.press("ArrowRight")
+        page.wait_for_function(
+            "() => window.VEFR_COMBAT.hero.at.join(',') === '8,5'", timeout=5000)
+        talk = page.locator("#talk")
+        assert talk.get_attribute("aria-label") == "Talk to the peddler"
+        talk.click()
+        page.wait_for_function(
+            "() => !document.getElementById('npc-box').hidden", timeout=5000)
+        assert page.text_content("#npc-name") == "the peddler"
+        assert page.text_content("#near") == ""
+    finally:
+        ctx.close()
+
+
+def test_talk_tip_follows_the_players_interact_key(browser, woven_wide):
+    """Blocker 1: rebind Interact to G, then take one step (updateUse
+    runs on every step). The Talk tooltip must still say (G), not the
+    hard-coded (F)."""
+    ctx, page = _open(browser, woven_wide, 1280, 720)
+    try:
+        page.keyboard.press("Escape")
+        page.locator('[data-panel="controls"]').click()
+        page.locator('[data-panel-body="controls"]').wait_for(state="visible")
+        page.locator('button.keybind-change[data-keybind="interact"]').click()
+        page.keyboard.press("g")
+        assert page.evaluate("() => window.VEFR_KEYBINDS().interact") == ["g"]
+        page.keyboard.press("Escape")
+        page.wait_for_function(
+            "() => document.getElementById('menu').hidden", timeout=5000)
+        # One step: updateUse runs on the turn and after the arrival.
+        page.keyboard.press("ArrowDown")
+        page.wait_for_function(
+            "() => document.getElementById('talk').title.includes('(G)')",
+            timeout=5000)
+        assert page.locator("#talk").get_attribute("title") == "Talk (G)"
+        assert page.locator("#talk kbd").inner_text() == "G"
+    finally:
+        ctx.close()
+
+
 @pytest.mark.parametrize("w,h", PHONES)
 def test_phone_the_fight_verbs_are_inside_the_canvas(browser, woven, w, h):
     ctx, page = _open(browser, woven, w, h)
@@ -332,5 +443,7 @@ def test_the_packaged_player_holds_both_fixes():
         "the packaged player puts the verb row outside the HUD frame")
     assert "var SEED_PARAM = 'vefr-seed'" in html, (
         "the packaged player does not read ?vefr-seed=")
-    assert "#stage.stage--dock .gbtn--main:not(.touch-smart) { width: auto;" in html, (
-        "the packaged player still draws Interact as a square")
+    assert "#stage.stage--dock .acts > .gbtn--main { width: auto;" in html, (
+        "the packaged player does not size the desktop action as a dock pill")
+    assert "#stage.stage--dock .gbtn--main { width: auto;" not in html, (
+        "dock pill sizing must not change the phone touch-smart control")

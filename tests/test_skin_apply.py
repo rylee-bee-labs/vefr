@@ -416,7 +416,8 @@ def test_the_tooltip_says_what_the_button_does(ran):
     assert len(tips) >= 4, tips
     for button in tips:
         assert button["tip"], f"the {button['id']} button has a title and no words to show"
-        assert button["tip"] == button["sr"], (
+        expected_sr = "Talk" if button["id"] == "talk" else button["tip"]
+        assert button["tip"] == expected_sr and button["sr"] == expected_sr, (
             f"the {button['id']} tooltip says {button['tip']!r} and its screen-reader "
             f"text says {button['sr']!r}")
     # the words on the tooltip, not just on the button: the tooltip paints them

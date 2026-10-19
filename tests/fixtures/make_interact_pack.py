@@ -19,6 +19,9 @@ SAMPLE = ROOT / "worlds" / "sample-world"
 #   enemy (a storeroom rat) . [2, 1]  one tile right of the hero: bump it
 #   resident "the porter" ... [4, 3]  talk reach 2
 #   resident spot ........... [4, 2]  stand -> "Talk to the porter"
+#   place spot .............. [5, 5]  stand -> "Look at the old market cross";
+#                                    the peddler at [6, 5] is in reach, a
+#                                    place under the hero must win the pick
 #   chest "The Gate Ledger". [7, 1]  touch reach 1
 #   chest spot .............. [7, 2]  stand -> "Open the chest"
 #   door tile ............... [9, 3]  town -> cellar transition
@@ -49,6 +52,14 @@ CELLAR_MAP = [
     "#...#",
     "#####",
 ]
+
+# A named place under the hero's feet at [5, 5], with the peddler one
+# tile east: the fixture that proves an own-tile place beats a resident
+# merely in talk reach (and is not itself the hero's start).
+TOWN_POIS = {"5,5": "the old market cross"}
+TOWN_POI_TEXT = {
+    "5,5": "A knot in the boards marks where the market cross stood.",
+}
 
 # The one hazard, asleep beside the hero's start. `sight: 0` is the
 # whole trick: hold still until bumped, so coordinates stay honest.
@@ -139,14 +150,17 @@ def _legend() -> dict:
     }
 
 
-def _write_region(region: Path, rows: list, enemies: list) -> None:
+def _write_region(region: Path, rows: list, enemies: list,
+                  pois: dict | None = None,
+                  poi_text: dict | None = None) -> None:
     region.mkdir(parents=True, exist_ok=True)
     (region / "map.md").write_text("\n".join(rows) + "\n", encoding="utf-8")
     contract = {
         "tile": 32, "bg": "#131311", "hero_start": [1, 1],
         "sanctuary_tiles": ["."],
         "water_by_phase": {"dusk": "low", "dawn": "low"},
-        "flood_tiles": [], "pois": {}, "legend": _legend(),
+        "flood_tiles": [], "pois": pois or {},
+        "poi_text": poi_text or {}, "legend": _legend(),
     }
     if enemies:
         contract["enemies"] = enemies
@@ -197,7 +211,8 @@ def build(dest: Path) -> Path:
     act["speakers"] = SPEAKERS
     (act_dir / "world.json").write_text(json.dumps(act), encoding="utf-8")
 
-    _write_region(act_dir / "town", TOWN_MAP, TOWN_ENEMIES)
+    _write_region(act_dir / "town", TOWN_MAP, TOWN_ENEMIES,
+                  pois=TOWN_POIS, poi_text=TOWN_POI_TEXT)
     _write_region(act_dir / "cellar", CELLAR_MAP, [])
 
     sprites = pack / "sprites"
