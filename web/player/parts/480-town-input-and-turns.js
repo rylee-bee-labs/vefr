@@ -855,6 +855,11 @@
     var all = interactTargets(state);
     if (!all.length) return null;
     var hero = state.hero;
+    var residentOverridesPlace = all.some(function (t) {
+      return t.kind === 'resident';
+    }) && all.some(function (t) {
+      return t.kind === 'place' && t.at[0] === hero[0] && t.at[1] === hero[1];
+    });
     var step = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
     var face = step[state.facing];
     var fx = null, fy = null;
@@ -865,7 +870,7 @@
     for (var i = 0; i < all.length; i++) {
       var t = all[i];
       // 0 the tile the hero faces, 1 the hero's own tile, 2 the rest
-      var tier = 2;
+      var tier = residentOverridesPlace && t.kind === 'resident' ? -1 : 2;
       if (fx !== null && t.at[0] === fx && t.at[1] === fy) tier = 0;
       else if (t.at[0] === hero[0] && t.at[1] === hero[1]) tier = 1;
       var r = rank[t.kind];
@@ -1316,6 +1321,17 @@
     var label = labelFor(pickTarget(interactState()));
     var labelEl = document.getElementById('interact-label');
     if (labelEl) labelEl.textContent = label || 'Interact';
+    var talk = document.getElementById('talk');
+    if (talk) {
+      var resident = interactTargets(interactState()).filter(function (t) {
+        return t.kind === 'resident';
+      }).sort(function (a, b) { return a.dist - b.dist; })[0];
+      var talkLabel = resident ? 'Talk to ' + resident.name : 'Talk to someone nearby';
+      talk.setAttribute('aria-label', talkLabel);
+      talk.title = talkLabel + ' (F)';
+      var sr = talk.querySelector('.sr-only');
+      if (sr) sr.textContent = talkLabel;
+    }
     btn.classList.toggle('gbtn--dim', !label);
     if (hint) hint.textContent = label || 'Nothing near you to use yet.';
     updateVerbRow();
@@ -1576,9 +1592,7 @@
     document.getElementById('npc-box').hidden = true;
     document.getElementById('talk').focus();
   });
-  document.getElementById('talk').addEventListener('click', talkNearest);
   document.getElementById('interact').addEventListener('click', doInteract);
   document.getElementById('bagbtn').addEventListener('click', function () {
     if (window.openBag) window.openBag();
   });
-

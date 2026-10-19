@@ -193,6 +193,28 @@ def test_desktop_the_fight_verbs_are_inside_the_painted_frame(browser, woven_wid
         ctx.close()
 
 
+def test_desktop_adjacent_resident_has_labelled_talk_control(browser, woven_wide):
+    ctx, page = _open(browser, woven_wide, 1280, 720)
+    try:
+        # Walk from [1, 1] to [4, 2], beside the neutral fixture's porter.
+        for key in ("ArrowRight", "ArrowRight", "ArrowRight", "ArrowDown"):
+            page.keyboard.press(key)
+        page.wait_for_function(
+            "() => document.getElementById('talk').getAttribute('aria-label')"
+            ".includes('the porter')", timeout=5000)
+        talk = page.locator('#talk')
+        assert talk.is_visible(), "resident Talk control is not visible on desktop"
+        assert talk.bounding_box() and talk.bounding_box()["width"] > 0 \
+            and talk.bounding_box()["height"] > 0, "resident Talk control has a 0x0 box"
+        assert "the porter" in talk.get_attribute("aria-label")
+        talk.click()
+        page.wait_for_function(
+            "() => !document.getElementById('npc-box').hidden", timeout=5000)
+        assert "the porter" in page.locator('#npc-name').inner_text().lower()
+    finally:
+        ctx.close()
+
+
 @pytest.mark.parametrize("w,h", PHONES)
 def test_phone_the_fight_verbs_are_inside_the_canvas(browser, woven, w, h):
     ctx, page = _open(browser, woven, w, h)
@@ -332,5 +354,5 @@ def test_the_packaged_player_holds_both_fixes():
         "the packaged player puts the verb row outside the HUD frame")
     assert "var SEED_PARAM = 'vefr-seed'" in html, (
         "the packaged player does not read ?vefr-seed=")
-    assert "#stage.stage--dock .gbtn--main:not(.touch-smart) { width: auto;" in html, (
-        "the packaged player still draws Interact as a square")
+    assert "#stage.stage--dock .gbtn--main { width: auto;" in html, (
+        "the packaged player does not size labelled main actions as dock pills")

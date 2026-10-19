@@ -381,6 +381,7 @@ window.addEventListener('pointerup', touchClearDown);
 window.addEventListener('pointercancel', touchClearDown);
 
 document.getElementById('touch-smart').addEventListener('click', touchSmartPress);
+document.getElementById('talk').addEventListener('click', touchSmartPress);
 document.getElementById('touch-bag').addEventListener('click', touchBagPress);
 document.getElementById('touch-b').addEventListener('click', touchClosePress);
 document.getElementById('touch-quick').addEventListener('click', touchQuickPress);
