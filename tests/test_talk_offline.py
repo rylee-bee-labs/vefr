@@ -4,7 +4,8 @@ The woven player's talk path, executed in a real DOM (jsdom) by
 tests/fixtures/talk_offline_harness.mjs against the interact fixture
 pack. Static: no endpoint, so the cat (seeds only) says its seeded
 line for the time of day (the fixture starts at dusk) on every Talk,
-and the stranger (no line at all) is not offered Talk. Brain: an
+and the stranger (no line at all) is not offered Talk, so the Talk
+button beside it names and takes no one. Brain: an
 endpoint is configured and every request fails, so the stranger keeps
 'Talk to' and its Talk says "They didn't answer.", while the cat falls
 back to its seeded line. vefr#417.
@@ -91,10 +92,13 @@ def test_static_the_stranger_is_not_offered_talk(runs):
     assert log["stranger-key-box-hidden"] is True, "Interact opened an empty box"
 
 
-def test_static_the_talk_button_beside_the_stranger_says_nobody_answered(runs):
+def test_static_the_talk_button_beside_the_stranger_says_no_one_is_close(runs):
+    """The label says plain "Talk" (the stranger has no offline line and
+    is not a target), so the press must not answer as the stranger -
+    name and click resolve to the same filtered resident, which is none."""
     log = runs["static"]
     assert log["stranger-talkbtn-box-hidden"] is True
-    assert log["stranger-talkbtn-near"] == SILENT
+    assert log["stranger-talkbtn-near"] == "No one is close enough to talk to."
     assert log["stranger-talkbtn-label"] == "Talk"
 
 

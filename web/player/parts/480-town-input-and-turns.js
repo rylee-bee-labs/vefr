@@ -855,11 +855,6 @@
     var all = interactTargets(state);
     if (!all.length) return null;
     var hero = state.hero;
-    var residentOverridesPlace = all.some(function (t) {
-      return t.kind === 'resident';
-    }) && all.some(function (t) {
-      return t.kind === 'place' && t.at[0] === hero[0] && t.at[1] === hero[1];
-    });
     var step = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
     var face = step[state.facing];
     var fx = null, fy = null;
@@ -869,8 +864,13 @@
     var best = null, bestTier = -1, bestDist = -1, bestRank = -1;
     for (var i = 0; i < all.length; i++) {
       var t = all[i];
-      // 0 the tile the hero faces, 1 the hero's own tile, 2 the rest
-      var tier = residentOverridesPlace && t.kind === 'resident' ? -1 : 2;
+      // 0 the tile the hero faces, 1 the hero's own tile, 2 the rest.
+      // A place under the hero's feet (tier 1) beats a resident merely
+      // within talk reach (tier 2); a resident the hero faces (tier 0)
+      // still wins, and on the own-tile tie `rank` puts the resident
+      // before the place. A door facing the hero is tier 0 too, so an
+      // adjacent resident never takes it.
+      var tier = 2;
       if (fx !== null && t.at[0] === fx && t.at[1] === fy) tier = 0;
       else if (t.at[0] === hero[0] && t.at[1] === hero[1]) tier = 1;
       var r = rank[t.kind];
@@ -1309,6 +1309,16 @@
   // when one-button Interact landed and is gone: the Interact path
   // above is the one canonical interaction, and it fires `opens`.)
 
+  // The nearest resident the Talk control may name and take. It is the
+  // same filtered set Interact uses (interactState leaves out a speaker
+  // with no offline line when no brain is configured), so the words on
+  // the button and the person it talks to can never disagree.
+  function nearestResident() {
+    return interactTargets(interactState()).filter(function (t) {
+      return t.kind === 'resident';
+    }).sort(function (a, b) { return a.dist - b.dist; })[0] || null;
+  }
+
   // The Interact control: ALWAYS on screen - never hidden, never
   // disabled, so it stays focusable and pressable. Its own words say
   // what the next press will do; with nothing in reach it dims
@@ -1323,12 +1333,16 @@
     if (labelEl) labelEl.textContent = label || 'Interact';
     var talk = document.getElementById('talk');
     if (talk) {
-      var resident = interactTargets(interactState()).filter(function (t) {
-        return t.kind === 'resident';
-      }).sort(function (a, b) { return a.dist - b.dist; })[0];
+      var resident = nearestResident();
       var talkLabel = resident ? 'Talk to ' + resident.name : 'Talk';
       talk.setAttribute('aria-label', talkLabel);
-      talk.title = talkLabel + ' (F)';
+      // The key letter is the player's own Interact binding, read from
+      // the one keybinds table - never a hard-coded F. This runs after
+      // `updateKeyLetters` on every step and every failed press, so a
+      // rebinding must survive it.
+      var talkKeys = keybindKeys('interact');
+      var talkKey = talkKeys.length ? keybindKeyName(talkKeys[0]) : '';
+      talk.title = talkKey ? talkLabel + ' (' + talkKey + ')' : talkLabel;
       var sr = talk.querySelector('.sr-only');
       if (sr) sr.textContent = talkLabel;
     }
@@ -1506,8 +1520,22 @@
     talkToSpeaker(nearest);
   }
 
-  // The Talk button uses the same nearest-speaker path as a canvas click.
-  function talkNearest() { tryNPC(); }
+  // The Talk button takes the resident its own words name (the same
+  // filtered nearest resident `updateUse` reads), so the name and the
+  // press resolve to one person. A canvas click keeps the older
+  // nearest-speaker search above - it is a click on the map, not the
+  // labelled control.
+  function talkNearest() {
+    var nearest = nearestResident();
+    // `comes-near` for the resident found, with the ACTUAL Manhattan
+    // distance - the same event and distance the Interact path fires.
+    if (nearest) fireRule('comes-near', { who: nearest.id, distance: nearest.dist });
+    if (!nearest) {
+      document.getElementById('near').textContent = 'No one is close enough to talk to.';
+      return;
+    }
+    talkToSpeaker({ key: nearest.id, spec: speakers[nearest.id], dist: nearest.dist });
+  }
 
   function brainConfigured() { return Boolean(llmUrl && llmModel); }
 

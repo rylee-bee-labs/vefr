@@ -6,8 +6,8 @@
 
      - static: the cat (seeds only) answers each Talk with its seeded
        line for the time of day; the stranger (no line at all) is not
-       offered Talk, the press opens nothing, and the Talk button says
-       "They didn't answer.";
+       offered Talk, the press opens nothing, and the Talk button (which
+       names no one) says "No one is close enough to talk to.";
      - brain: the stranger's words stay 'Talk to', the Talk button says
        "They didn't answer." (the brain was expected and failed, and
        there is no seeded line), and the cat falls back to its seeded
