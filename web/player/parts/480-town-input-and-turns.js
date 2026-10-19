@@ -1252,6 +1252,12 @@
         openIdentify(t.id, t.name, document.getElementById('interact'));
       } else if (t.kind === 'resident') {
         if (!speakers[t.id]) throw new Error('speaker gone');
+        // `comes-near` for the speaker talked to - the same event, with
+        // the same distance, as the Talk button's nearest-speaker search
+        // fires. This verb is the road an F press and the
+        // `Talk to <name>` button both take, so a pack's rule over a
+        // person has to be answered from here too.
+        fireRule('comes-near', { who: t.id, distance: t.dist });
         talkToSpeaker({ key: t.id, spec: speakers[t.id], dist: t.dist });
       } else if (t.kind === 'place' && t.id === ARRIVAL_ID) {
         // The floor, read: its name and the way on. Reading it spends the
