@@ -117,14 +117,16 @@ def test_a_talk_with_the_f_key_fires_the_comes_near_rule(page, served):
     that resident, and says its line."""
     enter(page, served)
     walk_to_the_keeper(page)
-    assert page.locator("#interact-label").inner_text() == "Talk to The Keeper"
+    # The button's CSS uppercases its words, and inner_text() hands back the
+    # text as the page shows it, so the case is not ours to assert on.
+    assert page.locator("#interact-label").inner_text().strip().lower() == "talk to the keeper"
     assert "keeper-hears-you" not in why_ids(page), \
         "the walk fired a rule only a talk should"
     page.keyboard.press("f")
     page.wait_for_timeout(400)
     assert "keeper-hears-you" in why_ids(page), \
         "the talk did not fire the rule that watches for the keeper"
-    assert "The Keeper looks up." in page.locator("#combat-live").inner_text()
+    assert "the keeper looks up." in page.locator("#combat-live").inner_text().lower()
 
 
 def test_the_interact_button_says_the_same_thing_the_f_key_does(page, served):
