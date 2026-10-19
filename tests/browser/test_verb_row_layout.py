@@ -197,7 +197,8 @@ def test_desktop_adjacent_resident_has_labelled_talk_control(browser, woven_wide
     ctx, page = _open(browser, woven_wide, 1280, 720)
     try:
         # Walk from [1, 1] to [4, 2], beside the neutral fixture's porter.
-        for key in ("ArrowRight", "ArrowRight", "ArrowRight", "ArrowDown"):
+        for key in ("ArrowDown", "ArrowDown", "ArrowRight", "ArrowRight",
+                "ArrowUp", "ArrowRight"):
             page.keyboard.press(key)
         page.wait_for_function(
             "() => document.getElementById('talk').getAttribute('aria-label')"
