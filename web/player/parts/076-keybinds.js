@@ -265,7 +265,31 @@ function keybindRefreshRows() {
 // capture side of the document so the game's own handler never sees the
 // key that is being offered. Esc stands the capture down and changes
 // nothing; Tab stands it down too and keeps moving the focus.
-var keybindCapturing = null;   // {id: action id, btn: the Change button, armed: bool}
+var keybindCapturing = null;   // {id, btn, activationKey, armed}
+
+// Which keys are down right now, and which one was last. A Change button
+// can be pressed by mouse or by keyboard, and the keyboard roads arrive
+// at different moments: Enter fires its click on keydown, Space on keyup.
+// An Enter still held down keeps auto-repeating keydowns, which the
+// capture would otherwise read as a refused binding and answer with the
+// Space-and-Enter sentence - ending the capture the player just opened.
+// So the capture keeps a note of what is held and waits for the
+// activating key to come back up before it reads any key at all. A mouse
+// press has no key to wait for and is armed at once, and so is a Space,
+// whose click already arrives on the keyup.
+var keybindHeld = {};
+var keybindLastKey = null;
+
+document.addEventListener('keydown', function (e) {
+  keybindHeld[e.key] = true;
+  keybindLastKey = e.key;
+}, true);
+
+document.addEventListener('keyup', function (e) {
+  delete keybindHeld[e.key];
+  var c = keybindCapturing;
+  if (c && !c.armed && e.key === c.activationKey) c.armed = true;
+}, true);
 
 function keybindEndCapture() {
   if (!keybindCapturing) return;
@@ -273,19 +297,35 @@ function keybindEndCapture() {
   keybindCapturing = null;
 }
 
-function keybindBegin(id, btn) {
+function keybindBegin(id, btn, ev) {
   keybindEndCapture();
-  keybindCapturing = { id: id, btn: btn, armed: false };
+  // A click with no pointer behind it (detail 0) came from the keyboard.
+  var activationKey = (ev && ev.detail === 0 && keybindLastKey) ? keybindLastKey : null;
+  keybindCapturing = { id: id, btn: btn, activationKey: activationKey,
+                       armed: !keybindHeld[activationKey] };
   btn.textContent = 'Press a new key';
   var a = keybindAction(id);
   keybindSay('Press a new key for ' + (a ? a.label : id) + '. Esc cancels.');
 }
 
+// Keys the browser and the system keep. Binding one of these would take
+// reload (F5, Ctrl+R) or the system's own shortcuts away from the player
+// for as long as the game is open, so the capture passes them by: it
+// neither takes them nor blocks them, and it goes on waiting for a key
+// that is the player's to give.
+function keybindReservedWhy(e) {
+  if (e.key === 'F5') return "F5 reloads the page, so it cannot be one of the game's keys.";
+  if (e.key === 'Meta' || e.key === 'OS') return "That is the system's own key.";
+  if (e.ctrlKey || e.metaKey || e.altKey) {
+    return 'Ctrl, Alt and the system key stay with the browser and the system.';
+  }
+  return '';
+}
+
 document.addEventListener('keydown', function (e) {
   if (!keybindCapturing) return;
-  // Enter/Space activates a focused Change button on keyup. Ignore that
-  // activation press through its keyup, including any auto-repeat, then
-  // arm capture for the next physical key.
+  // The press that opened the capture is still down: swallow it and its
+  // auto-repeat, and the keyup above arms the capture for the next key.
   if (!keybindCapturing.armed) {
     e.preventDefault();
     e.stopPropagation();
@@ -293,10 +333,11 @@ document.addEventListener('keydown', function (e) {
   }
   if (e.key === 'Tab') { keybindEndCapture(); return; }
   if (e.repeat) return;
-  // Browser/system shortcuts remain available while changing a binding.
-  // OS keys and modified keys are never game bindings.
-  if (e.key === 'F5' || e.key === 'Meta' || e.key === 'OS'
-      || e.ctrlKey || e.metaKey || e.altKey) return;
+  var reserved = keybindReservedWhy(e);
+  if (reserved) {
+    keybindSay(reserved + ' Press another key, or Esc to stop.');
+    return;
+  }
   e.preventDefault();
   e.stopPropagation();
   var id = keybindCapturing.id;
@@ -323,11 +364,6 @@ document.addEventListener('keydown', function (e) {
   keybindSay((a ? a.label : id) + ' now answers to ' + keybindKeyName(e.key) + '.');
 }, true);
 
-document.addEventListener('keyup', function (e) {
-  if (!keybindCapturing || keybindCapturing.armed) return;
-  if (e.key === 'Enter' || e.key === ' ') keybindCapturing.armed = true;
-}, true);
-
 function wireKeybinds() {
   var list = document.getElementById('keybind-list');
   if (!list) return;
@@ -352,7 +388,7 @@ function wireKeybinds() {
       btn.setAttribute('data-keybind', a.id);
       btn.setAttribute('aria-label', 'Change the key for ' + a.label);
       btn.textContent = 'Change';
-      btn.addEventListener('click', function () { keybindBegin(a.id, btn); });
+      btn.addEventListener('click', function (ev) { keybindBegin(a.id, btn, ev); });
       row.appendChild(label);
       row.appendChild(keys);
       row.appendChild(btn);

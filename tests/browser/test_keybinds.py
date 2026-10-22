@@ -317,25 +317,54 @@ def test_a_key_another_action_answers_to_is_refused_with_the_reason(page, woven)
 
 
 def test_reserved_browser_shortcuts_leave_capture_waiting(page, woven):
+    """F5 and Ctrl+R are the browser's own, so the capture passes them by:
+    it says why, binds nothing, and goes on waiting for a key that is
+    the player's to give."""
     enter(page, woven)
     open_controls(page)
     change = page.locator('button.keybind-change[data-keybind="whisper"]')
     change.click()
     page.keyboard.press("F5")
+    assert "F5" in live_text(page)
     page.keyboard.press("Control+r")
-    assert change.inner_text() == "Press a new key"
-    assert keys_of(page, "whisper") == ["q"]
+    assert keys_of(page, "whisper") == ["q"], "a reserved key was bound anyway"
+    assert change.inner_text().strip().lower() == "press a new key", \
+        "the capture stood down on a key the browser keeps"
     page.keyboard.press("p")
     assert keys_of(page, "whisper") == ["p"]
 
 
 @pytest.mark.parametrize("activation", ["Enter", "Space"])
 def test_native_activation_key_does_not_end_capture(page, woven, activation):
+    """A Change button opened the way a keyboard opens it - Enter or Space
+    on the focused button - is still waiting for a key when that press is
+    over, including when the key was held down and auto-repeated."""
     enter(page, woven)
     open_controls(page)
+    button = page.locator('button.keybind-change[data-keybind="whisper"]')
     activate_change_with(page, "whisper", activation)
-    assert keys_of(page, "whisper") == ["q"]
-    assert page.locator('button.keybind-change[data-keybind="whisper"]').inner_text() == "Press a new key"
+    assert keys_of(page, "whisper") == ["q"], \
+        "the activating key was bound instead of being waited out"
+    assert button.inner_text().strip().lower() == "press a new key", \
+        "the capture ended on the press that opened it"
+    page.keyboard.press("p")
+    assert keys_of(page, "whisper") == ["p"]
+
+
+def test_a_held_activation_key_does_not_end_capture(page, woven):
+    """An Enter that is held down goes on sending keydowns while it is
+    held. The capture waits that press out instead of answering the first
+    repeat with the Space-and-Enter refusal, which used to stand the
+    capture the player had just opened back down."""
+    enter(page, woven)
+    open_controls(page)
+    button = page.locator('button.keybind-change[data-keybind="whisper"]')
+    button.focus()
+    page.keyboard.down("Enter")
+    page.keyboard.down("Enter")
+    page.keyboard.up("Enter")
+    assert button.inner_text().strip().lower() == "press a new key", \
+        "the capture ended while the key that opened it was still down"
     page.keyboard.press("p")
     assert keys_of(page, "whisper") == ["p"]
 
