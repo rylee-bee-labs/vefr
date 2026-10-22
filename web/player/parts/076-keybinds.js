@@ -265,7 +265,7 @@ function keybindRefreshRows() {
 // capture side of the document so the game's own handler never sees the
 // key that is being offered. Esc stands the capture down and changes
 // nothing; Tab stands it down too and keeps moving the focus.
-var keybindCapturing = null;   // {id: action id, btn: the Change button}
+var keybindCapturing = null;   // {id: action id, btn: the Change button, armed: bool}
 
 function keybindEndCapture() {
   if (!keybindCapturing) return;
@@ -275,7 +275,7 @@ function keybindEndCapture() {
 
 function keybindBegin(id, btn) {
   keybindEndCapture();
-  keybindCapturing = { id: id, btn: btn };
+  keybindCapturing = { id: id, btn: btn, armed: false };
   btn.textContent = 'Press a new key';
   var a = keybindAction(id);
   keybindSay('Press a new key for ' + (a ? a.label : id) + '. Esc cancels.');
@@ -283,7 +283,20 @@ function keybindBegin(id, btn) {
 
 document.addEventListener('keydown', function (e) {
   if (!keybindCapturing) return;
+  // Enter/Space activates a focused Change button on keyup. Ignore that
+  // activation press through its keyup, including any auto-repeat, then
+  // arm capture for the next physical key.
+  if (!keybindCapturing.armed) {
+    e.preventDefault();
+    e.stopPropagation();
+    return;
+  }
   if (e.key === 'Tab') { keybindEndCapture(); return; }
+  if (e.repeat) return;
+  // Browser/system shortcuts remain available while changing a binding.
+  // OS keys and modified keys are never game bindings.
+  if (e.key === 'F5' || e.key === 'Meta' || e.key === 'OS'
+      || e.ctrlKey || e.metaKey || e.altKey) return;
   e.preventDefault();
   e.stopPropagation();
   var id = keybindCapturing.id;
@@ -308,6 +321,11 @@ document.addEventListener('keydown', function (e) {
   keybindRefreshRows();
   updateKeyLetters();
   keybindSay((a ? a.label : id) + ' now answers to ' + keybindKeyName(e.key) + '.');
+}, true);
+
+document.addEventListener('keyup', function (e) {
+  if (!keybindCapturing || keybindCapturing.armed) return;
+  if (e.key === 'Enter' || e.key === ' ') keybindCapturing.armed = true;
 }, true);
 
 function wireKeybinds() {

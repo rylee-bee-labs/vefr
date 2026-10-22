@@ -96,9 +96,11 @@ def walk_to_the_keeper(page):
     """Two steps right: the hero stands at [5, 4], two tiles from the
     keeper at [7, 4] - the reach the rule declares."""
     page.keyboard.press("ArrowRight")
-    page.wait_for_timeout(200)
+    page.wait_for_function(
+        "window.VEFR_HERO_AT && window.VEFR_HERO_AT.x === 4 && window.VEFR_HERO_AT.y === 4")
     page.keyboard.press("ArrowRight")
-    page.wait_for_timeout(200)
+    page.wait_for_function(
+        "window.VEFR_HERO_AT && window.VEFR_HERO_AT.x === 5 && window.VEFR_HERO_AT.y === 4")
 
 
 def why_ids(page) -> list:
@@ -123,7 +125,8 @@ def test_a_talk_with_the_f_key_fires_the_comes_near_rule(page, served):
     assert "keeper-hears-you" not in why_ids(page), \
         "the walk fired a rule only a talk should"
     page.keyboard.press("f")
-    page.wait_for_timeout(400)
+    page.wait_for_function(
+        "() => (window.VEFR_WHY || []).some(e => e.id === 'keeper-hears-you')")
     assert "keeper-hears-you" in why_ids(page), \
         "the talk did not fire the rule that watches for the keeper"
     assert "the keeper looks up." in page.locator("#combat-live").inner_text().lower()
@@ -135,9 +138,11 @@ def test_the_interact_button_says_the_same_thing_the_f_key_does(page, served):
     enter(page, served)
     walk_to_the_keeper(page)
     page.locator("#interact").click()
-    page.wait_for_timeout(400)
+    page.wait_for_function(
+        "() => (window.VEFR_WHY || []).filter(e => e.id === 'keeper-hears-you').length === 1")
     close_the_speech_box(page)
     page.locator("#talk").click()
-    page.wait_for_timeout(400)
+    page.wait_for_function(
+        "() => (window.VEFR_WHY || []).filter(e => e.id === 'keeper-hears-you').length === 2")
     close_the_speech_box(page)
     assert why_ids(page).count("keeper-hears-you") == 2, why_ids(page)

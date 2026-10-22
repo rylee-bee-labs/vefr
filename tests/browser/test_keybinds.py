@@ -131,6 +131,13 @@ def change_key(page, action, key):
     page.keyboard.press(key)
 
 
+def activate_change_with(page, action, key):
+    """Focus and activate Change through its native keyboard path."""
+    button = page.locator(f'button.keybind-change[data-keybind="{action}"]')
+    button.focus()
+    page.keyboard.press(key)
+
+
 def live_text(page) -> str:
     return page.locator("#keybind-live").inner_text()
 
@@ -307,6 +314,30 @@ def test_a_key_another_action_answers_to_is_refused_with_the_reason(page, woven)
     change_key(page, "whisper", "p")
     assert live_text(page) == "Listen for a rumor now answers to P."
     assert saved_delta(page) == {"whisper": ["p"]}
+
+
+def test_reserved_browser_shortcuts_leave_capture_waiting(page, woven):
+    enter(page, woven)
+    open_controls(page)
+    change = page.locator('button.keybind-change[data-keybind="whisper"]')
+    change.click()
+    page.keyboard.press("F5")
+    page.keyboard.press("Control+r")
+    assert change.inner_text() == "Press a new key"
+    assert keys_of(page, "whisper") == ["q"]
+    page.keyboard.press("p")
+    assert keys_of(page, "whisper") == ["p"]
+
+
+@pytest.mark.parametrize("activation", ["Enter", "Space"])
+def test_native_activation_key_does_not_end_capture(page, woven, activation):
+    enter(page, woven)
+    open_controls(page)
+    activate_change_with(page, "whisper", activation)
+    assert keys_of(page, "whisper") == ["q"]
+    assert page.locator('button.keybind-change[data-keybind="whisper"]').inner_text() == "Press a new key"
+    page.keyboard.press("p")
+    assert keys_of(page, "whisper") == ["p"]
 
 
 # ---- reset ----
