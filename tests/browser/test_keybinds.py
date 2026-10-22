@@ -369,6 +369,17 @@ def test_a_held_activation_key_does_not_end_capture(page, woven):
     assert keys_of(page, "whisper") == ["p"]
 
 
+def test_a_phone_changes_a_key_the_same_way(phone, woven):
+    """The same capture on a phone-sized screen: tap Change, press a key,
+    and the row answers to it. A capture that only armed itself from the
+    keyboard road would swallow every key here."""
+    enter(phone, woven)
+    open_controls(phone)
+    change_key(phone, "whisper", "p")
+    assert live_text(phone) == "Listen for a rumor now answers to P."
+    assert keys_of(phone, "whisper") == ["p"]
+
+
 # ---- reset ----
 
 
