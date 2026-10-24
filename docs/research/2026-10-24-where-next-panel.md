@@ -18,13 +18,12 @@ both render from real records the rules engine keeps: the *Where next?* panel
 lists the `point-to` hints a rule produced (`web/player/parts/340-where-next-hints.js:70-94`),
 and the *Why did that happen?* panel lists the last 20 fired rules with the
 plain sentence that says which condition made each one fire
-(`web/player/parts/340-where-next-hints.js:96-119`). The engine work landed in
-PR #192 on 2026-10-02 (merge commit `28ee8f50`), and `28ee8f50` is an ancestor
-of `72d366e7` (2026-10-12), so the panels are **in** the pinned build — the
-engine note that says the panels "landed in the engine (#192) after the
-Lanternwake pack was pinned"
-(`docs/research/2026-10-02-first-independent-pack.md:34`) describes the gap as
-it stood on 2026-10-02, and this pin is ten days later. The honest limit on
+(`web/player/parts/340-where-next-hints.js:96-119`). The pinned research note
+records the `point-to` hint as ephemeral and the *Where next?* panel as the
+merged remedy (`docs/research/2026-10-02-first-independent-pack.md:34`). The
+panels are **in** the pinned build: its history contains merge commit
+`28ee8f50` for PR #192, dated 2026-10-02, before the 2026-10-12 pin. The
+honest limit on
 the *Where next?* panel is that it is a **navigation pointer, not a
 consequence panel**: a pack may only point at a region it declares, and the
 sentence it shows is a template with the region id in it. A pack cannot put
@@ -206,7 +205,7 @@ The steps and their ground truth:
 Three hard limits a pack author has to design around:
 
 1. **The panel shows a region id, not a display name.** The row's bold prefix
-   is `e.place + ' - '` (`web/player/parts/340-where-next-hints.js:83-84`) and
+   is `e.place + ' - '` (`web/player/parts/340-where-next-hints.js:81`) and
    `e.place` is the region id the rule named. Region display names are
    explicitly out of scope for this table (`docs/guides/rulesets.md:1588-1590`).
    A pack whose regions are called `causeway-fork` and `salt-road` will show
@@ -307,10 +306,11 @@ Tests:
 - `tests/test_player_words.py:57-60` — the four `where_next.*` keys and their
   default wording; `tests/test_player_words.py:148-183` — the refusals for a
   blank, a non-string, a missing `{place}` slot, and an unknown key;
-  `tests/test_player_words.py:275-280` — the drift guard between the Python
+  `tests/test_player_words.py:80-90` — the drift guard between the Python
   and the player table.
-- `tests/fixtures/player_words_harness.mjs:63-104` — the player-side table
-  under a real DOM, including the `unknownKey` and `unfilledSlot` cases.
+- `tests/fixtures/player_words_harness.mjs:1-5,22-23,33-43` — the player-side
+  table code slice runs in a Node `vm` with a stub `window` and no DOM;
+  `:98-107` checks the `unknownKey` and `unfilledSlot` cases.
 - `tests/test_rules_validator.py:141-146` — a `point-to` naming an unknown
   place is refused by the validator, two errors for one rule that also names
   an unknown `enters` place.
@@ -333,8 +333,7 @@ Docs:
 - `ROADMAP.md:269-271` — the #192 entry, naming the two evidence panels and
   what they are made of.
 
-The engine's own research note is the one that named the gap in the first
-place, and it records both panels as merged in #192:
+The engine's own research note records both panels as merged in #192:
 `docs/research/2026-10-02-first-independent-pack.md:34` (row 12, *Where next?*)
 and the same file's row 11 at
 `docs/research/2026-10-02-first-independent-pack.md:33` (the *Why did that
@@ -370,7 +369,7 @@ names.
   reading of the pack.
 - **Whether the pack's region ids read well to a player** cannot be judged
   from this clone, and the panel shows them verbatim
-  (`web/player/parts/340-where-next-hints.js:83-84`).
+  (`web/player/parts/340-where-next-hints.js:81`).
 - **The browser tests were not executed at the pinned commit.** The pinned
   commit was not checked out, and the browser tests need a woven pack built
   from it. `tests/browser/test_menu_labels.py` and
