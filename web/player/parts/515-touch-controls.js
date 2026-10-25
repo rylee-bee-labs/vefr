@@ -5,9 +5,22 @@
 // panel closers. The D-pad stays for those who choose it in Display.
 // The button a player presses is Listen (#470); its element ids stay
 // `whisper`, which is the engine's own game-name-neutral name for the feature.
+//
+// The move control is a stored preference, and one gallery origin serves every
+// build of a game: they all share that origin's saved storage, so a value an
+// older build wrote is still here when a newer build opens. A D-pad picked in
+// an old build therefore used to pin the arrow pad on every later build, for a
+// player who had only ever wanted the floating joystick (issue: the phone
+// showed a busy arrow D-pad and several controls). So the value carries a
+// marker beside it: the marker says the choice was made in this layer, and a
+// stored value without it is a legacy leftover that falls back to the joystick.
 window.__vefrTouch = { log: [] };
 
 var TOUCH_MOVE_KEY = 'vefr-touch-move';
+// The marker, and the version of this layer that writes it. A marker that is
+// missing or older is not a choice made here.
+var TOUCH_MOVE_SET_KEY = 'vefr-touch-move-set';
+var TOUCH_MOVE_SET_VERSION = '2';
 var TOUCH_SIZE_KEY = 'vefr-touch-size';
 var TOUCH_LEFT_KEY = 'vefr-touch-left';
 var TOUCH_DEAD_ZONE = 14;
@@ -33,7 +46,19 @@ function touchRecord(kind, key, dir, extra) {
 }
 
 function touchMoveMode() {
-  return store.get(TOUCH_MOVE_KEY) === 'dpad' ? 'dpad' : 'joystick';
+  if (store.get(TOUCH_MOVE_KEY) !== 'dpad') return 'joystick';
+  if (store.get(TOUCH_MOVE_SET_KEY) !== TOUCH_MOVE_SET_VERSION) return 'joystick';
+  return 'dpad';
+}
+
+// Boot: a D-pad value with no marker of this layer is a legacy leftover from
+// another build on the same gallery origin. Put the joystick back and write
+// the marker, so the stale state cannot come back.
+function migrateTouchMovePref() {
+  if (store.get(TOUCH_MOVE_KEY) !== 'dpad') return;
+  if (store.get(TOUCH_MOVE_SET_KEY) === TOUCH_MOVE_SET_VERSION) return;
+  store.set(TOUCH_MOVE_KEY, 'joystick');
+  store.set(TOUCH_MOVE_SET_KEY, TOUCH_MOVE_SET_VERSION);
 }
 
 function touchSizePct() {
@@ -58,6 +83,8 @@ function wireTouchSettings() {
     input.checked = input.value === touchMoveMode();
     input.addEventListener('change', function () {
       store.set(TOUCH_MOVE_KEY, this.value);
+      // The marker goes with it: this choice was made in this layer.
+      store.set(TOUCH_MOVE_SET_KEY, TOUCH_MOVE_SET_VERSION);
       applyTouchPrefs();
     });
   }
@@ -398,6 +425,7 @@ TOUCH_PANEL_IDS.forEach(function (id) {
   touchPanelWatch.observe(document.getElementById(id), { attributes: true, attributeFilter: ['hidden'] });
 });
 
+migrateTouchMovePref();
 wireTouchSettings();
 applyTouchPrefs();
 touchSyncSmart();
