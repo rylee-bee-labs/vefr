@@ -1,3 +1,5 @@
+# 2026-10-25, Rylee: auto-merge unless it is a big deal. Only gates and leash, secrets and identity, and money and deletion
+# (plus legal texts) wait for her code-owner review; everything else merges on green CI plus an independent review.
 # CODEOWNERS for VEFR
 #
 # CODEOWNERS is informational here: the repository has a single
@@ -14,9 +16,6 @@
 /TRADEMARKS.md                  @Rylee-Bee
 /THIRD_PARTY_NOTICES.md         @Rylee-Bee
 /SECURITY.md                   @Rylee-Bee
-/scripts/                       @Rylee-Bee
 /.github/workflows/             @Rylee-Bee
-/.github/dependabot.yml         @Rylee-Bee
 /.gitleaks.toml                 @Rylee-Bee
 /.github/CODEOWNERS             @Rylee-Bee
-/worlds/sample-world/world.json @Rylee-Bee
