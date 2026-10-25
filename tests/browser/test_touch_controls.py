@@ -8,6 +8,7 @@ straight to the game's move(); no key events are synthesised.
 """
 
 from contextlib import contextmanager
+import json
 from pathlib import Path
 
 import pytest
@@ -172,6 +173,53 @@ def touch_phone(browser, woven, size=PHONE):
         ctx.close()
 
 
+# The move control is a stored preference, and one gallery origin serves every
+# build of a game: they share that origin's localStorage, so a value an older
+# build wrote is still here when a newer build opens. These tests seed that
+# storage the way an older build would have left it.
+TOUCH_MOVE_KEY = "vefr-touch-move"
+TOUCH_MOVE_SET_KEY = "vefr-touch-move-set"
+
+
+@contextmanager
+def seeded_touch_phone(browser, woven, stored, size=PHONE):
+    """A phone whose storage already holds `stored`, written before the page's own scripts run."""
+    ctx = browser.new_context(viewport=size, has_touch=True, is_mobile=True)
+    ctx.add_init_script(
+        "".join(f"try {{ localStorage.setItem({json.dumps(k)}, {json.dumps(v)}); }} catch (e) {{}}"
+                for k, v in stored.items())
+    )
+    page = ctx.new_page()
+    try:
+        page.goto(woven.as_uri())
+        enter(page)
+        yield page
+    finally:
+        ctx.close()
+
+
+def marker_version(browser, woven):
+    """The version this layer writes beside the move value."""
+    ctx = browser.new_context()
+    page = ctx.new_page()
+    try:
+        page.goto(woven.as_uri())
+        version = page.evaluate("window.TOUCH_MOVE_SET_VERSION")
+        assert version, "the player layer writes no marker version beside the move value"
+        return version
+    finally:
+        ctx.close()
+
+
+MOVE_STATE = """() => ({
+  value: localStorage.getItem('vefr-touch-move'),
+  marker: localStorage.getItem('vefr-touch-move-set'),
+  zone: getComputedStyle(document.getElementById('touch-zone')).display !== 'none',
+  dpad: getComputedStyle(document.getElementById('dpad')).display !== 'none',
+  bodyClass: document.body.classList.contains('touch-dpad'),
+})"""
+
+
 def open_display(page):
     page.click("#menu-open")
     page.click('[data-panel="display"]')
@@ -253,6 +301,62 @@ def test_the_joystick_is_the_default_and_the_d_pad_setting_swaps_it(browser, wov
         assert page.evaluate("document.body.classList.contains('touch-dpad')"), \
             "the D-pad choice did not survive a reload"
         assert page.evaluate(SHOWN, "touch-zone") is False
+
+
+def test_a_phone_with_no_stored_choice_gets_the_floating_joystick(browser, woven_sample):
+    """Nothing stored: the floating joystick, no D-pad, and no touch-dpad class.
+
+    The code default is already the joystick; this is the case that must not change.
+    """
+    with touch_phone(browser, woven_sample) as page:
+        info = page.evaluate(MOVE_STATE)
+        assert info["value"] is None, f"the phone wrote a move value of its own: {info}"
+        assert info["zone"], f"the floating joystick is not visible: {info}"
+        assert not info["dpad"], f"the D-pad is visible: {info}"
+        assert not info["bodyClass"], f"the body carries the touch-dpad class: {info}"
+
+
+def test_a_legacy_d_pad_value_falls_back_to_the_joystick(browser, woven_sample):
+    """A 'dpad' value an older build wrote, with no marker, is not a choice made in this layer.
+
+    One gallery origin serves every build of a game and they share its localStorage,
+    so the value a phone left behind outlives the build that wrote it. The player
+    gets the floating joystick back and the stale value is rewritten, so it cannot
+    come back on the next build.
+    """
+    with seeded_touch_phone(browser, woven_sample, {TOUCH_MOVE_KEY: "dpad"}) as page:
+        info = page.evaluate(MOVE_STATE)
+        assert info["zone"], f"the floating joystick is not visible: {info}"
+        assert not info["dpad"], f"the legacy D-pad is still on screen: {info}"
+        assert not info["bodyClass"], f"the body carries the touch-dpad class: {info}"
+        assert info["value"] == "joystick", f"the legacy value was not rewritten: {info}"
+        assert info["marker"] == marker_version(browser, woven_sample), \
+            f"the marker was not written: {info}"
+
+
+def test_a_d_pad_choice_made_in_this_layer_still_works(browser, woven_sample):
+    """A deliberate D-pad choice carries the marker, and the D-pad stays."""
+    version = marker_version(browser, woven_sample)
+    with seeded_touch_phone(browser, woven_sample,
+                            {TOUCH_MOVE_KEY: "dpad", TOUCH_MOVE_SET_KEY: version}) as page:
+        info = page.evaluate(MOVE_STATE)
+        assert info["bodyClass"], f"the D-pad class is missing: {info}"
+        assert info["dpad"], f"the D-pad is not visible: {info}"
+        assert not info["zone"], f"the joystick is still on screen: {info}"
+        assert info["value"] == "dpad", f"the stored value changed: {info}"
+
+
+def test_choosing_the_d_pad_in_display_writes_the_marker(browser, woven_sample):
+    """A choice made in this layer says so beside the value, so it is not read as a leftover."""
+    with touch_phone(browser, woven_sample) as page:
+        open_display(page)
+        page.check('input[name="touch-move"][value="dpad"]')
+        page.keyboard.press("Escape")
+        page.wait_for_timeout(150)
+        info = page.evaluate(MOVE_STATE)
+        assert info["value"] == "dpad", info
+        assert info["marker"] == marker_version(browser, woven_sample), \
+            f"the marker was not written with the choice: {info}"
 
 
 def test_control_size_scales_the_buttons_with_a_48px_floor(browser, woven_sample):

@@ -32,7 +32,8 @@ On a touch screen the bottom right holds a smaller set. The big round button is 
 will do, so beside a person it says **Talk** and their name. Above it is **Bag**. To the left are **Listen**
 and **Explore**; tap Explore again to stop. While a note, a shop or someone's line is open, these step aside
 and a **B** button closes it. Under Display in the Menu you can choose a D-pad instead of the joystick, change
-the Control size, or turn on Left-handed to swap the sides.
+the Control size, or turn on Left-handed to swap the sides. A D-pad picked in an older build of the same game
+does not carry over: the joystick comes back, and the choice is yours to make again.
 
 Display also holds the two reading settings, next to the Sound switch:
 
