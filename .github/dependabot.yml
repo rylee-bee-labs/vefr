@@ -1,9 +1,10 @@
 # Estate dependabot template (agent-platform docs/ops/dependabot.md, 2026-10-27):
-# - minor + patch arrive as ONE grouped PR per ecosystem; a major is its own PR, held for a look;
+# - minor + patch arrive as ONE grouped PR per ecosystem; a major arrives as its own PR;
 # - security updates are grouped too, and are not delayed by the cooldown;
 # - a 3-day cooldown (14 for majors) lets a bad release get yanked before it reaches us;
 # - docs/archive/** is frozen history and never gets a bump;
-# - monthly on monday, so the estate's runners do not all get every PR at the same hour.
+# - monthly (not a live service), on monday: each repo has its own weekday,
+#   so the estate's shared runners do not get every repo's PRs on the same morning.
 version: 2
 updates:
   - package-ecosystem: npm
