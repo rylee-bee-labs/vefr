@@ -176,6 +176,17 @@ On the `time` block:
 - `rest_heals: true`: Rest outside a generated floor, with no living foe in
   the region, restores health, mana and every charge.
 
+### Found on the way, and fixed
+
+- A floor already grown this session and walked onto again after a trip
+  home was never the descent's current floor (`ensureRegion` returned before
+  setting it), so its fog, kills and drops stopped being remembered until a
+  reload. It surfaced as soon as a trip home was ordinary (`resume`, `fall`).
+- A reload while anything was worn rewrote the bag as bare ids, wiping every
+  rolled instance in it.
+- The Rest button was lost whenever the fight row was redrawn.
+- `load_pack` would not have carried `fight` and `traits` to the validator.
+
 ## Consequences
 
 - One pack-contract change, recorded in `src/vefr/world.py`, the guide

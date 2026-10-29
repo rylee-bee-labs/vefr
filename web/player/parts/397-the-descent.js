@@ -1634,7 +1634,21 @@ window.VEFR_DESCENT = (function () {
   }
 
   function ensureRegion(name) {
-    if (!on() || wired[name]) return false;
+    if (!on()) return false;
+    // A floor already grown this session is walked onto again after a trip
+    // home (a landing's stair, a fall that wakes at home): it is the floor
+    // the hero stands on, so it is the CURRENT one, and its record is the one
+    // its fog, kills and drops are read from and written to. Before this, a
+    // floor wired once kept `currentName` empty after any town visit, so
+    // nothing the hero did there was remembered until a reload.
+    if (wired[name]) {
+      var again = depthOfName(name) ? floorPlan(depthOfName(name)) : null;
+      if (again) {
+        currentName = name;
+        saveDoc(recordFor(name, again).doc);
+      }
+      return false;
+    }
     var depth = depthOfName(name);
     if (!depth) return false;
     var at = parseName(name);

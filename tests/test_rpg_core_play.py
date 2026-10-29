@@ -376,6 +376,23 @@ def test_a_fall_wakes_at_home_and_the_bag_waits_where_the_hero_fell(tmp_path):
     assert "What you carried waits where you fell." in fell["line"]
 
 
+def test_a_floor_walked_again_after_a_trip_home_is_remembered(tmp_path):
+    js = """
+(function () {
+  var plan = VEFR_DESCENT.floorPlan(1);
+  VEFR_ENTER_REGION(plan.name, null);
+  var first = (VEFR_DESCENT.loadFog() || '').length;
+  VEFR_ENTER_REGION('town', null);
+  VEFR_ENTER_REGION(plan.name, null);
+  return {first: first, again: (VEFR_DESCENT.loadFog() || '').length};
+})()
+"""
+    out = play(tmp_path, [{"do": "eval", "js": js, "tag": "fog"}],
+               pack=_trip_pack(tmp_path))["evals"]["fog"]
+    assert out["first"] > 0
+    assert out["again"] == out["first"]           # the same record, read again
+
+
 def test_walking_onto_the_satchel_takes_it_all_back(tmp_path):
     js = """
 (function () {

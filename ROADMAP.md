@@ -198,7 +198,9 @@ gameplay features over new core machinery.
   and a Cast button; `descent.resume: "deepest-landing"`, `descent.fall: "home"` with the bag left on the floor as
   one satchel, and `time.rest_heals`. Two fixes found on the way: a reload while anything was worn rewrote the bag
   as bare ids (wiping every rolled instance), and `load_pack` would not have carried the new blocks to the
-  validator. Decision: [ADR 0021](docs/adr/0021-the-rpg-core.md); guide: `docs/guides/rpg-core.md`. Tests:
+  validator; and a floor walked onto again after a trip home was never the descent's current floor, so its
+  fog, kills and drops stopped being remembered until a reload (the go-home-and-back loop's own bug). The Rest
+  button also survives the fight row being redrawn. Decision: [ADR 0021](docs/adr/0021-the-rpg-core.md); guide: `docs/guides/rpg-core.md`. Tests:
   `tests/test_rpg_core.py`, `tests/test_rpg_core_play.py`, and the parity test with both twins moved together.
 
 ### IN PROGRESS (decided by Rylee on 2026-10-04; refreshed 2026-10-12)
