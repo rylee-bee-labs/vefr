@@ -220,6 +220,15 @@ def test_a_thing_that_casts_spends_charges_and_rests_awake(tmp_path):
     assert ev["rested"] == ["a birch wand - 2 charges", 8]
 
 
+def test_the_rest_button_survives_the_row_being_redrawn(tmp_path):
+    rest = "!!document.querySelector('#verb-row [data-rest]')"
+    out = play(tmp_path, [
+        {"do": "eval", "js": rest, "tag": "before"},
+        {"do": "eval", "js": "bagAdd('potion'); " + rest, "tag": "after"},
+    ], items=mk.ITEMS, time={"rest": True})["evals"]
+    assert out == {"before": True, "after": True}
+
+
 def test_rest_does_not_heal_beside_a_living_foe(tmp_path):
     out = play(tmp_path, [
         {"do": "eval", "js": "HERO_HP = 2; saveHeroHp(); timeRest(); HERO_HP", "tag": "hp"},
