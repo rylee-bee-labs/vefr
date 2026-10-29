@@ -5539,6 +5539,7 @@ def _explain_blocks() -> dict:
         'sound': lambda w, p: maplab.sound_errors(w),
         'time': lambda w, p: maplab.time_errors(w),
         'music': lambda w, p: maplab.music_errors(w),
+        'light': lambda w, p: maplab.light_errors(w),
         'spells': lambda w, p: maplab.spells_errors(w),
         'town_states': lambda w, p: maplab.town_states_errors(w),
     }

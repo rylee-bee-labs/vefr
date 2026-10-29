@@ -1765,6 +1765,98 @@ def music_errors(w: dict) -> list[str]:
     return [p.sentence for p in shapes.check(shapes.BLOCKS['music'], w['music'])]
 
 
+_COLOUR = re.compile(r'#[0-9a-fA-F]{6}')
+LIGHT_HEIGHTS = 3   # one shadow-casting plane per height; the light rig takes four casters
+
+
+def _region_maps(w: dict) -> dict[str, list[str]]:
+    """Every region the pack declares, with its map's rows (empty when the map is not text)."""
+    out: dict[str, list[str]] = {}
+    for act in w.get('acts') or []:
+        regions = act.get('regions') if isinstance(act, dict) else None
+        for name, region in (regions or {}).items():
+            text = region.get('map_text') if isinstance(region, dict) else None
+            out[name] = text.splitlines() if isinstance(text, str) else []
+    return out
+
+
+def light_errors(w: dict) -> list[str]:
+    """Every problem with a pack's optional `light` block (empty = good).
+
+    Lamplight is optional and additive: a pack that declares none draws
+    exactly as before. The key table (`shapes.LIGHT`) checks the hero's
+    light and the block's own keys; this checks what a table of names
+    cannot: each standing tile's height (a quarter to three tiles, at most
+    three heights), every colour (`#rrggbb`), that `ambient` names only the
+    pack's own phases, and that each lamp stands on a tile of a region the
+    pack declares and names a flag the pack declares. See
+    `docs/guides/world-creation.md`, "Lamplight".
+    """
+    if 'light' not in w:
+        return []
+    light = w['light']
+    problems = shapes.check(shapes.BLOCKS['light'], light)
+    if problems:
+        return [p.sentence for p in problems]
+    out: list[str] = []
+
+    def colour(path: str, value) -> None:
+        if not (isinstance(value, str) and _COLOUR.fullmatch(value)):
+            out.append(f'{path} must be a #rrggbb colour, such as "#ffd694", not {value!r}')
+
+    stand = light.get('stand') or {}
+    heights = set()
+    for name, height in stand.items():
+        if not shapes.WORD.fullmatch(name):
+            out.append(f'light.stand names tiles by their plain name, such as "stone-wall", not {name!r}')
+        elif isinstance(height, bool) or not isinstance(height, (int, float)) or not 0.25 <= height <= 3:
+            out.append(f'light.stand.{name} must be a height between 0.25 and 3 tiles, such as 1, not {height!r}')
+        else:
+            heights.add(height)
+    if len(heights) > LIGHT_HEIGHTS:
+        out.append(f'light.stand may stand tiles at most three heights, and it names {len(heights)}')
+
+    ambient = light.get('ambient')
+    phases = w.get('phases') if isinstance(w.get('phases'), dict) else None
+    if isinstance(ambient, dict):
+        for phase, value in ambient.items():
+            if phases is not None and phase not in phases:
+                out.append(f'light.ambient.{phase} must name a phase the pack declares '
+                           f'({", ".join(phases)}), and {phase!r} is not one')
+            colour(f'light.ambient.{phase}', value)
+    elif ambient is not None:
+        colour('light.ambient', ambient)
+    if 'color' in (light.get('hero') or {}):
+        colour('light.hero.color', light['hero']['color'])
+
+    lamps = light.get('lamps') or {}
+    maps = _region_maps(w)
+    flags = w.get('flags') if isinstance(w.get('flags'), dict) else {}
+    for region, row in lamps.items():
+        at = f'light.lamps.{region}'
+        if region not in maps:
+            out.append(f'{at} must name a region the pack declares, and {region!r} is not one')
+            continue
+        if not isinstance(row, list):
+            out.append(f'{at} must be a list of lamps, such as [{shapes.LIGHT_LAMP.example}]')
+            continue
+        for i, lamp in enumerate(row):
+            here = f'{at}[{i}]'
+            found = shapes.check(shapes.LIGHT_LAMP, lamp, at=here)
+            if found:
+                out.extend(p.sentence for p in found)
+                continue
+            x, y = lamp['at']
+            rows = maps[region]
+            if rows and not (y < len(rows) and x < len(rows[y])):
+                out.append(f'{here}.at {lamp["at"]} is off the map of {region!r}')
+            if 'color' in lamp:
+                colour(f'{here}.color', lamp['color'])
+            if 'flag' in lamp and lamp['flag'] not in flags:
+                out.append(f'{here}.flag must be a flag the pack declares, and {lamp["flag"]!r} is not one')
+    return out
+
+
 def bag_errors(w: dict) -> list[str]:
     """Every problem with a pack's optional `bag` block (empty = good).
 
@@ -4064,6 +4156,10 @@ def validate(w: dict, pack_dir: Path | None = None) -> list[str]:
     # other optional catalogs. A pack that declares none gets nothing
     # here, and a pack that does changes nothing about its sound.
     errors.extend(music_errors(w))
+    # The pack's optional light block (lamplight), checked beside the
+    # other optional catalogs. A pack that declares none gets nothing
+    # here and draws exactly as before.
+    errors.extend(light_errors(w))
     errors.extend(display_errors(w))
     errors.extend(bag_errors(w))
     # The pack's optional recipes (E2, mending): two carried things that
