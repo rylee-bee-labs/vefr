@@ -84,3 +84,24 @@ def test_the_sample_worlds_tiles_bake_as_they_did():
 def test_a_pack_with_normal_maps_still_validates(tmp_path):
     pack = _pack(tmp_path, ["stone-wall.webp", "stone-wall.normal.webp", "stone-wall.normal.2.webp"])
     assert maplab.validate(maplab.load_pack(pack), pack_dir=pack) == []
+
+
+def _with_light(tmp_path: Path, light: dict) -> Path:
+    pack = tmp_path / "lit-world"
+    shutil.copytree(SAMPLE, pack)
+    world = json.loads((pack / "world.json").read_text(encoding="utf-8"))
+    world["light"] = light
+    (pack / "world.json").write_text(json.dumps(world), encoding="utf-8")
+    return pack
+
+
+def test_standing_tiles_bake_by_region_and_symbol(tmp_path):
+    """The player draws by map symbol, and only the weave knows which tile a symbol draws (a solid `#` is the
+    stone-wall unless it names its own), so the weave turns `light.stand` into heights by symbol."""
+    pack = _with_light(tmp_path, {"stand": {"stone-wall": 1.5, "rock": 0.5}})
+    assert _baked(cli.weave_html(pack), "VEFR_LIGHT_STAND") == {"town": {"#": 1.5}}
+
+
+def test_a_pack_without_standing_tiles_bakes_an_empty_table(tmp_path):
+    assert "window.VEFR_LIGHT_STAND = {};" in cli.weave_html(SAMPLE).splitlines()
+    assert _baked(cli.weave_html(_with_light(tmp_path, {"ambient": "#101018"})), "VEFR_LIGHT_STAND") == {}

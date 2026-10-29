@@ -1632,6 +1632,28 @@ def _player_tile_edges(world: dict, web_dir: Path,
     return {rname: edges for rname, edges in every.items() if edges}
 
 
+def _player_light_stand(world: dict, web_dir: Path,
+                        pack: Path | None = None) -> dict[str, dict[str, float]]:
+    """Lamplight's standing tiles by region, then map symbol: `light.stand` names tiles, the player draws by symbol,
+    and only the weave knows which tile a symbol draws (`_legend_tile_name`). Only regions with a standing symbol
+    appear, so a pack without `light.stand` bakes `{}` (`window.VEFR_LIGHT_STAND`)."""
+    light = world.get('light')
+    stand = light.get('stand') if isinstance(light, dict) else None
+    if not isinstance(stand, dict) or not stand:
+        return {}
+
+    def per_legend(legend, sanctuaries, _web_dir, _region_dir=None, _pack=None):
+        if not isinstance(legend, dict) or not legend:
+            return {}
+        sanct = set(sanctuaries or [])
+        open_chars = _open_chars(legend, sanct)
+        names = {ch: _legend_tile_name(ch, spec, sanct, open_chars) for ch, spec in legend.items()}
+        return {ch: stand[name] for ch, name in names.items() if name in stand}
+
+    every = _player_region_tiles(world, web_dir, pack, per_legend=per_legend)
+    return {rname: heights for rname, heights in every.items() if heights}
+
+
 def _first_region_dir(pack: Path | None, world: dict) -> Path | None:
     """The on-disk directory of the first act's first region.
 
@@ -3058,6 +3080,9 @@ def weave_html(pack: Path, *, pool: dict | None = None,
     out_html = out_html.replace('{{tile_normals_json}}',
                                 _json.dumps(_player_tile_normals(world, template_path.parent,
                                                                  pack),
+                                            ensure_ascii=False))
+    out_html = out_html.replace('{{light_stand_json}}',
+                                _json.dumps(_player_light_stand(world, template_path.parent, pack),
                                             ensure_ascii=False))
     out_html = out_html.replace('{{sprites_json}}',
                                 _json.dumps(_player_sprites(pack, world), ensure_ascii=False))
