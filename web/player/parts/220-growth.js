@@ -29,15 +29,17 @@ function growthStats() {
   return engine.statsFor(window.VEFR_GROWTH, GROWTH_STATE);
 }
 
+// The traits a worn thing bears add to both (ADR 0021), and a curse may take
+// away; neither number ever falls below 1. A pack with no `traits` adds 0.
 function heroMax() {
   var h = window.VEFR_HERO || {};
   var base = (typeof h.hp === 'number' && h.hp > 0) ? h.hp : 6;
-  return base + growthStats().hp + equipStats().hp;
+  return Math.max(1, base + growthStats().hp + equipStats().hp + rpgTraitTotals().hp);
 }
 function heroAtk() {
   var h = window.VEFR_HERO || {};
   var base = (typeof h.atk === 'number' && h.atk > 0) ? h.atk : 2;
-  return base + growthStats().atk + equipStats().atk;
+  return Math.max(1, base + growthStats().atk + equipStats().atk + rpgTraitTotals().atk);
 }
 var HERO_HP = heroMax();
 function heroHpKey() {
@@ -62,6 +64,7 @@ function renderHp() {
   fill.style.width = pct + '%';
   value.textContent = HERO_HP + '/' + max;
   renderGrowth();
+  renderMana();
 }
 
 // The next xp step after the current one, for the level line. At the
@@ -310,8 +313,15 @@ function surfaceVerbs() {
   }
   if (Array.isArray(act.verbs) && act.verbs.length) {
     act.verbs.forEach(function (v) {
-      if (typeof v !== 'string') return;
-      add(v, v.charAt(0).toUpperCase() + v.slice(1));
+      // A verb may name its own label (ADR 0021): {"verb": "attack",
+      // "label": "Strike"}. A bare word is labelled with itself, as before.
+      var verb = (v && typeof v === 'object') ? v.verb : v;
+      if (typeof verb !== 'string') return;
+      var label = (v && typeof v === 'object' && typeof v.label === 'string' && v.label)
+        ? v.label : verb.charAt(0).toUpperCase() + verb.slice(1);
+      // `cast` is on the row only while there is a harmful spell to cast.
+      if (verb === 'cast' && !rpgCastReady()) return;
+      add(verb, label);
     });
   } else {
     DEFAULT_VERB_ROW.forEach(function (pair) { add(pair[0], pair[1]); });
@@ -353,6 +363,10 @@ function renderVerbRow() {
     b.appendChild(key);
     row.appendChild(b);
   });
+  // The row was emptied above, and the pack's Rest button (part 255) with it:
+  // put it back, after the verbs, as it was first drawn. A pack with no Rest
+  // gets nothing here.
+  if (typeof wireTimeRest === 'function') wireTimeRest();
 }
 
 // The nth button of the combat row, 1 being the first verb, or null.

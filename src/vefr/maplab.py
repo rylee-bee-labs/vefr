@@ -222,6 +222,12 @@ def load_pack(pack_dir: Path) -> dict:
         # loads exactly as before, and the validator sees nothing new.
         if 'sound' in config:
             unified['sound'] = config['sound']
+        # The RPG core's two world blocks (ADR 0021), carried through ONLY
+        # when the pack declares them, so `rpg_errors` can speak for them:
+        # a pack with neither loads exactly as before.
+        for key in ('fight', 'traits'):
+            if key in config:
+                unified[key] = config[key]
         # The optional time block (the Rest action, the rail lock and the
         # phase save), carried through ONLY when the pack declares it: a
         # pack with no `time` loads exactly as before, its phase lives in
@@ -482,7 +488,7 @@ def item_light_errors(item_id, spec) -> list[str]:
 # so they are written once here and read by both the validator (which
 # names a broken shape) and the bake (which carries only a usable one).
 SLOTS = ('hand', 'body', 'head', 'feet', 'charm')
-MOD_STATS = ('atk', 'hp')
+MOD_STATS = ('atk', 'hp', 'guard', 'mana')
 # A worn thing is held on the hero, not in the hand that pours a potion
 # or carries a torch: these three may not sit beside a `slot`.
 WORN_FORBIDDEN = ('heal', 'light', 'use')
@@ -519,7 +525,8 @@ def item_slot_errors(item_id, spec, keys: frozenset = frozenset()) -> list[str]:
     """Every problem with an item's optional `slot` and `mods` (empty = good).
 
     `slot` is one of SLOTS, and `mods` (only with a slot) is an object of
-    whole numbers 0 to 9 for atk and hp. Both are additive: an item with
+    whole numbers 0 to 9 for atk, hp, guard and mana (ADR 0021 added the
+    last two). Both are additive: an item with
     neither plays exactly as it did. A worn thing may still be worth gold
     or kept, but it is not drunk, lit or spent, so `heal`, `light` and
     `use` may not sit beside a slot; and a thing a locked door names as
@@ -655,7 +662,20 @@ def item_roll_of(spec) -> dict:
     top = roll.get('max')
     if isinstance(top, bool) or not isinstance(top, int) or not 0 <= top <= 4:
         top = 1
-    return {'rarity': rarity, 'traits': pool, 'chance': chance, 'max': top}
+    out = {'rarity': rarity, 'traits': pool, 'chance': chance, 'max': top}
+    # ADR 0021: how many traits each rarity bears, when the pack ties them -
+    # `{"common": 0, "fine": 1, "rare": 2}`. Only named rarities with a whole
+    # count 0..4 ride along, and only when the pack names the table, so a
+    # roll written before this slice resolves to the four keys it always did.
+    per = roll.get('per_rarity')
+    if isinstance(per, dict):
+        names = {name for name, _ in rarity}
+        clean = {name: count for name, count in per.items()
+                 if name in names and isinstance(count, int)
+                 and not isinstance(count, bool) and 0 <= count <= 4}
+        if clean:
+            out['per_rarity'] = clean
+    return out
 
 
 def item_roll_errors(item_id, spec) -> list[str]:
@@ -696,6 +716,17 @@ def item_roll_errors(item_id, spec) -> list[str]:
                           f"declares: {_names_sentence(names)}")
     if any(key in named for key in ROLL_ASKS) and not item_traits_of(named):
         errors.append(f"{where} roll asks for traits but names no trait pool")
+    # ADR 0021: each rarity a `per_rarity` names is one the roll declares,
+    # with a whole count of traits 0 to 4.
+    per = named.get('per_rarity')
+    if isinstance(per, dict):
+        for name, count in per.items():
+            if names and name not in names:
+                errors.append(f"{where} roll per_rarity names {name!r}, which its "
+                              f"rarity table does not: {_names_sentence(names)}")
+            if isinstance(count, bool) or not isinstance(count, int) or not 0 <= count <= 4:
+                errors.append(f"{where} roll per_rarity {name!r} must be a whole "
+                              f"number of traits from 0 to 4")
     return errors
 
 
@@ -1629,8 +1660,8 @@ def pack_verbs(w: dict) -> set:
     for act in acts if isinstance(acts, list) else []:
         listed = act.get('verbs') if isinstance(act, dict) else None
         if isinstance(listed, list):
-            out |= {v.strip() for v in listed
-                    if isinstance(v, str) and v.strip()}
+            from . import rpg
+            out |= set(rpg.verb_ids(listed))
     items = w.get('items')
     for spec in items.values() if isinstance(items, dict) else []:
         for grant in item_grants_of(spec):
@@ -1775,6 +1806,49 @@ def bag_errors(w: dict) -> list[str]:
     if 'bag' not in w:
         return []
     return _shape_sentences('world.json', shapes.check(shapes.BLOCKS['bag'], w['bag']))
+
+
+def _rpg_item_errors(item_id, spec, spell_ids) -> list[str]:
+    """An item's ADR 0021 keys: `casts` and `charges` (empty = good)."""
+    from . import rpg
+    return rpg.item_errors(item_id, spec, spell_ids)
+
+
+def rpg_errors(w: dict, pack_dir=None) -> list[str]:
+    """Every problem with the pack's RPG-core keys (ADR 0021; empty = good).
+
+    The `fight` block, `player.guard` and `player.mana`, the `traits`
+    table, each spell's `mana`/`harm`/`range`/`ward`, a shopkeeper's
+    `stock` and `markup`, and a Blueprint family's `guard`, `drop_chance`
+    and `gold`. All of it is opt-in: a pack that names none of it is not
+    this function's business, and plays exactly as it always did. See
+    `docs/guides/rpg-core.md`.
+    """
+    from . import rpg
+    errors: list[str] = []
+    errors.extend(rpg.fight_errors(w))
+    errors.extend(rpg.player_errors(w))
+    errors.extend(rpg.traits_errors(w))
+    for record in spells_of(w):
+        errors.extend(rpg.spell_errors(record, f"world.json: spell '{record.get('id')}'"))
+    items = w.get('items')
+    item_ids = set(items) if isinstance(items, dict) else set()
+    for key, spec in _speaker_specs(w).items():
+        if isinstance(spec, dict):
+            errors.extend(rpg.stock_errors(str(key), spec, item_ids))
+    if pack_dir is not None:
+        path = Path(pack_dir) / 'blueprint.json'
+        try:
+            source = json.loads(path.read_text(encoding='utf-8')) if path.is_file() else {}
+        except (OSError, ValueError):
+            source = {}
+        families = source.get('families') if isinstance(source, dict) else None
+        if isinstance(families, dict):
+            for name, family in families.items():
+                defaults = family.get('defaults') if isinstance(family, dict) else None
+                if isinstance(defaults, dict):
+                    errors.extend(rpg.family_errors(str(name), defaults))
+    return errors
 
 
 def element_errors(w: dict) -> list[str]:
@@ -4001,6 +4075,7 @@ def validate(w: dict, pack_dir: Path | None = None) -> list[str]:
                 errors.extend(item_roll_errors(iid, spec))
                 errors.extend(item_spell_errors(iid, spec, spell_ids))
                 errors.extend(item_grants_errors(iid, spec, verb_ids))
+                errors.extend(_rpg_item_errors(iid, spec, spell_ids))
     # The pack's optional identify service (ADR 0017, T3 slice 2): the
     # speaker that reads things, checked beside the other optional
     # fields so a service that names no place to stand is an authoring
@@ -4081,6 +4156,11 @@ def validate(w: dict, pack_dir: Path | None = None) -> list[str]:
     # words. A pack that declares neither bakes nothing and fights
     # every blow untyped, exactly as before.
     errors.extend(element_errors(w))
+    # The RPG core (ADR 0021): fight rolls, the hero's guard and mana, the
+    # traits table, a spell's cost and effect, a shopkeeper's stock and a
+    # Blueprint family's guard, drop chance and gold. Every key is opt-in,
+    # and a pack that declares none of them gets nothing here.
+    errors.extend(rpg_errors(w, pack_dir))
     # The pack's optional display block (pixel art): a pack that declares
     # none is drawn exactly as before.
     errors.extend(display_errors(w))
@@ -4234,6 +4314,12 @@ def validate(w: dict, pack_dir: Path | None = None) -> list[str]:
             val = act.get(fname, [])
             if not isinstance(val, list):
                 errors.append(f"act '{aid}' {fname} must be a list")
+            elif fname == 'verbs':
+                # A verb may name its own label (ADR 0021).
+                from . import rpg
+                if not all(rpg.verb_entry_ok(x) for x in val):
+                    errors.append(f"act '{aid}' verbs must be a list of verb words, or "
+                                  f"{{\"verb\": \"attack\", \"label\": \"Strike\"}} entries")
             elif not all(isinstance(x, str) for x in val):
                 errors.append(f"act '{aid}' {fname} must be a list of strings")
         # `transitions` is the act's doors now, not a string list; the

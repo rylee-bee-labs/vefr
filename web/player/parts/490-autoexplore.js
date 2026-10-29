@@ -125,6 +125,7 @@
     var said = live ? live.textContent : '';
     if (HERO_HP < hpBefore || regionName !== regionBefore
         || said === DEATH_LINE || said === STAIR_DEATH_LINE
+        || said === SATCHEL_DEATH_LINE
         || said.indexOf(' hits you ') !== -1) {
       exploreStop('Stopped.');
       return;

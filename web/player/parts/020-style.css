@@ -138,6 +138,8 @@
      price), so a world with no reward end keeps its old HUD exactly. */
   .hud-gold { padding: 6px 10px; font-size: 0.82rem; white-space: nowrap; }
   .hud-gold[hidden] { display: none; }
+  .hud-mana { padding: 6px 10px; font-size: 0.82rem; white-space: nowrap; }
+  .hud-mana[hidden] { display: none; }
   /* a burning light's turns, beside the purse and the bag pips. Shown
      only while a torch is lit, so a world with no light keeps its HUD. */
   .hud-light { padding: 6px 10px; font-size: 0.82rem; white-space: nowrap; }

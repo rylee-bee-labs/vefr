@@ -66,13 +66,17 @@ function bagCarried() {
     var record = (entry && typeof entry === 'object' && !Array.isArray(entry)) ? entry : null;
     var id = record ? record.id : entry;
     if (typeof id !== 'string' || !cat[id]) continue;
-    out.push({
+    var carried = {
       id: id,
       rarity: (record && typeof record.rarity === 'string') ? record.rarity : '',
       traits: (record && Array.isArray(record.traits))
         ? record.traits.filter(function (t) { return typeof t === 'string'; }) : [],
       identified: !!(record && record.identified === true)
-    });
+    };
+    // The charges a thing that casts has left (ADR 0021), only when they
+    // were ever spent: a bare id has all of them.
+    if (record && rpgWhole(record.charges)) carried.charges = record.charges;
+    out.push(carried);
   }
   return out;
 }
@@ -91,7 +95,17 @@ function carriedName(carried) {
   var name = itemName(carried.id);
   var words = carried.rarity ? (name + ' (' + carried.rarity + ')') : name;
   if (carried.identified && carried.traits.length) {
-    words += ' - traits: ' + carried.traits.join(', ');
+    // A trait the pack names a curse (ADR 0021) says so once it is read, in
+    // the same words, so the eye and a screen reader learn it together.
+    words += ' - traits: ' + carried.traits.map(function (t) {
+      return rpgTraitIsCurse(t) ? t + ' (cursed)' : t;
+    }).join(', ');
+  }
+  // A thing that casts says how many casts it has left (ADR 0021).
+  var def = itemCatalog()[carried.id];
+  if (def && def.casts && rpgWhole(def.charges)) {
+    var left = rpgChargesLeft(carried, def);
+    words += ' - ' + left + (left === 1 ? ' charge' : ' charges');
   }
   return words;
 }
@@ -103,9 +117,14 @@ function syncCombat() {
     try { window.refreshCombatSnapshot(); } catch (e) {}
   }
 }
-// What the carried bag holds, not counting a worn thing, as the panel counts.
+// What the carried bag holds, as the panel counts. A worn thing is not in it:
+// wearing a thing takes its entry out (see `equipItem`). A keepsake the pack
+// marks `pouch` (ADR 0021) is carried and takes none of the bag's places.
 function bagHolds() {
-  return bagCarried().filter(function (c) { return !isWorn(c.id); });
+  var cat = itemCatalog();
+  return bagCarried().filter(function (c) {
+    return !(cat[c.id] && cat[c.id].pouch === true);
+  });
 }
 // How many things the bag may hold: the pack's `bag.size` plus the `carry`
 // of each thing carried, in the bag or worn. Null when the pack names no
@@ -134,7 +153,9 @@ function bagRoom() {
 function bagAdd(id, roll, alwaysFits) {
   if (!itemCatalog()[id]) return false;
   var room = bagRoom();
-  if (!alwaysFits && room !== null && bagHolds().length >= room) return false;
+  // A keepsake in the pouch (ADR 0021) takes no place, so a full bag takes it.
+  var pouched = itemCatalog()[id].pouch === true;
+  if (!alwaysFits && !pouched && room !== null && bagHolds().length >= room) return false;
   var raw = store.getJSON(BAG_KEY, []);
   var cat = itemCatalog();
   // The bag has always dropped an id the catalog no longer has every time
@@ -149,8 +170,14 @@ function bagAdd(id, roll, alwaysFits) {
   var rarity = (roll && typeof roll.rarity === 'string') ? roll.rarity : '';
   var traits = (roll && Array.isArray(roll.traits))
     ? roll.traits.filter(function (t) { return typeof t === 'string'; }) : [];
-  if (rarity || traits.length) {
-    ids.push({ id: id, rarity: rarity, traits: traits, identified: false });
+  // A worn thing coming back (ADR 0021) keeps what the town read and the
+  // charges it had left; a fresh drop has been read by nobody.
+  var charges = (roll && rpgWhole(roll.charges)) ? roll.charges : null;
+  if (rarity || traits.length || charges !== null) {
+    var record = { id: id, rarity: rarity, traits: traits,
+                   identified: !!(roll && roll.identified === true) };
+    if (charges !== null) record.charges = charges;
+    ids.push(record);
   } else {
     ids.push(id);
   }
@@ -187,6 +214,62 @@ function bagRemoveOne(id) {
   return true;
 }
 
+// Take out the one carried entry that IS this instance (ADR 0021): the same
+// id, rarity, traits and charges, so two rings of different rarity are two
+// things and wearing one never takes the other. Falls back to the first
+// entry naming the id, which is what every caller did before.
+function bagRemoveEntry(carried) {
+  if (!carried) return false;
+  var ids = store.getJSON(BAG_KEY, []);
+  if (!Array.isArray(ids)) return false;
+  function same(entry) {
+    var rec = (entry && typeof entry === 'object' && !Array.isArray(entry)) ? entry : null;
+    var id = rec ? rec.id : entry;
+    if (id !== carried.id) return false;
+    var rarity = (rec && rec.rarity) || '';
+    var traits = (rec && Array.isArray(rec.traits)) ? rec.traits.join(',') : '';
+    var charges = (rec && rpgWhole(rec.charges)) ? rec.charges : null;
+    return rarity === (carried.rarity || '')
+      && traits === (carried.traits || []).join(',')
+      && charges === (rpgWhole(carried.charges) ? carried.charges : null);
+  }
+  for (var i = 0; i < ids.length; i++) {
+    if (same(ids[i])) {
+      ids.splice(i, 1);
+      store.setJSON(BAG_KEY, ids);
+      renderBagPanel();
+      renderBagStrip();
+      renderVerbRow();
+      syncCombat();
+      return true;
+    }
+  }
+  return bagRemoveOne(carried.id);
+}
+// Spend one charge of a carried thing that casts (ADR 0021): the first entry
+// with a charge left keeps how many it has left. False when none has one.
+function bagSpendCharge(id) {
+  var def = itemCatalog()[id];
+  var ids = store.getJSON(BAG_KEY, []);
+  if (!def || !Array.isArray(ids)) return false;
+  for (var i = 0; i < ids.length; i++) {
+    var entry = ids[i];
+    var rec = (entry && typeof entry === 'object' && !Array.isArray(entry)) ? entry : null;
+    if ((rec ? rec.id : entry) !== id) continue;
+    var left = rpgChargesLeft(rec, def);
+    if (left <= 0) continue;
+    var next = rec ? JSON.parse(JSON.stringify(rec))
+      : { id: id, rarity: '', traits: [], identified: false };
+    next.charges = left - 1;
+    ids[i] = next;
+    store.setJSON(BAG_KEY, ids);
+    renderBagPanel();
+    renderBagStrip();
+    return true;
+  }
+  return false;
+}
+
 // Use a carried thing. A thing the pack gave a `light` lights the dark
 // (see setupTown); a thing with a `heal` raises health by `heal` (never
 // above the max); a thing with a `spell` teaches it (ADR 0018). Either
@@ -209,9 +292,28 @@ function useItem(id) {
   // stays; a bare `use` (no heal, no light) has nothing to spend and
   // is the natural shape of a quest tool.
   var keep = def.keep === true;
+  // A thing that casts (ADR 0021) casts its spell for no mana and spends a
+  // charge; spent, it waits for a rest. A cast that did not happen spends
+  // nothing, and a cast that did costs the turn a cast costs.
+  if (typeof def.casts === 'string' && def.casts) {
+    if (!bagSpendCharge(id)) {
+      bagSay(itemName(id) + ' is spent. Rest to wake it again.');
+      return false;
+    }
+    var cast = castSpell(def.casts, { free: true, from: id });
+    if (!cast) {
+      // Nothing was there to take it: the charge comes back.
+      rpgRefundCharge(id);
+      return false;
+    }
+    rpgSpendTurn();
+    return true;
+  }
   if (def.light && typeof def.light === 'object'
       && typeof window.useLightItem === 'function') {
-    return window.useLightItem(id, def);
+    var lit = window.useLightItem(id, def);
+    if (lit) rpgSpendTurn();
+    return lit;
   }
   var verb = def.use || 'use';
   // A spellbook is an ordinary item that teaches one spell when it is used
@@ -254,7 +356,25 @@ function useItem(id) {
   bagSay('You ' + verb + ' ' + itemName(id) + '. '
     + 'You recover ' + gained + ' health.');
   syncCombat();
+  // With `fight.turns` a drink is a turn (ADR 0021): the monsters answer it.
+  rpgSpendTurn();
   return true;
+}
+// Give back the charge a cast took when the cast found nothing to do.
+function rpgRefundCharge(id) {
+  var def = itemCatalog()[id];
+  var ids = store.getJSON(BAG_KEY, []);
+  if (!def || !Array.isArray(ids)) return;
+  for (var i = 0; i < ids.length; i++) {
+    var rec = ids[i];
+    if (rec && typeof rec === 'object' && rec.id === id && rpgWhole(rec.charges)
+        && rec.charges < def.charges) {
+      rec.charges++;
+      store.setJSON(BAG_KEY, ids);
+      renderBagPanel();
+      return;
+    }
+  }
 }
 
 // The Bag panel's live line (kept in the panel, not the game's toasts).
@@ -317,7 +437,7 @@ function renderBagStrip() {
   var strip = document.getElementById('bag-strip');
   if (!strip) return;
   strip.textContent = '';
-  var kinds = bagKinds(bagCarried().filter(function (c) { return !isWorn(c.id); }));
+  var kinds = bagKinds(bagCarried());
   if (!kinds.length) {
     strip.hidden = true;
     strip.setAttribute('aria-label', 'Nothing carried');
@@ -428,6 +548,8 @@ function modsLine(def) {
   var parts = [];
   if (typeof def.mods.hp === 'number' && def.mods.hp > 0) parts.push('Health up by ' + def.mods.hp);
   if (typeof def.mods.atk === 'number' && def.mods.atk > 0) parts.push('Attack up by ' + def.mods.atk);
+  if (typeof def.mods.guard === 'number' && def.mods.guard > 0) parts.push('Guard up by ' + def.mods.guard);
+  if (typeof def.mods.mana === 'number' && def.mods.mana > 0) parts.push('Mana up by ' + def.mods.mana);
   return parts.join('. ');
 }
 // The engine's refusal reasons in plain words the player can read.
@@ -442,7 +564,7 @@ function reasonToWords(reason) {
 }
 // Equip a carried thing into its own slot. The bag row is removed and
 // the old wearer, if any, comes back to the bag.
-function equipItem(id) {
+function equipItem(id, carried) {
   var def = itemCatalog()[id];
   if (!def) return;
   var engine = window.VEFR_EQUIP_ENGINE;
@@ -456,16 +578,46 @@ function equipItem(id) {
     bagSay(reasonToWords('no-slot'));
     return;
   }
+  // Another copy of the thing already worn there (ADR 0021: rolled loot
+  // makes a rare ladle and a plain one two things): take the worn one off
+  // first, so the engine's no-duplicate rule sees an empty slot and the swap
+  // is the one a player asked for.
+  if (EQUIP_STATE[def.slot] === id && carried) {
+    var swapInst = rpgInstanceOf(carried);
+    var engineOff = engine.unequip(EQUIP_STATE, def.slot);
+    var wornBack = WORN_INST[def.slot] || null;
+    delete WORN_INST[def.slot];
+    EQUIP_STATE = engineOff.state;
+    if (!bagRemoveEntry(carried)) { EQUIP_STATE[def.slot] = id; return; }
+    bagAdd(id, wornBack, true);
+    var swapped = engine.equip(EQUIP_STATE, itemCatalog(), def.slot, id);
+    if (swapInst) WORN_INST[def.slot] = swapInst;
+    EQUIP_STATE = swapped.state;
+    saveEquipped(EQUIP_STATE);
+    saveWornInstances();
+    bagSay('You change ' + (def.name || id) + ' for the other one.');
+    renderHp();
+    renderEquipSlots();
+    renderBagPanel();
+    syncCombat();
+    return;
+  }
   var result = engine.equip(EQUIP_STATE, itemCatalog(), def.slot, id);
   if (result.reason !== 'ok') {
     bagSay(reasonToWords(result.reason));
     return;
   }
   // Apply the change before the re-render so every read sees the new state.
+  // The worn thing keeps the instance it was (ADR 0021): the one that comes
+  // off goes back to the bag as itself, and the one put on is remembered.
+  var offInst = WORN_INST[def.slot] || null;
+  var onInst = rpgInstanceOf(carried);
+  if (onInst) WORN_INST[def.slot] = onInst; else delete WORN_INST[def.slot];
   EQUIP_STATE = result.state;
   saveEquipped(EQUIP_STATE);
-  bagRemoveOne(id);
-  if (result.swapped) bagAdd(result.swapped, null, true);
+  saveWornInstances();
+  if (carried) bagRemoveEntry(carried); else bagRemoveOne(id);
+  if (result.swapped) bagAdd(result.swapped, offInst, true);
   var line = 'You put on ' + (def.name || id) + '.';
   var ml = modsLine(def);
   if (ml) line += ' ' + ml + '.';
@@ -493,7 +645,10 @@ function takeOffSlot(slot) {
   }
   EQUIP_STATE = result.state;
   saveEquipped(EQUIP_STATE);
-  bagAdd(result.removed, null, true);
+  var inst = WORN_INST[slot] || null;
+  delete WORN_INST[slot];
+  saveWornInstances();
+  bagAdd(result.removed, inst, true);
   // If the new max is below current, clamp and save; never below 1.
   var newMax = heroMax();
   if (HERO_HP > newMax) {
@@ -511,7 +666,8 @@ function itemUsable(def) {
   return !!(def.use
     || (typeof def.heal === 'number' && def.heal > 0)
     || (def.light && typeof def.light === 'object')
-    || (typeof def.spell === 'string' && def.spell));
+    || (typeof def.spell === 'string' && def.spell)
+    || (typeof def.casts === 'string' && def.casts));
 }
 
 // The pause-menu panel: a "You" section of five slots, then one row
@@ -533,7 +689,7 @@ function renderBagPanel() {
   var count = document.getElementById('bag-count');
   if (!list) return;
   list.textContent = '';
-  var carried = bagCarried().filter(function (c) { return !isWorn(c.id); });
+  var carried = bagCarried();
   var ids = carried.map(function (c) { return c.id; });
   if (!ids.length) {
     var p = document.createElement('p');
@@ -577,7 +733,7 @@ function renderBagPanel() {
       eb.dataset.item = id;
       eb.dataset.action = 'equip';
       eb.setAttribute('aria-label', 'Equip ' + itemName(id));
-      eb.addEventListener('click', function () { equipItem(id); });
+      eb.addEventListener('click', function () { equipItem(id, entry); });
       row.appendChild(eb);
     }
     // Anything the pack gave a `use`, a `heal`, a `light` or a `spell`
@@ -608,7 +764,7 @@ function renderBagPanel() {
   if (count) {
     count.textContent = room === null
       ? ids.length + (ids.length === 1 ? ' thing carried.' : ' things carried.')
-      : ids.length + ' of ' + room + ' carried.';
+      : bagHolds().length + ' of ' + room + ' carried.';
   }
   renderMendPanel();
   renderGold();

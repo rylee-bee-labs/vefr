@@ -186,6 +186,23 @@ gameplay features over new core machinery.
   unchanged. Measured at the merge base, the three old constants come back byte for byte. Tests:
   `tests/weave_digest.py`, `tests/test_skin_validator.py`, `tests/test_identify.py`.
 
+### LANDED 2026-10-29 (the RPG core, ADR 0021, #586 - Gate 1 of the Cottage 1.0 roadmap)
+- [Gameplay] Eight opt-in rules, one PR as the owner chose ("One big PR per gate"), every key refused in plain words
+  by `norns validate` and none of them changing a pack that names none: rolled blows (`fight`: misses and critical
+  hits from a named seeded stream, said in words, never re-rolled by a reload) and a turn for every drink, use or
+  cast (`fight.turns`); guard on the hero, worn gear (`mods.guard`) and monsters; a Section's `curve` read at play
+  through `vefr.mob_stats` in both twins; a family's `drop_chance` and `gold`, each on a stream of its own; a
+  shopkeeper's `stock` (with flag-gated entries) and `markup`; a `traits` table (stats, four bounded reactions,
+  curses named once read) that works from worn gear and carried bags, with a worn thing now keeping its rolled
+  instance; mana for learned spells, `harm` past guard and `ward`, and items that `casts` on `charges`; verb labels
+  and a Cast button; `descent.resume: "deepest-landing"`, `descent.fall: "home"` with the bag left on the floor as
+  one satchel, and `time.rest_heals`. Two fixes found on the way: a reload while anything was worn rewrote the bag
+  as bare ids (wiping every rolled instance), and `load_pack` would not have carried the new blocks to the
+  validator; and a floor walked onto again after a trip home was never the descent's current floor, so its
+  fog, kills and drops stopped being remembered until a reload (the go-home-and-back loop's own bug). The Rest
+  button also survives the fight row being redrawn. Decision: [ADR 0021](docs/adr/0021-the-rpg-core.md); guide: `docs/guides/rpg-core.md`. Tests:
+  `tests/test_rpg_core.py`, `tests/test_rpg_core_play.py`, and the parity test with both twins moved together.
+
 ### IN PROGRESS (decided by Rylee on 2026-10-04; refreshed 2026-10-12)
 - **The endless dungeon** (epic [#273](https://github.com/rylee-bee-labs/vefr/issues/273); design `docs/plans/endless-dungeon/DESIGN.md`, build plan `docs/plans/endless-dungeon/PLAN.md`, research `docs/research/big-generated-maps.md`): floors generated while you play from `seed + depth`, cut into sections of 8 to 11 floors; each ends in a key warden whose key opens a vault with a lore note; acts change the town only; elites, linked groups, hand-painted stamps and much bigger maps (up to 128x96, kept cheap for phones); an endless mode after the story.
   - **Merged:** E0a measurements (#278), F1 fog as a bitset (#287), E0d sleeping monsters and a radius-bounded flood (#288), E2 the v3 Python floor generator with property sweeps (#289).

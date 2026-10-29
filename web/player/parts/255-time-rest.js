@@ -78,6 +78,13 @@ function timeRest() {
   var next = timeNextPhase();
   if (!next) return false;
   gotoPhase(next);
+  // `rest_heals` (ADR 0021): somewhere quiet, a rest restores health, mana
+  // and every charge, and one line says so. Anywhere else it is the turn of
+  // the watch it always was.
+  if (rpgRestHeals()) {
+    var live = document.getElementById('combat-live');
+    if (live) live.textContent = 'You rest. You are whole again.';
+  }
   return true;
 }
 // The phase the game opens on: the one the save left off at when the

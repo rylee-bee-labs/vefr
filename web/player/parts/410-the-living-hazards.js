@@ -65,6 +65,14 @@
     return [raw.name, (Array.isArray(raw.at) ? raw.at.join(',') : ''),
             raw.hp, raw.atk, drops].join('|');
   }
+  // A baked foe's `gold`: a drawn number on a generated floor, a `[lo, hi]`
+  // on a hand-placed one (paid as its low end - no draw is spent outside the
+  // descent's own streams), and 0 when it names none.
+  function goldOfFoe(g) {
+    if (typeof g === 'number' && g > 0) return Math.floor(g);
+    if (Array.isArray(g) && typeof g[0] === 'number' && g[0] > 0) return Math.floor(g[0]);
+    return 0;
+  }
   function loadEnemies() {
     var dead = loadSlain();
     var generated = descentOn();
@@ -85,6 +93,10 @@
         // A pack without it reads as zero: defeat still plays as before.
         xp: (typeof e.xp === 'number') ? e.xp : 0,
         drops: Array.isArray(e.drops) ? e.drops.slice() : [],
+        // What a blow at it loses, and the coins it pays (ADR 0021): 0 and
+        // none for a record that names neither, which is the old fight.
+        guard: (typeof e.guard === 'number' && e.guard > 0) ? e.guard : 0,
+        gold: goldOfFoe(e.gold),
         // ADR 0015 Amendment 1 §2, read here rather than at the fight:
         // `fightable` is what refuses a blow and `yields` is what leaves
         // a beaten warden standing, and both have to be on the record

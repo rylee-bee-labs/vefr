@@ -37,7 +37,7 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import elements
+from . import elements, rpg
 from .maplab import (SKIN_PICTURE_KEYS, item_changes_of, item_grants_of,
                      item_rarity_of, item_roll_of,
                      item_slot_and_mods, item_traits_of, load_pack, prop_blocks,
@@ -2031,6 +2031,8 @@ def _player_items(world: dict) -> dict[str, dict]:
                 'traits': list(roll['traits']),
                 'chance': roll['chance'], 'max': roll['max'],
             }
+            if roll.get('per_rarity'):
+                entry['roll']['per_rarity'] = dict(roll['per_rarity'])
         # `spell` (ADR 0018): the spell this item teaches when it is used.
         # A spellbook is an ordinary item, so it rides along beside the
         # rest of the record and only when the pack named one - an item
@@ -2055,6 +2057,19 @@ def _player_items(world: dict) -> dict[str, dict]:
         changes = item_changes_of(spec)
         if changes:
             entry['changes'] = changes
+        # `casts` and `charges` (ADR 0021): a thing that casts a spell for no
+        # mana, one charge a cast. Both ride along only as a usable pair and
+        # only when the pack named them, so an item written before this
+        # slice bakes byte for byte what it always baked.
+        # `pouch` (ADR 0021): a keepsake that never takes a bag place. Only
+        # `true` rides along, as `keep` does.
+        if spec.get('pouch') is True:
+            entry['pouch'] = True
+        casts, charges = spec.get('casts'), spec.get('charges')
+        if (isinstance(casts, str) and casts.strip() and isinstance(charges, int)
+                and not isinstance(charges, bool) and 1 <= charges <= 20):
+            entry['casts'] = casts.strip()
+            entry['charges'] = charges
         out[key] = entry
     return out
 
@@ -2090,6 +2105,18 @@ def _player_spells(world: dict):
             entry['level'] = level
         if isinstance(heal, int) and not isinstance(heal, bool) and heal >= 1:
             entry['heal'] = heal
+        # ADR 0021: what the spell costs, and the two things it may do besides
+        # heal. Each rides along only when the pack named it in a usable form,
+        # so a spell written before this slice bakes what it always baked.
+        for field, lo, hi in (('mana', 1, 99), ('harm', 1, 99), ('range', 1, 20)):
+            n = record.get(field)
+            if isinstance(n, int) and not isinstance(n, bool) and lo <= n <= hi:
+                entry[field] = n
+        ward = record.get('ward')
+        if (isinstance(ward, dict) and isinstance(ward.get('guard'), int)
+                and isinstance(ward.get('turns'), int)
+                and 1 <= ward['guard'] <= 9 and 1 <= ward['turns'] <= 20):
+            entry['ward'] = {'guard': ward['guard'], 'turns': ward['turns']}
         out.append(entry)
     return {'schools': spell_schools_of(world), 'spells': out}
 
@@ -2871,6 +2898,14 @@ def weave_html(pack: Path, *, pool: dict | None = None,
                 burns = elements.burning_of(e)
                 if burns:
                     entry['burns'] = burns
+                # What a blow at it loses, and what killing it pays (ADR
+                # 0021), on the same rule: only when the contract names
+                # them, so a pack without them bakes the bytes it always did.
+                if rpg.guard_of(e):
+                    entry['guard'] = rpg.guard_of(e)
+                gold = rpg.gold_of(e)
+                if gold:
+                    entry['gold'] = list(gold)
                 out.append(entry)
             enemies_by_region[rname] = out
 
@@ -2949,6 +2984,14 @@ def weave_html(pack: Path, *, pool: dict | None = None,
             'seeds': spec.get('seeds', {}),
             'voice_file': spec.get('voice_file', ''),
         }
+        # A shopkeeper's own stock and markup (ADR 0021), only when the pack
+        # names them, so every other speaker entry keeps the shape it had.
+        stock = rpg.stock_of(spec)
+        if stock is not None:
+            speaker_groups[rname][key]['stock'] = stock
+        markup = rpg.markup_of(spec)
+        if markup is not None:
+            speaker_groups[rname][key]['markup'] = markup
 
     # The shopkeepers: a speaker whose spec carries `"shop": "true"`
     # keeps the shop of its region. Baked as a small {region: key} map

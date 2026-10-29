@@ -78,7 +78,9 @@ def verbs_for_pack(world: dict) -> tuple[str, ...]:
     acts = world.get("acts") or []
     idx = world.get("_current_act", 0)
     act = acts[idx] if idx < len(acts) else {}
-    verbs = act.get("verbs") or []
+    # A verb may name its own label (ADR 0021); the vocabulary is its ids.
+    from . import rpg
+    verbs = rpg.verb_ids(act.get("verbs") or [])
     if verbs:
         return tuple(verbs)
     return DEFAULT_VERBS

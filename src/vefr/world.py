@@ -222,6 +222,28 @@ REWARD (first slice): `world.player` may carry `gold`, the starting
   it is optional: a pack that names none of it bakes the player it had
   before.
 
+RPG CORE (ADR 0021): every key opt-in, and a pack that names none of them
+  bakes and plays exactly as before. world.json may carry `fight`
+  ({"miss": 0-50, "crit": 0-50, "crit_times": 2|3, "turns": bool}: rolled
+  blows from a named seeded stream, and a turn for every drink, use or
+  cast) and `traits` ({word: {"hp"|"atk"|"guard"|"mana": -9..9,
+  "crit": -50..50, "kill_heal"|"thorns"|"sting": 1..9, "opener": 2..3,
+  "curse": true}}: what a rolled or fixed trait does, worn or carried in a
+  bag). `player` may carry `guard` (0-99) and `mana` (0-999). An item's
+  `mods` may hold `guard` and `mana` beside `atk` and `hp`, and an item may
+  `casts` a spell id on `charges` (1-20), an item's `roll` may tie its
+  trait count to its rarity with `per_rarity`, and an item marked `pouch: true`
+  is carried without taking a bag place. A spell may cost `mana` (1-99)
+  and do one of `heal`, `harm` (1-99, with `range` 1-20) or `ward`
+  ({"guard": 1-9, "turns": 1-20}). A shopkeeper speaker may carry `stock`
+  (item ids, or {"item", "flag"}) and `markup` (100-500). A Blueprint
+  family's `defaults` may carry `guard`, `drop_chance` (0-100) and `gold`
+  ([lo, hi]). The `descent` block may carry `resume: "deepest-landing"`
+  and `fall: "home"`, and the `time` block `rest_heals: true`. A
+  Section's `curve` is read at play through `vefr.mob_stats`. An act's
+  `verbs` entry may be {"verb", "label"}, and the verb `cast` casts the
+  first harmful spell the hero knows. See `docs/guides/rpg-core.md`.
+
 GRAMMARS: `world.json` may carry a top-level `grammars` object: a
 set of tiny, hand-written sentence recipes the engine expands
 offline, with no model and no baked pool. Each grammar maps a rule

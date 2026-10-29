@@ -16,6 +16,48 @@ function itemValue(def) {
   return (def && typeof def.value === 'number' && def.value > 0)
     ? Math.floor(def.value) : 0;
 }
+// The shopkeeper's own spec (ADR 0021): its `stock` and `markup`, baked on
+// the speaker only when the pack names them. Null for a shop that names none.
+function tradeSpec() {
+  var groups = window.VEFR_SPEAKERS || {};
+  for (var region in groups) {
+    if (groups[region] && groups[region][TRADE_KEY]) return groups[region][TRADE_KEY];
+  }
+  return null;
+}
+// What the hero pays: the value marked up by the shop's `markup` percent,
+// rounded up so a sale never pays back what a purchase cost. A shop with no
+// markup asks the value, as it always did.
+function buyPrice(def) {
+  var value = itemValue(def);
+  var spec = tradeSpec();
+  var markup = (spec && typeof spec.markup === 'number' && spec.markup >= 100) ? spec.markup : 100;
+  return value ? Math.ceil(value * markup / 100) : 0;
+}
+// A story flag, from the rules or the descent: what a stock entry waits on.
+function tradeFlagSet(flag) {
+  var state = (typeof rulesStateNow === 'function') ? rulesStateNow() : null;
+  if (state && state.flags && state.flags[flag] === true) return true;
+  var D = window.VEFR_DESCENT;
+  return !!(D && typeof D.storyFlags === 'function' && D.storyFlags(flag));
+}
+// What this shop sells: its `stock` - each entry that names no flag, or
+// whose flag is set - in the pack's order; or, for a shop with no stock,
+// every priced thing in the catalog, as before.
+function tradeStock() {
+  var cat = itemCatalog();
+  var spec = tradeSpec();
+  if (spec && Array.isArray(spec.stock)) {
+    var out = [];
+    spec.stock.forEach(function (entry) {
+      if (!entry || !cat[entry.item] || !itemValue(cat[entry.item])) return;
+      if (entry.flag && !tradeFlagSet(entry.flag)) return;
+      if (out.indexOf(entry.item) < 0) out.push(entry.item);
+    });
+    return out;
+  }
+  return Object.keys(cat).filter(function (id) { return !!itemValue(cat[id]); });
+}
 function tradeSay(msg) {
   var el = document.getElementById('trade-live');
   if (el) el.textContent = msg || '';
@@ -72,7 +114,8 @@ function sellItem(id) {
   return true;
 }
 function buyItem(id) {
-  var price = itemValue(itemCatalog()[id]);
+  if (tradeStock().indexOf(id) < 0) return false;
+  var price = buyPrice(itemCatalog()[id]);
   if (!price || heroGold() < price) return false;
   // A full bag refuses the purchase before any gold changes hands, and
   // says so in the floor pickup's own words (bag capacity, ADR 0017).
@@ -123,8 +166,8 @@ function renderTrade() {
   if (buy) {
     buy.textContent = '';
     var cat = itemCatalog(), any = false, gold = heroGold();
-    Object.keys(cat).forEach(function (id) {
-      var price = itemValue(cat[id]);
+    tradeStock().forEach(function (id) {
+      var price = buyPrice(cat[id]);
       if (!price) return;
       any = true;
       buy.appendChild(tradeRow(id, price, 'Buy', '', gold < price,

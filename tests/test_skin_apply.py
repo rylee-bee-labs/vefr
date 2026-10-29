@@ -822,7 +822,7 @@ def test_a_pack_with_no_skin_gains_no_element_of_any_kind(ran):
     assert plain["hasStyle"] is False and plain["css"] == ""
     assert "has-skin" not in (plain["bodyClass"] + " " + plain["htmlClass"])
     assert plain["hud"]["hudTlChildren"] == [
-        "hud-hp", "touch-quick", "hud-level", "hud-state", "hud-gold",
+        "hud-hp", "hud-mana", "touch-quick", "hud-level", "hud-state", "hud-gold",
         "bag-strip", "light-live"]
     assert plain["hud"]["bagChildren"] == 1
     assert plain["npcBox"]["withPortrait"]["children"] == [

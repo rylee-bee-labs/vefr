@@ -27,8 +27,12 @@ GOLD = ROOT / "web" / "player" / "parts" / "180-gold.js"
 
 # A record that uses every key the shape has, so the bake has no reason to
 # leave one out.
+# Every key the shape accepts, so the bake is asked to carry each of them. A
+# checked pack never holds `heal`, `harm` and `ward` together (ADR 0021,
+# `rpg.spell_errors`); the bake is not the check, and carries what it is given.
 FULL = {"id": "ember-bolt", "name": "an ember bolt", "school": "ember",
-        "level": 1, "heal": 3}
+        "level": 1, "heal": 3, "mana": 2, "harm": 4, "range": 5,
+        "ward": {"guard": 2, "turns": 3}}
 
 
 def _code(path: Path) -> str:

@@ -40,6 +40,10 @@
             <div class="hud-hp-bar"><div class="hud-hp-fill" id="hud-hp-fill" style="width:100%"></div></div>
             <span class="hud-hp-value" id="hud-hp-value">0/0</span>
           </div>
+          <!-- The hero's mana (ADR 0021): words and a number, shown only for a
+               pack that declares `player.mana`, so every other pack's HUD
+               is the HUD it was. -->
+          <div class="hud-mana glass" id="hud-mana" role="status" hidden></div>
           <div class="touch-quick" id="touch-quick" role="group" aria-label="Quick use" hidden></div>
           <div class="hud-level glass" id="hud-level" role="status" aria-live="polite" hidden></div>
           <!-- What the hero is in the middle of being (burning, and what

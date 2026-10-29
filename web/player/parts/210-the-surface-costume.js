@@ -11,4 +11,8 @@
 var DEATH_LINE = 'You wake in the temple. You lost nothing that mattered.';
 var STAIR_DEATH_LINE = 'You wake at the foot of the stair, whole again. '
   + 'You lost nothing that mattered.';
+// ADR 0021 `fall: "home"`: the hero wakes at the pack's own wake point and
+// what the bag held waits on the floor where they fell.
+var SATCHEL_DEATH_LINE = 'You wake, whole again. What you carried waits '
+  + 'where you fell.';
 

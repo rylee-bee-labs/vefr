@@ -71,7 +71,11 @@ def test_the_grant_block_is_held_and_its_keys_are_registered():
     assert keys == ["verb", "label"]
     assert all(k.required for k in shapes.GRANT.keys)
     assert shapes.ITEM_GRANTS == ("grants", "changes")
-    assert [k.name for k in shapes.ITEM.keys][-2:] == ["grants", "changes"]
+    # The two sit together, right before the keys ADR 0021 added after them.
+    names = [k.name for k in shapes.ITEM.keys]
+    at = names.index("grants")
+    assert names[at:at + 2] == ["grants", "changes"]
+    assert names[at + 2:] == list(shapes.ITEM_CASTS)
 
 
 def test_a_good_item_has_no_problems():
