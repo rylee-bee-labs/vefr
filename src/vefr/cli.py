@@ -2031,6 +2031,8 @@ def _player_items(world: dict) -> dict[str, dict]:
                 'traits': list(roll['traits']),
                 'chance': roll['chance'], 'max': roll['max'],
             }
+            if roll.get('per_rarity'):
+                entry['roll']['per_rarity'] = dict(roll['per_rarity'])
         # `spell` (ADR 0018): the spell this item teaches when it is used.
         # A spellbook is an ordinary item, so it rides along beside the
         # rest of the record and only when the pack named one - an item

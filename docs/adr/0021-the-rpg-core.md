@@ -124,6 +124,10 @@ A world `traits` table gives a trait word what it does:
   `sting` (each of your misses hurts you N, never below 1). A reaction
   never fires another reaction, so a turn's chain is bounded by
   construction.
+- An item's `roll` may tie its trait count to its rarity: `per_rarity`
+  (`{"common": 0, "rare": 2}`, 0..4 each) is drawn in both twins after the
+  rarity, with no chance or count draw, so rarity finally matters. A roll
+  without it draws exactly as ADR 0017 wrote.
 - `curse: true` names a trait a curse: identified, it reads "(cursed)".
   A cursed thing comes off like any other.
 - A trait works from a **worn** thing, and from a **carried** thing that

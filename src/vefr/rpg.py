@@ -182,6 +182,31 @@ def markup_of(spec) -> int | None:
     return value if _in(value, MARKUP_RANGE) else None
 
 
+def verb_id(entry) -> str | None:
+    """The verb an act's `verbs` entry names: a bare word, or the `verb` of a
+    `{"verb", "label"}` entry (ADR 0021). None for anything else."""
+    if isinstance(entry, str):
+        return entry.strip() or None
+    if isinstance(entry, dict) and isinstance(entry.get('verb'), str):
+        return entry['verb'].strip() or None
+    return None
+
+
+def verb_ids(listed) -> list[str]:
+    """Every verb id an act's `verbs` list names, in its order."""
+    return [v for v in (verb_id(e) for e in (listed if isinstance(listed, list) else []))
+            if v]
+
+
+def verb_entry_ok(entry) -> bool:
+    """A usable `verbs` entry: a word, or `{"verb": word, "label": 1-60 chars}`."""
+    if isinstance(entry, str):
+        return bool(entry.strip())
+    return (isinstance(entry, dict) and set(entry) <= {'verb', 'label'}
+            and isinstance(entry.get('verb'), str) and bool(entry['verb'].strip())
+            and isinstance(entry.get('label'), str) and 1 <= len(entry['label']) <= 60)
+
+
 # ------------------------------------------------------------ validation
 
 

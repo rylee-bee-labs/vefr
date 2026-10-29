@@ -100,6 +100,17 @@ if (cases.rolled) {
   }
   w.VEFR_ITEMS = had;
 }
+// The RPG core (ADR 0021): the same shape as `rolled`, over a descent whose
+// Section names a `curve` and whose families name `guard`, `gold` and a
+// `drop_chance`, and a catalog whose roll ties traits to rarity.
+if (cases.rpg) {
+  const had = w.VEFR_ITEMS;
+  w.VEFR_ITEMS = cases.rpg.items;
+  w.VEFR_DESCENT_DEF = cases.rpg.descent;
+  out.rpg = { plans: [] };
+  for (const depth of cases.rpg.depths) out.rpg.plans.push(D.floorPlan(depth));
+  w.VEFR_ITEMS = had;
+}
 fs.writeSync(1, JSON.stringify(out) + '\n');
 w.close();
 process.exit(0);

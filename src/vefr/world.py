@@ -231,7 +231,8 @@ RPG CORE (ADR 0021): every key opt-in, and a pack that names none of them
   "curse": true}}: what a rolled or fixed trait does, worn or carried in a
   bag). `player` may carry `guard` (0-99) and `mana` (0-999). An item's
   `mods` may hold `guard` and `mana` beside `atk` and `hp`, and an item may
-  `casts` a spell id on `charges` (1-20), and an item marked `pouch: true`
+  `casts` a spell id on `charges` (1-20), an item's `roll` may tie its
+  trait count to its rarity with `per_rarity`, and an item marked `pouch: true`
   is carried without taking a bag place. A spell may cost `mana` (1-99)
   and do one of `heal`, `harm` (1-99, with `range` 1-20) or `ward`
   ({"guard": 1-9, "turns": 1-20}). A shopkeeper speaker may carry `stock`

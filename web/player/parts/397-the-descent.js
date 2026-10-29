@@ -861,13 +861,17 @@ window.VEFR_DESCENT = (function () {
     // draws nothing, which is `maplab.item_roll_errors`' refusal, not a
     // half-rolled drop here.
     if (!names.length || !pool.length) return null;
-    return {
+    var out = {
       names: names,
       weights: names.map(function (n) { return table[n]; }),
       pool: pool,
       chance: isWhole(roll.chance) ? roll.chance : 100,
       max: isWhole(roll.max) ? roll.max : 1
     };
+    // ADR 0021: the bake has already kept only named rarities and whole
+    // counts 0..4, the twin of `maplab.item_roll_of`.
+    if (roll.per_rarity && typeof roll.per_rarity === 'object') out.perRarity = roll.per_rarity;
+    return out;
   }
   // One name off the table: `floor(rng() * total)` and a walk down the
   // weights - one floor of one stream, and no float compared with another.
@@ -884,8 +888,17 @@ window.VEFR_DESCENT = (function () {
   // The hidden traits one rolled item carries, in draw order: whether it
   // bears any at all, then how many, then which - each drawn once, so two
   // traits never come back the same word and a seed always draws the same.
-  function traitDraw(rng, roll) {
+  function traitDraw(rng, roll, rarity) {
     var pool = roll.pool.slice(), out = [];
+    // ADR 0021: a rarity the roll ties to a count bears exactly that many,
+    // with no chance and no count drawn (the twin of `delve._trait_draw`).
+    if (roll.perRarity && Object.prototype.hasOwnProperty.call(roll.perRarity, rarity)) {
+      var exact = Math.min(roll.perRarity[rarity], pool.length);
+      for (var j = 0; j < exact; j++) {
+        out.push(pool.splice(Math.floor(rng() * pool.length), 1)[0]);
+      }
+      return out;
+    }
     if (roll.max < 1 || Math.floor(rng() * 100) >= roll.chance) return out;
     var want = Math.min(1 + Math.floor(rng() * roll.max), pool.length);
     for (var i = 0; i < want; i++) {
@@ -909,10 +922,13 @@ window.VEFR_DESCENT = (function () {
       return { item: itemId, rarity: rarity, traits: traits, identified: false };
     }
     var rng = window.VEFR_DELVE.prng(rollSeed(key, mobId, itemId));
-    return {
+    // The rarity is drawn first, then the traits it may decide (ADR 0021).
+    var drawn = {
       item: itemId, rarity: weightedName(rng, roll.names, roll.weights),
-      traits: traitDraw(rng, roll), identified: false
+      traits: [], identified: false
     };
+    drawn.traits = traitDraw(rng, roll, drawn.rarity);
+    return drawn;
   }
 
   function floorPlan(depth, run) {

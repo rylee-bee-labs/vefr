@@ -110,6 +110,15 @@ A trait is a word a rolled or fixed item carries (ADR 0017). A `traits` table gi
 - `curse: true` marks a curse. Once the item is read, it says "(cursed)". A cursed thing comes off like any other, so give every curse an upside.
 - A trait works from a worn thing, and from a carried thing that has `carry` (a bag on the hero's back). It works whether or not the item has been read.
 - A worn thing keeps its rarity and traits, and gives them back when it comes off.
+- To make rarity matter, tie the number of traits to it in the item's `roll`:
+
+```json
+"roll": {"rarity": {"common": 60, "fine": 25, "rare": 10, "heroic": 4, "mythic": 1},
+         "traits": ["keen", "warded", "lucky", "warming", "eager", "reckless"],
+         "per_rarity": {"common": 0, "fine": 1, "rare": 2, "heroic": 2, "mythic": 3}}
+```
+
+  A rarity named in `per_rarity` bears exactly that many traits (0 to 4). A roll without it draws as before.
 
 ## Magic
 

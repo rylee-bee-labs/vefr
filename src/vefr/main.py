@@ -328,7 +328,7 @@ def world():
         "act": {
             "id": act["id"],
             "title": act["title"],
-            "verbs": list(act.get("verbs") or []),
+            "verbs": combat.verbs_for_pack({"acts": [act]}) if act.get("verbs") else [],
             "floor": act.get("floor", "costume"),
             "tone": act.get("tone", ""),
             "ruleset": act.get("ruleset", "ambient"),

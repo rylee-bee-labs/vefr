@@ -1079,6 +1079,11 @@ ROLL = Block(
         Key('max', 'int', lo=0, hi=4, say={
             'wrong-type': 'roll max must be a whole number 0 to 4',
             'out-of-range': 'roll max must be a whole number 0 to 4'}),
+        # ADR 0021: how many traits each rarity bears, e.g. {"common": 0,
+        # "rare": 2}; the names and counts are `maplab.item_roll_errors`'.
+        Key('per_rarity', 'obj', say={
+            'wrong-type': 'roll per_rarity must be a table of rarity names and '
+                          'trait counts, such as {{"common": 0, "rare": 2}}'}),
     ),
 )
 

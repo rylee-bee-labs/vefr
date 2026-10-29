@@ -111,6 +111,23 @@ ROLLED_DESCENT["sections"][0]["warden"] = {
     "challenge": "rule", "yields": True, "fightable": False}
 ROLLED_DEPTHS = [1, 2, 3]
 
+# ADR 0021: every field the RPG core added to a monster, in both twins. The
+# cellar's curve scales every floor differently, the rat carries guard, gold
+# and a drop chance, and the moth drops a charm whose roll ties its traits to
+# its rarity - so a twin that read one of them differently, or spent a draw
+# the other did not, gives a different plan.
+RPG_ITEMS = dict(copy.deepcopy(ITEMS), **{"charm": {
+    "name": "a charm", "sprite": "",
+    "roll": {"rarity": {"common": 50, "rare": 30, "mythic": 20},
+             "traits": ["keen", "brave", "swift", "cold"],
+             "per_rarity": {"common": 0, "rare": 2, "mythic": 3}}}})
+RPG_DESCENT = copy.deepcopy(ROLLED_DESCENT)
+RPG_DESCENT["sections"][0]["curve"] = {"hp": [1.0, 2.5], "atk": [1.0, 3.0]}
+RPG_DESCENT["blueprint"]["families"]["rat"]["defaults"].update(
+    {"guard": 1, "gold": [1, 9], "drop_chance": 50})
+RPG_DESCENT["blueprint"]["families"]["moth"]["defaults"]["drops"] = ["charm"]
+RPG_DEPTHS = [1, 2, 3]
+
 
 # One Section, nine floors, and the two keys the shape has to be honest about.
 # `rat` is everywhere; `moth` stops at floor 3 and `beetle` starts at floor 7,
@@ -150,6 +167,9 @@ def replay(tmp_path_factory):
                                  "rolled": {"descent": ROLLED_DESCENT,
                                             "depths": ROLLED_DEPTHS,
                                             "items": ITEMS},
+                                 "rpg": {"descent": RPG_DESCENT,
+                                         "depths": RPG_DEPTHS,
+                                         "items": RPG_ITEMS},
                                  "depthDescent": DEPTH_DESCENT,
                                  "depthDepths": DEPTH_DEPTHS}),
                      encoding="utf-8")
@@ -249,6 +269,33 @@ def test_a_rolled_floor_is_the_same_floor_in_both_languages(replay):
     assert rolled_any, "the fixture rolled nothing, so this proved nothing"
     assert drawn_any, "the fixture drew nothing, so no rarity was read off a table"
     assert fixed_any, "the fixture fixed nothing, so no no-draw drop was read"
+
+
+def test_the_rpg_core_floor_is_the_same_floor_in_both_languages(replay):
+    """ADR 0021: curve, guard, gold, drop chance and rarity-tied traits.
+
+    Each is read after the draws it does not own, on a stream of its own, so
+    the plan is compared whole - and the fixture is checked to have made each
+    of them, or the comparison proved nothing about it.
+    """
+    got = replay["rpg"]["plans"]
+    assert len(got) == len(RPG_DEPTHS)
+    seen = {"guard": False, "gold": False, "dropped": False, "kept": False,
+            "tied": False}
+    for depth, plan in zip(RPG_DEPTHS, got):
+        want = delve.floor_plan(RPG_DESCENT, depth, catalog=RPG_ITEMS)
+        assert _canonical(plan) == _canonical(want), depth
+        for mob in want["mobs"]:
+            seen["guard"] |= mob.get("guard") == 1
+            seen["gold"] |= isinstance(mob.get("gold"), int)
+            if mob.get("guard") == 1:      # a rat, or a family extending one
+                seen["dropped" if mob["drops"] else "kept"] = True
+            for drop in mob["drops"]:
+                if isinstance(drop, dict) and drop["item"] == "charm":
+                    per = RPG_ITEMS["charm"]["roll"]["per_rarity"]
+                    assert len(drop["traits"]) == per[drop["rarity"]], drop
+                    seen["tied"] = True
+    assert all(seen.values()), seen
 
 
 def test_the_rolled_floor_is_the_same_floor_twice_on_each_side(replay):

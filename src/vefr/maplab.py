@@ -662,7 +662,20 @@ def item_roll_of(spec) -> dict:
     top = roll.get('max')
     if isinstance(top, bool) or not isinstance(top, int) or not 0 <= top <= 4:
         top = 1
-    return {'rarity': rarity, 'traits': pool, 'chance': chance, 'max': top}
+    out = {'rarity': rarity, 'traits': pool, 'chance': chance, 'max': top}
+    # ADR 0021: how many traits each rarity bears, when the pack ties them -
+    # `{"common": 0, "fine": 1, "rare": 2}`. Only named rarities with a whole
+    # count 0..4 ride along, and only when the pack names the table, so a
+    # roll written before this slice resolves to the four keys it always did.
+    per = roll.get('per_rarity')
+    if isinstance(per, dict):
+        names = {name for name, _ in rarity}
+        clean = {name: count for name, count in per.items()
+                 if name in names and isinstance(count, int)
+                 and not isinstance(count, bool) and 0 <= count <= 4}
+        if clean:
+            out['per_rarity'] = clean
+    return out
 
 
 def item_roll_errors(item_id, spec) -> list[str]:
@@ -703,6 +716,17 @@ def item_roll_errors(item_id, spec) -> list[str]:
                           f"declares: {_names_sentence(names)}")
     if any(key in named for key in ROLL_ASKS) and not item_traits_of(named):
         errors.append(f"{where} roll asks for traits but names no trait pool")
+    # ADR 0021: each rarity a `per_rarity` names is one the roll declares,
+    # with a whole count of traits 0 to 4.
+    per = named.get('per_rarity')
+    if isinstance(per, dict):
+        for name, count in per.items():
+            if names and name not in names:
+                errors.append(f"{where} roll per_rarity names {name!r}, which its "
+                              f"rarity table does not: {_names_sentence(names)}")
+            if isinstance(count, bool) or not isinstance(count, int) or not 0 <= count <= 4:
+                errors.append(f"{where} roll per_rarity {name!r} must be a whole "
+                              f"number of traits from 0 to 4")
     return errors
 
 
@@ -1636,8 +1660,8 @@ def pack_verbs(w: dict) -> set:
     for act in acts if isinstance(acts, list) else []:
         listed = act.get('verbs') if isinstance(act, dict) else None
         if isinstance(listed, list):
-            out |= {v.strip() for v in listed
-                    if isinstance(v, str) and v.strip()}
+            from . import rpg
+            out |= set(rpg.verb_ids(listed))
     items = w.get('items')
     for spec in items.values() if isinstance(items, dict) else []:
         for grant in item_grants_of(spec):
@@ -4290,6 +4314,12 @@ def validate(w: dict, pack_dir: Path | None = None) -> list[str]:
             val = act.get(fname, [])
             if not isinstance(val, list):
                 errors.append(f"act '{aid}' {fname} must be a list")
+            elif fname == 'verbs':
+                # A verb may name its own label (ADR 0021).
+                from . import rpg
+                if not all(rpg.verb_entry_ok(x) for x in val):
+                    errors.append(f"act '{aid}' verbs must be a list of verb words, or "
+                                  f"{{\"verb\": \"attack\", \"label\": \"Strike\"}} entries")
             elif not all(isinstance(x, str) for x in val):
                 errors.append(f"act '{aid}' {fname} must be a list of strings")
         # `transitions` is the act's doors now, not a string list; the
