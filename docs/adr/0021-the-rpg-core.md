@@ -4,8 +4,8 @@ Date: 2026-10-29
 
 ## Status
 
-**Accepted direction; implemented in one PR (Gate 1 of the Cottage 1.0
-roadmap).** The owner chose "One big PR per gate" for this work
+**Accepted direction; implemented in one PR (#586, Gate 1 of the Cottage
+1.0 roadmap).** The owner chose "One big PR per gate" for this work
 (cottage `NOTES.md`, 2026-10-29), which is the ask-first answer for the
 pack-contract change below. Every gameplay rule here is owner-approved
 direction from that day's sixteen answers (quoted in the game's `NOTES.md`

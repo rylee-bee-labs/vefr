@@ -186,7 +186,7 @@ gameplay features over new core machinery.
   unchanged. Measured at the merge base, the three old constants come back byte for byte. Tests:
   `tests/weave_digest.py`, `tests/test_skin_validator.py`, `tests/test_identify.py`.
 
-### LANDED 2026-10-29 (the RPG core, ADR 0021 - Gate 1 of the Cottage 1.0 roadmap)
+### LANDED 2026-10-29 (the RPG core, ADR 0021, #586 - Gate 1 of the Cottage 1.0 roadmap)
 - [Gameplay] Eight opt-in rules, one PR as the owner chose ("One big PR per gate"), every key refused in plain words
   by `norns validate` and none of them changing a pack that names none: rolled blows (`fight`: misses and critical
   hits from a named seeded stream, said in words, never re-rolled by a reload) and a turn for every drink, use or
