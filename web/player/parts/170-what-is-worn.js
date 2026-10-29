@@ -17,16 +17,13 @@ function loadEquipped() {
   if (!(raw && typeof raw === 'object' && !Array.isArray(raw))) raw = null;
   EQUIP_STATE = engine.clean(raw, itemCatalog());
   saveEquipped(EQUIP_STATE);
-  // A worn id cannot also sit in the bag: if a stale save has both,
-  // the bag copy is dropped so the invariant holds.
-  var worn = {};
-  Object.keys(EQUIP_STATE).forEach(function (s) {
-    if (typeof EQUIP_STATE[s] === 'string') worn[EQUIP_STATE[s]] = true;
-  });
-  if (Object.keys(worn).length) {
-    var bag = bagItems().filter(function (id) { return !worn[id]; });
-    store.setJSON(BAG_KEY, bag);
-  }
+  // Wearing a thing takes that entry out of the bag, so the bag never holds
+  // the worn thing itself. A second copy of the same id is a second thing
+  // (rolled loot makes two ladles of different rarity ordinary, ADR 0021),
+  // so it is neither hidden nor dropped here.
+  // The instances the worn things came from (ADR 0021), once the worn map
+  // is the whole truth.
+  if (typeof loadWornInstances === 'function') loadWornInstances();
   // A worn thing that grants a verb keeps granting it: the verb row is
   // drawn from what is carried AND what is worn, and this is the first
   // moment the worn map is the whole truth.

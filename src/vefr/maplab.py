@@ -222,6 +222,12 @@ def load_pack(pack_dir: Path) -> dict:
         # loads exactly as before, and the validator sees nothing new.
         if 'sound' in config:
             unified['sound'] = config['sound']
+        # The RPG core's two world blocks (ADR 0021), carried through ONLY
+        # when the pack declares them, so `rpg_errors` can speak for them:
+        # a pack with neither loads exactly as before.
+        for key in ('fight', 'traits'):
+            if key in config:
+                unified[key] = config[key]
         # The optional time block (the Rest action, the rail lock and the
         # phase save), carried through ONLY when the pack declares it: a
         # pack with no `time` loads exactly as before, its phase lives in
@@ -482,7 +488,7 @@ def item_light_errors(item_id, spec) -> list[str]:
 # so they are written once here and read by both the validator (which
 # names a broken shape) and the bake (which carries only a usable one).
 SLOTS = ('hand', 'body', 'head', 'feet', 'charm')
-MOD_STATS = ('atk', 'hp')
+MOD_STATS = ('atk', 'hp', 'guard', 'mana')
 # A worn thing is held on the hero, not in the hand that pours a potion
 # or carries a torch: these three may not sit beside a `slot`.
 WORN_FORBIDDEN = ('heal', 'light', 'use')
@@ -519,7 +525,8 @@ def item_slot_errors(item_id, spec, keys: frozenset = frozenset()) -> list[str]:
     """Every problem with an item's optional `slot` and `mods` (empty = good).
 
     `slot` is one of SLOTS, and `mods` (only with a slot) is an object of
-    whole numbers 0 to 9 for atk and hp. Both are additive: an item with
+    whole numbers 0 to 9 for atk, hp, guard and mana (ADR 0021 added the
+    last two). Both are additive: an item with
     neither plays exactly as it did. A worn thing may still be worth gold
     or kept, but it is not drunk, lit or spent, so `heal`, `light` and
     `use` may not sit beside a slot; and a thing a locked door names as
@@ -1775,6 +1782,49 @@ def bag_errors(w: dict) -> list[str]:
     if 'bag' not in w:
         return []
     return _shape_sentences('world.json', shapes.check(shapes.BLOCKS['bag'], w['bag']))
+
+
+def _rpg_item_errors(item_id, spec, spell_ids) -> list[str]:
+    """An item's ADR 0021 keys: `casts` and `charges` (empty = good)."""
+    from . import rpg
+    return rpg.item_errors(item_id, spec, spell_ids)
+
+
+def rpg_errors(w: dict, pack_dir=None) -> list[str]:
+    """Every problem with the pack's RPG-core keys (ADR 0021; empty = good).
+
+    The `fight` block, `player.guard` and `player.mana`, the `traits`
+    table, each spell's `mana`/`harm`/`range`/`ward`, a shopkeeper's
+    `stock` and `markup`, and a Blueprint family's `guard`, `drop_chance`
+    and `gold`. All of it is opt-in: a pack that names none of it is not
+    this function's business, and plays exactly as it always did. See
+    `docs/guides/rpg-core.md`.
+    """
+    from . import rpg
+    errors: list[str] = []
+    errors.extend(rpg.fight_errors(w))
+    errors.extend(rpg.player_errors(w))
+    errors.extend(rpg.traits_errors(w))
+    for record in spells_of(w):
+        errors.extend(rpg.spell_errors(record, f"world.json: spell '{record.get('id')}'"))
+    items = w.get('items')
+    item_ids = set(items) if isinstance(items, dict) else set()
+    for key, spec in _speaker_specs(w).items():
+        if isinstance(spec, dict):
+            errors.extend(rpg.stock_errors(str(key), spec, item_ids))
+    if pack_dir is not None:
+        path = Path(pack_dir) / 'blueprint.json'
+        try:
+            source = json.loads(path.read_text(encoding='utf-8')) if path.is_file() else {}
+        except (OSError, ValueError):
+            source = {}
+        families = source.get('families') if isinstance(source, dict) else None
+        if isinstance(families, dict):
+            for name, family in families.items():
+                defaults = family.get('defaults') if isinstance(family, dict) else None
+                if isinstance(defaults, dict):
+                    errors.extend(rpg.family_errors(str(name), defaults))
+    return errors
 
 
 def element_errors(w: dict) -> list[str]:
@@ -4001,6 +4051,7 @@ def validate(w: dict, pack_dir: Path | None = None) -> list[str]:
                 errors.extend(item_roll_errors(iid, spec))
                 errors.extend(item_spell_errors(iid, spec, spell_ids))
                 errors.extend(item_grants_errors(iid, spec, verb_ids))
+                errors.extend(_rpg_item_errors(iid, spec, spell_ids))
     # The pack's optional identify service (ADR 0017, T3 slice 2): the
     # speaker that reads things, checked beside the other optional
     # fields so a service that names no place to stand is an authoring
@@ -4081,6 +4132,11 @@ def validate(w: dict, pack_dir: Path | None = None) -> list[str]:
     # words. A pack that declares neither bakes nothing and fights
     # every blow untyped, exactly as before.
     errors.extend(element_errors(w))
+    # The RPG core (ADR 0021): fight rolls, the hero's guard and mana, the
+    # traits table, a spell's cost and effect, a shopkeeper's stock and a
+    # Blueprint family's guard, drop chance and gold. Every key is opt-in,
+    # and a pack that declares none of them gets nothing here.
+    errors.extend(rpg_errors(w, pack_dir))
     # The pack's optional display block (pixel art): a pack that declares
     # none is drawn exactly as before.
     errors.extend(display_errors(w))

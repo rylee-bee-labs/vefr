@@ -693,7 +693,7 @@ def check_item(value, at: str = '') -> list[Problem]:
     if not isinstance(value, dict):
         return []
     added = {key: value[key]
-             for key in ITEM_ADDED + ITEM_TAUGHT + ITEM_CARRIES + ITEM_GRANTS
+             for key in ITEM_ADDED + ITEM_TAUGHT + ITEM_CARRIES + ITEM_GRANTS + ITEM_CASTS
              if key in value}
     return check(ITEM, added, at=at)
 
@@ -728,6 +728,9 @@ TIME = Block(
         Key('rest', 'bool'),
         Key('rail', 'enum', choices=('open', 'locked')),
         Key('persist', 'bool'),
+        # ADR 0021: Rest outside a generated floor, with no living foe in
+        # the region, restores health, mana and every charge.
+        Key('rest_heals', 'bool'),
     ),
     say={
         'unknown-key': '{name} may only hold {keys}, not {key!r}',
@@ -877,6 +880,11 @@ DESCENT = Block(
         Key('story_end', 'str', lo=1, hi=64,
             say={'wrong-type': '{path} must be the name of a flag, such as '
                                '"king-slain"'}),
+        # ADR 0021: where a trip from town starts, and where a fall wakes.
+        # Both opt-in: a descent that names neither starts every trip at
+        # its first floor and wakes a fallen hero on the floor's up-stair.
+        Key('resume', 'enum', choices=('deepest-landing',)),
+        Key('fall', 'enum', choices=('home',)),
     ),
 )
 
@@ -1159,6 +1167,16 @@ ITEM = Block(
         Key('changes', 'obj', say={
             'wrong-type': '{path} must be an object naming the verb each effect is for, '
                           'such as {{"mend": {{"atk": 2}}}}'}),
+        # ADR 0021: a thing that casts a spell for no mana, a charge a cast.
+        # Which spell it may name and the pair rule are `rpg.item_errors`.
+        Key('casts', 'str', lo=1, hi=40, say={
+            'wrong-type': '{path} must be a spell id, such as "ember-bolt"'}),
+        Key('charges', 'int', lo=1, hi=20, say={
+            'wrong-type': '{path} must be a whole number, such as 3',
+            'out-of-range': '{path} must be a whole number from 1 to 20'}),
+        # A keepsake rides in the pouch (ADR 0021): it is carried, and it
+        # never takes one of the bag's places.
+        Key('pouch', 'bool', say={'wrong-type': '{path} must be true or false'}),
     ),
 )
 
@@ -1172,6 +1190,9 @@ ITEM_CARRIES = ('carry',)
 # hero, and `changes` is what it does to a verb it names. `check_item`
 # reads them both, beside the spell key.
 ITEM_GRANTS = ('grants', 'changes')
+
+# The keys ADR 0021 added: a thing that casts a spell, and its charges.
+ITEM_CASTS = ('casts', 'charges', 'pouch')
 
 # A warden's own endless record (ADR 0015, "In cycles `c >= 1` it draws
 # `endless.affixes` affixes"). `affixes` is how many extra affixes an
@@ -1459,11 +1480,8 @@ SECTION = Block(
         Key('mobs', 'depths', lo=0, hi=36),
         Key('curve', 'obj', sub=CURVE,
             doc='the `[lo, hi]` multipliers monster hp and atk rise by '
-                'across this Section\'s floors.',
-            wired=False,
-            wires='slice E10 scales monster stats through `vefr.mob_stats` at '
-                  'play; the balance report is what reads them today, and a '
-                  'monster draws at its Blueprint\'s own numbers meanwhile'),
+                'across this Section\'s floors; read at play through '
+                '`vefr.mob_stats` (ADR 0021), the warden excepted.'),
         Key('loot', 'obj', sub=LOOT,
             doc='the tier of loot this Section\'s drops and chests come from.',
             wired=False,
@@ -1692,6 +1710,19 @@ SPELL = Block(
         Key('heal', 'int', lo=1, hi=999, say={
             'wrong-type': '{path} must be a whole number',
             'out-of-range': '{path} must be a whole number of at least 1'}),
+        # ADR 0021: what a spell costs and the two things it may do besides
+        # heal. The bounds and the one-effect rule are `rpg.spell_errors`.
+        Key('mana', 'int', lo=1, hi=99, say={
+            'wrong-type': '{path} must be a whole number',
+            'out-of-range': '{path} must be a whole number from 1 to 99'}),
+        Key('harm', 'int', lo=1, hi=99, say={
+            'wrong-type': '{path} must be a whole number',
+            'out-of-range': '{path} must be a whole number from 1 to 99'}),
+        Key('range', 'int', lo=1, hi=20, say={
+            'wrong-type': '{path} must be a whole number of tiles',
+            'out-of-range': '{path} must be a whole number of tiles from 1 to 20'}),
+        Key('ward', 'obj', say={
+            'wrong-type': '{path} must be {{"guard": 2, "turns": 3}}'}),
     ),
 )
 

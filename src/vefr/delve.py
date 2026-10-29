@@ -865,7 +865,7 @@ def _trait_draw(rng, roll: dict) -> list:
     return out
 
 
-def mob_drops(key: str, mob_id: str, table, catalog=None) -> list:
+def mob_drops(key: str, mob_id: str, table, catalog=None, chance: int = 100) -> list:
     """What one monster carries, drawn from that monster's own stream.
 
     `table` is the monster family's list of drop ids. One draw off
@@ -883,6 +883,11 @@ def mob_drops(key: str, mob_id: str, table, catalog=None) -> list:
     """
     ids = [i for i in table if isinstance(i, str) and i] if isinstance(table, list) else []
     if not ids:
+        return []
+    # ADR 0021: a family's `drop_chance` is drawn on a stream of its own,
+    # so the item a drop names is still the one the old draw named, and a
+    # family that names no chance (100) spends no draw on it at all.
+    if chance < 100 and int(prng(loot_seed(key, mob_id) + '|chance')() * 100) >= chance:
         return []
     rng = prng(loot_seed(key, mob_id))
     chosen = ids[int(rng() * len(ids))]
@@ -1064,7 +1069,15 @@ def mobs_at(key: str, section: dict, rows: list[str], up: tuple[int, int],
     the floor's `depth` when it does not. It is read after the last draw
     and consumes none, so the floor's monsters, tiles and drops are
     exactly the ones a floor without this line drew.
+
+    ADR 0021 adds four things, each after the draws above and none of them
+    moving one: the Section's `curve` scales the drawn `hp` and `atk`
+    through `vefr.mob_stats` (neutral when the Section names none); a
+    family's `guard` rides along when it names one; its `drop_chance` is
+    drawn on the loot stream's own `|chance` stream; and its `gold` is
+    drawn on `<key>|gold|<mob id>` and rides along only when it names one.
     """
+    from . import rpg
     from . import sections  # here, not at the top: sections imports this module
 
     rng = prng(stream_seed(key, 'pop'))
@@ -1093,15 +1106,24 @@ def mobs_at(key: str, section: dict, rows: list[str], up: tuple[int, int],
         sight = family.get('sight')
         sight = sight if isinstance(sight, int) and not isinstance(sight, bool) else 6
         drops = family.get('drops')
-        mobs.append({
+        mob = {
             'id': f'm{i}', 'family': family['family'],
             'name': family.get('name') or DEFAULT_FAMILY,
             'sprite': _sprite_of(family),
-            'at': [at[0], at[1]], 'hp': max(1, hp), 'atk': max(1, atk),
+            'at': [at[0], at[1]],
+            'hp': rpg.curved(max(1, hp), section, k, 'hp'),
+            'atk': rpg.curved(max(1, atk), section, k, 'atk'),
             'sight': max(0, sight),
             'xp': sections.xp_for(family, depth),
-            'drops': mob_drops(key, f'm{i}', drops, catalog),
-        })
+            'drops': mob_drops(key, f'm{i}', drops, catalog,
+                               rpg.drop_chance_of(family)),
+        }
+        if rpg.guard_of(family):
+            mob['guard'] = rpg.guard_of(family)
+        gold = rpg.gold_of(family)
+        if gold:
+            mob['gold'] = _rand_range(prng(stream_seed(key, f'gold|m{i}')), gold[0], gold[1])
+        mobs.append(mob)
     return mobs
 
 

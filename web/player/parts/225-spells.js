@@ -107,16 +107,59 @@ function spellsKnown() {
 // the descent writes a death there, so what a cast did can be read back
 // after the panel's live line has moved on. A refused cast is not a cast
 // and writes nothing.
-function castSpell(id) {
-  if (!spellKnown(id)) {
+// ADR 0021 adds three things, each opt-in. A spell may cost `mana` (paid
+// from the hero's own when the pack declares `player.mana`; a refused cast
+// pays nothing), may `harm` the named foe - or the nearest living one within
+// `range` tiles - for a number guard does not reduce, or may `ward` the hero
+// with guard for a few turns. `opts.free` is a thing that casts on a charge
+// (the bag spent it), and `opts.target` is the foe the fight row named. A
+// cast that happened costs the turn a cast costs when the pack's `fight`
+// says so; one that did not happen costs nothing.
+function castSpell(id, opts) {
+  opts = opts || {};
+  if (!opts.free && !spellKnown(id)) {
     bagSay('You have not learned that spell.');
     return false;
   }
   var spell = spellById(id);
+  if (!spell) return false;
   var line = 'You cast ' + (spell.name || id) + '.';
+  var cost = (!opts.free && rpgManaOn() && rpgWhole(spell.mana)) ? spell.mana : 0;
+  if (cost > HERO_MP) {
+    castSay(id, 'Not enough mana for ' + (spell.name || id) + ': it needs '
+      + cost + ' and you have ' + HERO_MP + '.');
+    return false;
+  }
+  var harm = rpgWhole(spell.harm) && spell.harm > 0 ? spell.harm : 0;
+  if (harm) {
+    // How far it reaches: the spell's own `range`, else six tiles.
+    var reach = (rpgWhole(spell.range) && spell.range > 0) ? spell.range : 6;
+    var hit = (typeof window.VEFR_SPELL_HARM === 'function')
+      ? window.VEFR_SPELL_HARM(spell, opts.target || null, reach) : null;
+    if (!hit) {
+      castSay(id, 'There is nothing in reach for ' + (spell.name || id) + '.');
+      return false;
+    }
+    rpgPayMana(cost);
+    castSay(id, line + ' ' + hit);
+    if (!opts.free && !opts.noTurn) rpgSpendTurn();
+    return true;
+  }
+  var ward = spell.ward && typeof spell.ward === 'object' ? spell.ward : null;
+  if (ward && rpgWhole(ward.guard) && rpgWhole(ward.turns)) {
+    rpgPayMana(cost);
+    RPG_WARD.guard = ward.guard;
+    RPG_WARD.turns = ward.turns;
+    castSay(id, line + ' Guard up by ' + ward.guard + ' for ' + ward.turns
+      + (ward.turns === 1 ? ' turn.' : ' turns.'));
+    syncCombat();
+    if (!opts.free && !opts.noTurn) rpgSpendTurn();
+    return true;
+  }
   var heal = spell && typeof spell.heal === 'number' && spell.heal > 0
     ? spell.heal : 0;
   if (!heal) {
+    rpgPayMana(cost);
     castSay(id, line);
     return true;
   }
@@ -124,11 +167,38 @@ function castSpell(id) {
     castSay(id, line + ' You are already whole.');
     return true;
   }
+  rpgPayMana(cost);
   var before = HERO_HP;
   healHeroBy(heal);
   castSay(id, line + ' You recover ' + (HERO_HP - before) + ' health.');
   syncCombat();
+  if (!opts.free && !opts.noTurn) rpgSpendTurn();
   return true;
+}
+function rpgPayMana(cost) {
+  if (!cost) return;
+  HERO_MP = Math.max(0, HERO_MP - cost);
+  saveHeroMana();
+  renderMana();
+}
+// The harmful spell the fight row's Cast button casts (ADR 0021): the first
+// one in the pack's order the hero knows and can pay for. Null when none.
+function rpgReadySpell() {
+  var known = spellsKnown();
+  for (var i = 0; i < known.length; i++) {
+    var s = known[i];
+    if (!(rpgWhole(s.harm) && s.harm > 0)) continue;
+    var cost = (rpgManaOn() && rpgWhole(s.mana)) ? s.mana : 0;
+    if (cost <= HERO_MP) return s;
+  }
+  return null;
+}
+function rpgCastReady() {
+  var known = spellsKnown();
+  for (var i = 0; i < known.length; i++) {
+    if (rpgWhole(known[i].harm) && known[i].harm > 0) return true;
+  }
+  return false;
 }
 // One cast's words: the panel's live line, and the same words in the
 // why-log. Guarded because the rules part may not be in a file, and a
@@ -174,8 +244,8 @@ function renderSpellList() {
     row.setAttribute('role', 'listitem');
     var name = document.createElement('span');
     name.className = 'bag-row-name';
-    name.textContent = spell.school ? (spell.name + ' (' + spell.school + ')')
-      : spell.name;
+    name.textContent = (spell.school ? (spell.name + ' (' + spell.school + ')')
+      : spell.name) + ((rpgManaOn() && rpgWhole(spell.mana)) ? ' - ' + spell.mana + ' mana' : '');
     row.appendChild(name);
     var button = document.createElement('button');
     button.type = 'button';
@@ -190,4 +260,7 @@ function renderSpellList() {
   });
   list.setAttribute('aria-label', 'Spells you know: '
     + known.map(function (s) { return s.name; }).join(', ') + '.');
+  // A spell just learned may be the first harmful one: the fight row's Cast
+  // button (ADR 0021) follows what the hero knows.
+  renderVerbRow();
 }

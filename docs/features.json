@@ -336,6 +336,21 @@
         "tests/test_elements.py",
         "tests/test_elements_play.py"
       ]
+    },
+    {
+      "id": "rpg-core",
+      "name": "The RPG core: rolls, guard, depth, spoils, stock, traits, magic and trips",
+      "what": "A pack may opt in, key by key, to rolled blows (misses and critical hits) and a turn for every drink or cast; guard on the hero, worn gear and monsters; a Section's curve read at play; a family's drop chance and gold; a shop's own stock and markup; a traits table whose words change numbers, react and curse, worn or carried in a bag; mana for learned spells and charges for things that cast; and a descent that resumes at the deepest landing, a fall that wakes at home with the bag left where the hero fell, and a rest that heals. A pack that names none of it plays exactly as before.",
+      "status": "built",
+      "detect": "rpg",
+      "docs": [
+        "docs/guides/rpg-core.md"
+      ],
+      "design": "docs/adr/0021-the-rpg-core.md",
+      "tests": [
+        "tests/test_rpg_core.py",
+        "tests/test_rpg_core_play.py"
+      ]
     }
   ]
 }

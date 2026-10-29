@@ -601,8 +601,10 @@ def test_the_child_wins_whole_values():
 def test_the_record_is_over_the_closed_enemy_fields_and_nothing_else():
     """ADR 0014: Blueprint stays at format 1. `resolve_family` is how a
     Section pack reads a family, so it hands back exactly FIELD_KEYS."""
+    # ADR 0021 added `guard`, `drop_chance` and `gold` to the closed set.
     assert blueprint.FIELD_KEYS == {
-        "name", "sprite", "hp", "atk", "xp", "sight", "drops"}
+        "name", "sprite", "hp", "atk", "xp", "sight", "drops",
+        "guard", "drop_chance", "gold"}
     record = blueprint.resolve_family(a_good_blueprint(), "wide-beast")
     assert set(record) <= blueprint.FIELD_KEYS
 

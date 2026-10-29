@@ -173,6 +173,9 @@
   // places the player's turn is over - and nowhere else, so a turn is a
   // turn.
   function statusTurn() {
+    // A ward a spell raised (ADR 0021) counts down with the turn, after the
+    // monsters have struck at it - the same order a burn ticks in.
+    rpgWardTick();
     if (!heroStatuses.length) return;
     var said = [];
     var left = [];

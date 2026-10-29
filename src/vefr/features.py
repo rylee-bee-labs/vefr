@@ -24,7 +24,7 @@ from .paths import app_home
 
 VALID_STATUSES = ("built", "partial", "proposed")
 VALID_DETECTS = ("rules", "growth", "library", "items", "enemies", "fog",
-                 "skin", "blueprint", "slots", "elements", "always", "none")
+                 "skin", "blueprint", "slots", "elements", "rpg", "always", "none")
 
 
 def _root(root=None) -> Path:
@@ -275,6 +275,27 @@ def _one_use(feat: dict, pack: Path, w: dict, config: dict,
         if typed:
             said.append(f"{typed} typed hazards")
         used, detail = bool(said), ", ".join(said) or "untyped damage"
+    elif detect == "rpg":
+        # The RPG core (ADR 0021), read from the places the pack names it:
+        # the `fight` and `traits` blocks, the hero's guard and mana, an
+        # item that casts or wears guard or mana, a shop's own stock and a
+        # descent that resumes or falls home. A pack that names none of it
+        # has opted out, which is a "no" and not an unknown.
+        player = w.get("_player") or w.get("player")
+        player = player if isinstance(player, dict) else {}
+        items = config.get("items") if isinstance(config.get("items"), dict) else {}
+        descent = config.get("descent") if isinstance(config.get("descent"), dict) else {}
+        said = [key for key in ("fight", "traits") if isinstance(config.get(key), dict)]
+        said += [f"player {key}" for key in ("guard", "mana") if key in player]
+        if any(isinstance(spec, dict) and ("casts" in spec or set(spec.get("mods") or {})
+                                           & {"guard", "mana"})
+               for spec in items.values()):
+            said.append("items")
+        if any(isinstance(spec, dict) and "stock" in spec
+               for spec in maplab._speaker_specs(w).values()):
+            said.append("stock")
+        said += [f"descent {key}" for key in ("resume", "fall") if key in descent]
+        used, detail = bool(said), ", ".join(said) or "not used"
     elif detect == "skin":
         skin = config.get("skin")
         if skin is None:

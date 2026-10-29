@@ -75,8 +75,9 @@ def _no_school(**patch):
 def test_the_two_blocks_are_registered_and_named():
     assert shapes.BLOCKS["spells"] is shapes.SPELLS
     assert shapes.BLOCKS["spell"] is shapes.SPELL
+    # ADR 0021 added what a spell costs and the two things it may do besides heal.
     assert [k.name for k in shapes.SPELL.keys] == [
-        "id", "name", "school", "level", "heal"]
+        "id", "name", "school", "level", "heal", "mana", "harm", "range", "ward"]
 
 
 def test_a_good_block_has_no_problems():

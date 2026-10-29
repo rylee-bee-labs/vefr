@@ -422,6 +422,17 @@
         drawItemMarker(d.item, d.at[0], d.at[1]);
       });
     });
+    // The satchel a fall left (ADR 0021): drawn whether or not the light
+    // reaches it - the hero knows where they fell - as the first thing in it.
+    var satchel = (window.VEFR_DESCENT && window.VEFR_DESCENT.satchelIn)
+      ? window.VEFR_DESCENT.satchelIn(regionName) : null;
+    if (satchel) {
+      var first = satchel.items[0];
+      var firstId = (first && typeof first === 'object') ? first.id : first;
+      stand(satchel.at[1], 'satchel', function () {
+        drawItemMarker(firstId, satchel.at[0], satchel.at[1]);
+      });
+    }
 
     // The hero: their own sprite when the pack names one, else the dot.
     // The one character drawn with facing and step motion.
@@ -708,6 +719,14 @@
     hero = (!changed || tileOpen(at && at[0], at && at[1]))
       ? (at || town.hero_start).slice() : town.hero_start.slice();
     if (changed) settleDrops(name);
+    // A satchel left on a floor a new descent has redrawn (ADR 0021) moves
+    // to the nearest floor tile, the way a dropped thing does.
+    var sat = (window.VEFR_DESCENT && window.VEFR_DESCENT.satchelIn)
+      ? window.VEFR_DESCENT.satchelIn(name) : null;
+    if (sat && !tileOpen(sat.at[0], sat.at[1])) {
+      var spot = nearestFloorTile(sat.at);
+      if (spot) window.VEFR_DESCENT.moveSatchel(spot);
+    }
     heroAnim = null;   // a new region's hero appears settled, not mid-hop
     heroSetPose('idle');
     heroPublishAt();
@@ -720,6 +739,7 @@
     seeNow();
     loadEnemies();
     combatSnapshot();
+    if (sat) combatSay('What you carried waits on this floor.');
     // What this floor is, while the hero stands where they arrived
     // (vefr#362): only a floor of a labelled Section answers, so every
     // other region arrives exactly as it did.
@@ -1059,7 +1079,15 @@
     console: '{what} quiets a little.',
     hurl: '{what} does not care for that.',
     other: 'You say it anyway. Nothing answers.',
-    none: 'There is nothing here to answer that.'
+    none: 'There is nothing here to answer that.',
+    // ADR 0021: the rolled blow, said in words, never by colour or motion
+    // alone. Only a pack with a `fight` block or a family's `gold` ever
+    // reaches these rows, and a pack replaces any of them as it does the rest.
+    miss: 'You miss {what}.',
+    crit: 'A clean hit! You hit {what} for {damage}.',
+    foe_miss: '{what} misses you.',
+    foe_crit: 'A heavy blow!',
+    gold: 'You find {amount} gold.'
   };
   Object.keys(VEFR_COMBAT_WORDS).forEach(function (verb) {
     VEFR_PLAYER_WORDS['combat.' + verb] = VEFR_COMBAT_WORDS[verb];
@@ -1105,6 +1133,19 @@
     // that much more damage. A verb with no such change is still words.
     var bonus = verbAtkBonus(verb);
     if (verb === 'attack' || bonus > 0) return heroAttack(enemy, bonus);
+    // `cast` (ADR 0021): the first harmful spell the hero knows and can pay
+    // for, at this foe. The turn is the row's own to run, so the cast does
+    // not run one of its own; a cast that did not happen spends nothing.
+    if (verb === 'cast') {
+      var ready = rpgReadySpell();
+      if (!ready) {
+        combatSay('Not enough mana to cast.');
+        return false;
+      }
+      var cast = castSpell(ready.id, { target: enemy, noTurn: true });
+      if (!cast) combatSay((document.getElementById('bag-live') || {}).textContent || '');
+      return cast;
+    }
     // The plain sentence, not "You use Console on it": what the verb
     // DID is the line a player reads (#463). `label` is kept in the
     // signature because the row's word is what the button says, but it

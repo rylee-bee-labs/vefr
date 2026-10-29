@@ -96,6 +96,7 @@
   // a full bag refuses stays on the floor, and the same line says so; a
   // drop whose id the catalog lost is dropped as it always was.
   function takeHere() {
+    takeSatchelHere();
     var here = dropsAt(hero[0], hero[1]);
     if (!here.length) return;
     var names = [];
@@ -130,6 +131,23 @@
     if (said.length) combatSay(said.join(' '));
   }
   window.VEFR_TAKE_HERE = takeHere;
+  // The satchel a fall left (ADR 0021): walking onto it takes every thing
+  // in it back, whatever the bag's room - it was the hero's already.
+  function takeSatchelHere() {
+    var D = window.VEFR_DESCENT;
+    var sat = (D && typeof D.satchelIn === 'function') ? D.satchelIn(regionName) : null;
+    if (!sat || sat.at[0] !== hero[0] || sat.at[1] !== hero[1]) return;
+    var items = D.takeSatchel();
+    var raw = store.getJSON(BAG_KEY, []);
+    store.setJSON(BAG_KEY, (Array.isArray(raw) ? raw : []).concat(items));
+    renderBagPanel();
+    renderBagStrip();
+    renderVerbRow();
+    syncCombat();
+    playOneShot('hero', 'act');
+    soundCue('pickup');
+    combatSay('You find your satchel. Everything you carried is back.');
+  }
   window.VEFR_HERO_SPOT = function () {
     return { region: regionName, at: [hero[0], hero[1]] };
   };
@@ -138,6 +156,14 @@
   // `bonus` is what the hero is carrying adds to this one blow (the
   // item-grants slice): the verb the blow came through decides it, and
   // a plain bump carries none.
+  //
+  // ADR 0021, each part opt-in: a pack with a `fight` block rolls the blow
+  // (a miss, or a critical multiplied by `crit_times`) from its own named
+  // stream; the foe's `guard` takes from the blow, never below 1; and the
+  // traits the hero bears may react - `opener` on an unhurt foe, `sting` on
+  // a miss, `kill_heal` and the foe's `gold` on a kill. Every one of them is
+  // said in the same sentence the blow speaks. A pack with none of it rolls
+  // nothing and the blow is the one that always landed.
   function heroAttack(e, bonus) {
     // ADR 0015 Amendment 1 §2: a warden with `"fightable": false` cannot
     // be attacked. The blow never lands, makes no noise and spends no
@@ -152,6 +178,26 @@
     // into an enemy is the attack (vefr #464). A warden that cannot be
     // struck returns above, because there was no fight to teach.
     hintStrikeOnce();
+    var totals = rpgTraitTotals();
+    var roll = rpgRoll(regionName, 'hero', e.id, totals.crit);
+    playOneShot('hero', 'attack');
+    wakeOne(e);
+    makeNoise('fight');
+    if (roll && roll.miss) {
+      // A miss is still a swing: it spends the turn and wakes the floor.
+      var missed = verbWord('miss', { what: e.name });
+      var sting = totals.reactions.sting;
+      if (sting && HERO_HP > 1) {
+        var stung = Math.min(sting.n, HERO_HP - 1);
+        HERO_HP -= stung;
+        saveHeroHp();
+        renderHp();
+        missed += ' ' + itemName(sting.from) + ' stings you for ' + stung + '.';
+      }
+      combatSay(missed);
+      combatSnapshot();
+      return true;
+    }
     // Through the one resolver (vefr#497), on the hero's side as well as
     // the hazard's - a resolver on one side only is how fire turns aside
     // and poison does not. The hero's own blow is untyped for now: a
@@ -161,63 +207,115 @@
     // blow that always landed.
     // An item-granted verb's bonus (Mending Shift E1) is added before the resolver, so a resistance
     // answers the whole blow.
-    var dmg = resolveDamage(heroAtk()
-      + ((typeof bonus === 'number' && isFinite(bonus) && bonus > 0) ? Math.round(bonus) : 0),
-      '', e.resist, e.immune).damage;
+    var amount = heroAtk()
+      + ((typeof bonus === 'number' && isFinite(bonus) && bonus > 0) ? Math.round(bonus) : 0);
+    var crit = !!(roll && roll.crit);
+    if (crit) amount *= roll.times;
+    var opener = totals.reactions.opener;
+    var opened = !!(opener && e.hp >= (e.hp0 || e.hp));
+    if (opened) amount *= opener.n;
+    var dmg = rpgGuarded(resolveDamage(amount, '', e.resist, e.immune).damage, e.guard);
     e.hp = Math.max(0, e.hp - dmg);
-    playOneShot('hero', 'attack');
     playOneShot('enemy:' + e.id, 'hurt');
-    // A blow is the loudest thing on the floor, and it is also the one
-    // wake no sight can miss: the monster that was hit is awake from
-    // here, and so is every sleeper within earshot of the fight.
-    wakeOne(e);
-    makeNoise('fight');
     soundCue('hit');
     // The blow says itself in one sentence, from the same message
     // table every other player line comes from (#463) - the bytes are
     // the ones this always read.
-    var said = verbWord('attack', { what: e.name, damage: String(dmg) });
+    var said = verbWord(crit ? 'crit' : 'attack', { what: e.name, damage: String(dmg) });
+    if (opened) said += ' ' + itemName(opener.from) + ' makes the first blow count.';
     // A landed blow is one practice count; levels mode ignores it.
     sayGrowth(practiceSuffix(growBump('strikes')));
-    if (e.hp <= 0) {
-      e.alive = false;
-      saveSlain();
-      var beaten = (window.VEFR_DESCENT && window.VEFR_DESCENT.defeated)
-        ? window.VEFR_DESCENT.defeated(regionName, e) : false;
-      // A warden that `yields` (ADR 0015 Amendment 1 §2) stays on its
-      // anchor, no longer hostile, instead of vanishing: it is not alive
-      // any more - nothing attacks it and it attacks nothing - but it is
-      // still drawn, still where it stood, and it comes back the same way
-      // when the floor is rebuilt.
-      if (beaten && beaten.yields === true) {
-        e.yields = true;
-        if (Array.isArray(e.spawn)) e.at = e.spawn.slice();
-      }
-      // A warden's key goes straight into the bag, so it cannot be lost
-      // on the floor (ADR 0015). The key follows the FLAG, not the death:
-      // a `"challenge": "rule"` warden (Amendment 1 §2) is not passed by
-      // dying, so nothing is handed over until its rule sets the flag.
-      var passed = !!(beaten && window.VEFR_DESCENT
-                      && window.VEFR_DESCENT.storyFlags
-                      && window.VEFR_DESCENT.storyFlags(beaten.flag));
-      var keyLine = (passed && beaten.carries && bagAdd(beaten.carries, null, true))
-        ? ' You take ' + itemName(beaten.carries) + '; it is in your bag.' : '';
-      soundCue('defeat');
-      placeDrops(e.at, e.drops);
-      fireRule('defeats', { what: e.id });
-      said += ' ' + e.name + ' falls.' + keyLine;
-      // The defeat line first, then the xp it was worth, then any level.
-      var r = growAward(e.xp);
-      if (typeof e.xp === 'number' && e.xp > 0) {
-        sayGrowth('You earn ' + e.xp + ' ' + XP_WORD + '.');
-      }
-      if (r && r.grew && r.levelsGained) soundCue('level');
-      sayGrowth(levelSuffix(r));
-    }
+    if (e.hp <= 0) said += foeFalls(e, totals);
     combatSay(said);
     combatSnapshot();
     return true;
   }
+  // Everything a foe's death does, whatever felled it - a blow or a spell:
+  // the slain record, a warden's yield and key, the drops, the `defeats`
+  // event, the coins and a trait that warms the hero (ADR 0021), then the
+  // xp. Returns the words to add to the line that felled it.
+  function foeFalls(e, totals) {
+    totals = totals || rpgTraitTotals();
+    e.alive = false;
+    saveSlain();
+    var beaten = (window.VEFR_DESCENT && window.VEFR_DESCENT.defeated)
+      ? window.VEFR_DESCENT.defeated(regionName, e) : false;
+    // A warden that `yields` (ADR 0015 Amendment 1 §2) stays on its
+    // anchor, no longer hostile, instead of vanishing: it is not alive
+    // any more - nothing attacks it and it attacks nothing - but it is
+    // still drawn, still where it stood, and it comes back the same way
+    // when the floor is rebuilt.
+    if (beaten && beaten.yields === true) {
+      e.yields = true;
+      if (Array.isArray(e.spawn)) e.at = e.spawn.slice();
+    }
+    // A warden's key goes straight into the bag, so it cannot be lost
+    // on the floor (ADR 0015). The key follows the FLAG, not the death:
+    // a `"challenge": "rule"` warden (Amendment 1 §2) is not passed by
+    // dying, so nothing is handed over until its rule sets the flag.
+    var passed = !!(beaten && window.VEFR_DESCENT
+                    && window.VEFR_DESCENT.storyFlags
+                    && window.VEFR_DESCENT.storyFlags(beaten.flag));
+    var keyLine = (passed && beaten.carries && bagAdd(beaten.carries, null, true))
+      ? ' You take ' + itemName(beaten.carries) + '; it is in your bag.' : '';
+    soundCue('defeat');
+    placeDrops(e.at, e.drops);
+    fireRule('defeats', { what: e.id });
+    var said = ' ' + e.name + ' falls.' + keyLine;
+    if (e.gold > 0) {
+      addGold(e.gold);
+      said += ' ' + verbWord('gold', { amount: String(e.gold) });
+    }
+    var warm = totals.reactions.kill_heal;
+    if (warm && HERO_HP < heroMax()) {
+      var before = HERO_HP;
+      HERO_HP = Math.min(heroMax(), HERO_HP + warm.n);
+      saveHeroHp();
+      renderHp();
+      said += ' ' + itemName(warm.from) + ' warms you: you recover '
+        + (HERO_HP - before) + ' health.';
+    }
+    // The defeat line first, then the xp it was worth, then any level.
+    var r = growAward(e.xp);
+    if (typeof e.xp === 'number' && e.xp > 0) {
+      sayGrowth('You earn ' + e.xp + ' ' + XP_WORD + '.');
+    }
+    if (r && r.grew && r.levelsGained) soundCue('level');
+    sayGrowth(levelSuffix(r));
+    return said;
+  }
+  // A spell's harm (ADR 0021): at the foe the fight row named, else the
+  // nearest living one within `range` tiles (the spells part reads it),
+  // nearest first and then the roster's own order. Guard does not answer
+  // it - magic is the build that walks past armour. A spell with nothing in
+  // reach returns null and the cast does not happen. Returns its words.
+  function spellHarm(spell, target, range) {
+    var foe = (target && target.alive && target.fightable !== false) ? target : null;
+    if (!foe) {
+      var best = -1;
+      for (var i = 0; i < enemies.length; i++) {
+        var e = enemies[i];
+        if (!e || !e.alive || e.fightable === false) continue;
+        var d = chebyshev(e.at[0], e.at[1], hero[0], hero[1]);
+        if (d > range) continue;
+        if (best === -1 || d < best) { best = d; foe = e; }
+      }
+    }
+    if (!foe) return null;
+    var dmg = resolveDamage(spell.harm, '', foe.resist, foe.immune).damage;
+    foe.hp = Math.max(0, foe.hp - dmg);
+    wakeOne(foe);
+    makeNoise('fight');
+    playOneShot('enemy:' + foe.id, 'hurt');
+    soundCue('hit');
+    var said = 'It strikes ' + foe.name + ' for ' + dmg + '.';
+    if (foe.hp <= 0) said += foeFalls(foe);
+    combatSay(said);
+    combatSnapshot();
+    flushGrowth();
+    return said;
+  }
+  window.VEFR_SPELL_HARM = spellHarm;
   // One enemy's attack: the hero loses its `atk`, clamped at zero.
   //
   // The number that is subtracted comes from the one resolver, so the
@@ -225,10 +323,22 @@
   // blow is the identity and the sentence is the bytes this always
   // read; a typed one says what the type did in words - never by colour,
   // never by the health bar alone (vefr#497).
+  //
+  // ADR 0021: a pack with a `fight` block rolls the monster's blow too - a
+  // miss, or a critical - and the hero's guard takes from what lands, never
+  // below 1; a trait with `thorns` answers a blow that landed (a foe is
+  // never felled by it: it is left on 1, so a monster turn never kills).
   function enemyAttack(e) {
-    var struck = heroTakes(e.atk, e.dmgType);
-    HERO_HP = Math.max(0, HERO_HP - struck.damage);
+    var roll = rpgRoll(regionName, e.id, 'hero', 0);
     playOneShot('enemy:' + e.id, 'attack');
+    if (roll && roll.miss) {
+      combatSay(verbWord('foe_miss', { what: e.name }));
+      return false;
+    }
+    var heavy = !!(roll && roll.crit);
+    var struck = heroTakes(heavy ? e.atk * roll.times : e.atk, e.dmgType);
+    struck.damage = rpgGuarded(struck.damage, heroGuard());
+    HERO_HP = Math.max(0, HERO_HP - struck.damage);
     playOneShot('hero', 'hurt');
     saveHeroHp();
     renderHp();
@@ -247,6 +357,13 @@
       line = e.name + ' hits you with ' + struck.type + ' for ' + struck.damage + '.';
     } else {
       line = e.name + ' hits you for ' + struck.damage + '.';
+    }
+    if (heavy) line = verbWord('foe_crit', { what: e.name }) + ' ' + line;
+    var thorns = rpgTraitTotals().reactions.thorns;
+    if (thorns && struck.damage > 0 && HERO_HP > 0 && e.hp > 1) {
+      var back = Math.min(thorns.n, e.hp - 1);
+      e.hp -= back;
+      line += ' ' + itemName(thorns.from) + ' bites back for ' + back + '.';
     }
     combatSay(line);
     // A hit that reaches the hero is one practice count.
@@ -512,9 +629,15 @@
   function cozyDeath(killer) {
     var wake = (window.VEFR_HERO && window.VEFR_HERO.wake) || {};
     var D = window.VEFR_DESCENT;
-    var back = (D && typeof D.deathResume === 'function')
+    // ADR 0021 `fall: "home"`: a fall on a generated floor wakes at the
+    // pack's own wake point, and what the bag held stays where the hero
+    // fell. A descent that names no `fall` wakes on the floor's up-stair.
+    var home = !!(D && typeof D.fallsHome === 'function' && D.fallsHome(regionName));
+    var left = home ? D.dropSatchel(regionName, hero.slice()) : 0;
+    if (home) { renderBagPanel(); renderBagStrip(); renderVerbRow(); }
+    var back = (!home && D && typeof D.deathResume === 'function')
       ? D.deathResume(regionName) : null;
-    var said = back ? STAIR_DEATH_LINE : DEATH_LINE;
+    var said = back ? STAIR_DEATH_LINE : (home && left ? SATCHEL_DEATH_LINE : DEATH_LINE);
     // The fading line over the world keeps its own words; the second
     // argument keeps them off the quiet page once (vefr#484), because
     // the card below says them there with their "You fell."

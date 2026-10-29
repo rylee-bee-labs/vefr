@@ -151,8 +151,11 @@ sentence and a JSON pointer.
 | `xp` | experience |
 | `sight` | how far it notices the hero |
 | `drops` | a list of item ids the pack declares as items a player can be given (an `items` entry with no `name` never reaches the weave, so it is not one) |
+| `guard` | what each blow at it loses, 0 to 99, never below 1 (ADR 0021) |
+| `drop_chance` | the percent of its kills on a generated floor that drop anything, 0 to 100; 100 when left out (ADR 0021) |
+| `gold` | the coins one kill pays, as `[lo, hi]`, 0 to 9999 (ADR 0021) |
 
-<!-- FIELD_KEYS: name, sprite, hp, atk, xp, sight, drops -->
+<!-- FIELD_KEYS: name, sprite, hp, atk, xp, sight, drops, guard, drop_chance, gold -->
 
 | A region entry | |
 |---|---|

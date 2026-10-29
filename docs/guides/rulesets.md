@@ -690,6 +690,11 @@ above, as before. The rule has no new key, so `vefr check` and
 `tests/test_descent_landings.py` and
 `tests/browser/test_landing_home.py`.
 
+A descent that names `resume: "deepest-landing"` sends the town stair to
+the deepest landing reached instead of floor 1, and one that names
+`fall: "home"` wakes a fallen hero at home with the bag left where they
+fell (ADR 0021; [`rpg-core.md`](rpg-core.md#trips)).
+
 ### Locked doors
 
 A door or stair may be locked behind a key. A transition may carry an
@@ -728,6 +733,10 @@ water). Other regions' maps are read only for the door checks; their
 own geometry validation is a follow-on.
 
 ## combat (first slice: bump to fight)
+
+A pack may also opt in to rolled blows, guard, and a turn for every drink
+or cast, and give its Sections a `curve` that is read at play: see
+[`rpg-core.md`](rpg-core.md) (ADR 0021).
 
 The dungeon has floors, fog, doors and stairs; this is the first thing
 in them that moves on its own. Combat is **deterministic** - fixed
@@ -853,6 +862,10 @@ changes. The whole contract, the refusals and the feedback are in
 `design/elemental-and-status-effects.md`.
 
 ## loot (first slice: drops and a simple bag)
+
+A Blueprint family may name a `drop_chance` and the `gold` a kill pays,
+and a `traits` table gives a rolled item's words something to do: see
+[`rpg-core.md`](rpg-core.md#spoils) (ADR 0021).
 
 Killing something used to give survival and nothing else. Now a kill can
 leave a thing behind, the hero can carry it, and a Bag panel shows what
@@ -1289,6 +1302,10 @@ Code: `src/vefr/maplab.py` (validation) + `src/vefr/cli.py` (bake) +
 `tests/test_growth_play.py` + `tests/fixtures/make_growth_pack.py`.
 
 ## spells (schools, levels, and the books found on the floor)
+
+A spell may also cost `mana` and `harm` or `ward` instead of healing, and
+an item may `casts` a spell on `charges`: see
+[`rpg-core.md`](rpg-core.md#magic) (ADR 0021).
 
 Spells are optional and additive: **a pack with no `spells` key plays
 exactly as it did**, and one that declares none bakes no

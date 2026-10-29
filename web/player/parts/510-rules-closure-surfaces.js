@@ -285,9 +285,29 @@
       if (!box.hidden) box.hidden = true; else doInteract();
     }
   });
+  // ADR 0021's two seams out of this closure. A turn spent outside it - a
+  // drink, a thing used, a spell cast from the bag - is the turn a step is:
+  // the light ticks, the monsters act, the statuses tick, and the fight row
+  // follows. And a rest that heals asks whether the hero is somewhere
+  // quiet: not a floor of the descent, and nothing alive to fight here.
+  window.VEFR_SPEND_TURN = function () {
+    lightTick();
+    enemyTurn();
+    statusTurn();
+    updateVerbRow();
+  };
+  window.VEFR_QUIET_HERE = function () {
+    if (window.VEFR_DESCENT && window.VEFR_DESCENT.isGenerated
+        && window.VEFR_DESCENT.isGenerated(regionName)) return false;
+    for (var i = 0; i < enemies.length; i++) {
+      if (enemies[i] && enemies[i].alive) return false;
+    }
+    return true;
+  };
   loadFog();
   seeNow();
   loadHeroHp();
+  loadHeroMana();
   renderHp();
   loadFloor();
   loadEnemies();

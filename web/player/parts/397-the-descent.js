@@ -511,6 +511,47 @@ window.VEFR_DESCENT = (function () {
     return range[0] <= k && k <= range[1];
   }
 
+  // ---- ADR 0021: the twins of `vefr.mob_stats` (curve only) and `vefr.rpg`.
+  // A Section's `curve` scales a drawn monster's hp and atk by its floor -
+  // `pct`, `curvePct` and the sorted pair are ADR 0014's own lines, and with
+  // no affix and cycle 0 the whole formula is `max(1, v * pct // 100)`. A
+  // Section with no curve is the neutral 100. No draw is spent on any of it.
+  function pct(m) { return Math.floor(m * 100 + 0.5); }
+  function curvePct(lo, hi, k, n) {
+    return n <= 1 ? lo : lo + Math.floor((hi - lo) * (k - 1) / (n - 1));
+  }
+  function curvePair(section, stat) {
+    var curve = (section && typeof section.curve === 'object') ? section.curve : null;
+    var value = curve ? curve[stat] : null;
+    if (Array.isArray(value) && value.length === 2
+        && typeof value[0] === 'number' && typeof value[1] === 'number') {
+      var lo = pct(value[0]), hi = pct(value[1]);
+      return lo <= hi ? [lo, hi] : [hi, lo];
+    }
+    return [100, 100];
+  }
+  function curved(v, section, k, stat) {
+    var pair = curvePair(section, stat);
+    var n = (section && isWhole(section.floors)) ? section.floors : 9;
+    return Math.max(1, Math.floor(v * curvePct(pair[0], pair[1], k, n) / 100));
+  }
+  // A family's `guard` and `gold` (ADR 0021): read the way `rpg.guard_of`
+  // and `rpg.gold_of` read them, and carried only when the family names one.
+  function guardOf(family) {
+    var g = family ? family.guard : null;
+    return (isWhole(g) && g >= 0 && g <= 99) ? g : 0;
+  }
+  function goldOf(family) {
+    var g = family ? family.gold : null;
+    if (Array.isArray(g) && g.length === 2 && isWhole(g[0]) && isWhole(g[1])
+        && g[0] >= 0 && g[1] <= 9999 && g[0] <= g[1]) return g;
+    return null;
+  }
+  function dropChanceOf(family) {
+    var c = family ? family.drop_chance : null;
+    return (isWhole(c) && c >= 0 && c <= 100) ? c : 100;
+  }
+
   // `k` is the floor's 1-based position in its Section, which is what the
   // Section's own `mobs` table is read against. The twin of
   // `vefr.delve.mobs_at`.
@@ -545,14 +586,23 @@ window.VEFR_DESCENT = (function () {
       var hp = randRange(rng, Math.max(1, hr[0]), Math.max(1, hr[1]));
       var atk = isWhole(family.atk) ? family.atk : 1;
       var sight = isWhole(family.sight) ? family.sight : 6;
-      mobs.push({
+      var mob = {
         id: 'm' + i, family: family.family,
         name: (typeof family.name === 'string' && family.name) ? family.name : DEFAULT_FAMILY,
         sprite: (typeof family.sprite === 'string') ? family.sprite : '',
-        at: [at[0], at[1]], hp: Math.max(1, hp), atk: Math.max(1, atk),
+        at: [at[0], at[1]],
+        hp: curved(Math.max(1, hp), section, k, 'hp'),
+        atk: curved(Math.max(1, atk), section, k, 'atk'),
         sight: Math.max(0, sight), xp: xpFor(family, depth),
-        drops: mobDrops(key, 'm' + i, family.drops)
-      });
+        drops: mobDrops(key, 'm' + i, family.drops, dropChanceOf(family))
+      };
+      if (guardOf(family)) mob.guard = guardOf(family);
+      var gold = goldOf(family);
+      if (gold) {
+        mob.gold = randRange(window.VEFR_DELVE.prng(streamSeed(key, 'gold|m' + i)),
+                             gold[0], gold[1]);
+      }
+      mobs.push(mob);
     }
     return mobs;
   }
@@ -766,10 +816,16 @@ window.VEFR_DESCENT = (function () {
 
   // A monster's own loot stream: the order monsters are killed in cannot
   // change what they drop.
-  function mobDrops(key, mobId, table) {
+  function mobDrops(key, mobId, table, chance) {
     var ids = Array.isArray(table)
       ? table.filter(function (i) { return typeof i === 'string' && i; }) : [];
     if (!ids.length) return [];
+    // ADR 0021: the family's `drop_chance`, on the loot stream's own
+    // `|chance` stream - the twin of `delve.mob_drops`. 100 spends no draw.
+    if (typeof chance === 'number' && chance < 100
+        && Math.floor(window.VEFR_DELVE.prng(lootSeed(key, mobId) + '|chance')() * 100) >= chance) {
+      return [];
+    }
     var rng = window.VEFR_DELVE.prng(lootSeed(key, mobId));
     var chosen = ids[Math.floor(rng() * ids.length)];
     return [itemDraw(key, mobId, chosen, (window.VEFR_ITEMS || {})[chosen])];
@@ -1086,6 +1142,10 @@ window.VEFR_DESCENT = (function () {
     var out = { v: doc.v, gen: doc.gen, run: doc.run, seed: doc.seed,
                 card: doc.card, flags: isObj(doc.flags) ? doc.flags : {},
                 floors: {}, order: [] };
+    // The satchel a fall left (ADR 0021) is the hero's own things, not a
+    // floor's delta: it is kept whole, like the flags, and only exists in a
+    // save once a fall has made one - every other save keeps its shape.
+    if (isObj(doc.satchel)) out.satchel = doc.satchel;
     for (var n = 0; n < names.length; n++) {
       var record = doc.floors[names[n]];
       if (!isObj(record)) continue;
@@ -1396,20 +1456,36 @@ window.VEFR_DESCENT = (function () {
     return { region: region, at: at };
   }
 
+  // ADR 0021, `resume: "deepest-landing"`: the trip from town starts at the
+  // deepest landing the hero has reached (a landing is recorded the first
+  // time its floor is walked onto, and outlives the run), at its arrival
+  // tile. A descent that names no `resume` starts every trip at its first
+  // floor, as it always has.
+  function resumeDepth() {
+    var d = def();
+    if (!d || d.resume !== 'deepest-landing') return 1;
+    var deepest = 1;
+    landings().forEach(function (n) {
+      if (isWhole(n) && n > deepest && locate(n)) deepest = n;
+    });
+    return deepest;
+  }
+
   function wireEntry() {
     var entry = entryHere();
     if (!entry) return;
     var list = window.VEFR_TRANSITIONS || [];
-    var first = locate(1);
+    var depth = resumeDepth();
+    var first = locate(depth);
     if (!first) return;
-    var plan = floorPlan(1);
+    var plan = floorPlan(depth);
     if (!plan) return;
     // The town stair's entry for the next Section carries the same gate
     // the warden's down stair does (ADR 0015). The pack's own stair enters
     // the FIRST Section, which nothing lies behind and so is never gated;
     // the moment the elevator rule offers a town stair per Section, this
     // is what carries the gate on it.
-    var gate = gateFor(1);
+    var gate = gateFor(depth);
     claimTile(list, { from: entry.region, at: entry.at.slice(),
                       to: plan.name, to_at: plan.anchors.up.slice(),
                       requires: gate ? { flag: gate } : null,
@@ -1795,7 +1871,61 @@ window.VEFR_DESCENT = (function () {
       seen.sort(function (a, b) { return a - b; });
       doc.flags['landing'] = seen;
       saveDoc(doc);
+      // A new deepest landing moves the town stair (ADR 0021 `resume`).
+      var d = def();
+      if (d && d.resume === 'deepest-landing') wireEntry();
     }
+  }
+
+  // ---- the satchel (ADR 0021, `fall: "home"`) -----------------------
+  // A fall on a generated floor wakes the hero at home, and what was in the
+  // bag - not what is worn, and not a `keep` thing - stays where the hero
+  // fell, as ONE satchel in the descent's own record. Not with the floor's
+  // drops: the trip home clears those, and the satchel must outlive it. A
+  // second fall before the first is fetched replaces it.
+  function fallsHome(name) {
+    var d = def();
+    return !!(d && d.fall === 'home' && isGenerated(name));
+  }
+  function dropSatchel(name, at) {
+    var raw = store.getJSON(BAG_KEY, []);
+    var cat = window.VEFR_ITEMS || {};
+    var kept = [], carried = [];
+    (Array.isArray(raw) ? raw : []).forEach(function (entry) {
+      var id = (entry && typeof entry === 'object') ? entry.id : entry;
+      if (!cat[id]) return;
+      // A `keep` thing and a keepsake in the pouch stay with the hero.
+      if (cat[id].keep === true || cat[id].pouch === true) kept.push(entry);
+      else carried.push(entry);
+    });
+    var doc = loadDoc();
+    if (carried.length) {
+      doc.satchel = { region: name, at: [at[0], at[1]], items: carried };
+    }
+    saveDoc(doc);
+    store.setJSON(BAG_KEY, kept);
+    whySay('descent-satchel', carried.length
+      ? 'You fell on ' + placeName(name) + '. What you carried waits there.'
+      : 'You fell on ' + placeName(name) + ' with nothing in your bag.');
+    return carried.length;
+  }
+  function satchelIn(name) {
+    var doc = loadDoc();
+    var sat = doc.satchel;
+    if (!isObj(sat) || sat.region !== name || !Array.isArray(sat.at)
+        || !Array.isArray(sat.items) || !sat.items.length) return null;
+    return sat;
+  }
+  function takeSatchel() {
+    var doc = loadDoc();
+    var sat = doc.satchel;
+    delete doc.satchel;
+    saveDoc(doc);
+    return isObj(sat) && Array.isArray(sat.items) ? sat.items : [];
+  }
+  function moveSatchel(at) {
+    var doc = loadDoc();
+    if (isObj(doc.satchel)) { doc.satchel.at = [at[0], at[1]]; saveDoc(doc); }
   }
 
   // ---- the deltas, read and written by the parts that own them -------
@@ -2177,6 +2307,8 @@ window.VEFR_DESCENT = (function () {
     loadFog: loadFog, saveFog: saveFog,
     flags: flags, setFlag: setFlag, landings: landings,
     recordLanding: recordLanding, isLanding: isLanding,
+    resumeDepth: resumeDepth, fallsHome: fallsHome, dropSatchel: dropSatchel,
+    satchelIn: satchelIn, takeSatchel: takeSatchel, moveSatchel: moveSatchel,
     // E8c: the story end, the town gate and the act, all derived reads.
     // `storyFlags` is how the ONE gate mechanism (`lockOpen`) sees a
     // story flag, which lives in the descent's own save beside the floors.
