@@ -1507,42 +1507,90 @@ def _tiles_for_legend(legend: dict, sanctuaries, web_dir: Path,
     if not isinstance(legend, dict) or not legend:
         return {}
     sanctuaries = set(sanctuaries or [])
-    open_chars = [
-        ch for ch, spec in legend.items()
-        if isinstance(spec, dict) and not spec.get('solid')
-        and ch not in sanctuaries and not spec.get('deco')
-    ]
+    open_chars = _open_chars(legend, sanctuaries)
     out: dict[str, str | list[str] | dict] = {}
     for ch, spec in legend.items():
-        spec = spec if isinstance(spec, dict) else {}
-        own = spec.get('tile')
-        if isinstance(own, str) and own:
-            name = own
-        elif spec.get('solid') is True:
-            name = 'stone-wall'
-        elif ch in sanctuaries:
-            name = 'rug'
-        elif spec.get('deco'):
-            name = 'grass'
-        else:
-            name = 'path' if open_chars.index(ch) > 0 else 'grass'
+        name = _legend_tile_name(ch, spec, sanctuaries, open_chars)
         # The pack's own pictures win; a region with none falls through
         # to the engine set, unchanged.
         pack_paths = _pack_tile_paths(pack, region_dir, name)
         if pack_paths:
-            grid = tile_grid(pack_paths[0].stem)
-            if grid:
-                out[ch] = {'src': _tile_data_uri(pack_paths[0]),
-                           'cols': grid[1], 'rows': grid[2]}
-            elif len(pack_paths) == 1:
-                out[ch] = _tile_data_uri(pack_paths[0])
-            else:
-                out[ch] = [_tile_data_uri(p) for p in pack_paths]
+            out[ch] = _tile_shape(pack_paths)
             continue
         f = web_dir / 'art' / 'tiles' / f'{name}.webp'
         if f.is_file():
             out[ch] = _tile_data_uri(f)
     return out
+
+
+def _open_chars(legend: dict, sanctuaries: set) -> list[str]:
+    """A legend's open-ground symbols, in order: the first is grass, the rest path."""
+    return [
+        ch for ch, spec in legend.items()
+        if isinstance(spec, dict) and not spec.get('solid')
+        and ch not in sanctuaries and not spec.get('deco')
+    ]
+
+
+def _legend_tile_name(ch: str, spec, sanctuaries: set, open_chars: list[str]) -> str:
+    """The tile a legend symbol draws: its own `"tile"`, else stone-wall, rug or grass by kind, else grass or
+    path by order (the studio Map Room's `tileFor`)."""
+    spec = spec if isinstance(spec, dict) else {}
+    own = spec.get('tile')
+    if isinstance(own, str) and own:
+        return own
+    if spec.get('solid') is True:
+        return 'stone-wall'
+    if ch in sanctuaries:
+        return 'rug'
+    if spec.get('deco'):
+        return 'grass'
+    return 'path' if open_chars.index(ch) > 0 else 'grass'
+
+
+def _tile_shape(paths: list[Path]) -> str | list[str] | dict:
+    """A tile's pictures as the player takes them: one data URI, a list of variants, or a grid `{src, cols, rows}`."""
+    grid = tile_grid(paths[0].stem)
+    if grid:
+        return {'src': _tile_data_uri(paths[0]), 'cols': grid[1], 'rows': grid[2]}
+    if len(paths) == 1:
+        return _tile_data_uri(paths[0])
+    return [_tile_data_uri(p) for p in paths]
+
+
+def _normals_for_legend(legend: dict, sanctuaries, web_dir: Path,
+                        region_dir: Path | None = None,
+                        pack: Path | None = None) -> dict[str, str | list[str] | dict]:
+    """One legend's tile normal maps (lamplight), keyed by symbol.
+
+    A tile `stone-wall` may carry `stone-wall.normal.webp` (or `.png`) in the
+    region's own `tiles/`, with variants and grids named as the tile's are,
+    and it bakes in the same shape. Pack art only - the engine set has no
+    normal maps - so a pack with none bakes `{}` and is lit flat.
+    `web_dir` is unused; the signature is `_tiles_for_legend`'s so
+    `_player_region_tiles` can walk the regions once for both.
+    """
+    if not isinstance(legend, dict) or not legend:
+        return {}
+    sanctuaries = set(sanctuaries or [])
+    open_chars = _open_chars(legend, sanctuaries)
+    out: dict[str, str | list[str] | dict] = {}
+    for ch, spec in legend.items():
+        paths = _pack_tile_paths(pack, region_dir, _legend_tile_name(ch, spec, sanctuaries, open_chars) + '.normal')
+        if paths:
+            out[ch] = _tile_shape(paths)
+    return out
+
+
+def _player_tile_normals(world: dict, web_dir: Path,
+                         pack: Path | None = None) -> dict[str, dict]:
+    """Every region's tile normal maps, keyed by region name, then symbol.
+
+    Only regions with at least one appear, so a pack with none bakes `{}`
+    (`window.VEFR_TILE_NORMALS`).
+    """
+    every = _player_region_tiles(world, web_dir, pack, per_legend=_normals_for_legend)
+    return {rname: normals for rname, normals in every.items() if normals}
 
 
 def _edges_for_legend(legend: dict, sanctuaries, web_dir: Path,
@@ -3006,6 +3054,10 @@ def weave_html(pack: Path, *, pool: dict | None = None,
     out_html = out_html.replace('{{tile_edges_json}}',
                                 _json.dumps(_player_tile_edges(world, template_path.parent,
                                                                pack),
+                                            ensure_ascii=False))
+    out_html = out_html.replace('{{tile_normals_json}}',
+                                _json.dumps(_player_tile_normals(world, template_path.parent,
+                                                                 pack),
                                             ensure_ascii=False))
     out_html = out_html.replace('{{sprites_json}}',
                                 _json.dumps(_player_sprites(pack, world), ensure_ascii=False))
