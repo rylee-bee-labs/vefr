@@ -363,6 +363,10 @@ function renderVerbRow() {
     b.appendChild(key);
     row.appendChild(b);
   });
+  // The row was emptied above, and the pack's Rest button (part 255) with it:
+  // put it back, after the verbs, as it was first drawn. A pack with no Rest
+  // gets nothing here.
+  if (typeof wireTimeRest === 'function') wireTimeRest();
 }
 
 // The nth button of the combat row, 1 being the first verb, or null.
