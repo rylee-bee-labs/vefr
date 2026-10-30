@@ -83,6 +83,21 @@ times the straight-line distance; the stairs stand a median 35 tiles apart,
 16 at least; the walkable area's bounding box covers 40% of the floor (30% on
 the spine); no floor fell back to v2.
 
+## Found on the way, and fixed
+
+The game's playthrough bot walked the wander floors and found a floor's map
+missing from the save. A floor's record may hold `FLOOR_BYTES`, and over it the
+save gives up the explored bitset first, by design: the map is where the hero
+walked, while kills, chests and drops are what happened. Since ADR 0021, a
+kill's rolled loot (rarity and traits included) stays on the floor in `drops`.
+On a winding floor more of it is walked past, and a floor with a dozen finds
+on it no longer fit beside its map. Measured: three floors of eight kept
+11-13 drops (693-809 bytes) and had their maps given up, while the floors with
+no drops left kept theirs. PLAN §3's 1.5 KB was set before loot rolled, so it
+is now 3 KB in both twins (`delve.FLOOR_BYTES`, part 397). Forty floors of it
+is 120 KB, inside the 250 KB whole save, and the order of sacrifice is
+unchanged.
+
 ## Consequences
 
 - One pack-contract key, recorded in `src/vefr/world.py`, `shapes.SECTION`

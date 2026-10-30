@@ -212,8 +212,10 @@ gameplay features over new core machinery.
   apart. On that Section, 800 floors: no straight walk, a median of 14 turns, stairs a median 35 tiles apart,
   no fallback to v2. `"spine"` stays the default, and a Section that names no layout draws byte-identical
   floors. Both twins move together: the parity sweep runs the whole sweep again for the wander layout.
+  Found on the way: a floor's save budget (PLAN §3) was 1.5 KB, set before ADR 0021 left rolled loot on the
+  floor, and a floor holding a dozen finds gave up its map to fit; it is 3 KB in both twins now.
   Decision: [ADR 0022](docs/adr/0022-floors-that-wander.md); guide: `docs/guides/rulesets.md` ("`layout`").
-  Tests: `tests/test_wander_floors.py`, `tests/test_floor_v3_parity.py`.
+  Tests: `tests/test_wander_floors.py`, `tests/test_floor_v3_parity.py`, `tests/test_descent_floors.py`.
 
 ### IN PROGRESS (decided by Rylee on 2026-10-04; refreshed 2026-10-12)
 - **The endless dungeon** (epic [#273](https://github.com/rylee-bee-labs/vefr/issues/273); design `docs/plans/endless-dungeon/DESIGN.md`, build plan `docs/plans/endless-dungeon/PLAN.md`, research `docs/research/big-generated-maps.md`): floors generated while you play from `seed + depth`, cut into sections of 8 to 11 floors; each ends in a key warden whose key opens a vault with a lore note; acts change the town only; elites, linked groups, hand-painted stamps and much bigger maps (up to 128x96, kept cheap for phones); an endless mode after the story.

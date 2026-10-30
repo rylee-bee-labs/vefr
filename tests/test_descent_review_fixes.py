@@ -279,7 +279,9 @@ def test_start_over_keeps_the_old_save_when_this_browser_cannot_store_a_new_one(
 # finding in a single fixture.
 WIDE_ID = "☠"
 WIDE = _record(0)
-WIDE[1]["kills"] = [WIDE_ID + "x"] * 270
+# 270 at the old 1_500 budget: the count is held to the budget, so the
+# fixture keeps sitting between the two counts when the budget moves.
+WIDE[1]["kills"] = [WIDE_ID + "x"] * (delve.FLOOR_BYTES * 9 // 50)
 
 
 def test_a_floor_over_the_byte_budget_is_saved_inside_it(tmp_path):
