@@ -254,7 +254,7 @@ Every key is optional, and every distance is in tiles.
 - `ambient` is the darkness: the colour the unlit map takes. Give one
   colour for every phase, or one per phase. A phase it does not name is
   not darkened, and the map draws as it does without lamplight.
-- `hero` is a light the hero carries. Its keys and defaults are `reach`
+- `hero` is a light the hero carries, held beside them like a lantern in hand. Its keys and defaults are `reach`
   1.5, `height` 1.3, `intensity` 2 and `color` `"#ffd694"`.
 - `lamps` lists the lamps of each region. Each one stands on a tile `at`
   [x, y] of that region's map and has the same four keys, with the

@@ -166,6 +166,15 @@ def test_the_dark_is_darker_than_the_map_and_the_hero_is_lit(make_page, woven):
     assert lum(hero) > lum(far) + 30              # the hero's own light
 
 
+def test_the_hero_is_lit_but_never_washed_out(make_page, woven):
+    """The hero carries the light beside them, as a lantern in hand, so their own picture stays readable."""
+    page = make_page()
+    _open(page, woven + "lit.html")
+    hero, far = _read(page, HERO, FAR)["lit"]
+    assert lum(hero) > lum(far) + 30
+    assert lum(hero) < 3 * 245, hero
+
+
 def test_a_lamp_shines_only_while_its_flag_is_set(make_page, woven):
     page = make_page()
     _open(page, woven + "lit.html")
