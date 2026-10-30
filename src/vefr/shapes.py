@@ -1588,6 +1588,18 @@ SECTION = Block(
                 'Section keeps the floors a save remembers.',
             say={'wrong-type': '{path} must be a list of decor, such as '
                                '[{"pic": "puddle", "on": "floor", "every": 60}]'}),
+        # ADR 0022, after `decor` for the same reason `decor` is after
+        # `endless`.
+        Key('layout', 'enum', choices=('spine', 'wander'),
+            doc='how a floor\'s rooms are laid out. `spine` (the default) '
+                'lays a row of rooms across the floor\'s long axis with a '
+                'stair at each end; `wander` lays a walk over a grid of '
+                'cells, so the way from stair to stair turns, climbs and '
+                'doubles back, with rooms branching off it all over the '
+                'floor. The layout is part of the floor\'s identity, so '
+                'changing it redraws the floors a save remembers.',
+            say={'not-in-choices': '{path} must be "spine" or "wander", the '
+                                   'way the floor\'s rooms are laid out'}),
     ),
     say={'missing-key': '{name} must hold its {key}'},
 )

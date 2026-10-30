@@ -307,6 +307,12 @@ pack's `props/` scattered over its generated floors, `on` a floor tile or
 a wall face, about one for `every` tiles (docs/guides/rulesets.md, the
 Section contract). Decor never blocks and is not part of a floor's
 identity; a Section naming none draws exactly as before.
+A Section may name `layout`: `"spine"` (the default) lays a row of rooms
+across the floor with a stair at each end; `"wander"` lays a walk over a
+grid of cells, so the way from stair to stair turns, climbs and doubles
+back, with rooms branching off it all over the floor (docs/adr/0022).
+The layout is part of a floor's identity; a Section naming none draws
+exactly as before.
 
 SAVES (rule saves): world.json may carry an optional top-level `saves`
   block choosing how much of a run the rules remember:

@@ -668,13 +668,19 @@ FLAVOURS = 4
 def _plan_stage(rng, section: dict, floor_kind: str) -> dict:
     """The plan stage: quotas and flavour, drawn from the plan stream."""
     lo, hi = _read_rooms(section)
-    return {
+    plan = {
         "quota": _rand(rng, lo, hi),
         "loops": _rand(rng, LOOPS_MIN, LOOPS_MAX),
         "secrets": _rand(rng, 0, 2),
         "flavour": _pick(rng, FLAVOURS),
         "waypoint": floor_kind == "hub" and _pick(rng, 2) == 0,
     }
+    # The layout a Section asks for (ADR 0022). A name, not a draw, and only
+    # carried when it is not the spine, so a Section that names none plans
+    # exactly the dict it always planned.
+    if section.get("layout") == "wander":
+        plan["layout"] = "wander"
+    return plan
 
 
 # ----------------------------------------------------------------- stage 2
@@ -928,6 +934,190 @@ def _child_gallery(canvas: Canvas, horizontal: bool, children: list[int],
         return
     _gallery_loop(canvas, horizontal, tuple(canvas.rooms[same[0]][:4]),
                   tuple(canvas.rooms[same[-1]][:4]), row)
+
+
+# ----------------------------------------------------------- stage 2, wander
+# The `wander` layout (ADR 0022), the layout stream's other order of draws.
+# A Section that names `"layout": "wander"` is laid out here instead of on a
+# spine; stages 3 to 5 are the same. `rng()`, `rand` and `pick` are the
+# spine layout's own.
+#
+#  1. cell_w = rand(8, 10); cell_h = rand(7, 8)   the pitch of the cell grid.
+#     cols = (w - 1) // cell_w; rows = (h - 1) // cell_h. A grid of fewer
+#     than two cells lays nothing, and the retry ladder takes over.
+#  2. start = (rand(0, cols - 1), rand(0, rows - 1))   the walk's first cell.
+#  3. the walk: while it is shorter than max(3, (2 * quota + 2) // 3)
+#     cells, the free cells beside its last cell, east, south, west, north
+#     in that order; none ends the walk. Each option that is further from
+#     the first cell (Manhattan, in cells) than the last cell is listed
+#     WANDER_AWAY times, any other once, and
+#       next = listed[pick(len(listed))].
+#     A cell is free while no room stands in it. The walk never crosses
+#     itself, so it turns, climbs and doubles back but heads outward.
+#  4. a room in each walk cell, in walk order, and a room in a cell is
+#       rw = rand(4, cell_w - 2); rh = rand(3, cell_h - 2);
+#       x = cell_x + rand(0, cell_w - 1 - rw); y = cell_y + rand(0, cell_h - 1 - rh);
+#       shape = pick(len(SHAPES)),
+#     with `cell_x = 1 + c * cell_w` and `cell_y = 1 + r * cell_h`. The
+#     last column and row of every cell stay wall, so two rooms never
+#     touch. Each walk room after the first is joined to the one before
+#     it with one L-shaped corridor, which takes one draw for the bend.
+#  5. branches: every room in index order - the walk first, then each
+#     room as it is placed - grows into the free cells beside it, east,
+#     south, west, north, until it has `cap` children or the quota is met:
+#       cell = options[pick(len(options))]; a room there (4); a link (1).
+#     `cap = max(1, ceil((quota - walk) / walk))`.
+#  6. loops: every pair of rooms in side-by-side cells, row-major and east
+#     before south, that no corridor joins yet and whose roots - the walk
+#     room each one hangs off - are at most WANDER_REACH apart along the
+#     walk. Then, `plan["loops"]` times while any are left:
+#       pair = pairs.pop(pick(len(pairs))); a link (1).
+#     A loop stays local, so no loop is a short cut past the walk.
+#  7. the stamped rooms, exactly as the spine layout's step 7.
+#
+# Every corridor joins two rooms in side-by-side cells, so it stays inside
+# those two cells and never crosses a third room. Stage 5 holds a wander
+# floor to one more property: its stairs are at least
+# min(WANDER_APART, max(w, h) // 3) tiles apart (Chebyshev), so a walk that
+# doubled back to its start is drawn again rather than kept.
+
+WANDER_DIRS = ((1, 0), (0, 1), (-1, 0), (0, -1))
+# How far apart along the walk a loop's two roots may be.
+WANDER_REACH = 2
+# How many times a step away from the walk's first cell is listed.
+WANDER_AWAY = 3
+# The least Chebyshev distance between a wander floor's two stairs, capped
+# at a third of the floor's long side so a small floor can still keep one.
+WANDER_APART = 16
+
+
+def _wander_stage(rng, canvas: Canvas, plan: dict, pool: list[dict],
+                  pinned: bool = False) -> tuple[list[int], list[str]]:
+    """The wander layout: a walk over a grid of cells, branches, local loops.
+
+    Returns what `_layout_stage` returns: the walk's rooms in walk order,
+    which the graph stage puts the two stairs at the ends of, and the
+    required roles that wanted a stamped room and did not get one.
+    """
+    cell_w = _rand(rng, 8, 10)
+    cell_h = _rand(rng, 7, 8)
+    cols = (canvas.w - 1) // cell_w
+    rows = (canvas.h - 1) // cell_h
+    if cols * rows < 2:
+        return [], []
+
+    cells: dict[tuple[int, int], int] = {}
+    root: list[int] = []
+    linked: set[tuple[int, int]] = set()
+
+    def place(cell: tuple[int, int], walk_at: int) -> int:
+        index = len(canvas.rooms)
+        room_w = _rand(rng, 4, cell_w - 2)
+        room_h = _rand(rng, 3, cell_h - 2)
+        x = 1 + cell[0] * cell_w + _rand(rng, 0, cell_w - 1 - room_w)
+        y = 1 + cell[1] * cell_h + _rand(rng, 0, cell_h - 1 - room_h)
+        canvas.carve_room((x, y, room_w, room_h), index)
+        canvas.rooms.append([x, y, room_w, room_h, SHAPES[_pick(rng, len(SHAPES))]])
+        cells[cell] = index
+        root.append(walk_at)
+        return index
+
+    def join(a: int, b: int) -> None:
+        _link(rng, canvas, tuple(canvas.rooms[a][:4]), tuple(canvas.rooms[b][:4]))
+        linked.add((min(a, b), max(a, b)))
+
+    def free_beside(cell: tuple[int, int]) -> list[tuple[int, int]]:
+        out = []
+        for dc, dr in WANDER_DIRS:
+            near = (cell[0] + dc, cell[1] + dr)
+            if 0 <= near[0] < cols and 0 <= near[1] < rows and near not in cells:
+                out.append(near)
+        return out
+
+    # 2-3. the walk, a cell at a time, never onto a cell it has stood on.
+    walk_target = max(3, (2 * plan["quota"] + 2) // 3)
+    walk_cells = [(_rand(rng, 0, cols - 1), _rand(rng, 0, rows - 1))]
+    seen = {walk_cells[0]}
+    while len(walk_cells) < walk_target:
+        c, r = walk_cells[-1]
+        options = [
+            (c + dc, r + dr) for dc, dr in WANDER_DIRS
+            if 0 <= c + dc < cols and 0 <= r + dr < rows and (c + dc, r + dr) not in seen
+        ]
+        if not options:
+            break
+        # A step that takes the walk further from its first cell is listed
+        # WANDER_AWAY times, any other step once, so the walk still turns and
+        # doubles back but heads out across the floor rather than curling up.
+        here = abs(c - walk_cells[0][0]) + abs(r - walk_cells[0][1])
+        weighted = []
+        for option in options:
+            there = abs(option[0] - walk_cells[0][0]) + abs(option[1] - walk_cells[0][1])
+            weighted.extend([option] * (WANDER_AWAY if there > here else 1))
+        step = weighted[_pick(rng, len(weighted))]
+        walk_cells.append(step)
+        seen.add(step)
+    if len(walk_cells) < 2:
+        return [], []
+
+    # 4. a room in every walk cell, each joined to the one before it.
+    spine: list[int] = []
+    for at, cell in enumerate(walk_cells):
+        index = place(cell, at)
+        if spine:
+            join(spine[-1], index)
+        spine.append(index)
+
+    # 5. branches into the free cells, the walk first, then every room grown.
+    cap = max(1, -(-(plan["quota"] - len(spine)) // len(spine)))
+    cell_of = {index: cell for cell, index in cells.items()}
+    parent = 0
+    while parent < len(canvas.rooms) and len(canvas.rooms) < plan["quota"]:
+        options = free_beside(cell_of[parent])
+        grown = 0
+        while options and grown < cap and len(canvas.rooms) < plan["quota"]:
+            cell = options.pop(_pick(rng, len(options)))
+            child = place(cell, root[parent])
+            cell_of[child] = cell
+            join(parent, child)
+            grown += 1
+        parent += 1
+
+    # 6. local loops between side-by-side rooms no corridor joins yet.
+    pairs = []
+    for r in range(rows):
+        for c in range(cols):
+            a = cells.get((c, r))
+            if a is None:
+                continue
+            for dc, dr in ((1, 0), (0, 1)):
+                b = cells.get((c + dc, r + dr))
+                if b is None or (min(a, b), max(a, b)) in linked:
+                    continue
+                if abs(root[a] - root[b]) > WANDER_REACH:
+                    continue
+                pairs.append((a, b))
+    for _ in range(plan["loops"]):
+        if not pairs:
+            break
+        a, b = pairs.pop(_pick(rng, len(pairs)))
+        join(a, b)
+
+    # 7. the stamped rooms, once everything else has stopped carving.
+    missing: list[str] = []
+    if pool:
+        up = _center(tuple(canvas.rooms[spine[0]][:4]))
+        _placed, missing = _stamp_stage(rng, canvas, plan, pool, spine, up, pinned)
+    return spine, missing
+
+
+def _layout_for(plan: dict):
+    """The layout stage a plan asks for: the wander layout or the spine.
+
+    One place, read by the door and by the parity reference alike, so a floor
+    is never laid out by one layout in the spec and by the other in a test.
+    """
+    return _wander_stage if plan.get("layout") == "wander" else _layout_stage
 
 
 # How many carved tiles a socket's corridor may end on, tried nearest
@@ -2288,6 +2478,10 @@ def _validate(plan: dict, canvas: Canvas, graph: Graph, section: dict) -> bool:
     down = (anchors["down"][0], anchors["down"][1])
     if up == down:
         return False
+    if section.get("layout") == "wander":
+        apart = min(WANDER_APART, max(canvas.w, canvas.h) // 3)
+        if max(abs(up[0] - down[0]), abs(up[1] - down[1])) < apart:
+            return False
 
     # One connected component, and nothing carved that belongs to no room
     # and no corridor: the rooms and the corridors tile the walkable set.
@@ -2396,7 +2590,7 @@ def _attempt(floor_key: str, width: int, height: int, section: dict,
         trace["slots"] = set(_stamp_slots(plan))
     canvas = Canvas(width, height)
     pool = _stamp_pool(section, stamp_pack, depth)
-    spine, missing = _layout_stage(layout_rng, canvas, plan, pool, pinned)
+    spine, missing = _layout_for(plan)(layout_rng, canvas, plan, pool, pinned)
     if len(spine) < 2 or missing:
         return None, f"stamp:{missing[0]}" if missing else ""
     graph, anchors, pois, secrets = _graph_stage(canvas, spine, plan, section)

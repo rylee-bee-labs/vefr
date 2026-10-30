@@ -43,6 +43,8 @@
 //            _child_rows, _far_rows              childRows,          done
 //                                                farRowsFor
 //            _layout_stage (draws 1-7)           layoutStage         done
+//            _wander_stage (draws 1-7)           wanderStage         done
+//            _layout_for                         layoutFor           done
 //            _child_gallery                      childGallery        done
 //            stamps.orient                       stampOrient         done
 //            stamps.orientations                 stampOrientations   done
@@ -130,6 +132,15 @@
   // The pop stage's own spacing rule: a monster, a chest or a secret stands at
   // least this many tiles (Chebyshev) from both stairs.
   var STAIR_CLEAR = 7;
+
+  // The wander layout's own numbers (ADR 0022): the walk's four directions in
+  // the order it tries them, how far apart along the walk a loop's two roots
+  // may be, how many times a step away from the walk's first cell is listed,
+  // and the least Chebyshev distance between a wander floor's two stairs.
+  var WANDER_DIRS = [[1, 0], [0, 1], [-1, 0], [0, -1]];
+  var WANDER_REACH = 2;
+  var WANDER_AWAY = 3;
+  var WANDER_APART = 16;
 
   // One floor tile this many times is one monster slot, before the clamps.
   // MOBS_MAX is both the top of the budget clamp and ADR 0014's hard cap,
@@ -480,13 +491,18 @@
 
   function planStage(rng, section, floorKind) {
     var quota = readRooms(section);
-    return {
+    var plan = {
       quota: rand(rng, quota[0], quota[1]),
       loops: rand(rng, LOOPS_MIN, LOOPS_MAX),
       secrets: rand(rng, 0, 2),
       flavour: pick(rng, FLAVOURS),
       waypoint: floorKind === 'hub' && pick(rng, 2) === 0,
     };
+    // The layout a Section asks for (ADR 0022). A name, not a draw, and only
+    // carried when it is not the spine, so a Section that names none plans
+    // exactly the object it always planned.
+    if (isPlainObject(section) && section.layout === 'wander') plan.layout = 'wander';
+    return plan;
   }
 
   // ----------------------------------------------------------------- canvas
@@ -973,6 +989,153 @@
     if (same.length < 2) return;
     galleryLoop(canvas, horizontal, head(canvas.rooms[same[0]]),
                 head(canvas.rooms[same[same.length - 1]]), row);
+  }
+
+  // ---------------------------------------------------------- stage 2, wander
+  // The wander layout (ADR 0022), `_wander_stage` in the spec, draw for draw: a
+  // walk over a grid of cells, branches into the free cells, a few local loops,
+  // then the stamped rooms exactly as the spine layout places them. The order
+  // of every draw is written out above `_wander_stage`; the cells are held in
+  // arrays indexed `c + r * cols`, so nothing is walked in insertion order.
+  function wanderStage(rng, canvas, plan, pool, pinned) {
+    var cellW = rand(rng, 8, 10);
+    var cellH = rand(rng, 7, 8);
+    var cols = Math.floor((canvas.w - 1) / cellW);
+    var rows = Math.floor((canvas.h - 1) / cellH);
+    if (cols * rows < 2) return { spine: [], missing: [] };
+
+    var cellRoom = [];
+    var seen = [];
+    for (var n = 0; n < cols * rows; n++) {
+      cellRoom.push(-1);
+      seen.push(false);
+    }
+    var roomCell = [];
+    var root = [];
+    var linked = new Set();
+
+    function place(cell, walkAt) {
+      var index = canvas.rooms.length;
+      var roomW = rand(rng, 4, cellW - 2);
+      var roomH = rand(rng, 3, cellH - 2);
+      var x = 1 + cell[0] * cellW + rand(rng, 0, cellW - 1 - roomW);
+      var y = 1 + cell[1] * cellH + rand(rng, 0, cellH - 1 - roomH);
+      carveRoom(canvas, [x, y, roomW, roomH], index);
+      canvas.rooms.push([x, y, roomW, roomH, SHAPES[pick(rng, SHAPES.length)]]);
+      cellRoom[cell[0] + cell[1] * cols] = index;
+      roomCell.push(cell);
+      root.push(walkAt);
+      return index;
+    }
+
+    function join(a, b) {
+      link(rng, canvas, head(canvas.rooms[a]), head(canvas.rooms[b]));
+      linked.add(Math.min(a, b) + '|' + Math.max(a, b));
+    }
+
+    function freeBeside(cell) {
+      var out = [];
+      for (var d = 0; d < WANDER_DIRS.length; d++) {
+        var c = cell[0] + WANDER_DIRS[d][0];
+        var r = cell[1] + WANDER_DIRS[d][1];
+        if (c >= 0 && c < cols && r >= 0 && r < rows && cellRoom[c + r * cols] < 0) {
+          out.push([c, r]);
+        }
+      }
+      return out;
+    }
+
+    // 2-3. the walk, a cell at a time, never onto a cell it has stood on.
+    var walkTarget = Math.max(3, Math.floor((2 * plan.quota + 2) / 3));
+    var first = [rand(rng, 0, cols - 1), rand(rng, 0, rows - 1)];
+    var walkCells = [first];
+    seen[first[0] + first[1] * cols] = true;
+    while (walkCells.length < walkTarget) {
+      var last = walkCells[walkCells.length - 1];
+      var options = [];
+      for (var d2 = 0; d2 < WANDER_DIRS.length; d2++) {
+        var oc = last[0] + WANDER_DIRS[d2][0];
+        var orow = last[1] + WANDER_DIRS[d2][1];
+        if (oc >= 0 && oc < cols && orow >= 0 && orow < rows && !seen[oc + orow * cols]) {
+          options.push([oc, orow]);
+        }
+      }
+      if (!options.length) break;
+      // A step that takes the walk further from its first cell is listed
+      // WANDER_AWAY times, any other step once.
+      var here = Math.abs(last[0] - first[0]) + Math.abs(last[1] - first[1]);
+      var listed = [];
+      for (var o = 0; o < options.length; o++) {
+        var there = Math.abs(options[o][0] - first[0]) + Math.abs(options[o][1] - first[1]);
+        var times = there > here ? WANDER_AWAY : 1;
+        for (var t = 0; t < times; t++) listed.push(options[o]);
+      }
+      var step = listed[pick(rng, listed.length)];
+      walkCells.push(step);
+      seen[step[0] + step[1] * cols] = true;
+    }
+    if (walkCells.length < 2) return { spine: [], missing: [] };
+
+    // 4. a room in every walk cell, each joined to the one before it.
+    var spine = [];
+    for (var at = 0; at < walkCells.length; at++) {
+      var index = place(walkCells[at], at);
+      if (spine.length) join(spine[spine.length - 1], index);
+      spine.push(index);
+    }
+
+    // 5. branches into the free cells, the walk first, then every room grown.
+    var cap = Math.max(1, Math.ceil((plan.quota - spine.length) / spine.length));
+    var parent = 0;
+    while (parent < canvas.rooms.length && canvas.rooms.length < plan.quota) {
+      var free = freeBeside(roomCell[parent]);
+      var grown = 0;
+      while (free.length && grown < cap && canvas.rooms.length < plan.quota) {
+        var cell = free.splice(pick(rng, free.length), 1)[0];
+        var child = place(cell, root[parent]);
+        join(parent, child);
+        grown += 1;
+      }
+      parent += 1;
+    }
+
+    // 6. local loops between side-by-side rooms no corridor joins yet.
+    var pairs = [];
+    var ahead = [[1, 0], [0, 1]];
+    for (var r2 = 0; r2 < rows; r2++) {
+      for (var c2 = 0; c2 < cols; c2++) {
+        var a = cellRoom[c2 + r2 * cols];
+        if (a < 0) continue;
+        for (var q = 0; q < ahead.length; q++) {
+          var bc = c2 + ahead[q][0];
+          var br = r2 + ahead[q][1];
+          if (bc >= cols || br >= rows) continue;
+          var b = cellRoom[bc + br * cols];
+          if (b < 0 || linked.has(Math.min(a, b) + '|' + Math.max(a, b))) continue;
+          if (Math.abs(root[a] - root[b]) > WANDER_REACH) continue;
+          pairs.push([a, b]);
+        }
+      }
+    }
+    for (var l = 0; l < plan.loops; l++) {
+      if (!pairs.length) break;
+      var pair = pairs.splice(pick(rng, pairs.length), 1)[0];
+      join(pair[0], pair[1]);
+    }
+
+    // 7. the stamped rooms, once everything else has stopped carving.
+    var missing = [];
+    if (pool.length) {
+      var up = center(head(canvas.rooms[spine[0]]));
+      missing = stampStage(rng, canvas, plan, pool, spine, up, pinned);
+    }
+    return { spine: spine, missing: missing };
+  }
+
+  // The layout stage a plan asks for: the wander layout or the spine. One
+  // place, as `_layout_for` is one place in the spec.
+  function layoutFor(plan) {
+    return plan.layout === 'wander' ? wanderStage : layoutStage;
   }
 
   // ------------------------------------------------------- the stamped rooms
@@ -2415,6 +2578,10 @@
     var up = anchors.up;
     var down = anchors.down;
     if (up[0] === down[0] && up[1] === down[1]) return false;
+    if (isPlainObject(section) && section.layout === 'wander') {
+      var apart = Math.min(WANDER_APART, Math.floor(Math.max(canvas.w, canvas.h) / 3));
+      if (Math.max(Math.abs(up[0] - down[0]), Math.abs(up[1] - down[1])) < apart) return false;
+    }
 
     // One connected component, and nothing carved that belongs to no room and
     // no corridor: the rooms and the corridors tile the walkable set.
@@ -2522,7 +2689,7 @@
     var plan = planStage(planRng, section, floorKind);
     var canvas = makeCanvas(width, height);
     var pool = stampPool(section, stampPack || [], depth);
-    var laid = layoutStage(layoutRng, canvas, plan, pool, !!pinned);
+    var laid = layoutFor(plan)(layoutRng, canvas, plan, pool, !!pinned);
     var spine = laid.spine;
     var missing = laid.missing;
     var out = {
@@ -2741,6 +2908,10 @@
     LOOPS_MAX: LOOPS_MAX,
     ROOMS_FLOOR: ROOMS_FLOOR,
     STAIR_CLEAR: STAIR_CLEAR,
+    WANDER_DIRS: WANDER_DIRS,
+    WANDER_REACH: WANDER_REACH,
+    WANDER_AWAY: WANDER_AWAY,
+    WANDER_APART: WANDER_APART,
     TILES_PER_MOB: TILES_PER_MOB,
     MOBS_MIN: MOBS_MIN,
     MOBS_MAX: MOBS_MAX,
