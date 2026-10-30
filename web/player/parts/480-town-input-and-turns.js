@@ -1152,6 +1152,16 @@
       if (!cast) combatSay((document.getElementById('bag-live') || {}).textContent || '');
       return cast;
     }
+    // `throw` (ADR 0024): the first thing carried that can be thrown, at
+    // this foe. The row runs the turn, so the throw does not run its own.
+    if (verb === 'throw') {
+      var thrown = throwableId();
+      if (!thrown) {
+        combatSay('You carry nothing to throw.');
+        return false;
+      }
+      return heroThrow(thrown, enemy, { noTurn: true });
+    }
     // The plain sentence, not "You use Console on it": what the verb
     // DID is the line a player reads (#463). `label` is kept in the
     // signature because the row's word is what the button says, but it
@@ -1500,6 +1510,17 @@
         enemyTurn();
         statusTurn();
       }
+      heroSettleSoon();
+      return;
+    }
+    // A web (ADR 0024) holds the hero's feet: a step is a struggle, and a
+    // struggle is a turn, so the web wears off and the monsters still act.
+    // A blow at a monster beside the hero is still a blow (above).
+    if (heroWebbed()) {
+      combatSay('You struggle in the web.');
+      lightTick();
+      enemyTurn();
+      statusTurn();
       heroSettleSoon();
       return;
     }

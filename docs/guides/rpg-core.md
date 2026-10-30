@@ -152,6 +152,7 @@ A trait is a word a rolled or fixed item carries (ADR 0017). A `traits` table gi
 - A verb may name its own label. A bare word is labelled with itself, as before.
 - `cast` casts the first harmful spell the hero knows and can pay for, at the foe the row names.
 - The Cast button shows only while the hero knows a harmful spell.
+- `throw` (ADR 0024) throws the first thing carried that can be thrown, at the foe the row names. It shows only while something can be thrown.
 
 ## Trips
 
@@ -186,6 +187,37 @@ On the `time` block:
 - A thing marked `pouch` is carried like any other, and takes none of the bag's places.
 - A fall leaves it with the hero, as it does a `keep` thing.
 
+## Monster skills
+
+ADR 0024. A Blueprint family's `defaults` (or a hand-placed enemy) may carry up to two `skills`:
+
+```json
+"skills": [{"skill": "web", "range": 3, "turns": 2, "every": 5}, {"skill": "spit", "harm": 2}]
+```
+
+| Skill | When | What it does | Keys (default) |
+| --- | --- | --- | --- |
+| `web` | from up to `range` tiles, on a clear line, once every `every` of its turns | the hero cannot step for `turns` of their turns; a step is a struggle and costs the turn; a blow at a monster beside them is still a blow | `range` 2-6 (3), `turns` 1-5 (2), `every` 2-20 (5) |
+| `spit` | the same | a hit for `harm`, rolled like a blow; guard takes from it | `range` 2-6 (4), `harm` 1-20 (2), `every` 2-20 (3) |
+| `fester` | on a melee blow that lands, `chance` in 100 | the bite keeps biting: `tick` a turn for `turns` (poison) | `chance` 1-100 (30), `tick` 1-9 (1), `turns` 1-9 (3) |
+| `dust` | the same | the hero's blows miss `miss` in 100 more often for `turns` (needs a `fight` block, which rolls misses) | `chance` 1-100 (40), `miss` 5-50 (25), `turns` 1-9 (3) |
+| `squeal` | once, the first time it is struck to half its health or below | every monster within `radius` tiles wakes and comes | `radius` 2-24 (16) |
+
+- A clear line has no wall, no prop and no other monster on the tiles between.
+- Each chance is drawn from its own named stream, so the same moves give the same bites.
+- The states (webbed, festering, dusted) are written on the HUD's state line in words, and a reload clears them, as it does a burn.
+
+## Throwing
+
+```json
+"items": {"stone": {"name": "a stone", "throw": {"harm": 2, "range": 5}}}
+```
+
+- A thing with `throw` is thrown at the foe the fight row names, or the nearest one within `range` tiles (2-8, default 5) on a clear line.
+- It is rolled like a blow (a miss, a critical), guard takes from its `harm` (1-20), and dust spoils it as it does a blow.
+- It lands on the foe's tile, to be picked up again. A throw costs the turn a blow costs.
+- Throw from the Bag, from the quick bar (it is a quick-use thing), or from a `throw` verb on the fight row, which shows only while something that can be thrown is carried.
+
 ## What this does not do yet
 
-Named so nobody assumes it: elites and groups on generated floors, monster weaknesses, status effects beyond burning, stock quantities and restock timing, permanent death, a map mark for the satchel, and interface icons for rarity.
+Named so nobody assumes it: elites and groups on generated floors, monster weaknesses, stock quantities and restock timing, permanent death, a map mark for the satchel, and interface icons for rarity.

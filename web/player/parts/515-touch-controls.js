@@ -408,7 +408,8 @@ function renderHotbar(box) {
     if (t.kind === 'item') {
       var def = itemCatalog()[t.id];
       b.dataset.item = t.id;
-      words = (def.use || 'Use') + ' ' + itemName(t.id) + (t.count > 1 ? ', ' + t.count + ' carried' : '');
+      words = (rpgThrowOf(def) ? 'Throw' : (def.use || 'Use')) + ' ' + itemName(t.id)
+        + (t.count > 1 ? ', ' + t.count + ' carried' : '');
       badge = t.count > 1 ? String(t.count) : '';
       var src = itemSpriteSrc(t.id);
       if (src) {

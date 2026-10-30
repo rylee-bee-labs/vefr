@@ -333,7 +333,8 @@ function hotbarOn() { return displayOn('hotbar'); }
 function quickUse(def) {
   return !!def && ((typeof def.heal === 'number' && def.heal > 0)
     || (typeof def.casts === 'string' && !!def.casts)
-    || (!!def.light && typeof def.light === 'object'));
+    || (!!def.light && typeof def.light === 'object')
+    || !!rpgThrowOf(def));
 }
 function hotbarThings() {
   if (!hotbarOn()) return [];
@@ -367,8 +368,15 @@ function hotbarPress(i) {
   var live = document.getElementById('bag-live');
   if (live) live.textContent = '';
   var before = combatText();
+  var target = (typeof VERB_TARGET !== 'undefined') ? VERB_TARGET : null;
+  // A thing that can be thrown is thrown (ADR 0024): its words are the
+  // fight's own, so there is nothing for the Bag's line to add.
+  if (t.kind === 'item' && rpgThrowOf(itemCatalog()[t.id])) {
+    if (typeof window.VEFR_THROW === 'function') window.VEFR_THROW(t.id, target);
+    return true;
+  }
   if (t.kind === 'item') useItem(t.id);
-  else castSpell(t.id, { target: (typeof VERB_TARGET !== 'undefined') ? VERB_TARGET : null });
+  else castSpell(t.id, { target: target });
   var said = live ? live.textContent : '';
   if (said) {
     var now = combatText();

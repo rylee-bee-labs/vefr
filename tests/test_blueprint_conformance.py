@@ -61,6 +61,6 @@ def test_reader_registry_and_closed_sets():
     assert blueprint.TOP_KEYS == {"blueprint", "families", "regions", "things"}
     assert blueprint.FAMILY_KEYS == {"defaults", "extends"}
     assert blueprint.FIELD_KEYS == {"name", "sprite", "hp", "atk", "xp", "sight", "drops",
-                                    "guard", "drop_chance", "gold"}
+                                    "guard", "drop_chance", "gold", "skills"}
     assert blueprint.REGION_KEYS == {"enemies", "places"}
     assert blueprint.INSTANCE_KEYS == {"id", "family", "at", "properties"}

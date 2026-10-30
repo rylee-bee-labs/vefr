@@ -109,10 +109,19 @@
     }
     return null;
   }
-  // What a status is called in a sentence, and what it is costing.
+  // What a status is called in a sentence, and what it is costing. ADR
+  // 0024 added three a monster's skill leaves: festering (a bite that
+  // keeps biting), webbed (no stepping) and dusted (blows go wide).
+  var STATUS_NAMES = { burning: 'Burning', festering: 'Festering', webbed: 'Webbed',
+                       dusted: 'Dusted' };
+  var STATUS_ENDS = { burning: 'The burning dies out of you.',
+                      festering: 'The festering wound closes.',
+                      webbed: 'You pull free of the web.',
+                      dusted: 'Your eyes clear.' };
   function statusWords(s) {
-    var said = s.effect === 'burning' ? 'Burning' : s.effect;
-    return said + ' (' + s.type + ', ' + s.turns + (s.turns === 1 ? ' turn' : ' turns') + ' left)';
+    var said = STATUS_NAMES[s.effect] || s.effect;
+    var left = s.turns + (s.turns === 1 ? ' turn' : ' turns') + ' left';
+    return said + ' (' + (s.type ? s.type + ', ' : '') + left + ')';
   }
   // The HUD line beside the health, the way the torch's turns and the
   // level's xp sit beside it. Words, never a tint; hidden and cleared
@@ -158,6 +167,38 @@
     renderStatusHud();
     return { status: s, fresh: true };
   }
+  // A state a monster's skill leaves (ADR 0024): festering ticks like a
+  // burn, through the same resolver; webbed and dusted do no damage and
+  // only count down. A second one keeps the longer of the two, as a burn
+  // does. Answers `{status, fresh}`, or null when it cannot take hold.
+  function applyHeroStatus(spec) {
+    if (!spec || !STATUS_NAMES[spec.effect] || spec.effect === 'burning') return null;
+    var tick = spec.tick || 0;
+    if (tick > 0 && resolveDamage(tick, spec.type, heroResist(), heroImmune()).damage <= 0) return null;
+    var held = findStatus(spec.effect);
+    if (held) {
+      held.turns = Math.max(held.turns, spec.turns);
+      if (spec.miss) held.miss = Math.max(held.miss || 0, spec.miss);
+      renderStatusHud();
+      return { status: held, fresh: false };
+    }
+    var s = { effect: spec.effect, type: spec.type || '', turns: spec.turns, tick: tick };
+    if (spec.miss) s.miss = spec.miss;
+    // A web or dust is laid in the monsters' turn, and "stuck for 2 turns"
+    // means two of the hero's: the countdown that closes this same turn
+    // passes it by once. A festering bite bites from this turn, as a burn.
+    if (!tick) s.fresh = true;
+    heroStatuses.push(s);
+    renderStatusHud();
+    return { status: s, fresh: true };
+  }
+  // What dust in the hero's eyes adds to a miss, in 100, and whether a web
+  // holds the hero's feet.
+  function heroMissBonus() {
+    var dust = findStatus('dusted');
+    return dust ? (dust.miss || 0) : 0;
+  }
+  function heroWebbed() { return !!findStatus('webbed'); }
   // One hero turn passes: every state ticks its damage, then counts
   // down, and the last one says so and goes.
   //
@@ -181,19 +222,24 @@
     var left = [];
     for (var i = 0; i < heroStatuses.length; i++) {
       var s = heroStatuses[i];
-      var bite = resolveDamage(s.tick, s.type, heroResist(), heroImmune());
-      if (bite.damage > 0) {
-        HERO_HP = Math.max(0, HERO_HP - bite.damage);
-        hitAt(null, '-' + bite.damage, 'hurt');
-        said.push('The ' + s.type + ' takes ' + bite.damage + ' from you.');
-      } else {
-        said.push('The ' + s.type + ' does no more.');
+      // A state that does no damage (a web, dust) only counts down.
+      if (s.tick > 0) {
+        var bite = resolveDamage(s.tick, s.type, heroResist(), heroImmune());
+        if (bite.damage > 0) {
+          HERO_HP = Math.max(0, HERO_HP - bite.damage);
+          hitAt(null, '-' + bite.damage, 'hurt');
+          said.push('The ' + (s.type || (STATUS_NAMES[s.effect] || s.effect).toLowerCase())
+                    + ' takes ' + bite.damage + ' from you.');
+        } else {
+          said.push('The ' + s.type + ' does no more.');
+        }
       }
+      if (s.fresh) { s.fresh = false; left.push(s); continue; }
       s.turns -= 1;
       if (s.turns > 0) {
         left.push(s);
       } else {
-        said.push(s.effect === 'burning' ? 'The burning dies out of you.' : s.effect + ' ends.');
+        said.push(STATUS_ENDS[s.effect] || (s.effect + ' ends.'));
       }
     }
     heroStatuses = left;
@@ -205,7 +251,8 @@
     // only that the fire took 2 would not know what lit it. Both halves
     // are on the live region, in the order they happened.
     var before = combatText();
-    combatSay(before ? before + ' ' + said.join(' ') : said.join(' '));
+    // A web or dust only counting down says nothing this turn.
+    if (said.length) combatSay(before ? before + ' ' + said.join(' ') : said.join(' '));
     // The harness reads the fight's own snapshot, so the health this
     // tick just moved is published with the rest of the turn.
     combatSnapshot();

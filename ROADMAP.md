@@ -217,6 +217,18 @@ gameplay features over new core machinery.
   Decision: [ADR 0022](docs/adr/0022-floors-that-wander.md); guide: `docs/guides/rulesets.md` ("`layout`").
   Tests: `tests/test_wander_floors.py`, `tests/test_floor_v3_parity.py`, `tests/test_descent_floors.py`.
 
+### LANDED 2026-10-30 (monster skills and throwing, ADR 0024 - from Gate 0 of the Cottage 1.0 roadmap)
+- [Gameplay] The owner asked for monsters with skills and for ranged attacks, and picked web and spit, a
+  festering bite, dust, a squeal for help, and "Throw things". A family (or a hand-placed enemy) may carry up to
+  two `skills` from that closed set, every number bounded and defaulted, each chance on its own seeded stream:
+  a web or a spit from a distance on a clear line, a festering bite or dust on a blow that lands (three new hero
+  states, said in words on the HUD), and a squeal that wakes the floor around it once. An item may carry `throw`:
+  rolled like a blow, landing where it struck, from the Bag, the quick bar or a `throw` verb on the fight row.
+  Both twins carry a family's skills onto its mobs. Found on the way: a generated floor's enemy entries dropped
+  the `guard` and `gold` ADR 0021 had planned, so cellar monsters never paid their coins; they carry both now.
+  Decision: [ADR 0024](docs/adr/0024-monster-skills-and-throwing.md); guide: `docs/guides/rpg-core.md`. Tests:
+  `tests/test_monster_skills.py`, `tests/test_monster_skills_play.py`, `tests/test_descent_parity.py`.
+
 ### LANDED 2026-10-30 (show it, ADR 0023 - from Gate 0 of the Cottage 1.0 roadmap)
 - [Player] Four opt-in `display` keys. The owner's first run found that "the spells and combat and gear weren't
   really there"; she picked all four ways offered to show them. `spell_card`: a card for each spell learned, on a

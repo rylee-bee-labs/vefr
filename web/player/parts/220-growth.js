@@ -322,8 +322,11 @@ function surfaceVerbs() {
       if (typeof verb !== 'string') return;
       var label = (v && typeof v === 'object' && typeof v.label === 'string' && v.label)
         ? v.label : verb.charAt(0).toUpperCase() + verb.slice(1);
-      // `cast` is on the row only while there is a harmful spell to cast.
+      // `cast` is on the row only while there is a harmful spell to cast,
+      // and `throw` (ADR 0024) only while something that can be thrown is
+      // carried.
       if (verb === 'cast' && !rpgCastReady()) return;
+      if (verb === 'throw' && !throwReady()) return;
       add(verb, label);
     });
   } else {
@@ -382,6 +385,12 @@ function renderVerbRow() {
 // (#463). Only a surface that shows the row answers: on `plain` and
 // `investigation` the row is hidden and the keys do nothing.
 function verbDigits() { return hotbarOn() ? 4 : 9; }
+// Whether anything carried can be thrown (ADR 0024): the fight row's
+// `throw` stands only while it can.
+function throwReady() {
+  var cat = itemCatalog();
+  return bagItems().some(function (id) { return !!rpgThrowOf(cat[id]); });
+}
 function combatVerbButton(n) {
   if (document.body.getAttribute('data-surface') !== 'combat') return null;
   if (n > verbDigits()) return null;

@@ -397,6 +397,21 @@
       "tests": [
         "tests/test_show_it_play.py"
       ]
+    },
+    {
+      "id": "monster-skills",
+      "name": "Monster skills and throwing",
+      "what": "A monster family may carry up to two skills from a closed set: a web that holds the hero's feet and a spit, both from a distance on a clear line; a festering bite and dust in the eyes on a blow that lands; and a squeal for help at half health. A thing with a throw can be thrown at a foe from the Bag, the quick bar or the fight row, and lands where it struck. A pack that names none of it plays as it did.",
+      "status": "built",
+      "detect": "none",
+      "docs": [
+        "docs/guides/rpg-core.md"
+      ],
+      "design": "docs/adr/0024-monster-skills-and-throwing.md",
+      "tests": [
+        "tests/test_monster_skills.py",
+        "tests/test_monster_skills_play.py"
+      ]
     }
   ]
 }
