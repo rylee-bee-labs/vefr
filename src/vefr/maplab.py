@@ -233,6 +233,11 @@ def load_pack(pack_dir: Path) -> dict:
         # before, and the validator sees nothing new.
         if 'music' in config:
             unified['music'] = config['music']
+        # The optional light block (lamplight), carried through ONLY when
+        # the pack declares it: a pack with no light loads exactly as
+        # before, and the validator sees nothing new.
+        if 'light' in config:
+            unified['light'] = config['light']
         if 'display' in config:
             unified['display'] = config['display']
         # The optional bag block (bag capacity): carried through ONLY when
@@ -1769,14 +1774,23 @@ _COLOUR = re.compile(r'#[0-9a-fA-F]{6}')
 LIGHT_HEIGHTS = 3   # one shadow-casting plane per height; the light rig takes four casters
 
 
+def _rows(m) -> list[str]:
+    """A map's rows, from its text or its list of strings (empty when it is neither)."""
+    if isinstance(m, str):
+        return m.splitlines()
+    return [r for r in m if isinstance(r, str)] if isinstance(m, list) else []
+
+
 def _region_maps(w: dict) -> dict[str, list[str]]:
-    """Every region the pack declares, with its map's rows (empty when the map is not text)."""
+    """Every region the pack declares, with its map's rows. A flat pack has one, its `town`, named as the weave
+    names it (`_region`, else "town")."""
     out: dict[str, list[str]] = {}
     for act in w.get('acts') or []:
         regions = act.get('regions') if isinstance(act, dict) else None
         for name, region in (regions or {}).items():
-            text = region.get('map_text') if isinstance(region, dict) else None
-            out[name] = text.splitlines() if isinstance(text, str) else []
+            out[name] = _rows(region.get('map_text')) if isinstance(region, dict) else []
+    if not out and isinstance(w.get('town'), dict):
+        out[w.get('_region') or 'town'] = _rows(w['town'].get('map'))
     return out
 
 

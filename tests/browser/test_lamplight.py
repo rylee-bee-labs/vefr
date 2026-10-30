@@ -8,7 +8,6 @@ needed; Chromium is launched with the flags that allow it. Without Chromium thes
 
 import argparse
 import json
-import os
 import shutil
 import socket
 import subprocess
@@ -76,26 +75,21 @@ def woven(tmp_path_factory):
 
 
 @pytest.fixture(scope="module")
-def gl_browser():
-    """Chromium with software WebGL2 (the shared `browser` fixture launches it without)."""
-    sync_api = pytest.importorskip("playwright.sync_api")
-    with sync_api.sync_playwright() as p:
-        try:
-            b = p.chromium.launch(args=GL_ARGS)
-        except Exception as exc:  # noqa: BLE001 - no browser installed here
-            if os.environ.get("VEFR_BROWSER_REQUIRED") == "1":
-                raise
-            pytest.skip(f"Chromium isn't installed ({exc.__class__.__name__}); run: uv run playwright install chromium")
-        yield b
-        b.close()
+def gl_browser(browser):
+    """Chromium with software WebGL2, from the suite's own Playwright (the shared `browser` fixture launches it
+    without the flags, and a second Playwright in one session refuses to start)."""
+    b = browser.browser_type.launch(args=GL_ARGS)
+    yield b
+    b.close()
 
 
 @pytest.fixture
 def make_page(gl_browser):
     contexts = []
 
-    def make(motion="reduce", init=None):
-        ctx = gl_browser.new_context(viewport={"width": 1100, "height": 900}, reduced_motion=motion)
+    def make(motion="reduce", init=None, viewport=None, dpr=1):
+        ctx = gl_browser.new_context(viewport=viewport or {"width": 1100, "height": 900}, reduced_motion=motion,
+                                     device_scale_factor=dpr)
         if init:
             ctx.add_init_script(init)
         contexts.append(ctx)
@@ -204,9 +198,9 @@ def test_a_phase_without_darkness_is_unlit(make_page, woven):
     page = make_page()
     _open(page, woven + "dusk-only.html")
     assert _visible(page)
-    page.evaluate("gotoPhase('dawn'); window.VEFR_REDRAW()")
+    page.evaluate("gotoPhase('dawn')")   # the rail, Rest or a rule: nothing else redraws
     assert not _visible(page)
-    page.evaluate("gotoPhase('dusk'); window.VEFR_REDRAW()")
+    page.evaluate("gotoPhase('dusk')")
     assert _visible(page)
 
 
@@ -250,4 +244,41 @@ def test_a_pack_without_light_has_no_switch(make_page, woven):
     assert page.locator("#lamp-canvas").count() == 0
     assert page.locator("#lamplight-toggle").count() == 0
     assert page.evaluate("typeof window.VEFR_LAMPLIGHT") == "undefined"
+    assert page.errors == []
+
+
+def test_standing_tiles_keep_their_pixels(make_page, woven):
+    """Each standing height is cut from the drawn map where its tiles stand: every one of them, not only the last."""
+    page = make_page()
+    _open(page, woven + "lit.html")
+    (wall,) = page.evaluate("(window.VEFR_REDRAW(), window.VEFR_LAMPLIGHT.standing())")
+    assert wall["tiles"] > 1
+    assert wall["opaque"] >= 0.9 * wall["tiles"] * wall["size"] ** 2
+
+
+BREAKABLE = """(() => { const up = WebGL2RenderingContext.prototype.texImage2D;
+  WebGL2RenderingContext.prototype.texImage2D = function (...a) {
+    if (window.__breakLight) throw new Error('the picture is too big for this GPU');
+    return up.apply(this, a);
+  };
+})();"""
+
+
+def test_a_failure_while_lighting_turns_lamplight_off_not_the_game(make_page, woven):
+    page = make_page(init=BREAKABLE)
+    _open(page, woven + "lit.html")
+    page.evaluate("window.__breakLight = true; window.VEFR_REDRAW()")   # must not throw out of draw()
+    assert page.locator("#lamp-canvas").count() == 0
+    assert page.locator("#lamplight-toggle").count() == 0
+    assert page.evaluate("window.VEFR_LAMPLIGHT.on()") is False
+    assert page.errors == []
+
+
+def test_a_dense_phone_screen_is_lit_at_one_and_a_half_pixels(make_page, woven):
+    """The phone that held 60 fps lit at most 1.5 pixels per CSS pixel; a 3x screen is not lit at 3x."""
+    page = make_page(viewport={"width": 390, "height": 844}, dpr=3)
+    _open(page, woven + "lit.html")
+    sizes = page.evaluate("[document.getElementById('town-canvas').width, document.getElementById('lamp-canvas').width]")
+    assert sizes == [1170, 585]
+    assert page.evaluate("window.VEFR_LAMPLIGHT.on()") is True
     assert page.errors == []

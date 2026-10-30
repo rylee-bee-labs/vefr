@@ -105,3 +105,27 @@ def test_norns_validate_passes_the_sample_world():
     r = subprocess.run([sys.executable, "-c", "import sys; from vefr.cli import norns_main; sys.exit(norns_main())", "validate", "--pack", str(SAMPLE)],
                        capture_output=True, text=True, check=False)
     assert r.returncode == 0, r.stdout + r.stderr
+
+
+def test_the_validator_reads_the_block_from_the_pack_on_disk(tmp_path):
+    """`load_pack` carries `light` through, so `norns validate` and `vefr explain light` see what the author wrote."""
+    import json
+    import shutil
+
+    from vefr import cli
+
+    pack = tmp_path / "pack"
+    shutil.copytree(SAMPLE, pack)
+    world = json.loads((pack / "world.json").read_text(encoding="utf-8"))
+    world["light"] = {"glow": 1}
+    (pack / "world.json").write_text(json.dumps(world), encoding="utf-8")
+    w = maplab.load_pack(pack)
+    assert any("glow" in e for e in maplab.validate(w, pack_dir=pack))
+    assert any("glow" in e for e in cli._explain_blocks()["light"](w, pack))
+
+
+def test_a_flat_pack_lights_its_one_region():
+    w = {"town": {"map": ["#####", "#...#", "#####"]}, "light": {"lamps": {"town": [{"at": [2, 1]}]}}}
+    assert maplab.light_errors(w) == []
+    w["light"]["lamps"]["town"][0]["at"] = [7, 1]
+    assert "off the map" in _said(w)

@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 
 PARTS = Path(__file__).resolve().parents[1] / "web" / "player" / "parts"
-RIG = PARTS / "398-lightrig.js"
+RIG = PARTS / "035-lightrig.html"
 
 # The light rig (lightrig.js 1.0.1, Rylee's own; see docs/guides/world-creation.md, "Lamplight"), as it is published:
 # 14,698 bytes. The part carries it between its two marker lines with the one word `export ` taken off its one
@@ -40,6 +40,22 @@ def test_the_rig_keeps_its_helpers_to_itself():
     outside = text.split("// -- lightrig.js", 1)[0] + text.rsplit(" end --\n", 1)[1]
     assert re.search(r"^var createLightRig = \(function \(\) \{$", outside, re.M)
     assert re.search(r"^  return createLightRig;\n\}\)\(\);$", outside, re.M)
+
+
+def test_the_rig_is_its_own_script_before_the_players():
+    """The rig is newer JavaScript than the rest of the player (`?.`, `??`, spread). In a script element of its own,
+    a browser that cannot read it loses lamplight alone, and the game still plays."""
+    from vefr import player_build
+
+    html, problems = player_build.build(PARTS.parents[2])
+    assert not problems
+    html = html.decode("utf-8")
+    rig_at, main_at = html.index('<script id="vefr-lightrig">\n'), html.index("<script>\n")
+    assert rig_at < main_at
+    rig = html[rig_at:html.index("</script>", rig_at)]
+    assert "createLightRig" in rig and "VEFR_" not in rig
+    glue = (PARTS / "505-lamplight.js").read_text(encoding="utf-8")
+    assert "typeof createLightRig !== 'function'" in glue
 
 
 def test_draw_runs_its_after_draw_hooks_last():

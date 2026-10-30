@@ -1,7 +1,10 @@
+<script id="vefr-lightrig">
 // The light rig: lightrig.js 1.0.1, the shared per-pixel light (WebGL2) that Lamplight (505-lamplight.js) uses.
-// A pinned copy, byte for byte, with `export ` taken off its one export because the player is one classic
-// script; tests/test_lamplight_player.py holds its sha256 and says how to move to a new version. Wrapped so
-// only createLightRig reaches the player's scope. Edit the rig upstream, never here.
+// A pinned copy, byte for byte, with `export ` taken off its one export because the player is classic script;
+// tests/test_lamplight_player.py holds its sha256 and says how to move to a new version. Wrapped so only
+// createLightRig reaches the player's scope, and in a script element of its own, before the player's: it is
+// newer JavaScript than the rest (`?.`, `??`, spread), and a browser that cannot read it loses lamplight alone.
+// Edit the rig upstream, never here.
 var createLightRig = (function () {
 // -- lightrig.js 1.0.1 start --
 // lightrig.js 1.0.1: light a stack of painted planes with a few point lights. WebGL2, no libraries, no build step.
@@ -303,3 +306,4 @@ function tex(gl, src, premultiply, mips, nearest, t) {
 // -- lightrig.js 1.0.1 end --
   return createLightRig;
 })();
+</script>

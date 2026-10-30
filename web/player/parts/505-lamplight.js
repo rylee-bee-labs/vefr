@@ -1,6 +1,6 @@
   // ---- lamplight: per-pixel light over the drawn map ----
   // The pack's optional `light` block (src/vefr/world.py, LIGHT; docs/guides/world-creation.md, "Lamplight"), drawn
-  // by the light rig (398-lightrig.js) on a WebGL2 canvas laid over the town canvas, after every draw() (the afterDraw
+  // by the light rig (035-lightrig.html) on a WebGL2 canvas laid over the town canvas, after every draw() (the afterDraw
   // hook in 480). The drawn map is the ground plane's paint, with the tiles' normal maps for relief; the tiles that
   // stand up are planes one height up, cut from the same drawn pixels, and they cast shadows. With no `light` block,
   // no WebGL2, a lost context, the Display switch off, or a phase the pack does not darken, the light canvas is hidden
@@ -9,20 +9,28 @@
     var spec = window.VEFR_WORLD && window.VEFR_WORLD.light;
     if (!spec || typeof spec !== 'object' || Array.isArray(spec)) return;
     if (/[?&]lamplight=off\b/.test(window.location.search)) return;
+    if (typeof createLightRig !== 'function') return;   // its own script (035) did not load in this browser
     var KEY = 'vefr-lamplight-' + (window.VEFR_WORLD.name || 'world');
     var FLAT = 'rgb(128,128,255)';   // a normal map's "facing straight up": no relief
     var HERO = { reach: 1.5, height: 1.3, intensity: 2, color: '#ffd694' };
     var LAMP = { reach: 2.4, height: 2.2, intensity: 2.4, color: '#ffdb99' };
+    var SCALE_MAX = 1.5;   // the light's pixels per CSS pixel, at most: the phone test held 60 fps at 1.5
     var glc = document.createElement('canvas');
     glc.id = 'lamp-canvas';
     glc.setAttribute('aria-hidden', 'true');
     glc.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;display:none;pointer-events:none';
     canvas.parentNode.insertBefore(glc, canvas.nextSibling);
-    var rig = null, lost = false;
+    var rig = null, lost = false, row = null;
+    // The light is gone for this page (the context was lost, or lighting failed): its canvas and its switch go, and
+    // the map draws as it does without lamplight.
+    function stop() {
+      lost = true;
+      rig = null;
+      glc.remove();
+      if (row) row.remove();
+    }
     try {
-      rig = createLightRig(glc, { maxLights: 4, maxCasters: 3, onLost: function () {
-        lost = true; rig = null; glc.remove();
-      } });
+      rig = createLightRig(glc, { maxLights: 4, maxCasters: 3, onLost: stop });
     } catch (e) {   // no WebGL2, or a context that cannot run the rig: the map stays as it is
       glc.remove();
       return;
@@ -91,25 +99,36 @@
       if (ready(im)) L.x.drawImage(im, px, py, s, s);
     }
 
-    var planesFor = '';
+    var planesFor = '', found = [];
     function world(bb, dpr) {   // a device-pixel box back to map pixels, for a plane's rect
       return [cameraAt.x + bb[0] / dpr, cameraAt.y + bb[1] / dpr,
               Math.max(1, bb[2] - bb[0]) / dpr, Math.max(1, bb[3] - bb[1]) / dpr];
     }
-    // After each draw(): repaint the planes from what draw() just put on the canvas, then light them.
+    // After each draw(): repaint the planes from what draw() just put on the canvas, then light them. Anything that
+    // fails in here (a canvas too big for this GPU, a picture the browser will not hand to WebGL) stops lamplight for
+    // the page rather than draw(), whose callers still have work to do after it.
     function sync() {
       if (!rig) return;
+      try {
+        light();
+      } catch (e) {
+        stop();
+        if (window.console) console.warn('lamplight stopped: ' + (e && e.message));
+      }
+    }
+    function light() {
       var dark = on ? ambient() : null;
       glc.style.display = dark ? 'block' : 'none';
       if (!dark) return;
       if (normalsFor !== regionName) loadNormals();
       var dpr = window.devicePixelRatio || 1, W = canvas.width, H = canvas.height, s = T * dpr;
-      if (glc.width !== W || glc.height !== H) { glc.width = W; glc.height = H; }
+      var gw = Math.round(viewW * scale()), gh = Math.round(viewH * scale());
+      if (glc.width !== gw || glc.height !== gh) { glc.width = gw; glc.height = gh; }
       size(relief, W, H);
       relief.x.fillStyle = FLAT;
       relief.x.fillRect(0, 0, W, H);
       var standAt = (window.VEFR_LIGHT_STAND || {})[regionName] || {};
-      var found = heights.map(function () { return { tiles: [], bb: [W, H, 0, 0] }; });
+      found = heights.map(function () { return { tiles: [], bb: [W, H, 0, 0] }; });
       var x0 = Math.max(0, Math.floor(cameraAt.x / T)), x1 = Math.min(cols - 1, Math.ceil((cameraAt.x + viewW) / T));
       var y0 = Math.max(0, Math.floor(cameraAt.y / T)), y1 = Math.min(rows - 1, Math.ceil((cameraAt.y + viewH) / T));
       for (var y = y0; y <= y1; y++) {
@@ -132,9 +151,13 @@
         size(st.relief, w, h);
         if (!f.tiles.length) return;
         st.paint.x.drawImage(canvas, -bb[0], -bb[1]);
+        // Keep the drawn pixels only where these tiles stand: ONE fill of every tile's square, because each fill in
+        // destination-in also clears everything outside its own shape.
         st.paint.x.globalCompositeOperation = 'destination-in';
         st.paint.x.fillStyle = '#000';
-        f.tiles.forEach(function (t) { st.paint.x.fillRect(t[0] - bb[0], t[1] - bb[1], s, s); });
+        st.paint.x.beginPath();
+        f.tiles.forEach(function (t) { st.paint.x.rect(t[0] - bb[0], t[1] - bb[1], s, s); });
+        st.paint.x.fill();
         st.paint.x.globalCompositeOperation = 'source-over';
         st.relief.x.drawImage(relief.c, -bb[0], -bb[1]);
       });
@@ -149,9 +172,9 @@
         planesFor = key;
       }
       rig.updatePlane(0, { albedo: canvas, normal: relief.c, rect: view });
-      found.forEach(function (f, k) {
-        rig.updatePlane(k + 1, { albedo: stands[k].paint.c, normal: stands[k].relief.c, rect: world(f.bb, dpr),
-                                 hidden: !f.tiles.length });
+      found.forEach(function (f, k) {   // a height with nothing standing on screen sends no pictures at all
+        rig.updatePlane(k + 1, f.tiles.length ? { albedo: stands[k].paint.c, normal: stands[k].relief.c,
+                                                  rect: world(f.bb, dpr), hidden: false } : { hidden: true });
       });
       frame();
       schedule();
@@ -187,13 +210,13 @@
       });
       return out;
     }
+    function scale() { return Math.min(window.devicePixelRatio || 1, SCALE_MAX); }
     var lastLights = [];
     function frame() {
       var dark = rig && on ? ambient() : null;
       if (!dark) return;
-      var dpr = window.devicePixelRatio || 1;
       lastLights = lights(performance.now());
-      rig.render({ camera: { x: cameraAt.x + viewW / 2, y: cameraAt.y + viewH / 2, zoom: dpr },
+      rig.render({ camera: { x: cameraAt.x + viewW / 2, y: cameraAt.y + viewH / 2, zoom: scale() },
                    lights: lastLights, ambient: dark, clear: hexRgb(town.bg, [0.02, 0.03, 0.04]) });
     }
     // The flame's flicker redraws the light alone, 30 times a second, while motion is allowed and the page is seen.
@@ -205,7 +228,10 @@
     function tick(t) {
       raf = 0;
       if (!rig || !on || document.hidden || reducedMotion() || !ambient()) return;
-      if (t - lastTick >= 32) { lastTick = t; frame(); }
+      if (t - lastTick >= 32) {
+        lastTick = t;
+        try { frame(); } catch (e) { stop(); return; }
+      }
       raf = requestAnimationFrame(tick);
     }
     document.addEventListener('visibilitychange', schedule);
@@ -214,7 +240,7 @@
     // has no switch to find. A real checkbox on a 44px row, like Sound's.
     var panel = document.querySelector('[data-panel-body="display"]');
     if (panel) {
-      var row = document.createElement('p');
+      row = document.createElement('p');
       row.className = 'sound-row';
       var label = document.createElement('label');
       var box = document.createElement('input');
@@ -243,6 +269,13 @@
       lights: function () { frame(); return lastLights.slice(); },
       planes: function () { return 1 + heights.length; },
       lost: function () { return lost; },
+      standing: function () {
+        return found.map(function (f, k) {
+          var c = stands[k].paint.c, d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data, n = 0;
+          for (var i = 3; i < d.length; i += 4) if (d[i] > 0) n++;
+          return { tiles: f.tiles.length, opaque: n, size: T * (window.devicePixelRatio || 1) };
+        });
+      },
       looping: function () { return !!raf; },
       px: function (x, y) {
         var dpr = window.devicePixelRatio || 1;
