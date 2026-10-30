@@ -188,15 +188,18 @@
         return still ? 1 : 1 + 0.07 * Math.sin(t * 0.0071 + seed) * Math.sin(t * 0.0113 + seed * 2)
           + 0.03 * Math.sin(t * 0.031 + seed);
       };
-      function light(d, at, seed) {
+      // glow: the soft disc around the flame itself, [strength, radius in tiles].
+      function light(d, at, seed, glow) {
         var c = hexRgb(d.color, [1, 0.85, 0.6]);
         return { x: at[0] * T, y: at[1] * T, z: d.height * T, intensity: d.intensity * flick(seed),
                  reach: d.reach * T, size: T * 0.3, color: c, edge: [c[0], c[1] * 0.65, c[2] * 0.45],
-                 glow: 0.6, glowRadius: T * Math.min(1.4, d.reach) };
+                 glow: glow[0], glowRadius: T * glow[1] };
       }
       var me = heroPose().tile;
       if (spec.hero && typeof spec.hero === 'object') {
-        out.push(light(Object.assign({}, HERO, spec.hero), [me[0] + 0.5, me[1] + 0.5], 1));
+        // Held beside the hero, as a lantern in hand, with a small glow: a light on the hero's own tile washes their
+        // picture out to white.
+        out.push(light(Object.assign({}, HERO, spec.hero), [me[0] + 0.62, me[1] + 0.55], 1, [0.5, 0.8]));
       }
       var lamps = ((spec.lamps || {})[regionName] || []).filter(function (l) {
         return Array.isArray(l.at) && !hideUnseen(l.at[0], l.at[1]) && (!l.flag || ruleFlagOn(l.flag));
@@ -206,7 +209,7 @@
           - (Math.abs(b.at[0] - me[0]) + Math.abs(b.at[1] - me[1]));
       });
       lamps.slice(0, 4 - out.length).forEach(function (l) {
-        out.push(light(Object.assign({}, LAMP, l), [l.at[0] + 0.5, l.at[1] + 0.5], l.at[0] * 7 + l.at[1]));
+        out.push(light(Object.assign({}, LAMP, l), [l.at[0] + 0.5, l.at[1] + 0.5], l.at[0] * 7 + l.at[1], [0.9, 1.4]));
       });
       return out;
     }
