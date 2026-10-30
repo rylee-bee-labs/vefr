@@ -298,6 +298,10 @@ A legend entry may also name `"edges": "lane-edges"`: ONE picture in
 + west 8 for each neighbour sharing the symbol) is drawn over the tile so
 one ground blends into the next (docs/guides/rulesets.md, "A ground that
 blends"). A legend naming no edges draws exactly as before.
+A tile may carry a normal map beside it, `stone-wall.normal.png` (and
+`stone-wall.normal.2.png` for variant 2, `.normal.gridCxR` for a grid),
+from any normal-map tool: tangent space, +Y up the picture. Lamplight
+(LIGHT below) reads it for relief; a tile without one is lit flat.
 A Section (`sections/<id>.json`) may name `decor`: pictures from the
 pack's `props/` scattered over its generated floors, `on` a floor tile or
 a wall face, about one for `every` tiles (docs/guides/rulesets.md, the
@@ -318,6 +322,31 @@ SAVES (rule saves): world.json may carry an optional top-level `saves`
   persist mode. maplab validates the block; a pack with none loads and
   bakes exactly as before. See docs/adr/0009-rule-saves.md and
   docs/guides/rules.md.
+
+LIGHT (lamplight): world.json may carry an optional top-level `light`
+  block: per-pixel light over the drawn map, in a browser with WebGL2.
+
+      {"light": {"stand": {"stone-wall": 1},
+                 "ambient": "#14141f" | {"<phase>": "#14141f"},
+                 "hero": {"reach": 1.5, "height": 1.3, "intensity": 2,
+                          "color": "#ffd694"},
+                 "lamps": {"<region>": [{"at": [x, y], "height": 2.2,
+                           "reach": 2.4, "intensity": 2.4,
+                           "color": "#ffdb99", "flag": "<rule flag>"}]}}}
+
+  Every key is optional. Distances are in tiles; `reach` is how far a
+  light carries (half as bright there, gone by four times it). `stand`
+  names the tiles that stand up and how tall (0.25 to 3 tiles, at most
+  three heights); they cast shadows. `ambient` is the darkness: the
+  colour the unlit map takes, in every phase or per phase. A phase it
+  does not name is not darkened, and the map draws as it does without
+  the block. `hero` is a light the hero carries. A lamp stands on a tile
+  of its region and shines while its `flag` is set (always, with no
+  flag). At most four lights show: the hero's and the three lit lamps
+  nearest the hero. Normal maps beside the tiles (TILES CONVENTION) give
+  relief. Without WebGL2, or with the player's Lamplight switch off, the
+  map draws exactly as before. maplab validates the block (`vefr
+  explain light`); see docs/guides/world-creation.md, "Lamplight".
 
 VISIBLE ENGINE: every load step is recorded to the weave log so the
 author can see exactly what the loader did. See weave.py.

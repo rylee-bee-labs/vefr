@@ -232,6 +232,59 @@ own processing step. A tile the region and the engine both lack is a
 validation error in a region that has a `tiles/`, while a region without
 one still falls back to the engine set silently.
 
+### Lamplight
+
+A world can be lit: real light over the drawn map, a pixel at a time, in a
+browser with WebGL2. Declare an optional `light` block in `world.json`:
+
+```json
+"light": {
+  "stand": {"stone-wall": 1, "rock": 0.5},
+  "ambient": {"dusk": "#14141f", "dawn": "#6a6670"},
+  "hero": {"reach": 1.5},
+  "lamps": {"town": [{"at": [6, 2], "flag": "lamp-lit"}]}
+}
+```
+
+Every key is optional, and every distance is in tiles.
+
+- `stand` names the tiles that stand up and how tall they are, from 0.25
+  to 3 tiles, with at most three different heights. Standing tiles cast
+  shadows away from each light.
+- `ambient` is the darkness: the colour the unlit map takes. Give one
+  colour for every phase, or one per phase. A phase it does not name is
+  not darkened, and the map draws as it does without lamplight.
+- `hero` is a light the hero carries. Its keys and defaults are `reach`
+  1.5, `height` 1.3, `intensity` 2 and `color` `"#ffd694"`.
+- `lamps` lists the lamps of each region. Each one stands on a tile `at`
+  [x, y] of that region's map and has the same four keys, with the
+  defaults `reach` 2.4, `height` 2.2, `intensity` 2.4 and `color`
+  `"#ffdb99"`. With a `flag`, a lamp shines only while that rule flag is
+  set: a rule that `set`s it lights the lamp.
+
+`reach` is how far a light carries: at that distance it is half as
+bright, and by four times that distance it is gone. At most four lights
+show at once: the hero's, then the shining lamps nearest the hero.
+
+For relief, put a normal map beside a tile: `stone-wall.normal.png` next
+to `stone-wall.png`, `stone-wall.normal.2.png` for variant 2, and
+`.normal.grid3x3` for a grid. Any normal-map tool works if it writes
+tangent space with +Y up the picture. A tile without one is lit flat.
+
+The player decides too. Menu > Display has a **Lamplight** switch, which
+is on by default and remembered per world. With reduced motion the
+flames hold still. Lamplight never runs without WebGL2, stops if the
+browser loses its graphics, and stays off with `?lamplight=off` in the
+address. In each of those cases, and with the switch off, the map draws
+exactly as it would without the block. People and monsters are lit with
+the ground: they have no relief or shadow of their own yet.
+
+Check it with `vefr explain light`. Code: `src/vefr/maplab.py`
+(`light_errors`), `web/player/parts/505-lamplight.js` and the pinned
+light rig in `035-lightrig.html`. Tests: `tests/test_lamplight_pack.py`,
+`tests/test_lamplight_weave.py`, `tests/test_lamplight_player.py` and
+`tests/browser/test_lamplight.py`.
+
 ### Doors, stairs and trapdoors
 
 A way out is drawn with the engine's door picture unless the pack brings

@@ -188,6 +188,11 @@
   // can call it directly (reduced motion in -> the identity out).
   window.VEFR_STEP_MOTION = stepMotion;
 
+  // What runs after every draw(), in order, once the map is on the canvas:
+  // a part that lays something over the drawn map pushes its function here
+  // (Lamplight, 505-lamplight.js). Empty, draw() is exactly what it was.
+  var afterDraw = [];
+
   function draw() {
     animWant = false;
     var ph = phase();
@@ -456,6 +461,7 @@
     }
     drawTargetCue();
     ctx.restore();
+    afterDraw.forEach(function (f) { f(); });
     if (animWant) scheduleAnim();
   }
 

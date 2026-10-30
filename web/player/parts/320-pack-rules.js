@@ -57,6 +57,13 @@ function rulesStateNow() {
   window.VEFR_RULES_STATE = RULES_STATE;
   return RULES_STATE;
 }
+// Whether one rule flag is set right now: a read-only view for the parts
+// that draw by a flag (a lamp shines while its flag is set). Only `set`
+// counts; a pack with no rules has no flags, so every flag reads unset.
+function ruleFlagOn(name) {
+  var s = rulesStateNow();
+  return !!(s && s.flags && s.flags[name] === true);
+}
 
 // One returned action onto a surface that ALREADY exists - never a new
 // subsystem. set/unset/believes/stops-believing/tells were applied to

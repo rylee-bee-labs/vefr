@@ -765,6 +765,51 @@ MUSIC = Block(
     },
 )
 
+# `light`: lamplight, per-pixel light over the drawn map (docs/guides/world-creation.md, "Lamplight"). Optional and
+# additive: a pack that declares none draws exactly as before. Distances are in tiles; `reach` is how far a light
+# carries (half as bright there, gone by four times it). The tables the key table cannot say - `stand`, `ambient` and
+# `lamps` - are checked by `maplab.light_errors`, which also owns every colour.
+LIGHT_HERO = Block(
+    name='hero',
+    example='{"reach": 1.5, "color": "#ffd694"}',
+    keys=(
+        Key('reach', 'hundredths', lo=25, hi=1600),
+        Key('height', 'hundredths', lo=25, hi=800),
+        Key('intensity', 'hundredths', lo=0, hi=800),
+        Key('color', 'str'),
+    ),
+    say={'unknown-key': 'light.hero may only hold {keys}, not {key!r}'},
+)
+
+LIGHT_LAMP = Block(
+    name='lamp',
+    example='{"at": [4, 2], "flag": "lamp-lit"}',
+    keys=(
+        Key('at', 'pair', lo=0, hi=999, required=True,
+            say={'wrong-type': '{path} must be a tile [x, y] on the map, such as [4, 2]'}),
+        Key('height', 'hundredths', lo=25, hi=800),
+        Key('reach', 'hundredths', lo=25, hi=1600),
+        Key('intensity', 'hundredths', lo=0, hi=800),
+        Key('color', 'str'),
+        Key('flag', 'word'),
+    ),
+    say={'unknown-key': 'a lamp in light.lamps may only hold {keys}, not {key!r}',
+         'missing-key': 'a lamp in light.lamps must hold {key}, such as {example}'},
+)
+
+LIGHT = Block(
+    name='light',
+    example='{"stand": {"stone-wall": 1}, "ambient": "#14141f"}',
+    keys=(
+        Key('stand', 'obj'),
+        Key('ambient', 'str-or-obj',
+            say={'wrong-type': '{path} must be a #rrggbb colour, or a table of one per phase, such as {{"dusk": "#14141f"}}'}),
+        Key('hero', 'obj', sub=LIGHT_HERO),
+        Key('lamps', 'obj'),
+    ),
+    say={'unknown-key': '{name} may only hold {keys}, not {key!r}'},
+)
+
 # The drawn tile, in CSS pixels, a touch phone follows the hero at (docs/guides/world-creation.md).
 PHONE_TILE_LO, PHONE_TILE_HI = 32, 72
 # `display.pixel_art`: how the engine draws the pack's art. A pack
@@ -1748,6 +1793,8 @@ BLOCKS = {
     'sound': SOUND,
     'time': TIME,
     'music': MUSIC,
+    'light': LIGHT,
+    'lamp': LIGHT_LAMP,
     'display': DISPLAY,
     'affix': AFFIX,
     'elites': ELITES,

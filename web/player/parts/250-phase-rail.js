@@ -19,6 +19,8 @@ function gotoPhase(k) {
   // Only a pack that asks for it keeps the standing phase (255).
   timePhaseSave(k);
   fireRule('phase-changes', { to: k });
+  // The map draws by the phase too (the flood, lamplight's darkness): show the new one now, not at the next step.
+  if (typeof window.VEFR_REDRAW === 'function') window.VEFR_REDRAW();
 }
 function buildPhaseRail() {
   var rail = document.getElementById('phase');

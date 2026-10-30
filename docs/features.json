@@ -293,6 +293,23 @@
       ]
     },
     {
+      "id": "lamplight",
+      "name": "Lamplight",
+      "what": "Real light over the drawn map: darkness per phase, a light the hero carries, lamps that shine while a rule flag is set, and standing tiles that cast shadows; off with one switch.",
+      "status": "built",
+      "detect": "none",
+      "docs": [
+        "docs/guides/world-creation.md"
+      ],
+      "design": null,
+      "tests": [
+        "tests/test_lamplight_pack.py",
+        "tests/test_lamplight_weave.py",
+        "tests/test_lamplight_player.py",
+        "tests/browser/test_lamplight.py"
+      ]
+    },
+    {
       "id": "walk-sheets",
       "name": "A character that walks",
       "what": "An optional sprite sheet beside a sprite gives it a walk cycle: idle when standing, one frame per step, and a missing side mirrored.",

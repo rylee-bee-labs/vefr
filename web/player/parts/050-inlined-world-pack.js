@@ -25,6 +25,12 @@ window.VEFR_REGION_TILES = {{region_tiles_json}};
 // Edges sheets per region, keyed by map symbol: a legend entry's `edges` (one 4 x 4 picture, the piece
 // drawn over a tile chosen by which neighbours share its symbol). Empty when no legend names edges.
 window.VEFR_TILE_EDGES = {{tile_edges_json}};
+// Lamplight's normal maps per region, keyed by map symbol: `<tile>.normal.webp` beside a tile, in the tile's own
+// shape (one picture, variants, or a grid). Empty when the pack has none; its tiles are then lit flat.
+window.VEFR_TILE_NORMALS = {{tile_normals_json}};
+// Lamplight's standing tiles per region, keyed by map symbol: the height in tiles of each symbol whose tile
+// `light.stand` names. Empty when the pack stands none.
+window.VEFR_LIGHT_STAND = {{light_stand_json}};
 window.VEFR_LOGBOK = {{logbok_json}};
 window.VEFR_LEDGER = {{ledger_json}};
 window.VEFR_VOICES = {{voices_json}};
