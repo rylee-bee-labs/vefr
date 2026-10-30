@@ -368,6 +368,21 @@
         "tests/test_rpg_core.py",
         "tests/test_rpg_core_play.py"
       ]
+    },
+    {
+      "id": "wander-floors",
+      "name": "Floors that wander",
+      "what": "A Section may lay its generated floors out as a walk over a grid of cells instead of a row of rooms across the floor, so the way from stair to stair turns, climbs and doubles back, with rooms branching off it all over the floor and the stairs well apart. A Section that names no layout draws exactly the floors it drew before.",
+      "status": "built",
+      "detect": "none",
+      "docs": [
+        "docs/guides/rulesets.md"
+      ],
+      "design": "docs/adr/0022-floors-that-wander.md",
+      "tests": [
+        "tests/test_wander_floors.py",
+        "tests/test_floor_v3_parity.py"
+      ]
     }
   ]
 }

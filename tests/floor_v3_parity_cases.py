@@ -10,7 +10,10 @@ Three things live here:
 1. **The sweep.** 200 seeds x every size of PLAN.md section 3 x every floor
    kind, which is the cell count PLAN.md section 2 names for the parity test,
    plus a stamped half at the two smallest sizes (E5b's JS half - the spec can
-   place stamped rooms and the twin has to place the same one).
+   place stamped rooms and the twin has to place the same one). Then the same
+   sweep again with the Section asking for the wander layout (ADR 0022), so
+   both layouts are held to the full cell count rather than one of them to a
+   sample.
 2. **The Python reference**, `staged()`: one attempt of one floor key, kept at
    its stage boundaries. It is `delve_v3._attempt` line for line with the
    stage outputs kept instead of thrown away, so the harness can compare
@@ -78,13 +81,18 @@ CYCLES = (1, 2)
 
 STAMP_FIXTURES = Path(__file__).parent / "fixtures" / "stamps"
 
+# The two layouts a Section may ask for, as the `wander` flag of a case: the
+# spine (False, every pack's default) and the wander layout of ADR 0022.
+LAYOUTS = (False, True)
+
 # The budget of PLAN.md section 3, per size cell: generate + validate, p95 over
 # the sweep. The desktop figure is the gate; the Chromium test in
 # tests/browser/ is the normative measurement and adds the phone proxy.
 BUDGET_DESKTOP_MS = 40.0
 
 
-def section(kind: str, rooms: int, with_stamps: bool = False) -> dict:
+def section(kind: str, rooms: int, with_stamps: bool = False,
+            wander: bool = False) -> dict:
     """A valid Section pack for one floor kind and one size's room quota.
 
     The same pack `tests/test_floor_v3_properties.py` builds, so the parity
@@ -112,6 +120,8 @@ def section(kind: str, rooms: int, with_stamps: bool = False) -> dict:
     }
     if with_stamps:
         pack["stamps"] = list(STAMP_TAGS)
+    if wander:
+        pack["layout"] = "wander"
     return pack
 
 
@@ -122,8 +132,8 @@ def stamp_pack() -> tuple:
 
 
 @lru_cache(maxsize=None)
-def _pack(kind: str, rooms: int, with_stamps: bool) -> dict:
-    return section(kind, rooms, with_stamps)
+def _pack(kind: str, rooms: int, with_stamps: bool, wander: bool = False) -> dict:
+    return section(kind, rooms, with_stamps, wander)
 
 
 @lru_cache(maxsize=None)
@@ -155,7 +165,7 @@ def canonical(value) -> str:
 @lru_cache(maxsize=256)
 def staged(seed: str, width: int, height: int, kind: str,
            with_stamps: bool = False, pinned: bool = False,
-           cycle: int = CYCLE) -> dict:
+           cycle: int = CYCLE, wander: bool = False) -> dict:
     """One attempt of one floor key, with every stage kept.
 
     `delve_v3._attempt` line for line, with the stage outputs kept instead of
@@ -167,14 +177,14 @@ def staged(seed: str, width: int, height: int, kind: str,
     about. Where an attempt stopped is read from the stage it did not reach
     (`graph`, `pop` and `floor` are None), not from that string.
     """
-    pack = copy.deepcopy(_pack(kind, _quota(width), with_stamps))
+    pack = copy.deepcopy(_pack(kind, _quota(width), with_stamps, wander))
     records = list(_records(with_stamps))
     key = f"{seed}/{pack['id']}/{cycle}/{STAMP_DEPTH}"
 
     plan = delve_v3._plan_stage(delve_v3.prng(f"v3|{key}|plan"), pack, kind)
     canvas = delve_v3.Canvas(width, height)
     pool = delve_v3._stamp_pool(pack, records, STAMP_DEPTH)
-    spine, missing = delve_v3._layout_stage(
+    spine, missing = delve_v3._layout_for(plan)(
         delve_v3.prng(f"v3|{key}|layout"), canvas, plan, pool, pinned)
 
     out = {
@@ -241,11 +251,12 @@ def staged(seed: str, width: int, height: int, kind: str,
 
 @lru_cache(maxsize=256)
 def end_to_end(seed: str, width: int, height: int, kind: str,
-               with_stamps: bool = False, cycle: int = CYCLE) -> dict:
+               with_stamps: bool = False, cycle: int = CYCLE,
+               wander: bool = False) -> dict:
     """`generate_floor_v3` itself: the retry ladder and the v2 fallback."""
     return delve_v3.generate_floor_v3(
         seed, (width, height),
-        copy.deepcopy(_pack(kind, _quota(width), with_stamps)),
+        copy.deepcopy(_pack(kind, _quota(width), with_stamps, wander)),
         kind, list(_records(with_stamps)) or None, STAMP_DEPTH, cycle=cycle)
 
 
@@ -257,9 +268,9 @@ def _quota(width: int) -> int:
     raise ValueError(f"no size in SIZES is {width} wide")
 
 
-def pack_key(kind: str, width: int, with_stamps: bool) -> str:
+def pack_key(kind: str, width: int, with_stamps: bool, wander: bool = False) -> str:
     """The name a Section pack is filed under in the cases file."""
-    return f"{kind}|{width}|{int(with_stamps)}"
+    return f"{kind}|{width}|{int(with_stamps)}" + ("|wander" if wander else "")
 
 
 def case_file() -> dict:
@@ -274,9 +285,9 @@ def case_file() -> dict:
     packs: dict[str, dict] = {}
 
     def add(seed: str, width: int, height: int, kind: str,
-            with_stamps: bool, cycle: int) -> None:
-        key = pack_key(kind, width, with_stamps)
-        packs[key] = section(kind, _quota(width), with_stamps)
+            with_stamps: bool, cycle: int, wander: bool) -> None:
+        key = pack_key(kind, width, with_stamps, wander)
+        packs[key] = section(kind, _quota(width), with_stamps, wander)
         cases.append({
             "i": len(cases),
             "seed": seed,
@@ -285,24 +296,29 @@ def case_file() -> dict:
             "kind": kind,
             "size": f"{width}x{height}",
             "stamped": with_stamps,
+            "wander": wander,
             "pack": key,
             "cycle": cycle,
         })
 
-    for with_stamps, sizes in ((False, SIZES), (True, STAMP_SIZES)):
-        for width, height, _rooms in sizes:
-            for kind in FLOOR_KINDS:
-                for seed in SEEDS:
-                    add(seed, width, height, kind, with_stamps, CYCLE)
+    # Each layout gets the whole sweep: the spine first, then the wander
+    # layout (ADR 0022) over the same seeds, sizes, kinds and stamps.
+    for wander in LAYOUTS:
+        for with_stamps, sizes in ((False, SIZES), (True, STAMP_SIZES)):
+            for width, height, _rooms in sizes:
+                for kind in FLOOR_KINDS:
+                    for seed in SEEDS:
+                        add(seed, width, height, kind, with_stamps, CYCLE, wander)
     # The nonzero-cycle block: the same sizes and the same seeds as the sweep,
     # at every size and both stamp settings, so `cycle` reaches the streams in
     # both languages rather than only ever being 0.
-    for cycle in CYCLES:
-        for with_stamps, sizes in ((False, SIZES), (True, STAMP_SIZES)):
-            for width, height, _rooms in sizes:
-                for kind in CYCLE_KINDS:
-                    for seed in CYCLE_SEEDS:
-                        add(seed, width, height, kind, with_stamps, cycle)
+    for wander in LAYOUTS:
+        for cycle in CYCLES:
+            for with_stamps, sizes in ((False, SIZES), (True, STAMP_SIZES)):
+                for width, height, _rooms in sizes:
+                    for kind in CYCLE_KINDS:
+                        for seed in CYCLE_SEEDS:
+                            add(seed, width, height, kind, with_stamps, cycle, wander)
     return {
         "packs": packs,
         "stamps": [dict(record) for record in stamp_pack()],
@@ -322,13 +338,13 @@ def expected_case_count() -> int:
     sizes = len(SIZES) + len(STAMP_SIZES)
     sweep = SEED_COUNT * sizes * len(FLOOR_KINDS)
     cycles = len(CYCLES) * CYCLE_SEED_COUNT * len(CYCLE_KINDS) * sizes
-    return sweep + cycles
+    return (sweep + cycles) * len(LAYOUTS)
 
 
 def expected_stages(case: dict) -> dict[str, str]:
     """What the twin has to return for one case, stage by stage."""
     got = staged(case["seed"], case["w"], case["h"], case["kind"],
-                 case["stamped"], cycle=case["cycle"])
+                 case["stamped"], cycle=case["cycle"], wander=case["wander"])
     return {
         "plan": canonical(got["plan"]),
         "layout": canonical(got["layout"]),
@@ -348,6 +364,7 @@ def where(case: dict) -> str:
     about the cycle.
     """
     stamp = " stamped" if case["stamped"] else ""
+    stamp += " wander" if case["wander"] else ""
     return (f"seed={case['seed']} size={case['size']} kind={case['kind']}"
             f"{stamp} cycle={case['cycle']}")
 
@@ -430,7 +447,7 @@ def compare_full(records: list[dict], by_index: dict[int, dict]) -> dict:
         case = by_index[got["i"]]
         compared += 1
         want = end_to_end(case["seed"], case["w"], case["h"], case["kind"],
-                          case["stamped"], cycle=case["cycle"])
+                          case["stamped"], cycle=case["cycle"], wander=case["wander"])
         if got["gen"] != want["gen"]:
             _note(gen_mismatches, f"{where(case)}: the twin returned gen "
                                  f"{got['gen']} and the spec returned gen "
@@ -463,7 +480,7 @@ def reached() -> dict:
         counts[stage] = 0
     for case in file["cases"]:
         got = staged(case["seed"], case["w"], case["h"], case["kind"],
-                     case["stamped"], cycle=case["cycle"])
+                     case["stamped"], cycle=case["cycle"], wander=case["wander"])
         counts["plan"] += 1
         counts["layout"] += 1
         if got["graph"] is not None:

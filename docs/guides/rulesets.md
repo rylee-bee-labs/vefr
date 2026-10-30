@@ -487,6 +487,7 @@ and refuses every value below at the pointer that names it.
 | `vault` | the vault stamp's id | no vault |
 | `endless` | `{"omens": [{"id", "label", one of `fog_radius`/`groups_per_floor`/`warden_affixes`}], "picks": N}` - the omens an endless descent offers | no omens |
 | `decor` | **small pictures scattered over its floors** - see below | no decor |
+| `layout` | **how a floor's rooms are laid out**: `"spine"` or `"wander"` - see below | `"spine"` |
 
 **`mobs` - how many monsters a floor carries.** Without it the count is
 area policy: one monster per 30 walkable tiles, clamped into 4..36, which
@@ -521,6 +522,32 @@ JavaScript twins in `web/player/parts/396-` and `397-` read the same
 table through the same rule. Code: `src/vefr/sections.py`
 (`mob_count`), `src/vefr/delve_v3.py` (`mob_budget`); tests:
 `tests/test_section_monster_count.py`.
+
+**`layout` - how a floor's rooms are laid out** (ADR 0022). The default,
+`"spine"`, lays one row of rooms across the floor's long axis with the up
+stair at one end and the down stair at the other, so the way down is a
+straight walk with rooms off one side of it. `"wander"` lays the floor as a
+grid of cells and walks across them, so the way from stair to stair turns,
+climbs and doubles back, with rooms branching off it all over the floor:
+
+```json
+"layout": "wander"
+```
+
+Both layouts keep everything else a floor promises: one connected floor,
+two loops or more, the warden off the main path, most chest value off it,
+and the stamped rooms placed the same way. A wander floor's stairs are also
+at least 16 tiles apart (a third of the floor's long side on a small floor).
+The layout is part of the floor's identity, so switching it redraws the floors
+a save remembers. `vefr check` refuses any other value:
+
+```
+sections/cellar.json: /section/layout section.layout must be "spine" or "wander", the way the floor's rooms are laid out
+```
+
+Code: `src/vefr/delve_v3.py` (`_wander_stage`), its twin `wanderStage` in
+`web/player/parts/396-engine-delve-v3.js`; tests:
+`tests/test_wander_floors.py`, `tests/test_floor_v3_parity.py`.
 
 **`decor` - small pictures scattered over its floors** (vefr#442). A
 generated floor has no authored map to put props on, so a Section names

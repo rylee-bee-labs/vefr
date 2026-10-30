@@ -29,7 +29,7 @@ window.VEFR_DESCENT = (function () {
   var STREAM_VERSION = 'v3';
   var MOB_SPACING = 7;
   var FLOOR_CAP = 40;
-  var FLOOR_BYTES = 1500;
+  var FLOOR_BYTES = 3000;
   var SAVE_BYTES = 250000;
   var DEFAULT_FOG_RADIUS = 5;
   // A Section's decor (vefr#442), the twins of delve.py's `DECOR_*`.
@@ -1091,7 +1091,7 @@ window.VEFR_DESCENT = (function () {
 
   // PLAN §3's other half: a visited floor may not carry more than
   // FLOOR_BYTES, and nothing else in the save enforces that - forty floors
-  // at 1.5 KB is 60 KB, comfortably inside SAVE_BYTES, so a save of
+  // at 3 KB is 120 KB, comfortably inside SAVE_BYTES, so a save of
   // oversized records sails under the whole-save trim and the per-floor
   // number is a claim rather than a contract.
   //

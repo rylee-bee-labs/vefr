@@ -155,7 +155,7 @@ Lifecycle:
 | Generate + validate, p95 over 200 seeds | ≤ 40 ms | ≤ 150 ms |
 | Monster turn, all monsters awake | ≤ 8 ms | ≤ 30 ms |
 | Frame while scrolling | ≤ 4 ms | ≤ 12 ms |
-| Save per visited floor | ≤ 1.5 KB | — |
+| Save per visited floor | ≤ 3 KB (1.5 KB until 2026-10-30: rolled loot left on a floor outgrew it, and the floor's map was given up first) | — |
 | Whole save at 40 floors | ≤ 250 KB | — |
 | `packaged.html` growth (engine code) | ≤ 30 KB | — |
 | JS heap for the floor | ≤ 5 MB | — |

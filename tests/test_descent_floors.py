@@ -6,7 +6,7 @@ walks the Sections again in cycle 1, 2, ... Every floor's randomness
 comes from a named stream seeded `v3|<floor key>|<stream>`, so two
 streams never share a draw and changing what lives on a floor cannot
 move a wall. A floor is identified by `(gen, section hash, floor key)`,
-and the budgets of PLAN §3 - 1.5 KB per visited floor, 250 KB for a
+and the budgets of PLAN §3 - 3 KB per visited floor, 250 KB for a
 whole save at 40 floors - are engine constants, not pack choices.
 """
 
@@ -279,8 +279,12 @@ def test_a_mobs_drops_come_from_that_mobs_own_stream():
 # ---- the budgets and the ban --------------------------------------------
 
 def test_the_budgets_are_the_ones_the_plan_set():
+    # FLOOR_BYTES moved from 1_500 to 3_000 on 2026-10-30, and PLAN §3's table
+    # with it: rolled loot left on a floor (ADR 0021) outgrew the old number,
+    # and the order of sacrifice then gave up the floor's map first. The other
+    # two did not move.
     assert delve.FLOOR_CAP == 40
-    assert delve.FLOOR_BYTES == 1_500
+    assert delve.FLOOR_BYTES == 3_000
     assert delve.SAVE_BYTES == 250_000
 
 

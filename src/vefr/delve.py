@@ -448,9 +448,13 @@ STREAM_VERSION = "v3"
 # names `story_end` in its `descent` block and sets it with any rule.
 STORY_END_FLAG = 'king-slain'
 
-# The save budgets of PLAN §3, and the cap that keeps them.
+# The save budgets of PLAN §3, and the cap that keeps them. FLOOR_BYTES was
+# 1_500 until 2026-10-30: ADR 0021 left a kill's rolled loot on the floor
+# (rarity and traits included), and a floor with a dozen finds left on it no
+# longer fit beside its explored bitset, so the bitset - the floor's map - was
+# given up. 3_000 holds both; forty floors of it is 120 KB, inside SAVE_BYTES.
 FLOOR_CAP = 40
-FLOOR_BYTES = 1_500
+FLOOR_BYTES = 3_000
 SAVE_BYTES = 250_000
 
 # What a Section gets when it says nothing. Its floor size and kind come

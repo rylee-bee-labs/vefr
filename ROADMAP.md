@@ -203,6 +203,20 @@ gameplay features over new core machinery.
   button also survives the fight row being redrawn. Decision: [ADR 0021](docs/adr/0021-the-rpg-core.md); guide: `docs/guides/rpg-core.md`. Tests:
   `tests/test_rpg_core.py`, `tests/test_rpg_core_play.py`, and the parity test with both twins moved together.
 
+### LANDED 2026-10-30 (floors that wander, ADR 0022 - from Gate 0 of the Cottage 1.0 roadmap)
+- [Gameplay] A Section may name `"layout": "wander"`. The owner's first playthrough found "almost straight
+  lines to every staircase", and measured, every spine floor of a real Section walked stair to stair in a
+  straight line along one row. A wander floor is a walk over a grid of cells - it turns, climbs and doubles back,
+  heading outward - with rooms in its cells, branches into the free cells beside them, two or three local loops,
+  and the spine's own stamped rooms, graph, population and checks after it; its stairs stand at least 16 tiles
+  apart. On that Section, 800 floors: no straight walk, a median of 14 turns, stairs a median 35 tiles apart,
+  no fallback to v2. `"spine"` stays the default, and a Section that names no layout draws byte-identical
+  floors. Both twins move together: the parity sweep runs the whole sweep again for the wander layout.
+  Found on the way: a floor's save budget (PLAN §3) was 1.5 KB, set before ADR 0021 left rolled loot on the
+  floor, and a floor holding a dozen finds gave up its map to fit; it is 3 KB in both twins now.
+  Decision: [ADR 0022](docs/adr/0022-floors-that-wander.md); guide: `docs/guides/rulesets.md` ("`layout`").
+  Tests: `tests/test_wander_floors.py`, `tests/test_floor_v3_parity.py`, `tests/test_descent_floors.py`.
+
 ### IN PROGRESS (decided by Rylee on 2026-10-04; refreshed 2026-10-12)
 - **The endless dungeon** (epic [#273](https://github.com/rylee-bee-labs/vefr/issues/273); design `docs/plans/endless-dungeon/DESIGN.md`, build plan `docs/plans/endless-dungeon/PLAN.md`, research `docs/research/big-generated-maps.md`): floors generated while you play from `seed + depth`, cut into sections of 8 to 11 floors; each ends in a key warden whose key opens a vault with a lore note; acts change the town only; elites, linked groups, hand-painted stamps and much bigger maps (up to 128x96, kept cheap for phones); an endless mode after the story.
   - **Merged:** E0a measurements (#278), F1 fog as a bitset (#287), E0d sleeping monsters and a radius-bounded flood (#288), E2 the v3 Python floor generator with property sweeps (#289).
