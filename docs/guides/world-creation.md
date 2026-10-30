@@ -223,8 +223,8 @@ Four things the fight already does can also be put where the player looks
 - `hit_numbers`: each blow's number over the one it struck (`3`, `CRIT 6`,
   `miss`), the hero's hurt (`-2`) and heals (`+3`) over the hero. With
   reduced motion it holds still. The fight's line still says every number.
-- `hotbar`: up to four quick-use buttons under the health bar, on every
-  screen: each kind of thing used in one tap (a `heal`, a `light`, a thing
+- `hotbar`: up to four quick-use buttons beside the health bar (on a
+  phone, over the stick, where a thumb is), on every screen: each kind of thing used in one tap (a `heal`, a `light`, a thing
   that `casts`), then the spells the hero knows. Keys 5 to 8, which the
   player can change in Controls; the fight row's number keys stop at 4.
 

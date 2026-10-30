@@ -76,7 +76,9 @@ Four `display` keys, each a `true` or `false`, in `shapes.DISPLAY`:
   fight row's number keys stop at 4, so a digit always means one button. A
   press is the Bag's own Use or Cast (aimed at the foe the fight row
   names), and what it said goes to the fight's line, ahead of a monster's
-  answer in the turn it cost.
+  answer in the turn it cost. On a touch screen the top row has no room for
+  four more buttons, so the bar stands where a thumb is: over the stick,
+  level with the fight verbs on the other side.
 
 **And one fix, for every pack.** The fall card's note says "Your bag, your
 gold and the ground you have walked are as you left them." On a fall that

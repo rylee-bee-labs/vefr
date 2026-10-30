@@ -451,11 +451,14 @@
   .hot-btn .hot-key { position: absolute; left: 3px; top: 2px; font: 700 0.7rem/1 var(--read); opacity: 0.85; }
   .hot-btn .hot-cost { position: absolute; right: 3px; bottom: 2px; font: 700 0.7rem/1 var(--read); color: #A9CFF2; }
   .hot-btn .hot-count { position: absolute; right: -4px; bottom: -4px; }
-  /* On a touch screen the bar stands down the left edge under the health,
-     clear of the messages, which take the top of the screen's middle. */
+  /* On a touch screen the bar leaves the top row, which has no room for it,
+     and stands where a thumb is: over the stick, level with the fight verbs
+     on the other side (on the right instead, when the controls are swapped). */
   @media (pointer: coarse) {
     .hot-btn .hot-key { display: none; }
-    body.in-game .touch-quick.hotbar:not([hidden]) { flex-direction: column; align-self: flex-start; flex-basis: 100%; }
+    body.in-game .touch-quick.hotbar:not([hidden]) { position: fixed; left: calc(12px + var(--sai-left));
+      bottom: calc(196px + var(--sai-bottom)); margin: 0; z-index: 2; }
+    body.in-game.touch-left .touch-quick.hotbar:not([hidden]) { left: auto; right: calc(12px + var(--sai-right)); }
   }
   .touch-range-row { display: flex; justify-content: space-between; align-items: center; margin: 12px 0 0; }
   .touch-set { border: 0; margin: 10px 0; padding: 0; }
