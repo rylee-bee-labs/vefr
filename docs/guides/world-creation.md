@@ -281,7 +281,7 @@ the ground: they have no relief or shadow of their own yet.
 
 Check it with `vefr explain light`. Code: `src/vefr/maplab.py`
 (`light_errors`), `web/player/parts/505-lamplight.js` and the pinned
-light rig in `398-lightrig.js`. Tests: `tests/test_lamplight_pack.py`,
+light rig in `035-lightrig.html`. Tests: `tests/test_lamplight_pack.py`,
 `tests/test_lamplight_weave.py`, `tests/test_lamplight_player.py` and
 `tests/browser/test_lamplight.py`.
 
