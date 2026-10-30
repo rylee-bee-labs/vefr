@@ -184,6 +184,7 @@
       var bite = resolveDamage(s.tick, s.type, heroResist(), heroImmune());
       if (bite.damage > 0) {
         HERO_HP = Math.max(0, HERO_HP - bite.damage);
+        hitAt(null, '-' + bite.damage, 'hurt');
         said.push('The ' + s.type + ' takes ' + bite.damage + ' from you.');
       } else {
         said.push('The ' + s.type + ' does no more.');

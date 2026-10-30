@@ -335,6 +335,8 @@ function useItem(id) {
       : ' You already know that one.';
     bagSay('You ' + verb + ' ' + itemName(id) + '.' + learned);
     renderSpellList();
+    // A pack with `display.spell_card` (ADR 0023) says what it does, too.
+    if (fresh) showSpellCard(def.spell);
     return true;
   }
   if (!(typeof def.heal === 'number' && def.heal > 0)) {
@@ -355,6 +357,7 @@ function useItem(id) {
   var gained = HERO_HP - before;
   bagSay('You ' + verb + ' ' + itemName(id) + '. '
     + 'You recover ' + gained + ' health.');
+  heroHitNumber('+' + gained, 'heal');
   syncCombat();
   // With `fight.turns` a drink is a turn (ADR 0021): the monsters answer it.
   rpgSpendTurn();

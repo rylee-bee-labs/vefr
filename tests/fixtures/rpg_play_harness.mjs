@@ -5,10 +5,12 @@
    (window.VEFR_COMBAT, window.VEFR_RPG). Nothing here reads a colour.
 
    usage: node rpg_play_harness.mjs <woven.html> [spec json]
-   spec: {"steps": [...]}
+   spec: {"steps": [...], "matchMedia": true}
      { "do": "press", "dir": "left" }        // presses that dpad button
      { "do": "eval", "js": "...", "tag": "" } // runs JS in the page, keeps its JSON result
      { "do": "snap", "tag": "" }             // captures a named snapshot
+     { "do": "key", "key": "ArrowLeft" }     // one keydown on the document
+     { "do": "wait", "ms": 500 }             // lets the page's timers run
    Prints {"final": <snapshot>, "snaps": {...}, "evals": {...}, "errors": [...]}.
 
    A snapshot:
@@ -41,7 +43,10 @@ const dom = new JSDOM(html, {
     window.HTMLCanvasElement.prototype.getContext = function () {
       return new Proxy({ canvas: this }, { get: (t, k) => (k in t ? t[k] : noop) });
     };
-    window.matchMedia = () => ({ matches: true, addListener: noop });
+    // Every media query answers yes (a coarse pointer, reduced motion) unless
+    // the spec says `"matchMedia": false`, a desk with motion on.
+    const answer = spec.matchMedia !== false;
+    window.matchMedia = () => ({ matches: answer, addListener: noop });
     window.addEventListener('error', (e) => errors.push(String(e.message || e)));
   },
 });
@@ -90,6 +95,9 @@ let last = snap();
 for (const step of (spec.steps || [])) {
   if (!step || !step.do) continue;
   if (step.do === 'press') press(step.dir);
+  else if (step.do === 'key') {
+    d.dispatchEvent(new w.KeyboardEvent('keydown', { key: step.key, bubbles: true }));
+  } else if (step.do === 'wait') await wait(step.ms || 0);
   else if (step.do === 'eval') {
     const value = w.eval(step.js);
     evals[step.tag || String(Object.keys(evals).length)] =

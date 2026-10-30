@@ -217,6 +217,18 @@ gameplay features over new core machinery.
   Decision: [ADR 0022](docs/adr/0022-floors-that-wander.md); guide: `docs/guides/rulesets.md` ("`layout`").
   Tests: `tests/test_wander_floors.py`, `tests/test_floor_v3_parity.py`, `tests/test_descent_floors.py`.
 
+### LANDED 2026-10-30 (show it, ADR 0023 - from Gate 0 of the Cottage 1.0 roadmap)
+- [Player] Four opt-in `display` keys. The owner's first run found that "the spells and combat and gear weren't
+  really there"; she picked all four ways offered to show them. `spell_card`: a card for each spell learned, on a
+  level or from a book - what it does, what it costs, how to cast it - that a walking key does not dismiss.
+  `wear_prompt`: gear picked up that would raise a number asks "Wear it?" with the change, Y or N, counting only
+  what the player can know (no unread trait). `hit_numbers`: each blow's number, miss and critical over the one it
+  struck, hurt and heals over the hero, still under reduced motion and for the eye only (the line still says them).
+  `hotbar`: up to four quick-use buttons on every screen - one-tap things, then known spells - keys 5 to 8 in the
+  player's Controls, with the fight row's digits stopping at 4. Fixed for every pack: a fall that left the bag on
+  the floor no longer says the bag is as it was. Decision: [ADR 0023](docs/adr/0023-show-it.md); guide:
+  `docs/guides/world-creation.md` ("Show it"). Tests: `tests/test_show_it_play.py`.
+
 ### IN PROGRESS (decided by Rylee on 2026-10-04; refreshed 2026-10-12)
 - **The endless dungeon** (epic [#273](https://github.com/rylee-bee-labs/vefr/issues/273); design `docs/plans/endless-dungeon/DESIGN.md`, build plan `docs/plans/endless-dungeon/PLAN.md`, research `docs/research/big-generated-maps.md`): floors generated while you play from `seed + depth`, cut into sections of 8 to 11 floors; each ends in a key warden whose key opens a vault with a lore note; acts change the town only; elites, linked groups, hand-painted stamps and much bigger maps (up to 128x96, kept cheap for phones); an endless mode after the story.
   - **Merged:** E0a measurements (#278), F1 fog as a bitset (#287), E0d sleeping monsters and a radius-bounded flood (#288), E2 the v3 Python floor generator with property sweeps (#289).

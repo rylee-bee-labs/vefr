@@ -15,4 +15,8 @@ var STAIR_DEATH_LINE = 'You wake at the foot of the stair, whole again. '
 // what the bag held waits on the floor where they fell.
 var SATCHEL_DEATH_LINE = 'You wake, whole again. What you carried waits '
   + 'where you fell.';
+// The fall card's note for that fall: the bag is on the floor, so the
+// card's own note ("Your bag ... as you left them") would not be true.
+var SATCHEL_FALL_NOTE = 'Your health is whole again. What you wear, your gold '
+  + 'and the ground you have walked are as you left them.';
 

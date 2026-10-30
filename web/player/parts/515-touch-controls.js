@@ -346,6 +346,7 @@ function quickItemIds() {
 function renderQuickslots() {
   var box = document.getElementById('touch-quick');
   if (!box) return;
+  if (hotbarOn()) { renderHotbar(box); return; }
   var ids = quickItemIds();
   box.textContent = '';
   box.hidden = !ids.length;
@@ -368,7 +369,98 @@ function renderQuickslots() {
   });
 }
 
+// The quick bar (ADR 0023, `display.hotbar`): the same box, on every screen
+// rather than a touch one alone, holding up to four things - each kind of a
+// thing used in one tap, with how many are carried, then the spells known,
+// with what each costs - and each button printing the key that presses it.
+// A spell the hero cannot pay for is still a button (a press says why), and
+// says so in its name; the eye gets the same answer, dimmed.
+// A spell's face, drawn in a line so no art file is needed: a bolt for one
+// that harms, a shield for a ward, a heart for a heal.
+function hotbarIcon(spell) {
+  var path = (rpgWhole(spell.harm) && spell.harm > 0) ? '<path d="M17 4l-7 12h6l-2 12 9-15h-6z"/>'
+    : (spell.ward && typeof spell.ward === 'object') ? '<path d="M16 5l9 3v7c0 6-4 10-9 12-5-2-9-6-9-12V8z"/>'
+    : (typeof spell.heal === 'number' && spell.heal > 0)
+      ? '<path d="M16 26s-10-6-10-13a5 5 0 0 1 10-2 5 5 0 0 1 10 2c0 7-10 13-10 13z"/>'
+      : '<circle cx="16" cy="16" r="8"/>';
+  return '<svg class="hot-icon" viewBox="0 0 32 32" aria-hidden="true" focusable="false">' + path + '</svg>';
+}
+// The first letter of a name, past the article a pack writes ("a cloudy
+// potion" is C): the face of a thing that has no picture.
+function hotbarLetter(name) {
+  var bare = String(name || '').replace(/^(a|an|the|some)\s+/i, '');
+  return (bare.charAt(0) || '?').toUpperCase();
+}
+function renderHotbar(box) {
+  var things = hotbarThings();
+  box.textContent = '';
+  box.classList.add('hotbar');
+  box.setAttribute('aria-label', 'Quick bar');
+  box.hidden = !things.length;
+  things.forEach(function (t, i) {
+    var keys = keybindKeys('quick' + (i + 1));
+    var keyName = keys.length ? keybindKeyName(keys[0]) : '';
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'touch-btn touch-quick-btn hot-btn';
+    b.dataset.slot = String(i);
+    var words, badge = '';
+    if (t.kind === 'item') {
+      var def = itemCatalog()[t.id];
+      b.dataset.item = t.id;
+      words = (def.use || 'Use') + ' ' + itemName(t.id) + (t.count > 1 ? ', ' + t.count + ' carried' : '');
+      badge = t.count > 1 ? String(t.count) : '';
+      var src = itemSpriteSrc(t.id);
+      if (src) {
+        var im = document.createElement('img');
+        im.src = src;
+        im.alt = '';
+        b.appendChild(im);
+      } else {
+        b.appendChild(document.createTextNode(hotbarLetter(itemName(t.id))));
+      }
+    } else {
+      var spell = t.spell;
+      var cost = (rpgManaOn() && rpgWhole(spell.mana)) ? spell.mana : 0;
+      b.dataset.spell = t.id;
+      words = 'Cast ' + (spell.name || t.id) + (cost ? ', ' + cost + ' mana' : '');
+      if (cost > HERO_MP) {
+        b.setAttribute('aria-disabled', 'true');
+        words += ', not enough mana';
+      }
+      badge = cost ? String(cost) : '';
+      b.insertAdjacentHTML('beforeend', hotbarIcon(spell));
+      b.classList.add('hot-btn--spell');
+    }
+    if (badge) {
+      var n = document.createElement('span');
+      n.className = t.kind === 'item' ? 'bag-pip-count hot-count' : 'hot-cost';
+      n.setAttribute('aria-hidden', 'true');
+      n.textContent = badge;
+      b.appendChild(n);
+    }
+    if (keyName) {
+      var k = document.createElement('kbd');
+      k.className = 'hot-key';
+      k.setAttribute('aria-hidden', 'true');
+      k.textContent = keyName;
+      b.appendChild(k);
+      b.setAttribute('aria-keyshortcuts', keys[0]);
+    }
+    b.setAttribute('aria-label', words + (keyName ? ' (key ' + keyName + ')' : ''));
+    b.title = words + (keyName ? ' (' + keyName + ')' : '');
+    box.appendChild(b);
+  });
+}
+
 function touchQuickPress(e) {
+  var slot = e.target.closest('button[data-slot]');
+  if (slot && hotbarOn()) {
+    touchStopExplore();
+    touchRecord('action', 'quick', null, { slot: Number(slot.dataset.slot) });
+    hotbarPress(Number(slot.dataset.slot));
+    return;
+  }
   var b = e.target.closest('button[data-item]');
   if (!b) return;
   touchStopExplore();

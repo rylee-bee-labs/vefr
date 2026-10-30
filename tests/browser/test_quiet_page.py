@@ -243,7 +243,7 @@ def test_the_fall_card_is_a_warm_hush(browser, woven):
 
         # One small quiet card near the bottom, centred, clear of the
         # verbs at the foot, at the mockup's own size.
-        card = page.locator(".fcard").bounding_box()
+        card = page.locator("#fall .fcard").bounding_box()
         pad = page.evaluate(
             "() => parseFloat(getComputedStyle(document.getElementById('fall')).paddingBottom)")
         assert card, "the card is not on the page at all"
@@ -255,8 +255,8 @@ def test_the_fall_card_is_a_warm_hush(browser, woven):
         assert abs((card["x"] + card["width"] / 2) - 1280 / 2) <= 24, \
             f"the card is not centred: {card}"
         # The card's own words clear the floor, both the line and the note.
-        _readable(page, ".fcard .fall-line", "the fall card's line")
-        _readable(page, ".fcard .fall-note", "the fall card's note")
+        _readable(page, "#fall .fcard .fall-line", "the fall card's line")
+        _readable(page, "#fall .fcard .fall-note", "the fall card's note")
 
         # Any key continues, and the focus comes back to the control
         # that had it.
@@ -278,7 +278,7 @@ def test_the_fall_is_instant_under_reduced_motion(browser, woven):
         walk_to_a_fall(page)
 
         still = page.evaluate("""() => {
-          const f = document.getElementById('fall'), c = document.querySelector('.fcard');
+          const f = document.getElementById('fall'), c = document.querySelector('#fall .fcard');
           return { dimAnim: getComputedStyle(f).animationName,
                    dimTrans: getComputedStyle(f).transitionDuration,
                    cardAnim: getComputedStyle(c).animationName,
@@ -313,9 +313,9 @@ def test_the_card_and_the_page_read_a_fifth_larger(browser, woven):
         page.click("#menu-close")
 
         walk_to_a_fall(page)
-        assert page.evaluate(PX, ".fcard .fall-line") == pytest.approx(17 * 1.2, abs=0.3), \
+        assert page.evaluate(PX, "#fall .fcard .fall-line") == pytest.approx(17 * 1.2, abs=0.3), \
             "the card's line did not grow a fifth under larger text"
-        assert page.evaluate(PX, ".fcard .fall-note") == pytest.approx(13 * 1.2, abs=0.3), \
+        assert page.evaluate(PX, "#fall .fcard .fall-note") == pytest.approx(13 * 1.2, abs=0.3), \
             "the card's note did not grow a fifth under larger text"
         box = page.locator("#fall-keep").bounding_box()
         assert box and box["height"] >= 48 and box["width"] >= 48, \

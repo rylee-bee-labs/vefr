@@ -89,10 +89,19 @@ renderJournalPage();
 // the OS's own query and the player's switch - make it instant, the
 // same answer every other motion reads.
 var fallOpener = null;
-function showFallCard(line) {
+// The note under the line says what the fall kept. Its words are the
+// card's own unless the caller names others: a fall that left the bag on
+// the floor (ADR 0021, `fall: "home"`) must not say the bag is as it was.
+var FALL_NOTE = (function () {
+  var el = document.getElementById('fall-note');
+  return el ? el.textContent.replace(/\s+/g, ' ').trim() : '';
+})();
+function showFallCard(line, note) {
   var card = document.getElementById('fall');
   if (!card || !card.hidden) return;
   document.getElementById('fall-line').textContent = line || '';
+  var noteEl = document.getElementById('fall-note');
+  if (noteEl) noteEl.textContent = note || FALL_NOTE;
   // The words are kept on the quiet page the moment they are said.
   journalSay(line);
   fallOpener = document.activeElement;

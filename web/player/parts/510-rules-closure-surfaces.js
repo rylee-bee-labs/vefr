@@ -182,6 +182,16 @@
       }
       return;
     }
+    // The spell card (ADR 0023): Interact, Enter or the menu key go on, and
+    // a walking key does nothing while it waits, so it is not waved away
+    // unread mid-fight. Tab moves inside it; its own button takes Enter.
+    var learnCard = document.getElementById('learn');
+    if (learnCard && !learnCard.hidden) {
+      if (e.key === 'Tab' || nativeClick) return;
+      e.preventDefault();
+      if (!e.repeat && (keybindOn('menu', e.key) || interactKey)) closeSpellCard();
+      return;
+    }
     // While the reader is open, its keys win and movement stops: the
     // pages answer to the reading keys, and Interact and the menu key
     // continue and close.
@@ -225,6 +235,8 @@
     // is a question, not a screen. With no stake pending this is one
     // check and no key is touched.
     if (stakesKey(e)) { e.preventDefault(); return; }
+    // "Wear it?" (ADR 0023) asks the same way: Y wears, N keeps it in the bag.
+    if (wearKey(e)) { e.preventDefault(); return; }
     var menuOpen = !document.getElementById('menu').hidden;
     if (keybindOn('menu', e.key)) {
       closeEnemyVerbs();
@@ -270,6 +282,12 @@
       if (!e.repeat) { e.preventDefault(); timeRest(); }
     }
     else if (keybindOn('journal', e.key)) window.openMenu();
+    // The quick bar (ADR 0023, `display.hotbar`): 5 to 8 unless the player
+    // chose others. A held key is one press.
+    else if (hotbarSlotFor(e.key) >= 0) {
+      e.preventDefault();
+      if (!e.repeat) hotbarPress(hotbarSlotFor(e.key));
+    }
     // The fight verbs answer 1, 2, 3 - the digits printed on them
     // (#463). The row's own order is the key's, and a surface with no
     // row shown has no verb to press, so the keys do nothing there.

@@ -208,6 +208,8 @@ function renderMana() {
   HERO_MP = Math.min(HERO_MP, heroManaMax());
   el.hidden = false;
   el.textContent = 'Mana ' + HERO_MP + '/' + heroManaMax();
+  // The quick bar dims a spell the hero can no longer pay for (ADR 0023).
+  if (hotbarOn()) renderQuickslots();
 }
 
 // ---- charges ----------------------------------------------------------

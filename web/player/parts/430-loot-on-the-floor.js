@@ -101,10 +101,12 @@
     if (!here.length) return;
     var names = [];
     var left = [];
+    var picked = [];
     // One `picks-up` per item actually bagged.
     here.forEach(function (d) {
       var inst = dropInstance(d);
       if (bagAdd(inst.id, inst)) {
+        picked.push(inst);
         names.push(carriedName(inst));
         fireRule('picks-up', { what: inst.id });
       } else if (itemCatalog()[inst.id]) {
@@ -129,6 +131,12 @@
       }).join(', ') + ' on the floor.');
     }
     if (said.length) combatSay(said.join(' '));
+    // ADR 0023 (`display.wear_prompt`): the first thing just picked up that
+    // would raise one of the hero's numbers asks to be worn.
+    for (var i = 0; i < picked.length; i++) {
+      if (offerToWear({ id: picked[i].id, rarity: picked[i].rarity || '',
+                        traits: picked[i].traits.slice(), identified: false })) break;
+    }
   }
   window.VEFR_TAKE_HERE = takeHere;
   // The satchel a fall left (ADR 0021): walking onto it takes every thing
@@ -193,7 +201,9 @@
         saveHeroHp();
         renderHp();
         missed += ' ' + itemName(sting.from) + ' stings you for ' + stung + '.';
+        hitAt(null, '-' + stung, 'hurt');
       }
+      hitAt(e.at, 'miss', 'miss');
       combatSay(missed);
       combatSnapshot();
       return true;
@@ -218,6 +228,7 @@
     e.hp = Math.max(0, e.hp - dmg);
     playOneShot('enemy:' + e.id, 'hurt');
     soundCue('hit');
+    hitAt(e.at, crit ? 'CRIT ' + dmg : String(dmg), crit ? 'crit' : 'hit');
     // The blow says itself in one sentence, from the same message
     // table every other player line comes from (#463) - the bytes are
     // the ones this always read.
@@ -304,6 +315,7 @@
     if (!foe) return null;
     var dmg = resolveDamage(spell.harm, '', foe.resist, foe.immune).damage;
     foe.hp = Math.max(0, foe.hp - dmg);
+    hitAt(foe.at, String(dmg), 'spell');
     wakeOne(foe);
     makeNoise('fight');
     playOneShot('enemy:' + foe.id, 'hurt');
@@ -332,6 +344,7 @@
     var roll = rpgRoll(regionName, e.id, 'hero', 0);
     playOneShot('enemy:' + e.id, 'attack');
     if (roll && roll.miss) {
+      hitAt(null, 'miss', 'miss');
       combatSay(verbWord('foe_miss', { what: e.name }));
       return false;
     }
@@ -340,6 +353,7 @@
     struck.damage = rpgGuarded(struck.damage, heroGuard());
     HERO_HP = Math.max(0, HERO_HP - struck.damage);
     playOneShot('hero', 'hurt');
+    hitAt(null, (heavy ? 'CRIT ' : '') + '-' + struck.damage, heavy ? 'crit' : 'hurt');
     saveHeroHp();
     renderHp();
     var line;
@@ -363,6 +377,7 @@
     if (thorns && struck.damage > 0 && HERO_HP > 0 && e.hp > 1) {
       var back = Math.min(thorns.n, e.hp - 1);
       e.hp -= back;
+      hitAt(e.at, String(back), 'hit');
       line += ' ' + itemName(thorns.from) + ' bites back for ' + back + '.';
     }
     combatSay(line);
@@ -673,7 +688,7 @@
     closeEnemyVerbs();
     var vrow = document.getElementById('verb-row');
     if (vrow) vrow.hidden = true;
-    showFallCard('You fell. ' + said);
+    showFallCard('You fell. ' + said, (home && left) ? SATCHEL_FALL_NOTE : '');
   }
   // The mind state of every monster, in the same order as `enemies` and
   // carrying the same `id`: whether it is on its feet, which group it

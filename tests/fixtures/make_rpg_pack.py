@@ -57,7 +57,7 @@ TRAITS = {
 
 def build(dest: Path, name="rpg-test", player=None, fight=None, traits=None,
           items=None, spells=None, growth=None, time=None, hound=None,
-          keeper=None, verbs=None) -> Path:
+          keeper=None, verbs=None, display=None) -> Path:
     pack = dest / "worlds" / name
     if pack.exists():
         shutil.rmtree(pack)
@@ -70,7 +70,7 @@ def build(dest: Path, name="rpg-test", player=None, fight=None, traits=None,
     world["player"] = dict({"hp": 8, "atk": 2, "gold": 0}, **(player or {}))
     world["items"] = {**(world.get("items") or {}), **copy.deepcopy(items or {})}
     for key, value in (("fight", fight), ("traits", traits), ("spells", spells),
-                       ("growth", growth), ("time", time)):
+                       ("growth", growth), ("time", time), ("display", display)):
         if value is not None:
             world[key] = copy.deepcopy(value)
     world_json.write_text(json.dumps(world), encoding="utf-8")
