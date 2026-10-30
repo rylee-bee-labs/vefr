@@ -18,7 +18,7 @@ both render from real records the rules engine keeps: the *Where next?* panel
 lists the `point-to` hints a rule produced (`web/player/parts/340-where-next-hints.js:70-94`),
 and the *Why did that happen?* panel lists the last 20 fired rules with the
 plain sentence that says which condition made each one fire
-(`web/player/parts/340-where-next-hints.js:96-119`). The pinned research note
+(`web/player/parts/340-where-next-hints.js:96-119`). The engine's own research note
 records the `point-to` hint as ephemeral and the *Where next?* panel as the
 merged remedy (`docs/research/2026-10-02-first-independent-pack.md:34`). The
 panels are **in** the pinned build: its history contains merge commit

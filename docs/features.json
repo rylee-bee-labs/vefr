@@ -168,7 +168,7 @@
     {
       "id": "random-floors",
       "name": "A new descent every run",
-      "what": "The shared generator is built (the same floors in Python and in the browser); drawing a fresh descent each run in the game is still to come.",
+      "what": "The shared generator is built (the same floors in Python and in the browser); the game draws a fresh descent each run from a run seed at the stair (play-time floors, #314), with a \"Start a new descent\" control.",
       "status": "partial",
       "detect": "none",
       "docs": [
