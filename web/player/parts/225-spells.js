@@ -171,6 +171,7 @@ function castSpell(id, opts) {
   var before = HERO_HP;
   healHeroBy(heal);
   castSay(id, line + ' You recover ' + (HERO_HP - before) + ' health.');
+  heroHitNumber('+' + (HERO_HP - before), 'heal');
   syncCombat();
   if (!opts.free && !opts.noTurn) rpgSpendTurn();
   return true;
@@ -261,6 +262,8 @@ function renderSpellList() {
   list.setAttribute('aria-label', 'Spells you know: '
     + known.map(function (s) { return s.name; }).join(', ') + '.');
   // A spell just learned may be the first harmful one: the fight row's Cast
-  // button (ADR 0021) follows what the hero knows.
+  // button (ADR 0021) follows what the hero knows, and so does the quick bar
+  // (ADR 0023).
   renderVerbRow();
+  renderQuickslots();
 }

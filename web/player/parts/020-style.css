@@ -250,6 +250,15 @@
     font: 700 0.85rem var(--read); text-align: left; }
   .stake-btn--take { border-color: rgba(216, 170, 78, 0.7); }
   .stake-btn:focus-visible { outline: 3px solid #D8AA4E; outline-offset: 2px; }
+  /* "Wear it?" (ADR 0023): the stake's two answers, with the change named
+     above them in words and a number on each side of the arrow. */
+  .wear-ask .wear-line, .wear-ask .wear-change { margin: 0; padding: 5px 10px; font-size: 0.82rem; text-align: left; }
+  .wear-ask .wear-line { font-weight: 700; }
+  .wear-ask .wear-change { font-variant-numeric: tabular-nums; }
+  /* The messages fold away after a while on a phone; not while a question waits. */
+  .toasts.is-collapsed:has(.wear-ask:not([hidden])) { opacity: 1; }
+  .wear-ask kbd { margin-left: 4px; font: inherit; opacity: 0.75; }
+  @media (pointer: coarse) { .wear-ask kbd { display: none; } }
   .encounter-prompt { font-style: italic; }
   body[data-surface="plain"] .encounter-prompt,
   body[data-surface="investigation"] .encounter-prompt { display: none; }
@@ -430,6 +439,24 @@
   .touch-quick-btn { width: max(48px, calc(48px * var(--touch-scale))); height: max(48px, calc(48px * var(--touch-scale)));
     display: flex; align-items: center; justify-content: center; }
   .touch-quick-btn img { width: 70%; height: 70%; object-fit: contain; }
+  /* The quick bar (ADR 0023, `display.hotbar`): the quickslots' box, on every
+     screen, four buttons at most. Each prints its key in a corner on a
+     screen with a keyboard; a count or a mana cost sits in the other. */
+  body.in-game .touch-quick.hotbar:not([hidden]) { display: flex; flex-wrap: nowrap; margin-top: 6px; pointer-events: auto; }
+  .hot-btn { position: relative; border-radius: 12px; font: 700 1rem var(--display);
+    background: var(--glass); color: var(--glass-ink); border: 1px solid var(--glass-edge); }
+  .hot-btn:focus-visible { outline: 3px solid #D8AA4E; outline-offset: 2px; }
+  .hot-btn .hot-icon { width: 60%; height: 60%; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }
+  .hot-btn[aria-disabled="true"] { opacity: 0.55; }
+  .hot-btn .hot-key { position: absolute; left: 3px; top: 2px; font: 700 0.7rem/1 var(--read); opacity: 0.85; }
+  .hot-btn .hot-cost { position: absolute; right: 3px; bottom: 2px; font: 700 0.7rem/1 var(--read); color: #A9CFF2; }
+  .hot-btn .hot-count { position: absolute; right: -4px; bottom: -4px; }
+  /* On a touch screen the bar stands down the left edge under the health,
+     clear of the messages, which take the top of the screen's middle. */
+  @media (pointer: coarse) {
+    .hot-btn .hot-key { display: none; }
+    body.in-game .touch-quick.hotbar:not([hidden]) { flex-direction: column; align-self: flex-start; flex-basis: 100%; }
+  }
   .touch-range-row { display: flex; justify-content: space-between; align-items: center; margin: 12px 0 0; }
   .touch-set { border: 0; margin: 10px 0; padding: 0; }
   .touch-set label, .touch-set-row { display: flex; align-items: center; gap: 10px; min-height: 48px; }
@@ -506,7 +533,7 @@
      continues. Nothing is red and nothing moves: the dim fades in over
      a moment, and the reduced-motion blankets (the OS query and the
      player's own switch) make it instant. */
-  #fall { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end;
+  #fall, #learn { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end;
     justify-content: center; padding: 0 24px calc(150px + var(--sai-bottom));
     background: rgba(6, 7, 9, 0.78);
     animation: fall-dim 240ms ease-out; }
@@ -517,7 +544,26 @@
   .fcard .fall-rule { width: 42px; height: 2px; margin: 0 0 10px; border: 0;
     background: var(--accent); opacity: 0.7; }
   .fcard .fall-note { margin: 0 0 14px; font-size: 0.8125rem; line-height: 1.45; color: var(--ink-dim); }
+  /* The spell card (ADR 0023) is the fall's box: what the spell does, what
+     it costs and how to cast it, one short line each. */
+  .fcard .learn-notes { margin: 0 0 14px; padding: 0; list-style: none; font-size: 0.875rem; line-height: 1.45; color: var(--ink-dim); }
+  .fcard .learn-notes li + li { margin-top: 4px; }
   .fall-controls { display: flex; flex-wrap: wrap; gap: 8px; }
+  /* Each blow's number over the one it struck (ADR 0023). It rises and fades;
+     with motion off (either blanket below) it holds still and goes. */
+  .hits { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+  .hit { position: absolute; transform: translate(-50%, -100%); white-space: nowrap;
+    font: 700 1rem/1 var(--display); color: #F4EEDD; text-shadow: 0 1px 0 #000, 0 0 3px #000, 0 0 1px #000;
+    animation: hit-rise 900ms ease-out forwards; }
+  .hit--crit { font-size: 1.3rem; color: #F2C14E; }
+  .hit--miss { font-weight: 600; font-style: italic; color: #D6D0C2; }
+  .hit--hurt { color: #F4A397; }
+  .hit--heal { color: #9EDB9A; }
+  .hit--spell { color: #A9CFF2; }
+  @keyframes hit-rise {
+    from { opacity: 1; transform: translate(-50%, -100%); }
+    65% { opacity: 1; }
+    to { opacity: 0; transform: translate(-50%, calc(-100% - 20px)); } }
   .fall-controls .cta { min-height: 48px; min-width: 48px; }
 
   /* the kitchen and the desk: page surfaces, in carved panels */

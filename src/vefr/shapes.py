@@ -844,6 +844,16 @@ DISPLAY = Block(
         Key('ending_tile', 'int', lo=8, hi=512, say={
             'wrong-type': '{path} must be a whole number of CSS pixels, such as 64',
             'out-of-range': '{path} must be a whole number from 8 to 512'}),
+        # Show it (ADR 0023): four things the fight already does, put where
+        # the player looks. Each is off unless the pack says true.
+        Key('spell_card', 'bool', say={
+            'wrong-type': '{path} must be true or false: whether a card says what a spell does when it is learned'}),
+        Key('wear_prompt', 'bool', say={
+            'wrong-type': '{path} must be true or false: whether picking up better gear asks "Wear it?"'}),
+        Key('hit_numbers', 'bool', say={
+            'wrong-type': '{path} must be true or false: whether each blow shows its number over the one it struck'}),
+        Key('hotbar', 'bool', say={
+            'wrong-type': '{path} must be true or false: whether potions and spells sit in a bar of quick-use buttons'}),
     ),
 )
 

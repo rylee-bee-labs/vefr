@@ -78,6 +78,15 @@ var KEYBIND_ACTIONS = [
     keys: ['v'] },
   { id: 'rest', context: 'gameplay', label: 'Rest until the watch turns',
     keys: ['r'] },
+  // The quick bar's four buttons (ADR 0023, `display.hotbar`), left to right.
+  { id: 'quick1', context: 'gameplay', label: 'Quick use, first button',
+    keys: ['5'] },
+  { id: 'quick2', context: 'gameplay', label: 'Quick use, second button',
+    keys: ['6'] },
+  { id: 'quick3', context: 'gameplay', label: 'Quick use, third button',
+    keys: ['7'] },
+  { id: 'quick4', context: 'gameplay', label: 'Quick use, fourth button',
+    keys: ['8'] },
   { id: 'pageBack', context: 'reading', label: 'Turn the page back',
     keys: ['ArrowLeft', 'a'] },
   { id: 'pageForward', context: 'reading', label: 'Turn the page forward',
@@ -103,6 +112,8 @@ function keybindAction(id) {
 // before this part existed.
 function keybindListed(a) {
   if (a.id === 'rest') return timeRestOn();
+  // The same for the quick bar: a pack without `display.hotbar` lists no row.
+  if (/^quick[1-4]$/.test(a.id)) return hotbarOn();
   return true;
 }
 
@@ -202,7 +213,10 @@ function keybindRefused(id, key) {
   if (norm === 'e') return 'That key is kept for Interact. Choose a different key.';
   if (norm === ' ' || norm === 'Enter')
     return 'Space and Enter always answer for Interact too. Choose a different key.';
-  if (/^[1-9]$/.test(norm))
+  // With the quick bar on, the fight row keeps 1 to 4 and the bar may take
+  // 5 to 9 (ADR 0023); with it off, every digit is the fight row's.
+  var barDigit = /^quick[1-4]$/.test(id) && hotbarOn() && /^[5-9]$/.test(norm);
+  if (/^[1-9]$/.test(norm) && !barDigit)
     return 'The number keys stay on the fight verbs printed on them. Choose a different key.';
   var mine = keybindAction(id);
   if (!mine) return 'That action is not one this game knows.';

@@ -33,6 +33,10 @@
   <div id="play" hidden>
     <div class="stage" id="stage">
       <canvas id="town-canvas" width="480" height="336" role="img" aria-label="The town, seen from above"></canvas>
+      <!-- Each blow's number over the one it struck (ADR 0023,
+           `display.hit_numbers`). For the eye only: the fight's own line
+           says every number in words. -->
+      <div class="hits" id="hits" aria-hidden="true"></div>
       <div class="hud-frame" id="hud-frame">
         <div class="hud hud--tl">
           <div class="hud-hp glass" id="hud-hp" role="status" aria-live="polite">
@@ -74,6 +78,10 @@
                is open, and out of the way of the fight verbs, which sit at the foot
                of the frame. -->
           <div class="stake-ask" id="stake-ask" role="group" aria-label="Answer the stake" hidden></div>
+          <!-- "Wear it?" (ADR 0023, `display.wear_prompt`): picked-up gear that
+               would raise a number asks, the way a stake asks - Y and N, or
+               the two buttons. Empty and hidden unless a question is open. -->
+          <div class="stake-ask wear-ask" id="wear-ask" role="group" aria-labelledby="wear-line" hidden></div>
           <p class="glass" id="explore-status" role="status" aria-live="polite"></p>
         </div>
         <div class="dpad" id="dpad" aria-label="Move">
@@ -179,10 +187,24 @@
         <div class="fcard">
           <p class="fall-line" id="fall-line"></p>
           <hr class="fall-rule">
-          <p class="fall-note">Your health is whole again. Your bag, your gold
+          <p class="fall-note" id="fall-note">Your health is whole again. Your bag, your gold
              and the ground you have walked are as you left them.</p>
           <div class="fall-controls">
             <button type="button" id="fall-keep" class="cta cta--gold">Keep exploring</button>
+          </div>
+        </div>
+      </div>
+      <!-- A spell just learned (ADR 0023, `display.spell_card`): the fall
+           card's quiet box, saying what the spell does, what it costs and
+           how to cast it. Empty and hidden unless the pack opts in. -->
+      <div id="learn" role="dialog" aria-modal="true"
+           aria-labelledby="learn-line" aria-describedby="learn-notes" tabindex="-1" hidden>
+        <div class="fcard">
+          <p class="fall-line" id="learn-line"></p>
+          <hr class="fall-rule">
+          <ul class="learn-notes" id="learn-notes"></ul>
+          <div class="fall-controls">
+            <button type="button" id="learn-ok" class="cta cta--gold">Got it</button>
           </div>
         </div>
       </div>

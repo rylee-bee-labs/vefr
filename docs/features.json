@@ -383,6 +383,20 @@
         "tests/test_wander_floors.py",
         "tests/test_floor_v3_parity.py"
       ]
+    },
+    {
+      "id": "show-it",
+      "name": "Show it: spell card, Wear it?, hit numbers, quick bar",
+      "what": "Four opt-in display keys put what the fight already decides where the player looks: a card for each spell learned, saying what it does, what it costs and how to cast it; a Wear it? question with the change when better gear is picked up; each blow's number over the one it struck; and a bar of up to four quick-use buttons for potions and known spells, keys 5 to 8. A pack that names none of them plays and looks as it did.",
+      "status": "built",
+      "detect": "none",
+      "docs": [
+        "docs/guides/world-creation.md"
+      ],
+      "design": "docs/adr/0023-show-it.md",
+      "tests": [
+        "tests/test_show_it_play.py"
+      ]
     }
   ]
 }

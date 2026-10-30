@@ -198,6 +198,38 @@ the next visit. `look` is `"plain"` or `"skin"`; left out, it is
 `"skin"`. A pack with no skin has nothing to pick, and Display offers
 no choice.
 
+### Show it: the card, the question, the numbers and the bar
+
+Four things the fight already does can also be put where the player looks
+(ADR 0023). Each is its own `display` key, off unless the pack says `true`:
+
+```json
+"display": {
+  "spell_card": true,
+  "wear_prompt": true,
+  "hit_numbers": true,
+  "hotbar": true
+}
+```
+
+- `spell_card`: when the hero learns a spell, on a level or from a book, a
+  card says what it does, what it costs and how to cast it. Interact, Enter
+  or the menu key closes it; a walking key does not.
+- `wear_prompt`: picking up gear that would raise one of the hero's numbers
+  asks "Wear it?" with the change ("Attack 3 to 5"). Y or the button wears
+  it, N keeps it in the bag, and the game goes on while it waits. Only what
+  the player can know counts: the thing's `mods`, and the traits of one the
+  town has read.
+- `hit_numbers`: each blow's number over the one it struck (`3`, `CRIT 6`,
+  `miss`), the hero's hurt (`-2`) and heals (`+3`) over the hero. With
+  reduced motion it holds still. The fight's line still says every number.
+- `hotbar`: up to four quick-use buttons under the health bar, on every
+  screen: each kind of thing used in one tap (a `heal`, a `light`, a thing
+  that `casts`), then the spells the hero knows. Keys 5 to 8, which the
+  player can change in Controls; the fight row's number keys stop at 4.
+
+Left out, a pack plays and looks exactly as it did.
+
 ### Your own tiles and variants
 
 A region may bring its own ground pictures in a `tiles/` directory beside

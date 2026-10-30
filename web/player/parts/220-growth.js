@@ -135,6 +135,7 @@ function growAward(xp) {
   var engine = window.VEFR_GROWTH_ENGINE;
   if (!engine || !window.VEFR_GROWTH) return null;
   var r = null;
+  var knew = spellIdsKnown();
   try { r = engine.award(window.VEFR_GROWTH, GROWTH_STATE, xp); } catch (e) { return null; }
   if (!r) return null;
   GROWTH_STATE = r.state || GROWTH_STATE;
@@ -143,8 +144,10 @@ function growAward(xp) {
   renderGrowth();
   // A level that has just been earned is the one moment a spell the hero
   // knew the name of becomes a spell the hero can cast (ADR 0018), so the
-  // panel is redrawn here rather than only when the bag is opened.
+  // panel is redrawn here rather than only when the bag is opened - and a
+  // pack with `display.spell_card` (ADR 0023) gives each one its card.
   renderSpellList();
+  spellCardsSince(knew);
   return r;
 }
 
@@ -356,11 +359,15 @@ function renderVerbRow() {
     label.className = 'verb';
     label.textContent = pair[1];
     b.dataset.label = pair[1];
-    var key = document.createElement('kbd');
-    key.textContent = String(i + 1);
     b.appendChild(label);
-    b.appendChild(document.createTextNode(' '));
-    b.appendChild(key);
+    // With the quick bar on (ADR 0023) the digits past 4 are its keys, so a
+    // fifth verb is pressed by tap or click and prints no digit.
+    if (i < verbDigits()) {
+      var key = document.createElement('kbd');
+      key.textContent = String(i + 1);
+      b.appendChild(document.createTextNode(' '));
+      b.appendChild(key);
+    }
     row.appendChild(b);
   });
   // The row was emptied above, and the pack's Rest button (part 255) with it:
@@ -374,8 +381,10 @@ function renderVerbRow() {
 // and the digit printed on that verb are one list and cannot drift
 // (#463). Only a surface that shows the row answers: on `plain` and
 // `investigation` the row is hidden and the keys do nothing.
+function verbDigits() { return hotbarOn() ? 4 : 9; }
 function combatVerbButton(n) {
   if (document.body.getAttribute('data-surface') !== 'combat') return null;
+  if (n > verbDigits()) return null;
   var row = document.getElementById('verb-row');
   if (!row) return null;
   var buttons = row.querySelectorAll('button[data-verb]');
