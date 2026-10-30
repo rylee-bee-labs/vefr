@@ -154,8 +154,9 @@ sentence and a JSON pointer.
 | `guard` | what each blow at it loses, 0 to 99, never below 1 (ADR 0021) |
 | `drop_chance` | the percent of its kills on a generated floor that drop anything, 0 to 100; 100 when left out (ADR 0021) |
 | `gold` | the coins one kill pays, as `[lo, hi]`, 0 to 9999 (ADR 0021) |
+| `skills` | up to two of `web`, `spit`, `fester`, `dust` and `squeal`, each with its own numbers (ADR 0024; `docs/guides/rpg-core.md`, "Monster skills") |
 
-<!-- FIELD_KEYS: name, sprite, hp, atk, xp, sight, drops, guard, drop_chance, gold -->
+<!-- FIELD_KEYS: name, sprite, hp, atk, xp, sight, drops, guard, drop_chance, gold, skills -->
 
 | A region entry | |
 |---|---|

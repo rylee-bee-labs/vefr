@@ -38,17 +38,74 @@ function rpgPlayer() {
 // blows struck in this region since the hero came into it. A pack with no
 // `fight` block never rolls: the answer is null and the blow lands.
 var RPG_BLOWS = { region: null, n: 0 };
-function rpgRoll(region, attacker, defender, critBonus) {
+// `missBonus` (ADR 0024) is what dust in the eyes adds to a miss, in 100:
+// the same draws in the same order, so a hero with none rolls as before.
+function rpgRoll(region, attacker, defender, critBonus, missBonus) {
   var f = rpgFight();
   if (!f || !(window.VEFR_DELVE && window.VEFR_DELVE.prng)) return null;
   if (RPG_BLOWS.region !== region) { RPG_BLOWS.region = region; RPG_BLOWS.n = 0; }
   RPG_BLOWS.n++;
   var rng = window.VEFR_DELVE.prng(['fight', rpgWorldName(), region, attacker,
                                     defender, RPG_BLOWS.n].join('|'));
-  var miss = Math.floor(rng() * 100) < f.miss;
+  var miss = Math.floor(rng() * 100) < f.miss + (missBonus || 0);
   var crit = !miss && Math.floor(rng() * 100)
     < Math.max(0, Math.min(100, f.crit + (critBonus || 0)));
   return { miss: miss, crit: crit, times: f.critTimes };
+}
+
+// ---- monster skills (ADR 0024) ---------------------------------------
+// The closed set a family or a hand-placed enemy may carry, every number
+// bounded and defaulted - the twin of `rpg.SKILL_KINDS` / `rpg.skills_of`,
+// which the descent's parity harness holds to the same answer. A skill that
+// is not one of these, or a number out of its bounds, is left out (the
+// validator names it), and a monster keeps at most two.
+var RPG_SKILL_KINDS = {
+  web: { range: [2, 6, 3], turns: [1, 5, 2], every: [2, 20, 5] },
+  spit: { range: [2, 6, 4], harm: [1, 20, 2], every: [2, 20, 3] },
+  fester: { chance: [1, 100, 30], tick: [1, 9, 1], turns: [1, 9, 3] },
+  dust: { chance: [1, 100, 40], miss: [5, 50, 25], turns: [1, 9, 3] },
+  squeal: { radius: [2, 24, 16] }
+};
+function rpgSkillsOf(record) {
+  var listed = record && Array.isArray(record.skills) ? record.skills : [];
+  var out = [];
+  listed.forEach(function (entry) {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return;
+    var spec = RPG_SKILL_KINDS.hasOwnProperty(entry.skill) ? RPG_SKILL_KINDS[entry.skill] : null;
+    if (!spec) return;
+    for (var k in entry) {
+      if (entry.hasOwnProperty(k) && k !== 'skill' && !spec.hasOwnProperty(k)) return;
+    }
+    var skill = { skill: entry.skill };
+    for (var key in spec) {
+      if (!spec.hasOwnProperty(key)) continue;
+      var v = entry.hasOwnProperty(key) ? entry[key] : spec[key][2];
+      if (!rpgWhole(v) || v < spec[key][0] || v > spec[key][1]) return;
+      skill[key] = v;
+    }
+    out.push(skill);
+  });
+  return out.slice(0, 2);
+}
+// A thing that can be thrown (ADR 0024): `{harm, range}`, or null.
+function rpgThrowOf(def) {
+  var t = def && def.throw;
+  if (!t || typeof t !== 'object' || !rpgWhole(t.harm) || t.harm < 1 || t.harm > 20) return null;
+  var range = rpgWhole(t.range) ? t.range : 5;
+  if (range < 2 || range > 8) return null;
+  return { harm: t.harm, range: range };
+}
+// A skill's own chance, in 100, drawn from its own named stream - the same
+// seeded generator a blow's roll uses, so the same moves give the same
+// webs and the same festering bites, and a reload never re-rolls one.
+var RPG_SKILL_ROLLS = { region: null, n: 0 };
+function rpgSkillRoll(region, who, skill) {
+  if (!(window.VEFR_DELVE && window.VEFR_DELVE.prng)) return 0;
+  if (RPG_SKILL_ROLLS.region !== region) { RPG_SKILL_ROLLS.region = region; RPG_SKILL_ROLLS.n = 0; }
+  RPG_SKILL_ROLLS.n++;
+  var rng = window.VEFR_DELVE.prng(['skill', rpgWorldName(), region, who, skill,
+                                    RPG_SKILL_ROLLS.n].join('|'));
+  return Math.floor(rng() * 100);
 }
 
 // A landed blow, reduced by the target's guard and never below 1. A blow

@@ -4127,6 +4127,11 @@ def _region_enemy_errors(rname: str, geo: dict, levels_mode: bool,
         # turns. Both are optional and named the same way.
         errors.extend(enemy_element_errors(
             f"{prefix}enemy '{who}' in region '{rname}'", e))
+        # What it can do besides walk up and bite (ADR 0024): the same
+        # closed set of skills a Blueprint family may carry.
+        from . import rpg
+        errors.extend(rpg.skills_errors(
+            f"{prefix}enemy '{who}' in region '{rname}'", e))
     return errors
 
 

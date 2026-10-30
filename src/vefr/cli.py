@@ -2140,6 +2140,12 @@ def _player_items(world: dict) -> dict[str, dict]:
                 and not isinstance(charges, bool) and 1 <= charges <= 20):
             entry['casts'] = casts.strip()
             entry['charges'] = charges
+        # `throw` (ADR 0024): a thing that can be thrown at a foe, in the
+        # usable form `rpg.throw_of` resolves and only when the pack named
+        # one, so an item written before it bakes what it always baked.
+        thrown = rpg.throw_of(spec)
+        if thrown:
+            entry['throw'] = thrown
         out[key] = entry
     return out
 
@@ -2976,6 +2982,11 @@ def weave_html(pack: Path, *, pool: dict | None = None,
                 gold = rpg.gold_of(e)
                 if gold:
                     entry['gold'] = list(gold)
+                # What it can do besides walk up and bite (ADR 0024), on
+                # the same rule: only when the contract names some.
+                skills = rpg.skills_of(e)
+                if skills:
+                    entry['skills'] = skills
                 out.append(entry)
             enemies_by_region[rname] = out
 

@@ -12,7 +12,9 @@ contract, all of it optional:
     spells:   "mana": 2, "harm": 4, "range": 6, "ward": {"guard": 2, "turns": 3}
     speakers: "stock": ["potion", {"item": "satchel", "flag": "cellar-done"}],
               "markup": 200
-    families: "guard": 1, "drop_chance": 40, "gold": [1, 4]
+    families: "guard": 1, "drop_chance": 40, "gold": [1, 4],
+              "skills": [{"skill": "web", "range": 3}]   (ADR 0024)
+    items:    "throw": {"harm": 2, "range": 5}           (ADR 0024)
     descent:  "resume": "deepest-landing", "fall": "home"
     time:     "rest_heals": true
 
@@ -68,6 +70,34 @@ GOLD_RANGE = (0, 9999)
 RESUME_CHOICES = ('deepest-landing',)
 FALL_CHOICES = ('home',)
 
+# --------------------------------------------- monster skills, throwing
+
+# ADR 0024. A family (or a hand-placed enemy) may carry up to two `skills`,
+# each one of a closed set, and every number in one is bounded here. Each
+# key a skill may hold, with its bounds; a key a skill does not list is
+# refused, and one it lists but leaves out takes the default beside it.
+SKILL_KINDS = {
+    # From a distance, on a clear line: the hero cannot step for `turns`.
+    'web': {'range': ((2, 6), 3), 'turns': ((1, 5), 2), 'every': ((2, 20), 5)},
+    # From a distance, on a clear line: a hit for `harm`, which guard takes from.
+    'spit': {'range': ((2, 6), 4), 'harm': ((1, 20), 2), 'every': ((2, 20), 3)},
+    # On a melee blow that lands, `chance` in 100: `tick` a turn for `turns`.
+    'fester': {'chance': ((1, 100), 30), 'tick': ((1, 9), 1), 'turns': ((1, 9), 3)},
+    # On a melee blow that lands, `chance` in 100: the hero's blows miss
+    # `miss` in 100 more often for `turns`.
+    'dust': {'chance': ((1, 100), 40), 'miss': ((5, 50), 25), 'turns': ((1, 9), 3)},
+    # Once, the first time it is struck to half its health or below: every
+    # monster within `radius` tiles wakes and comes. The default reaches past
+    # a fight's own noise (12 tiles), which has woken the nearer ones already.
+    'squeal': {'radius': ((2, 24), 16)},
+}
+SKILLS_MAX = 2
+# A thing that can be thrown (ADR 0024): `harm` (guard takes from it, and it
+# is rolled like a blow) at a foe up to `range` tiles away on a clear line.
+THROW_HARM_RANGE = (1, 20)
+THROW_RANGE_RANGE = (2, 8)
+DEFAULT_THROW_RANGE = 5
+
 
 def _whole(value) -> bool:
     return isinstance(value, int) and not isinstance(value, bool)
@@ -119,6 +149,48 @@ def drop_chance_of(record) -> int:
     """A family's `drop_chance` (0..100), or 100 - every kill drops, as before."""
     value = record.get('drop_chance') if isinstance(record, dict) else None
     return value if _in(value, DROP_CHANCE_RANGE) else 100
+
+
+def skills_of(record) -> list[dict]:
+    """A record's usable `skills`, defaults filled, in the order written.
+
+    A skill that is not one of `SKILL_KINDS`, or a number out of its bounds,
+    is left out here - `skills_errors` names it - so a pack the check
+    refused still plays the skills it wrote right. At most `SKILLS_MAX`.
+    """
+    listed = record.get('skills') if isinstance(record, dict) else None
+    if not isinstance(listed, list):
+        return []
+    out: list[dict] = []
+    for entry in listed:
+        if not isinstance(entry, dict) or entry.get('skill') not in SKILL_KINDS:
+            continue
+        spec = SKILL_KINDS[entry['skill']]
+        if any(k not in spec and k != 'skill' for k in entry):
+            continue
+        skill = {'skill': entry['skill']}
+        ok = True
+        for key, (bounds, default) in spec.items():
+            value = entry.get(key, default)
+            if not _in(value, bounds):
+                ok = False
+                break
+            skill[key] = value
+        if ok:
+            out.append(skill)
+    return out[:SKILLS_MAX]
+
+
+def throw_of(spec) -> dict | None:
+    """An item's usable `throw` as `{harm, range}`, or None."""
+    block = spec.get('throw') if isinstance(spec, dict) else None
+    if not isinstance(block, dict) or set(block) - {'harm', 'range'}:
+        return None
+    harm = block.get('harm')
+    rng = block.get('range', DEFAULT_THROW_RANGE)
+    if not (_in(harm, THROW_HARM_RANGE) and _in(rng, THROW_RANGE_RANGE)):
+        return None
+    return {'harm': harm, 'range': rng}
 
 
 def curved(value: int, section, k: int, stat: str) -> int:
@@ -328,6 +400,42 @@ def item_errors(item_id: str, spec: dict, spell_ids) -> list[str]:
             errors.append(f'{where} charges must be a whole number from 1 to 20')
         if 'casts' not in spec:
             errors.append(f'{where} charges need a casts: a charge is one cast')
+    if 'throw' in spec and throw_of(spec) is None:
+        errors.append(f'{where} throw must be {{"harm": 1 to 20, "range": 2 to 8}}, '
+                      f'such as {{"harm": 2, "range": 5}}')
+    return errors
+
+
+def skills_errors(where: str, record: dict) -> list[str]:
+    """Every problem with a record's `skills` (ADR 0024; empty = good)."""
+    if 'skills' not in record:
+        return []
+    listed = record['skills']
+    kinds = ', '.join(SKILL_KINDS)
+    if not isinstance(listed, list):
+        return [f'{where} skills must be a list of up to {SKILLS_MAX} skills, '
+                f'such as [{{"skill": "web"}}]']
+    errors: list[str] = []
+    if len(listed) > SKILLS_MAX:
+        errors.append(f'{where} skills may hold at most {SKILLS_MAX} skills')
+    seen = set()
+    for i, entry in enumerate(listed):
+        at = f'{where} skill {i + 1}'
+        if not isinstance(entry, dict) or entry.get('skill') not in SKILL_KINDS:
+            errors.append(f'{at} must name its skill, one of {kinds}')
+            continue
+        kind = entry['skill']
+        if kind in seen:
+            errors.append(f'{at} is a second {kind}: a monster has each skill once')
+        seen.add(kind)
+        spec = SKILL_KINDS[kind]
+        for key in entry:
+            if key != 'skill' and key not in spec:
+                errors.append(f'{at} ({kind}) may only hold {", ".join(spec)}, not {key!r}')
+        for key, (bounds, _default) in spec.items():
+            if key in entry and not _in(entry[key], bounds):
+                errors.append(f'{at} ({kind}) {key} must be a whole number from '
+                              f'{bounds[0]} to {bounds[1]}')
     return errors
 
 
@@ -365,4 +473,5 @@ def family_errors(name: str, defaults: dict) -> list[str]:
     if 'gold' in defaults and gold_of(defaults) is None:
         errors.append(f'{where} gold must be [lo, hi], whole numbers from 0 to 9999, '
                       f'such as [1, 4]')
+    errors.extend(skills_errors(where, defaults))
     return errors

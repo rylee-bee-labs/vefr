@@ -187,7 +187,7 @@
     // struck returns above, because there was no fight to teach.
     hintStrikeOnce();
     var totals = rpgTraitTotals();
-    var roll = rpgRoll(regionName, 'hero', e.id, totals.crit);
+    var roll = rpgRoll(regionName, 'hero', e.id, totals.crit, heroMissBonus());
     playOneShot('hero', 'attack');
     wakeOne(e);
     makeNoise('fight');
@@ -237,6 +237,7 @@
     // A landed blow is one practice count; levels mode ignores it.
     sayGrowth(practiceSuffix(growBump('strikes')));
     if (e.hp <= 0) said += foeFalls(e, totals);
+    else said += squealIfHurt(e);
     combatSay(said);
     combatSnapshot();
     return true;
@@ -322,12 +323,193 @@
     soundCue('hit');
     var said = 'It strikes ' + foe.name + ' for ' + dmg + '.';
     if (foe.hp <= 0) said += foeFalls(foe);
+    else said += squealIfHurt(foe);
     combatSay(said);
     combatSnapshot();
     flushGrowth();
     return said;
   }
   window.VEFR_SPELL_HARM = spellHarm;
+
+  // ---- monster skills and throwing (ADR 0024) ----
+  // A clear line from one tile to another: every tile between them (not
+  // the two ends) is open ground with no monster on it, walked the way a
+  // straight line is drawn on a grid. A web, a spit and a thrown thing all
+  // need one, so a wall or another monster stands in the way of each.
+  function clearLine(x0, y0, x1, y1) {
+    var dx = Math.abs(x1 - x0), dy = Math.abs(y1 - y0);
+    var sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+    var err = dx - dy, x = x0, y = y0;
+    while (true) {
+      var e2 = 2 * err;
+      if (e2 > -dy) { err -= dy; x += sx; }
+      if (e2 < dx) { err += dx; y += sy; }
+      if (x === x1 && y === y1) return true;
+      if ((town.legend[town.map[y][x]] || {}).solid) return false;
+      if (typeof propBlocked === 'function' && propBlocked(x, y)) return false;
+      if (enemyAt(x, y)) return false;
+    }
+  }
+  function skillOf(e, kind) {
+    var list = (e && e.skills) || [];
+    for (var i = 0; i < list.length; i++) if (list[i].skill === kind) return list[i];
+    return null;
+  }
+  // Each of the monster's own turns brings a waiting skill one turn nearer.
+  function skillsTick(e) {
+    var wait = e.skillWait || {};
+    for (var k in wait) if (wait.hasOwnProperty(k) && wait[k] > 0) wait[k]--;
+  }
+  // A web or a spit at a hero within its range on a clear line, when the
+  // skill is not still waiting. Answers whether the hero fell, or null when
+  // no skill was used (the monster then walks as it always did).
+  function rangedSkill(e) {
+    var reach = chebyshev(e.at[0], e.at[1], hero[0], hero[1]);
+    e.skillWait = e.skillWait || {};
+    var kinds = ['web', 'spit'];
+    for (var i = 0; i < kinds.length; i++) {
+      var sk = skillOf(e, kinds[i]);
+      if (!sk || reach > sk.range || e.skillWait[sk.skill] > 0) continue;
+      if (!clearLine(e.at[0], e.at[1], hero[0], hero[1])) continue;
+      e.skillWait[sk.skill] = sk.every;
+      playOneShot('enemy:' + e.id, 'attack');
+      if (sk.skill === 'web') {
+        var held = applyHeroStatus({ effect: 'webbed', turns: sk.turns });
+        combatSay(e.name + ' throws a web over you: you are stuck for ' + sk.turns
+          + (sk.turns === 1 ? ' turn.' : ' turns.'));
+        if (held) hitAt(null, 'webbed', 'miss');
+        return false;
+      }
+      var roll = rpgRoll(regionName, e.id, 'hero', 0);
+      if (roll && roll.miss) {
+        hitAt(null, 'miss', 'miss');
+        combatSay(e.name + ' spits at you and misses.');
+        return false;
+      }
+      var hurt = rpgGuarded(sk.harm, heroGuard());
+      HERO_HP = Math.max(0, HERO_HP - hurt);
+      saveHeroHp();
+      renderHp();
+      hitAt(null, '-' + hurt, 'hurt');
+      soundCue('hurt');
+      combatSay(e.name + ' spits at you for ' + hurt + '.');
+      if (HERO_HP <= 0) { cozyDeath(e); return true; }
+      return false;
+    }
+    return null;
+  }
+  // A festering bite, dust in the eyes: each with its own chance, drawn
+  // from its own stream. Answers the words to add to the blow's line.
+  function onHitSkills(e) {
+    var said = '';
+    var fester = skillOf(e, 'fester');
+    if (fester && rpgSkillRoll(regionName, e.id, 'fester') < fester.chance) {
+      var f = applyHeroStatus({ effect: 'festering', type: 'poison', turns: fester.turns,
+                                tick: fester.tick });
+      if (f && f.fresh) said += ' The bite festers: ' + fester.tick + ' a turn for ' + fester.turns
+        + (fester.turns === 1 ? ' turn.' : ' turns.');
+    }
+    var dust = skillOf(e, 'dust');
+    if (dust && rpgSkillRoll(regionName, e.id, 'dust') < dust.chance) {
+      var d = applyHeroStatus({ effect: 'dusted', turns: dust.turns, miss: dust.miss });
+      if (d && d.fresh) said += ' Dust gets in your eyes: your blows go wide for ' + dust.turns
+        + (dust.turns === 1 ? ' turn.' : ' turns.');
+    }
+    return said;
+  }
+  // The first time a monster with `squeal` is struck to half its health or
+  // below and still stands, it squeals: every monster within the radius
+  // wakes and comes. Once a life. Answers the words to add to the line.
+  function squealIfHurt(e) {
+    var sk = skillOf(e, 'squeal');
+    if (!sk || e.squealed || !e.alive || e.hp > (e.hp0 || e.hp) / 2) return '';
+    e.squealed = true;
+    var woke = 0;
+    for (var i = 0; i < enemies.length; i++) {
+      var o = enemies[i];
+      if (!o || o === e || !o.alive) continue;
+      if (chebyshev(o.at[0], o.at[1], e.at[0], e.at[1]) > sk.radius) continue;
+      if (!o.awake) woke++;
+      wakeOne(o);
+    }
+    soundCue('hurt');
+    return ' ' + e.name + ' squeals for help' + (woke ? '!' : ', and nothing answers.');
+  }
+  // The first carried thing that can be thrown, in the pack's own order.
+  function throwableId() {
+    var cat = itemCatalog();
+    var carried = bagItems();
+    var ids = Object.keys(cat);
+    for (var i = 0; i < ids.length; i++) {
+      if (carried.indexOf(ids[i]) >= 0 && rpgThrowOf(cat[ids[i]])) return ids[i];
+    }
+    return null;
+  }
+  // Throw one carried thing (ADR 0024) at the foe the fight row names, or
+  // the nearest living one in range on a clear line. It is rolled like a
+  // blow (a miss, a critical), guard takes from it, and it lands on the
+  // foe's tile, to be picked up again. A throw is a blow: it costs the
+  // turn one costs, unless the caller runs that turn itself (`noTurn`).
+  // Answers whether a throw happened.
+  function heroThrow(id, target, opts) {
+    opts = opts || {};
+    var def = itemCatalog()[id];
+    var spec = rpgThrowOf(def);
+    if (!spec || bagItems().indexOf(id) < 0) return false;
+    function inReach(f) {
+      return f && f.alive && f.fightable !== false
+        && chebyshev(f.at[0], f.at[1], hero[0], hero[1]) <= spec.range
+        && clearLine(hero[0], hero[1], f.at[0], f.at[1]);
+    }
+    var foe = inReach(target) ? target : null;
+    if (!foe) {
+      var best = -1;
+      for (var i = 0; i < enemies.length; i++) {
+        var e = enemies[i];
+        if (!inReach(e)) continue;
+        var dist = chebyshev(e.at[0], e.at[1], hero[0], hero[1]);
+        if (best === -1 || dist < best) { best = dist; foe = e; }
+      }
+    }
+    if (!foe) {
+      combatSay('There is nothing in reach to throw ' + itemName(id) + ' at.');
+      return false;
+    }
+    var carried = null;
+    bagCarried().forEach(function (c) { if (!carried && c.id === id) carried = c; });
+    if (!carried || !bagRemoveEntry(carried)) return false;
+    var totals = rpgTraitTotals();
+    var roll = rpgRoll(regionName, 'hero', foe.id, totals.crit, heroMissBonus());
+    playOneShot('hero', 'attack');
+    wakeOne(foe);
+    makeNoise('fight');
+    var said;
+    if (roll && roll.miss) {
+      hitAt(foe.at, 'miss', 'miss');
+      said = 'You throw ' + itemName(id) + ' at ' + foe.name + ' and miss.';
+    } else {
+      var crit = !!(roll && roll.crit);
+      var amount = spec.harm * (crit ? roll.times : 1);
+      var dmg = rpgGuarded(resolveDamage(amount, '', foe.resist, foe.immune).damage, foe.guard);
+      foe.hp = Math.max(0, foe.hp - dmg);
+      playOneShot('enemy:' + foe.id, 'hurt');
+      soundCue('hit');
+      hitAt(foe.at, crit ? 'CRIT ' + dmg : String(dmg), crit ? 'crit' : 'hit');
+      said = 'You throw ' + itemName(id) + ' at ' + foe.name + ' for ' + dmg + '.';
+      if (foe.hp <= 0) said += foeFalls(foe, totals);
+      else said += squealIfHurt(foe);
+    }
+    // It lands where the foe stood, as itself.
+    placeDrops(foe.at, [{ item: carried.id, rarity: carried.rarity, traits: carried.traits }]);
+    combatSay(said);
+    combatSnapshot();
+    flushGrowth();
+    draw();
+    if (!opts.noTurn && typeof window.VEFR_SPEND_TURN === 'function') window.VEFR_SPEND_TURN();
+    return true;
+  }
+  window.VEFR_THROW = heroThrow;
+  window.VEFR_THROWABLE = throwableId;
   // One enemy's attack: the hero loses its `atk`, clamped at zero.
   //
   // The number that is subtracted comes from the one resolver, so the
@@ -380,6 +562,10 @@
       hitAt(e.at, String(back), 'hit');
       line += ' ' + itemName(thorns.from) + ' bites back for ' + back + '.';
     }
+    // What the bite leaves behind (ADR 0024): a festering wound, dust in
+    // the eyes. Only on a blow that landed, and never on the one that
+    // felled the hero - the wake clears every state anyway.
+    if (struck.damage > 0 && HERO_HP > 0) line += onHitSkills(e);
     combatSay(line);
     // A hit that reaches the hero is one practice count.
     sayGrowth(practiceSuffix(growBump('hits-taken')));
@@ -529,7 +715,13 @@
   // walks out of its hall.
   function enemyAct(e, maps) {
     var d = manhattan(e.at[0], e.at[1], hero[0], hero[1]);
+    skillsTick(e);
     if (d === 1) return enemyAttack(e);
+    // A web or a spit from where it stands (ADR 0024), before it walks.
+    if (d <= e.sight) {
+      var reached = rangedSkill(e);
+      if (reached !== null) return reached;
+    }
     if (isWarden(e)) {
       if (d <= e.sight && badlyHurt(e)) {
         return stepAlong(e, distances(maps, hero[0], hero[1]), -1);

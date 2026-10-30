@@ -47,9 +47,10 @@ TOP_KEYS_V1 = frozenset({"blueprint", "families", "regions"})
 FAMILY_KEYS = frozenset({"defaults", "extends"})
 # ADR 0021 added `guard` (what a blow at the monster loses), `drop_chance`
 # (the share of its kills that drop anything) and `gold` (the coins a kill
-# pays, as [lo, hi]); `rpg.family_errors` checks their values.
+# pays, as [lo, hi]); ADR 0024 added `skills` (what it can do besides walk
+# up and bite). `rpg.family_errors` checks their values.
 FIELD_KEYS = frozenset({"name", "sprite", "hp", "atk", "xp", "sight", "drops",
-                        "guard", "drop_chance", "gold"})
+                        "guard", "drop_chance", "gold", "skills"})
 REGION_KEYS = frozenset({"enemies", "places"})
 # Format 1 closed its regions on `enemies` alone, and it still does: a
 # format-1 file carrying `places` is a file asking for a format it is
@@ -75,7 +76,7 @@ PLACE_KEYS = frozenset({
 PLACE_KINDS = ("door", "stair", "sign")
 
 FIELD_ORDER = ("id", "name", "sprite", "at", "hp", "atk", "xp", "sight", "drops",
-               "guard", "drop_chance", "gold")
+               "guard", "drop_chance", "gold", "skills")
 
 
 class BlueprintRefusal(ValueError):

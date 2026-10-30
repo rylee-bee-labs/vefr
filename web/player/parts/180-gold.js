@@ -756,6 +756,24 @@ function renderBagPanel() {
       use.addEventListener('click', function () { useItem(id); });
       row.appendChild(use);
     }
+    // A thing that can be thrown (ADR 0024) can be thrown from here, at
+    // the nearest foe in reach; the fight decides whether one is.
+    if (def && rpgThrowOf(def)) {
+      var tb = document.createElement('button');
+      tb.type = 'button';
+      tb.className = 'cta';
+      tb.textContent = 'Throw';
+      tb.dataset.item = id;
+      tb.dataset.action = 'throw';
+      tb.setAttribute('aria-label', 'Throw ' + itemName(id));
+      tb.addEventListener('click', function () {
+        if (typeof window.VEFR_THROW === 'function') {
+          window.VEFR_THROW(id, null);
+          bagSay(combatText());
+        }
+      });
+      row.appendChild(tb);
+    }
     // Mending (E2): a pack that declares recipes gives every carried
     // thing a Mend button; the mending part owns the choosing and the
     // preview. A pack with no recipes gets no button at all.

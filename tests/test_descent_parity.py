@@ -126,6 +126,12 @@ RPG_DESCENT["sections"][0]["curve"] = {"hp": [1.0, 2.5], "atk": [1.0, 3.0]}
 RPG_DESCENT["blueprint"]["families"]["rat"]["defaults"].update(
     {"guard": 1, "gold": [1, 9], "drop_chance": 50})
 RPG_DESCENT["blueprint"]["families"]["moth"]["defaults"]["drops"] = ["charm"]
+# ADR 0024: a family's skills ride its mobs in both twins, the defaults
+# filled in the same way - one skill left at its defaults, one named whole.
+RPG_DESCENT["blueprint"]["families"]["rat"]["defaults"]["skills"] = [
+    {"skill": "fester", "chance": 50}, {"skill": "squeal"}]
+RPG_DESCENT["blueprint"]["families"]["moth"]["defaults"]["skills"] = [
+    {"skill": "dust", "chance": 40, "miss": 25, "turns": 3}]
 RPG_DEPTHS = [1, 2, 3]
 
 
@@ -272,7 +278,8 @@ def test_a_rolled_floor_is_the_same_floor_in_both_languages(replay):
 
 
 def test_the_rpg_core_floor_is_the_same_floor_in_both_languages(replay):
-    """ADR 0021: curve, guard, gold, drop chance and rarity-tied traits.
+    """ADR 0021: curve, guard, gold, drop chance and rarity-tied traits;
+    ADR 0024: a family's skills, defaults filled.
 
     Each is read after the draws it does not own, on a stream of its own, so
     the plan is compared whole - and the fixture is checked to have made each
@@ -281,13 +288,19 @@ def test_the_rpg_core_floor_is_the_same_floor_in_both_languages(replay):
     got = replay["rpg"]["plans"]
     assert len(got) == len(RPG_DEPTHS)
     seen = {"guard": False, "gold": False, "dropped": False, "kept": False,
-            "tied": False}
+            "tied": False, "skills": False}
     for depth, plan in zip(RPG_DEPTHS, got):
         want = delve.floor_plan(RPG_DESCENT, depth, catalog=RPG_ITEMS)
         assert _canonical(plan) == _canonical(want), depth
         for mob in want["mobs"]:
             seen["guard"] |= mob.get("guard") == 1
             seen["gold"] |= isinstance(mob.get("gold"), int)
+            # ADR 0024: the defaults filled in, the same on both sides.
+            if mob.get("guard") == 1:
+                assert mob.get("skills") == [
+                    {"skill": "fester", "chance": 50, "tick": 1, "turns": 3},
+                    {"skill": "squeal", "radius": 16}], mob
+                seen["skills"] = True
             if mob.get("guard") == 1:      # a rat, or a family extending one
                 seen["dropped" if mob["drops"] else "kept"] = True
             for drop in mob["drops"]:

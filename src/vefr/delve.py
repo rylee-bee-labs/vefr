@@ -1138,6 +1138,11 @@ def mobs_at(key: str, section: dict, rows: list[str], up: tuple[int, int],
         gold = rpg.gold_of(family)
         if gold:
             mob['gold'] = _rand_range(prng(stream_seed(key, f'gold|m{i}')), gold[0], gold[1])
+        # What it can do besides walk up and bite (ADR 0024), only when the
+        # family names it, so a floor of plain families plans the same dict.
+        skills = rpg.skills_of(family)
+        if skills:
+            mob['skills'] = skills
         mobs.append(mob)
     return mobs
 

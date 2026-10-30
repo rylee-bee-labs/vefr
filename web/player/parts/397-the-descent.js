@@ -602,6 +602,10 @@ window.VEFR_DESCENT = (function () {
         mob.gold = randRange(window.VEFR_DELVE.prng(streamSeed(key, 'gold|m' + i)),
                              gold[0], gold[1]);
       }
+      // What it can do besides walk up and bite (ADR 0024; twin of
+      // `delve.py`), only when the family names it.
+      var skills = rpgSkillsOf(family);
+      if (skills.length) mob.skills = skills;
       mobs.push(mob);
     }
     return mobs;
@@ -1321,11 +1325,18 @@ window.VEFR_DESCENT = (function () {
   // WOULD stay. Copying the plan's key would put a fresh warden on the
   // roster already yielded and, by `loadEnemies`'s `alive`, unattackable
   // from the first turn, so its challenge could never be completed.
+  // `guard`, `gold` and `skills` ride it too: the plan draws them (ADR 0021,
+  // ADR 0024), and the fight reads them off the entry. Until ADR 0024 the
+  // entry dropped `guard` and `gold`, so a generated monster's armour was
+  // never felt and its coins were never paid.
   function enemyEntry(mob) {
     var entry = { id: mob.id, name: mob.name, sprite: mob.sprite || '', at: mob.at.slice(),
                   hp: mob.hp, atk: mob.atk, sight: mob.sight, xp: mob.xp,
                   drops: mob.drops.slice(), warden: mob.warden === true };
     if (mob.fightable === false) entry.fightable = false;
+    if (mob.guard) entry.guard = mob.guard;
+    if (mob.gold) entry.gold = mob.gold;
+    if (mob.skills) entry.skills = mob.skills.slice();
     return entry;
   }
 

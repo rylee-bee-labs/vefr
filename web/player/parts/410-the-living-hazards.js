@@ -115,6 +115,13 @@
                ? { effect: 'burning', type: 'fire', turns: e.burns.turns,
                    tick: e.burns.tick }
                : null,
+        // What it can do besides walk up and bite (ADR 0024), and the turns
+        // each ranged skill still waits; a record with none has [] here
+        // and fights the fight it always fought.
+        // (Guarded: a harness may load the monster parts without the RPG core.)
+        skills: (typeof rpgSkillsOf === 'function') ? rpgSkillsOf(e) : [],
+        skillWait: {},
+        squealed: false,
         // A yielding warden that is on the roster at all has already
         // yielded: the descent puts one here only once its challenge
         // flag is set, and it is not a living hazard from then on - it
