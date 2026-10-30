@@ -43,7 +43,12 @@ E2 (mending) changed ONE captured sentence the same way the event table's own tw
 changed with it: the unknown-event sentence of the rules case '{"bogus": {}}' names every event
 the table holds, and `mends` is now one of them, appended LAST so every other name keeps its
 place. That is the whole of the written reason - the vocabulary grew by one declared-thing event
-(`tests/test_event_table.py` pins the same growth), and no other byte moved."""
+(`tests/test_event_table.py` pins the same growth), and no other byte moved.
+ADR 0022 added `layout` to the `section` table, and the same unknown-key sentence moved the way it
+moved for `endless`: it names every key the table holds, and it now ends "decor and layout"
+because `layout` is a key of that table, put LAST so every other name keeps its order and its
+position. That sentence appears three times (once in "an unknown key", twice in "two unknown keys
+and two wrong values"); no value, pointer, case or order changed, and no case was added."""
 import json
 from pathlib import Path
 
