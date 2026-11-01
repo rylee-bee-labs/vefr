@@ -157,5 +157,14 @@ the next FOV implementation must close, not a claim about today.
   (`docs/research/2026-09-30-enhancement-packet.md:56`, `:71`); libtcod and
   python-tcod, BSD-3 / BSD-2 (`:67`); DeBroglie, MIT (`:94`); mapgen4,
   Apache-2.0 (`:98`).
-- memomancer `src/core/fov.ts` and `mapgen.ts` were named in the mission but
-  were not present in this run, so no sha is claimed.
+- memomancer `src/core/mapgen.ts` @
+  `fba040200b2c82f739705027ccf85c3306e8b8cb` (249 lines: `generateFloor`
+  `:23`, `bfs` `:198`, `walkable` `:249`) and `src/core/fov.ts` @
+  `8b48021e4718474814e209e6a3773f3298e14b14` (42 lines: `computeFov` `:8`,
+  `visible` `:15`, `stepToward` `:24`, `pathTo` `:36`) are the smallest estate
+  pair that does this card's two halves: rooms first, then what the player sees.
+- haunted-card-table `src/rules/solver.js` @
+  `d4d50e7697d0d5cac8387c74ae6a5be9572800cf` searches a generated deal - the
+  same shape of "generate, then ask what is reachable".
+- memomancer and haunted-card-table are private estate repositories, so the
+  citation is the path and sha, not a URL.

@@ -167,5 +167,14 @@ tests/test_delve_prng.py                       c993716d334adb06d02a7a7bafaf29217
 The generator is cited at `src/vefr/delve.py:313-420`; the fog at
 `web/player/parts/450-fog-of-war.js:115-149`; the shipped turn at
 `web/player/parts/480-town-input-and-turns.js:1477-1560`.
-The estate repositories memomancer, haunted-card-table and vibe-coder were not
-present in this run, so no sha is claimed for their files.
+The estate files behind the three cards were checked from a clone of each private repository, and the
+blob shas above were produced the same way:
+
+```text
+memomancer src/core/rng.ts               c9ed5ad1cc1596df1f86a45b0d78d8d5946c8729
+memomancer src/core/fov.ts               8b48021e4718474814e209e6a3773f3298e14b14
+memomancer src/core/mapgen.ts            fba040200b2c82f739705027ccf85c3306e8b8cb
+haunted-card-table src/rules/game.js     ca89ed989c8829ae728b5764243a732864fd097b
+haunted-card-table src/rules/solver.js   d4d50e7697d0d5cac8387c74ae6a5be9572800cf
+vibe-coder src/logic/game.js             367bc5d9013e122e50a8970984eec60d2deb75c1
+```
