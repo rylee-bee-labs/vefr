@@ -75,17 +75,19 @@ HP is a per-phase display, and a combat action is a journal entry; the engine
 does not have a turn system (`src/vefr/combat.py:1-31`).
 No card here claims a combat loop.
 
-## Sources and what this run could verify
+## Sources and how to check them
 
-The three cards cite VEFR files at blob shas produced by
-`git rev-parse HEAD:<path>` in this tree at the base commit `3ed48bb7`.
-Those shas are real and reproducible.
+VEFR files are cited at blob shas produced by `git rev-parse HEAD:<path>` in
+this tree at the base commit `3ed48bb7`, and each claim names the line it rests
+on.
 
-The estate repositories named in the mission - memomancer,
-haunted-card-table and vibe-coder - and the 2026-10-31 research notes were not
-present in this run's filesystem, and the network was closed.
-No sha or path is claimed for a file this run could not read.
-No game repository URL is linked: none could be verified with the network closed.
+Estate games are cited the same way, from a clone of each repository:
+memomancer (`src/core/rng.ts`, `fov.ts`, `mapgen.ts`), haunted-card-table
+(`src/rules/game.js`, `src/rules/solver.js`) and vibe-coder
+(`src/logic/game.js`). All three are private estate repositories, so the
+citation is the path and sha, not a link: a public page pointing at a private
+repository would only 404.
+
 Where VEFR has no implementation, the card says so plainly.
 
 OSS references and their licences are quoted from the repository's own research

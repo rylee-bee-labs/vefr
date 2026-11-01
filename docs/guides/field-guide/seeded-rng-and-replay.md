@@ -149,5 +149,13 @@ The narrower guard is the pinned float test: a wrong hash, such as Python's
   `tests/test_delve_prng.py:5-6`; rot.js is BSD-3-Clause
   (`docs/research/2026-09-30-enhancement-packet.md:56`); DeBroglie is MIT
   (`:94`).
-- memomancer `src/core/rng.ts` was named in the mission but was not present in
-  this run, so no sha is claimed.
+- memomancer `src/core/rng.ts` @ `c9ed5ad1cc1596df1f86a45b0d78d8d5946c8729`
+  (46 lines: `mulberry32` `:6`, `hashStr` `:16`, `intBetween` `:25`,
+  `shuffled` `:31`, `weighted` `:41`) is the estate's smallest seeded stream:
+  one function of a number, threaded through state instead of a global.
+- haunted-card-table `src/rules/game.js` @
+  `ca89ed989c8829ae728b5764243a732864fd097b` keeps a run as its move list and
+  rebuilds it with `replay(cfg, moves)` at `:10` - replay as data, not as a
+  recording.
+- memomancer and haunted-card-table are private estate repositories, so the
+  citation is the path and sha, not a URL.

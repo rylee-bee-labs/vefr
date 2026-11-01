@@ -127,6 +127,12 @@ That is the common purity bug in a tile loop, caught without a browser.
 - OSS: rot.js, BSD-3-Clause, for turn scheduling
   (`docs/research/2026-09-30-enhancement-packet.md:56`); Ink and inkjs, MIT
   (`:51`).
-- No pure `step(state, action)` exists in VEFR today. The estate pure-step kits
-  named in the mission (vibe-coder, haunted-card-table's solver) were not
-  readable this run; no sha is claimed.
+- No pure `step(state, action)` exists in VEFR today. Two estate games have one:
+  vibe-coder `src/logic/game.js` @
+  `367bc5d9013e122e50a8970984eec60d2deb75c1` (`step(prev, a)` `:73`, a pure
+  reducer over state and one verb), and haunted-card-table `src/rules/game.js`
+  @ `ca89ed989c8829ae728b5764243a732864fd097b`, where `play(g, m)` at `:15`
+  returns a new game and `replay(cfg, moves)` at `:10` rebuilds any position
+  from its move list.
+- Those two repositories are private estate projects, so the citation is the
+  path and sha, not a URL.
