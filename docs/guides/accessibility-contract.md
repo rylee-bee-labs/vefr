@@ -440,7 +440,7 @@ Import `vefr-foundation.css` — it provides all of these out of the box:
 
 - Foundation CSS: `web/vefr-foundation.css` (shared accessible skeleton)
 - Preferences: `web/prefs.js` (contract, defaults, CSS integration)
-- Agent rules: `AGENTS.md` (boundary table, "Always" row)
+- Agent rules: `docs/agent-reference.md` (boundary table, "Always" row)
 - Burrito tokens: `Rylee-Bee/burrito-journalism/web/design-tokens.css`
   (skin only — imports vefr-foundation.css)
 - Figma source: file `J0iRc8JElLGrJkvCz6L6fk`

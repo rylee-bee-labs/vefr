@@ -161,7 +161,7 @@ That's the full pytest suite. It should pass with zero setup beyond
 step 1 - the engine tests itself against the demonstration world.
 
 Working on the player itself? `web/packaged.html` is generated from `web/player/parts/`:
-edit a part, run `uv run python scripts/build_player.py`, and see `AGENTS.md`.
+edit a part, run `uv run python scripts/build_player.py`, and see `docs/agent-reference.md`.
 
 ## 5. The CLI reference
 
@@ -213,7 +213,7 @@ Every route, every request/response shape, try-it-out included.
 
 | Question | Read |
 |---|---|
-| How does the bones/flesh split work? | `AGENTS.md` |
+| How does the bones/flesh split work? | `docs/agent-reference.md` |
 | What's landed, what's next? | `ROADMAP.md` |
 | How do I build a world end to end? | `docs/guides/world-creation.md` |
 | Which game does an act play? | `docs/guides/rulesets.md` |

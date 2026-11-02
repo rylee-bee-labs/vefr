@@ -21,7 +21,7 @@ loaded through the world-pack contract.
 
 ## Owner direction is authoritative
 
-When Rylee and ChatGPT jointly refine a gameplay requirement and Rylee accepts it, agents must treat it as **approved direction**, not a draft or proposal. Follow [AGENTS.md](../AGENTS.md#owner-confirmed-design-direction); separate requirements from implementation/testing and preserve canon approval boundaries. This rule applies to Cottage 1.0 and reusable VEFR work.
+When Rylee and ChatGPT jointly refine a gameplay requirement and Rylee accepts it, agents must treat it as **approved direction**, not a draft or proposal. Follow [the agent reference](../docs/agent-reference.md#owner-confirmed-design-direction); separate requirements from implementation/testing and preserve canon approval boundaries. This rule applies to Cottage 1.0 and reusable VEFR work.
 
 ## Current release-linked engine work (2026-10-14)
 
