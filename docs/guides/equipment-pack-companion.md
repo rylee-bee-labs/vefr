@@ -4,7 +4,7 @@ The engine side of equipment is done and verified (#244 pack fields, #247 the pu
 Bag panel). What is left for step 5 of `design/equipment.md` is **pack data**, and pack data lives
 in your private pack repo — so this is the change to make there, not here. The engine records the
 companion change rather than editing across the repo boundary
-(`AGENTS.md`, "Cross-repo boundaries").
+(`docs/agent-reference.md`, "Cross-repo boundaries").
 
 ## The change
 
