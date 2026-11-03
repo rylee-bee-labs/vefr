@@ -1,6 +1,7 @@
 # Plan 2 · Durable rule saves
 
-> Status: proposed plan, not authorized · Owner: Rylee · Planner: Opus 5.5 · Date: 2026-10-02
+> Status: authorized (2026-11-02) · Owner: Rylee · Planner: Opus 5.5 · Date: 2026-10-02
+> Authorized on 2026-11-02: Rylee approved all four recommendations (Project Home decision 391). The gate below is satisfied for this plan.
 > Inputs: `docs/research/language-architecture/08` (save-state), `11` (decision 4), `13`, and live code at VEFR `main` `45f5767`.
 > Independent of [Plan 1, Blueprint family normalization](blueprint-family-normalization-plan.md). It touches no Blueprint code and needs none.
 
