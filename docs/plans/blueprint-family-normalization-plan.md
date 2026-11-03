@@ -1,6 +1,7 @@
 # Plan 1 · Blueprint family normalization
 
-> Status: proposed plan, not authorized · Owner: Rylee · Planner: Opus 5.5 · Date: 2026-10-02
+> Status: held, not authorized (2026-11-02) · Owner: Rylee · Planner: Opus 5.5 · Date: 2026-10-02
+> Held on 2026-11-02: normalization waits until the end-of-life date for hand-written Blueprint records is set. Rylee approved all four recommendations (Project Home decision 391).
 > Inputs: `docs/research/language-architecture/` (00–13, SOURCES), `language-architecture-campaign.md`, `language-architecture-proof-pass.md`, the two private Cottage companions, and live code at VEFR `main` `45f5767`.
 > Independent of [Plan 2, durable rule saves](durable-rule-saves-plan.md). Neither blocks the other.
 
