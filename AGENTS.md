@@ -13,7 +13,7 @@ before pytest: the node harnesses need jsdom, and without it pytest errors.
 uv sync --group test
 uv run --group test ruff check src tests scripts
 npm ci
-uv run --group test --with pytest-xdist pytest -q -n auto
+uv run --group test --with pytest-xdist pytest -q -n auto --durations=30
 uv run --group test norns validate --pack worlds/sample-world
 python3 scripts/check_public_surface.py
 ```

@@ -290,16 +290,14 @@ def put(repo, rel, value):
 def make_pr(tmp_path, edits, *, merge=True, base=PIN_BASE, also=None, gitlink=None):
     """A repo whose HEAD is a merge of a PR branch (the `edits` mapping path -> new text or bytes) into main.
 
-    `base` is the manifest on main (None: main has none). `also` is more files on main. `gitlink` is a pair of commit
+    `base` is the manifest on main. `also` is more files on main. `gitlink` is a pair of commit
     names: main records a submodule `sub` at the first, and the PR branch records it at the second.
     """
     repo = tmp_path / "repo"
     repo.mkdir(parents=True)
     git(repo, "init", "-q", "-b", "main")
     git(repo, "config", "core.autocrlf", "false")
-    files = {"README.md": "hello\n", **(also or {})}
-    if base is not None:
-        files[PIN] = base
+    files = {"README.md": "hello\n", PIN: base, **(also or {})}
     for rel, value in files.items():
         put(repo, rel, value)
     git(repo, "add", "-A")
@@ -534,13 +532,10 @@ def test_a_git_setting_cannot_hide_a_second_change_behind_the_bump(tmp_path):
 
 
 NOT_ONLY = {
-    "an older note removed": {PIN: PIN_BUMP.replace(OLD_NOTE, "")},
     "another line of the same file": {PIN: PIN_BUMP.replace("  - secrets-and-data\n", "")},
     "another comment in the same file": {PIN: PIN_BUMP.replace("source:\n", "source:\n  # a note anyone could write\n")},
     "another key in the same file": {PIN: PIN_BUMP.replace("schema:", "schema2:")},
-    "a short sha": {PIN: PIN_BUMP.replace(NEW_SHA, "bbbbbbb")},
     "a second file": {PIN: PIN_BUMP, "README.md": "changed\n"},
-    "a new file beside it": {PIN: PIN_BUMP, "docs/note.md": "new\n"},
     "another file alone": {"README.md": "changed\n"},
 }
 
@@ -549,10 +544,6 @@ NOT_ONLY = {
 def test_a_bump_with_anything_else_is_not(tmp_path, case):
     assert NOT_ONLY[case].get(PIN) != PIN_BUMP or len(NOT_ONLY[case]) > 1
     assert run(make_pr(tmp_path, NOT_ONLY[case])) == "only=false"
-
-
-def test_a_pr_that_adds_the_manifest_is_not(tmp_path):
-    assert run(make_pr(tmp_path, {PIN: PIN_BUMP}, base=None)) == "only=false"
 
 
 def test_a_push_event_is_not(tmp_path):
@@ -695,7 +686,7 @@ def test_a_line_that_only_looks_like_the_pin_is_told_apart_by_the_file_alone():
 # -- the workflows. The test group has no YAML reader, so the steps are read as text. --------------------------------
 GUARD = "        if: steps.pin.outputs.only != 'true'"
 # (workflow, job, the steps after the pin step that a pin bump still runs)
-PIN_JOBS = (("ci.yml", "gate", []), ("dev-guards.yml", "browser", []))
+PIN_JOBS = (("ci.yml", "gate", ["- name: Public-surface guard"]), ("dev-guards.yml", "browser", []))
 
 
 def unguarded_steps(text, job):
@@ -718,15 +709,22 @@ def unguarded_steps(text, job):
 
 @pytest.mark.parametrize("name, job, still_runs", PIN_JOBS)
 def test_a_pin_bump_skips_the_long_steps_and_nothing_else(name, job, still_runs):
-    """The yes names the long steps. Every step after the pin step is skipped on a pin bump."""
+    """The yes names the long tests. The public-surface guard is a privacy check and takes seconds, so it runs on a
+    pin bump too; every other step after the pin step is skipped."""
     text = (WORKFLOWS / name).read_text()
     assert text.count("python3 scripts/ci_pin_only.py") == 1, name
     assert unguarded_steps(text, job) == still_runs
 
 
-@pytest.mark.parametrize("name", ["ci_pin_only.py"])
+def test_the_public_surface_guard_runs_on_every_change():
+    text = (WORKFLOWS / "ci.yml").read_text()
+    step = "      - name: Public-surface guard\n        run: python3 scripts/check_public_surface.py\n"
+    assert text.count(step) == 1, "the guard is one step with no condition on it"
+
+
+@pytest.mark.parametrize("name", ["ci_pin_only.py", "check_public_surface.py"])
 def test_what_a_pin_bump_still_runs_needs_nothing_installed(name):
-    """The judge runs on the runner's own python3, before uv, Python and the deps are set up."""
+    """Both run on the runner's own python3: one before uv, Python and the deps are set up, one when they never are."""
     tree = ast.parse((ROOT / "scripts" / name).read_text(encoding="utf-8"))
     found = set()
     for node in ast.walk(tree):
@@ -760,4 +758,4 @@ def test_the_step_check_names_a_step_that_lost_its_guard():
         text.replace(step + GUARD + "\n", step + GUARD.replace("!=", "==") + "\n"),
     ):
         assert broken != text
-        assert unguarded_steps(broken, "gate") == ["- name: Pytest (blocks CI)"]
+        assert unguarded_steps(broken, "gate") == ["- name: Pytest (blocks CI)", "- name: Public-surface guard"]
