@@ -58,7 +58,7 @@ fi
 # --------------------------------------------------------------------------
 STEP_TABLE='ruff|fast|yes|fast|Ruff lint on src, tests and scripts|uv run --group test ruff check src tests scripts|
 pytest-changed|fast|yes|fast|pytest on the tests this branch changed|pytest -q {changed_tests}|no changed tests found against origin/<default>
-pytest|full|yes|slow|pytest, the whole suite (parallel, every core)|uv run --group test --with pytest-xdist pytest -q -n auto|
+pytest|full|yes|slow|pytest, the whole suite (parallel, every core)|uv run --group test --with pytest-xdist pytest -q -n auto --durations=30|
 public-surface|fast|yes|fast|public-surface guard (no private data in tracked files)|python3 scripts/check_public_surface.py|
 sample-world|fast|yes|fast|validate the shipped sample pack|uv run --group test norns validate --pack worlds/sample-world|
 gitleaks|fast|yes|fast|secret scan of the branch diff|gitleaks detect --source . --no-banner --redact --no-color --log-opts={gitleaks_base}..HEAD|needs origin/<default> to diff against

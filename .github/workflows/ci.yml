@@ -94,7 +94,7 @@ jobs:
       - name: Pytest (blocks CI)
         env:
           VEFR_REFACTOR: ${{ contains(github.event.pull_request.labels.*.name, 'refactor') && '1' || '' }}
-        run: uv run --group test --with pytest-xdist pytest -q -n auto
+        run: uv run --group test --with pytest-xdist pytest -q -n auto --durations=30
 
       - name: Validate sample-world
         run: uv run --group test norns validate --pack worlds/sample-world
