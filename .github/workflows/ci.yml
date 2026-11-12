@@ -60,11 +60,14 @@ jobs:
           # public-surface guard and for any future gitleaks step.
           fetch-depth: 0
 
-      # A Play-Nice pin bump changes no code and no test reads the pin file, so the heavy steps below are skipped.
-      # "Pin bump" means the diff CONTENT: one file, .project/contracts/adoption.yaml, whose only changed lines are
-      # the revision line and "# date: auto re-pin" comments (scripts/ci_pin_only.py, tested by tests/test_ci_pin_only.py).
-      # The job still runs and reports: it is a required check. Any other diff, a push, or an error here runs everything,
-      # and the separate contract-freshness job still runs on a bump.
+      # A Play-Nice pin bump changes no code and no test reads the pin file, so the long steps below are skipped.
+      # "Pin bump" means the diff CONTENT and where it sits: one file, .project/contracts/adoption.yaml, one hunk, the
+      # revision line under source: replaced where it stands, with at most the re-pin job's one comment directly above.
+      # The line is also checked against the manifest the PR started from, so a line that only reads like the pin does
+      # not count (scripts/ci_pin_only.py, tested by tests/test_ci_pin_only.py). The step prints a notice on a skip.
+      # It reads GitHub's own test merge of the PR (HEAD^1 is the base), so the checkout above keeps its default ref.
+      # The job still runs and reports: it is a required check. Any other diff, a push, or an error here runs everything.
+      # The public-surface guard at the end runs on a pin bump too, and so does the separate contract-freshness job.
       - id: pin
         name: Is this only a Play-Nice pin bump?
         env:
@@ -117,6 +120,7 @@ jobs:
         if: steps.pin.outputs.only != 'true'
         run: uv run --group test norns validate --pack worlds/sample-world
 
+      # No condition on this one: it is a privacy check and takes seconds, so it runs on a pin bump too. It needs
+      # nothing the skipped steps install (tests/test_ci_pin_only.py checks that it imports only the standard library).
       - name: Public-surface guard
-        if: steps.pin.outputs.only != 'true'
         run: python3 scripts/check_public_surface.py
