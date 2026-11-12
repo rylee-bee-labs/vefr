@@ -60,21 +60,37 @@ jobs:
           # public-surface guard and for any future gitleaks step.
           fetch-depth: 0
 
+      # A Play-Nice pin bump changes no code and no test reads the pin file, so the heavy steps below are skipped.
+      # "Pin bump" means the diff CONTENT: one file, .project/contracts/adoption.yaml, whose only changed lines are
+      # the revision line and "# date: auto re-pin" comments (scripts/ci_pin_only.py, tested by tests/test_ci_pin_only.py).
+      # The job still runs and reports: it is a required check. Any other diff, a push, or an error here runs everything,
+      # and the separate contract-freshness job still runs on a bump.
+      - id: pin
+        name: Is this only a Play-Nice pin bump?
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: python3 scripts/ci_pin_only.py
+
       - name: Install uv
+        if: steps.pin.outputs.only != 'true'
         uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
         with:
           version: "latest"
 
       - name: Set up Python
+        if: steps.pin.outputs.only != 'true'
         run: uv python install 3.11
 
       - name: Sync test deps
+        if: steps.pin.outputs.only != 'true'
         run: uv sync --group test
 
       - name: Ruff
+        if: steps.pin.outputs.only != 'true'
         run: uv run --group test ruff check src tests scripts
 
       - name: Install node dev deps (test harnesses only)
+        if: steps.pin.outputs.only != 'true'
         # package.json is dev-only tooling (jsdom for the kitchen
         # harness). Nothing in it ships or runs at runtime.
         run: npm ci
@@ -92,12 +108,15 @@ jobs:
       # cannot collide on a digest line. Every other PR gets '' and the guard
       # skips with its reason.
       - name: Pytest (blocks CI)
+        if: steps.pin.outputs.only != 'true'
         env:
           VEFR_REFACTOR: ${{ contains(github.event.pull_request.labels.*.name, 'refactor') && '1' || '' }}
-        run: uv run --group test --with pytest-xdist pytest -q -n auto
+        run: uv run --group test --with pytest-xdist pytest -q -n auto --durations=30
 
       - name: Validate sample-world
+        if: steps.pin.outputs.only != 'true'
         run: uv run --group test norns validate --pack worlds/sample-world
 
       - name: Public-surface guard
+        if: steps.pin.outputs.only != 'true'
         run: python3 scripts/check_public_surface.py

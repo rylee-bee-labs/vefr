@@ -92,7 +92,8 @@ def test_step_table_covers_every_ci_gate(step_table):
     """
     ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text()
     gate = ci.split("  gate:", 1)[1]
-    setup = ("uv python install", "uv sync")  # environment prep, not a check
+    # environment prep and the pin-bump skip decision, not checks
+    setup = ("uv python install", "uv sync", "python3 scripts/ci_pin_only.py")
     commands = [line.strip() for line in gate.splitlines()
                 if line.strip().startswith("run: ")]
     commands = [c[len("run: "):].strip() for c in commands]
