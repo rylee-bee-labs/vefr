@@ -88,22 +88,39 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: 2
+
+      # A Play-Nice pin bump changes no code and no test reads the pin file, so the heavy steps below are skipped.
+      # "Pin bump" means the diff CONTENT: one file, .project/contracts/adoption.yaml, whose only changed lines are
+      # the revision line and "# date: auto re-pin" comments (scripts/ci_pin_only.py, tested by tests/test_ci_pin_only.py).
+      # The job still runs and reports: it is a required check. Any other diff, a push, or an error here runs everything,
+      # and the separate contract-freshness job still runs on a bump.
+      - id: pin
+        name: Is this only a Play-Nice pin bump?
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: python3 scripts/ci_pin_only.py
 
       - name: Install uv
+        if: steps.pin.outputs.only != 'true'
         uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
         with:
           version: "latest"
 
       - name: Set up Python
+        if: steps.pin.outputs.only != 'true'
         run: uv python install 3.11
 
       - name: Sync deps
+        if: steps.pin.outputs.only != 'true'
         run: uv sync --group test
 
       - name: Install Playwright chromium
+        if: steps.pin.outputs.only != 'true'
         run: uv run playwright install chromium --with-deps
 
       - name: Browser tests
+        if: steps.pin.outputs.only != 'true'
         env:
           VEFR_BROWSER_REQUIRED: "1"
         run: uv run pytest -q tests/browser
@@ -114,6 +131,7 @@ jobs:
       # is unreachable or a rule a reached phase asked for never fired,
       # so the same gate the tests use holds the sample itself.
       - name: Play the sample world through
+        if: steps.pin.outputs.only != 'true'
         run: uv run vefr playthrough --pack sample-world --out /tmp/playthrough
 
   visual:
